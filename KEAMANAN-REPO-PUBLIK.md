@@ -34,3 +34,8 @@ Bila tetap memakai repositori yang sama: semua riwayat terbuka. Hapus/pindahkan 
 ## Setelah publik
 - Jangan menulis data pelanggan, harga modal, atau rekening di issue, PR, komentar, atau catatan `.md`.
 - Tinjau setiap PR dari luar sebelum menyetujui workflow-nya.
+
+## Catatan: action dikunci ke SHA (8 Nov 2026)
+Pengaturan repositori ini mewajibkan setiap GitHub Action dikunci ke SHA commit penuh (Settings > Actions > General > *Require actions to be pinned to a full-length commit SHA*). Semua `uses:` di `.github/workflows/` sudah memakai SHA dengan komentar versi, mis. `actions/checkout@<sha> # v4.4.0`. Akibatnya:
+- Menambah action baru wajib memakai SHA, bukan `@v4`. Tanpa itu job gagal di "Set up job" dengan pesan *must be pinned to a full-length commit SHA*.
+- Memperbarui versi: ganti SHA dan komentar versinya (SHA tag ada di halaman rilis action itu). Dependabot version updates dapat melakukannya otomatis bila `dependabot.yml` dibuat.
