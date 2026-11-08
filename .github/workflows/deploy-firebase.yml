@@ -15,8 +15,8 @@ concurrency:
 jobs:
   deploy:
     # Hanya main yang boleh men-deploy, termasuk lewat Run workflow dari branch lain.
-    # Hanya main milik organisasi ISL-Company1818 (bukan fork orang lain, apa pun nama repositorinya) yang boleh men-deploy.
-    if: github.ref == 'refs/heads/main' && github.repository_owner == 'ISL-Company1818'
+    # Hanya main milik akun Pamungkas72 (bukan fork orang lain, apa pun nama repositorinya) yang boleh men-deploy.
+    if: github.ref == 'refs/heads/main' && github.repository_owner == 'Pamungkas72'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -1,5 +1,7 @@
 # Panduan: pindah ke repositori publik baru, arsipkan yang lama
 
+> **Pembaruan 8 Nov 2026:** repositori aktif sekarang **Pamungkas72/ISL-HUB-app** (publik). Repositori `ISL-Company1818/ISL-HUB-publik` tidak dipakai lagi karena akun `ISL-Company1818` kehabisan kuota menit Actions dan dibatasi. Nama repositori dan pemilik di bawah mengikuti rencana awal; ganti sesuai alamat aktif.
+
 Dibuat 8 Nov 2026. Tujuan: kerja selanjutnya di repositori **publik baru** (Actions gratis, tanpa riwayat lama), sedangkan repositori sekarang **ISL-Company1818/ISL-HUB** diarsipkan (privat, hanya baca) sebagai catatan sejarah.
 
 Semua langkah GitHub dan Google Cloud dilakukan **pemilik akun**. Perkiraan waktu: 45 sampai 60 menit. Kerjakan berurutan.

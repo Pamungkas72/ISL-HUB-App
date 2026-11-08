@@ -16,7 +16,7 @@ Bila tetap memakai repositori yang sama: semua riwayat terbuka. Hapus/pindahkan 
 ## Yang sudah aman
 - Tidak ada kunci privat, token, atau kata sandi di berkas terlacak (diperiksa 8 Nov 2026).
 - Kunci API Firebase memang publik; sumber `public/` juga sudah bisa diunduh dari situs live.
-- Workflow deploy hanya jalan dari `main` milik organisasi ISL-Company1818 (`github.repository_owner`), tidak dari fork.
+- Workflow deploy hanya jalan dari `main` milik akun Pamungkas72 (`github.repository_owner`), tidak dari fork.
 - Tes CI memakai Firebase tiruan, tanpa rahasia. Workflow yang butuh rahasia hanya `workflow_dispatch` (manual).
 
 ## Pengaturan GitHub sebelum dibuka (Settings repositori)
