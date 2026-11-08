@@ -1,6 +1,7 @@
 # Tes aturan Firestore per peran (master, admin, sales, lihat saja) di emulator Firestore.
 # Berjalan saat firestore.rules atau tests/rules berubah, dan bisa dijalankan manual.
 # Tidak menulis ke proyek Firebase sungguhan: semuanya di emulator lokal.
+# Di repositori publik menit Actions gratis, jadi tes pull request selalu jalan (tanpa filter berkas): wajib agar status check ruleset selalu terkirim.
 name: Tes aturan Firestore
 
 on:
@@ -11,9 +12,6 @@ on:
       - 'tests/rules/**'
       - '.github/workflows/tes-aturan.yml'
   pull_request:
-    paths:
-      - 'firestore.rules'
-      - 'tests/rules/**'
   workflow_dispatch:
 
 permissions:

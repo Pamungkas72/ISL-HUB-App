@@ -1,6 +1,7 @@
 # Uji asap halaman Quotation: periksa nama yang tidak terdefinisi (ESLint no-undef) dan muat skrip asli di browser untuk tiap peran.
 # Tidak butuh secret dan tidak menyentuh Firebase. Berjalan di pull request (dan di main setelah digabung) saat skrip atau tesnya berubah, dan bisa dijalankan manual.
 # Push ke cabang fitur tidak menjalankan ulang tes: pull request sudah menjalankannya (menghindari menit ganda).
+# Di repositori publik menit Actions gratis, jadi tes pull request selalu jalan (tanpa filter berkas): wajib agar status check ruleset selalu terkirim.
 name: Tes asap Quotation
 
 on:
@@ -12,10 +13,6 @@ on:
       - 'tests/asap/**'
       - '.github/workflows/tes-asap.yml'
   pull_request:
-    paths:
-      - 'public/js/**'
-      - 'public/css/**'
-      - 'tests/asap/**'
   workflow_dispatch:
 
 permissions:

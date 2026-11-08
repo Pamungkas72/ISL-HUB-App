@@ -1,6 +1,7 @@
 # Audit konsistensi tema terang/gelap pada aplikasi ASLI (app.html) dengan Firebase tiruan di memori: tidak butuh secret dan tidak menyentuh Firebase.
 # Memindai puluhan tampilan (halaman, panel, formulir, dialog) di HP dan desktop, dan gagal bila ada area berlatar terang di tema gelap
 # (atau sebaliknya) atau teks yang hampir tidak terbaca. Lihat tests/audit/.
+# Di repositori publik menit Actions gratis, jadi tes pull request selalu jalan (tanpa filter berkas): wajib agar status check ruleset selalu terkirim.
 name: Audit tema terang dan gelap
 
 on:
@@ -13,11 +14,6 @@ on:
       - 'tests/audit/**'
       - '.github/workflows/tes-audit-tema.yml'
   pull_request:
-    paths:
-      - 'public/css/**'
-      - 'public/js/**'
-      - 'public/*.html'
-      - 'tests/audit/**'
   workflow_dispatch:
 
 permissions:
