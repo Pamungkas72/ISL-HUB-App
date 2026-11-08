@@ -1,6 +1,6 @@
 # Catatan perubahan tampilan
 
-Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
+Tiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
 ## 2026-11-04 (desktop Quotation dan Master Rate diseragamkan dengan desain HP)
 
