@@ -1,0 +1,47 @@
+# Tes aturan Firestore per peran (master, admin, sales, lihat saja) di emulator Firestore.
+# Berjalan saat firestore.rules atau tests/rules berubah, dan bisa dijalankan manual.
+# Tidak menulis ke proyek Firebase sungguhan: semuanya di emulator lokal.
+name: Tes aturan Firestore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firestore.rules'
+      - 'tests/rules/**'
+      - '.github/workflows/tes-aturan.yml'
+  pull_request:
+    paths:
+      - 'firestore.rules'
+      - 'tests/rules/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Hemat menit Actions: commit baru di cabang atau PR yang sama membatalkan proses lama yang belum selesai.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  aturan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Pasang dependensi tes
+        run: npm --prefix tests/rules ci
+
+      - name: Jalankan tes aturan di emulator Firestore
+        run: npx --yes firebase-tools@13.35.1 emulators:exec --only firestore --project isl-uji-aturan "npm --prefix tests/rules test"

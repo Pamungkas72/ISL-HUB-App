@@ -1,0 +1,78 @@
+# Uji asap halaman Quotation: periksa nama yang tidak terdefinisi (ESLint no-undef) dan muat skrip asli di browser untuk tiap peran.
+# Tidak butuh secret dan tidak menyentuh Firebase. Berjalan di pull request (dan di main setelah digabung) saat skrip atau tesnya berubah, dan bisa dijalankan manual.
+# Push ke cabang fitur tidak menjalankan ulang tes: pull request sudah menjalankannya (menghindari menit ganda).
+name: Tes asap Quotation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/js/**'
+      - 'public/css/**'
+      - 'tests/asap/**'
+      - '.github/workflows/tes-asap.yml'
+  pull_request:
+    paths:
+      - 'public/js/**'
+      - 'public/css/**'
+      - 'tests/asap/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Hemat menit Actions: commit baru di cabang atau PR yang sama membatalkan proses lama yang belum selesai.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  asap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Periksa nama yang tidak terdefinisi
+        run: npx --yes eslint@8.57.0 --no-eslintrc -c tests/asap/eslint.json public/js/app-core.js public/js/formulir-lini.js public/js/pembuat-format.js public/js/sales.js public/js/logo.js
+
+      - name: Pasang Playwright dan Chromium
+        run: |
+          mkdir -p "$RUNNER_TEMP/tes"
+          cd "$RUNNER_TEMP/tes"
+          npm init -y > /dev/null
+          npm install playwright@1.47.2
+          npx playwright install --with-deps chromium
+
+      - name: Uji asap tiga peran
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-asap.js
+      - name: Uji skenario quotation Depo
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-depo.js
+      - name: Uji kop surat terkunci
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-kop.js
+      - name: Uji tabel kartu Depo dan Trailer
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-kartu.js
+      - name: Uji formulir Trucking Distribusi (grid spreadsheet)
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-distribusi.js
+      - name: Uji menu Uang Jalan
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-uang-jalan.js
+      - name: Uji perubahan umum di semua jenis quotation
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-semua-lini.js

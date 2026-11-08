@@ -1,0 +1,159 @@
+// Tes aturan Firestore per peran (master, admin, sales, lihat saja) di emulator.
+// Dijalankan dari repo: firebase emulators:exec --only firestore "npm --prefix tests/rules test"
+// Setiap tes menulis ke emulator lokal saja; tidak menyentuh proyek Firebase sungguhan.
+import { describe, it, before, after } from "node:test";
+import { readFileSync } from "node:fs";
+import { initializeTestEnvironment, assertSucceeds, assertFails } from "@firebase/rules-unit-testing";
+import { doc, setDoc, getDoc, getDocs, collection, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+
+const RULES = process.env.ISL_RULES || new URL("../../firestore.rules", import.meta.url);
+const MASTER = "codcodan1@gmail.com";
+const sekarang = () => Math.floor(Date.now() / 1000);
+
+let env;
+// auth_time dipakai aturan sesi (24 jam 10 menit); default = waktu sekarang.
+const ctx = (uid, email, authTime = sekarang()) => env.authenticatedContext(uid, { email, auth_time: authTime }).firestore();
+const master = () => ctx("uid-master", MASTER);
+const admin = () => ctx("uid-admin", "admin@isl.test");
+const sales = () => ctx("uid-sales", "sales@isl.test");
+const lihat = () => ctx("uid-lihat", "lihat@isl.test");
+
+const kegiatan = (quotationId, pemilikUid, oleh) => ({ quotationId, pemilikUid, tanggal: "2026-10-30", jenis: "kunjungan", omzet: 0, catatan: "uji", oleh, dibuat: "2026-10-30" });
+const volume = (quotationId, pemilikUid, oleh) => ({ quotationId, barisId: "b1", pemilikUid, customerId: "c1", customerNama: "PT Uji", liniKey: "depo", liniNama: "Depo", item: "Stripping", satuan: "per kontainer 20ft", jual: 100000, volume: 2, tanggal: "2026-10-30", catatan: "", oleh, dibuat: "2026-10-30" });
+
+before(async () => {
+  env = await initializeTestEnvironment({ projectId: "isl-uji-aturan", firestore: { rules: readFileSync(RULES, "utf8"), host: "127.0.0.1", port: 8080 } });
+  await env.clearFirestore();
+  await env.withSecurityRulesDisabled(async (c) => {
+    const db = c.firestore();
+    const isi = (path, data) => setDoc(doc(db, path), data);
+    await isi("pengguna/uid-admin", { email: "admin@isl.test", nama: "Admin", peran: "admin", status: "aktif" });
+    await isi("pengguna/uid-sales", { email: "sales@isl.test", nama: "Sales", peran: "sales", status: "aktif", kodeSales: "BD" });
+    await isi("pengguna/uid-lihat", { email: "lihat@isl.test", nama: "Lihat", peran: "lihat", status: "aktif" });
+    await isi("pengguna/uid-pending", { email: "pending@isl.test", nama: "Pendaftar", peranDiminta: "sales", peran: null, status: "menunggu" });
+    await isi("qt_quotations/q-sales", { pemilikUid: "uid-sales", status: "disetujui", nomor: "001/QL", customerId: "c1", baris: [] });
+    await isi("qt_quotations/q-draf-sales", { pemilikUid: "uid-sales", status: "draf", customerId: "c1", baris: [] });
+    await isi("qt_quotations/q-admin", { pemilikUid: "uid-admin", status: "disetujui", nomor: "002/QL", customerId: "c1", baris: [] });
+    await isi("qt_templates/t-sales", { pemilikUid: "uid-sales", nama: "Template sales" });
+    await isi("qt_templates/t-admin", { pemilikUid: "uid-admin", nama: "Template admin" });
+    // fixture khusus uji penghapusan (admin tidak boleh menghapus; 3 Nov 2026)
+    await isi("qt_quotations/h-draf-admin", { pemilikUid: "uid-admin", status: "draf", customerId: "c1", baris: [] });
+    await isi("qt_quotations/h-draf-sales-a", { pemilikUid: "uid-sales", status: "draf", customerId: "c1", baris: [] });
+    await isi("qt_quotations/h-draf-sales-b", { pemilikUid: "uid-sales", status: "draf", customerId: "c1", baris: [] });
+    await isi("qt_quotations/h-ditolak", { pemilikUid: "uid-sales", status: "ditolak", nomor: "003/QL", customerId: "c1", baris: [] });
+    await isi("qt_quotations/h-tdk-dipakai", { pemilikUid: "uid-sales", status: "tidak_dipakai", nomor: "004/QL", customerId: "c1", baris: [] });
+    await isi("qt_quotations/h-ditolak-master", { pemilikUid: "uid-sales", status: "ditolak", nomor: "005/QL", customerId: "c1", baris: [] });
+    await isi("qt_quotations/h-terkirim-sales", { pemilikUid: "uid-sales", status: "terkirim", nomor: "006/QL", customerId: "c1", baris: [] });
+    await isi("qt_templates/h-tpl-admin", { pemilikUid: "uid-admin", nama: "Template admin hapus" });
+    await isi("qt_templates/h-tpl-sales", { pemilikUid: "uid-sales", nama: "Template sales hapus" });
+    await isi("qt_riwayat/h-rw-admin", { pemilikUid: "uid-admin", nomor: "R1", customerNama: "PT Uji" });
+    await isi("qt_riwayat/h-rw-sales", { pemilikUid: "uid-sales", nomor: "R2", customerNama: "PT Uji" });
+    await isi("qt_riwayat/h-rw-master", { pemilikUid: "uid-sales", nomor: "R3", customerNama: "PT Uji" });
+    await isi("satuan_baku/h-sat-admin", { nama: "per uji admin" });
+    await isi("satuan_baku/h-sat-master", { nama: "per uji master" });
+    await isi("qt_kegiatan/h-k-sales", kegiatan("q-sales", "uid-sales", "sales@isl.test"));
+    await isi("cu_customers/c1", { nama: "PT Uji", status: "aktif" });
+    await isi("cu_customers/c2", { nama: "PT Hapus", status: "aktif" });
+    await isi("cu_rates/r1", { cid: "c1", quotationId: "q-sales", jual: 1000 });
+    await isi("qt_kegiatan/k-admin", kegiatan("q-sales", "uid-sales", "admin@isl.test"));
+    await isi("qt_kegiatan/k-sales", kegiatan("q-sales", "uid-sales", "sales@isl.test"));
+  });
+});
+after(async () => { await env.cleanup(); });
+
+describe("Template: admin membaca semua untuk memeriksa modal; sales hanya miliknya", () => {
+  it("admin membaca template milik sales", () => assertSucceeds(getDoc(doc(admin(), "qt_templates/t-sales"))));
+  it("sales tidak membaca template milik admin", () => assertFails(getDoc(doc(sales(), "qt_templates/t-admin"))));
+  it("sales membaca template miliknya", () => assertSucceeds(getDoc(doc(sales(), "qt_templates/t-sales"))));
+});
+
+describe("Hapus customer: hanya master", () => {
+  it("admin tidak bisa menghapus customer", () => assertFails(deleteDoc(doc(admin(), "cu_customers/c2"))));
+  it("sales tidak bisa menghapus customer", () => assertFails(deleteDoc(doc(sales(), "cu_customers/c2"))));
+  it("master bisa menghapus customer", () => assertSucceeds(deleteDoc(doc(master(), "cu_customers/c2"))));
+});
+
+describe("Koreksi rate: sales tidak bisa mengubah isi rate", () => {
+  it("sales tidak bisa mengubah harga rate miliknya", () => assertFails(updateDoc(doc(sales(), "cu_rates/r1"), { jual: 2000 })));
+});
+
+describe("Catat kegiatan: admin dan sales pada quotation disetujui", () => {
+  it("admin mencatat di quotation disetujui milik sales", () => assertSucceeds(setDoc(doc(admin(), "qt_kegiatan/ka1"), kegiatan("q-sales", "uid-sales", "admin@isl.test"))));
+  it("admin tidak mencatat di quotation yang belum disetujui", () => assertFails(setDoc(doc(admin(), "qt_kegiatan/ka2"), kegiatan("q-draf-sales", "uid-sales", "admin@isl.test"))));
+  it("sales mencatat di quotation miliknya yang disetujui", () => assertSucceeds(setDoc(doc(sales(), "qt_kegiatan/ks1"), kegiatan("q-sales", "uid-sales", "sales@isl.test"))));
+  it("sales tidak mencatat di quotation admin", () => assertFails(setDoc(doc(sales(), "qt_kegiatan/ks2"), kegiatan("q-admin", "uid-admin", "sales@isl.test"))));
+  it("lihat saja tidak mencatat", () => assertFails(setDoc(doc(lihat(), "qt_kegiatan/kl1"), kegiatan("q-sales", "uid-sales", "lihat@isl.test"))));
+  it("admin tidak menghapus catatan yang dicatatnya sendiri (hapus hanya master)", () => assertFails(deleteDoc(doc(admin(), "qt_kegiatan/k-admin"))));
+  it("admin tidak menghapus catatan yang dicatat sales", () => assertFails(deleteDoc(doc(admin(), "qt_kegiatan/k-sales"))));
+  it("master menghapus catatan sales", () => assertSucceeds(deleteDoc(doc(master(), "qt_kegiatan/k-sales"))));
+});
+
+describe("Catat volume: admin pada quotation disetujui", () => {
+  it("admin mencatat volume di quotation disetujui milik sales", () => assertSucceeds(setDoc(doc(admin(), "qt_volume/v1"), volume("q-sales", "uid-sales", "admin@isl.test"))));
+  it("admin tidak menghapus volume yang dicatatnya (hapus hanya master)", () => assertFails(deleteDoc(doc(admin(), "qt_volume/v1"))));
+});
+
+describe("Log perubahan akun: hanya ditambah oleh staf", () => {
+  const log = { uid: "uid-pending", email: "pending@isl.test", aksi: "setujui", dari: { peran: null, status: "menunggu" }, ke: { peran: "sales", status: "aktif" }, oleh: "admin@isl.test", waktu: serverTimestamp() };
+  it("admin mencatat log akun", () => assertSucceeds(setDoc(doc(admin(), "pengguna_log/l1"), log)));
+  it("log dengan kolom tambahan ditolak", () => assertFails(setDoc(doc(admin(), "pengguna_log/l2"), { ...log, extra: 1 })));
+  it("log tidak bisa diubah, bahkan oleh master", () => assertFails(updateDoc(doc(master(), "pengguna_log/l1"), { aksi: "x" })));
+  it("log tidak bisa dihapus", () => assertFails(deleteDoc(doc(master(), "pengguna_log/l1"))));
+  it("sales tidak membaca log", () => assertFails(getDoc(doc(sales(), "pengguna_log/l1"))));
+  it("master membaca log", () => assertSucceeds(getDoc(doc(master(), "pengguna_log/l1"))));
+});
+
+describe("Persetujuan akun oleh admin", () => {
+  it("admin menyetujui pendaftar sebagai sales tanpa target", () => assertSucceeds(updateDoc(doc(admin(), "pengguna/uid-pending"), { peran: "sales", kodeSales: "CD", status: "aktif", disetujuiPada: serverTimestamp() })));
+  it("admin tidak bisa mengisi target bulanan", () => assertFails(updateDoc(doc(admin(), "pengguna/uid-sales"), { targetBulanan: 5000000 })));
+});
+
+describe("Batas sesi di server (24 jam 10 menit)", () => {
+  it("token login tiga hari lalu ditolak meski akun master", () => assertFails(getDocs(collection(ctx("uid-master", MASTER, sekarang() - 3 * 86400), "cu_customers"))));
+  it("token segar diterima", () => assertSucceeds(getDocs(collection(master(), "cu_customers"))));
+});
+
+describe("Penghapusan hanya master: admin boleh mengedit, tidak boleh menghapus (3 Nov 2026)", () => {
+  it("admin tidak menghapus draf miliknya sendiri", () => assertFails(deleteDoc(doc(admin(), "qt_quotations/h-draf-admin"))));
+  it("admin tidak menghapus draf milik sales", () => assertFails(deleteDoc(doc(admin(), "qt_quotations/h-draf-sales-a"))));
+  it("admin tidak menghapus quotation ditolak", () => assertFails(deleteDoc(doc(admin(), "qt_quotations/h-ditolak"))));
+  it("admin tidak menghapus quotation tidak dipakai", () => assertFails(deleteDoc(doc(admin(), "qt_quotations/h-tdk-dipakai"))));
+  it("admin tetap boleh mengubah draf (mengedit)", () => assertSucceeds(updateDoc(doc(admin(), "qt_quotations/h-draf-admin"), { judul: "Diubah admin" })));
+  it("master menghapus draf", () => assertSucceeds(deleteDoc(doc(master(), "qt_quotations/h-draf-admin"))));
+  it("master menghapus quotation ditolak", () => assertSucceeds(deleteDoc(doc(master(), "qt_quotations/h-ditolak-master"))));
+  it("sales tetap boleh menghapus draf miliknya (tidak berubah)", () => assertSucceeds(deleteDoc(doc(sales(), "qt_quotations/h-draf-sales-b"))));
+  it("sales tidak menghapus quotation terkirim miliknya", () => assertFails(deleteDoc(doc(sales(), "qt_quotations/h-terkirim-sales"))));
+
+  it("admin tidak menghapus template miliknya", () => assertFails(deleteDoc(doc(admin(), "qt_templates/h-tpl-admin"))));
+  it("admin tetap boleh mengubah template miliknya", () => assertSucceeds(updateDoc(doc(admin(), "qt_templates/h-tpl-admin"), { nama: "Template admin diubah" })));
+  it("sales tetap boleh menghapus template miliknya (tidak berubah)", () => assertSucceeds(deleteDoc(doc(sales(), "qt_templates/h-tpl-sales"))));
+  it("master menghapus template admin", () => assertSucceeds(deleteDoc(doc(master(), "qt_templates/h-tpl-admin"))));
+
+  it("admin tidak menghapus riwayat", () => assertFails(deleteDoc(doc(admin(), "qt_riwayat/h-rw-admin"))));
+  it("admin tidak menghapus riwayat milik sales", () => assertFails(deleteDoc(doc(admin(), "qt_riwayat/h-rw-sales"))));
+  it("admin tetap boleh mengubah riwayat", () => assertSucceeds(updateDoc(doc(admin(), "qt_riwayat/h-rw-admin"), { nomor: "R1-ubah" })));
+  it("sales tetap boleh menghapus riwayat miliknya (tidak berubah)", () => assertSucceeds(deleteDoc(doc(sales(), "qt_riwayat/h-rw-sales"))));
+  it("master menghapus riwayat", () => assertSucceeds(deleteDoc(doc(master(), "qt_riwayat/h-rw-master"))));
+
+  it("admin menambah dan mengubah satuan", async () => {
+    await assertSucceeds(setDoc(doc(admin(), "satuan_baku/h-sat-baru"), { nama: "per baru" }));
+    await assertSucceeds(updateDoc(doc(admin(), "satuan_baku/h-sat-baru"), { nama: "per baru diubah" }));
+  });
+  it("admin tidak menghapus satuan", () => assertFails(deleteDoc(doc(admin(), "satuan_baku/h-sat-admin"))));
+  it("master menghapus satuan", () => assertSucceeds(deleteDoc(doc(master(), "satuan_baku/h-sat-master"))));
+
+  it("sales tetap boleh menghapus catatan kegiatan miliknya (tidak berubah)", () => assertSucceeds(deleteDoc(doc(sales(), "qt_kegiatan/h-k-sales"))));
+});
+
+describe("Sembunyikan dari tampilan akun (admin dan sales), disimpan di profil sendiri", () => {
+  const ref = (uid) => `pengguna/${uid}`;
+  it("admin menyimpan daftar sembunyi di profilnya sendiri", () => assertSucceeds(updateDoc(doc(admin(), ref("uid-admin")), { sembunyi: { quotation: ["q1", "q2"], template: ["t1"] } })));
+  it("sales menyimpan daftar sembunyi di profilnya sendiri", () => assertSucceeds(updateDoc(doc(sales(), ref("uid-sales")), { sembunyi: { riwayat: ["r1"], preset: ["p1"], satuan: ["pertitik"] } })));
+  it("admin tidak mengubah daftar sembunyi akun lain", () => assertFails(updateDoc(doc(admin(), ref("uid-sales")), { sembunyi: { quotation: ["x"] } })));
+  it("jenis di luar daftar ditolak", () => assertFails(updateDoc(doc(admin(), ref("uid-admin")), { sembunyi: { rahasia: ["x"] } })));
+  it("sembunyi harus berupa peta, bukan teks", () => assertFails(updateDoc(doc(admin(), ref("uid-admin")), { sembunyi: "semua" })));
+  it("lebih dari 500 item per jenis ditolak", () => assertFails(updateDoc(doc(admin(), ref("uid-admin")), { sembunyi: { quotation: Array.from({ length: 501 }, (_, i) => "q" + i) } })));
+  it("sembunyi tidak bisa dipakai untuk menyelipkan peran", () => assertFails(updateDoc(doc(admin(), ref("uid-admin")), { sembunyi: { quotation: [] }, peran: "sales" })));
+  it("akun lihat saja tidak menyimpan daftar sembunyi", () => assertFails(updateDoc(doc(lihat(), ref("uid-lihat")), { sembunyi: { quotation: ["q1"] } })));
+  it("menyembunyikan tidak menghapus quotation (dokumen tetap terbaca master)", () => assertSucceeds(getDoc(doc(master(), "qt_quotations/q-admin"))));
+});

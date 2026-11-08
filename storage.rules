@@ -1,0 +1,71 @@
+// ===========================================================
+// ATURAN FIREBASE STORAGE — Master Rate + Fase 2.
+// Firebase Console > Storage > Rules > hapus isi lama > tempel > Publish.
+// Email master HARUS huruf kecil semua.
+// Folder yang dipakai aplikasi:
+//  - vendor_rahasia/   kontrak vendor            : hanya master
+//  - rahasia/          tanda tangan dan cap       : hanya master (membaca dan menulis)
+//  - quotation_pdf/    PDF quotation yang terbit  : akun aktif boleh melihat, master dan sales mengunggah
+//  - dokumen/          dokumen bertanda tangan, foto galeri formulir lini : akun aktif boleh melihat, master dan sales mengunggah
+//  - quotation_riwayat/ PDF quotation terkirim di luar sistem (riwayat) : akun aktif boleh melihat, master dan sales mengunggah
+//  - open_yard/, vendor_dokumen/  seperti sebelumnya
+// ===========================================================
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Batas sesi 24 jam di sisi server (24 jam 10 menit, selisih agar aplikasi yang keluar tepat 24 jam selalu lebih dulu).
+    function sesiBerlaku() {
+      return request.auth != null
+        && request.auth.token.auth_time * 1000 > request.time.toMillis() - 87000000;
+    }
+    function isMaster() {
+      return sesiBerlaku()
+        && request.auth.token.email == "codcodan1@gmail.com";
+    }
+
+    // Peran dibaca dari dokumen pengguna/{uid} di Firestore (lintas layanan). Pertama kali deploy, Firebase meminta izin akses lintas layanan: setujui.
+    function profilAktif() {
+      return sesiBerlaku()
+        && firestore.exists(/databases/(default)/documents/pengguna/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.status == 'aktif';
+    }
+    function isSales() {
+      return profilAktif()
+        && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'sales';
+    }
+    function aktif() { return isMaster() || profilAktif(); }
+    // Admin (pemeliharaan): boleh mengunggah dokumen Master Rate yang tidak rahasia (open_yard, vendor_dokumen).
+    function isAdmin() {
+      return profilAktif()
+        && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'admin';
+    }
+
+    function fileBolehDiunggah(maks) {
+      return request.resource.size < maks
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType == 'application/pdf'
+            || request.resource.contentType == 'application/msword'
+            || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    }
+
+    match /vendor_rahasia/{vendorId}/{file} {
+      allow read, delete: if isMaster();
+      allow create, update: if isMaster() && fileBolehDiunggah(10 * 1024 * 1024);
+    }
+
+    match /rahasia/{allPaths=**} {
+      allow read, delete: if isMaster();
+      allow create, update: if isMaster() && fileBolehDiunggah(5 * 1024 * 1024);
+    }
+
+    // Sales dan admin boleh mengunggah PDF dan lampiran quotation miliknya, tanda tangannya sendiri, dan foto galeri formulir.
+    match /{folder}/{allPaths=**} {
+      allow read: if aktif() && folder != 'vendor_rahasia' && folder != 'rahasia';
+      allow create, update: if (isMaster() || ((isSales() || isAdmin()) && folder in ['quotation_pdf', 'dokumen', 'quotation_riwayat'])
+          || (isAdmin() && folder in ['open_yard', 'vendor_dokumen', 'profil_fasilitas']))
+        && folder != 'vendor_rahasia' && folder != 'rahasia' && fileBolehDiunggah(10 * 1024 * 1024);
+      allow delete: if isMaster() && folder != 'vendor_rahasia' && folder != 'rahasia';
+    }
+  }
+}

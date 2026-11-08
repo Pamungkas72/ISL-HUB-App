@@ -1,0 +1,59 @@
+# Audit konsistensi tema terang/gelap pada aplikasi ASLI (app.html) dengan Firebase tiruan di memori: tidak butuh secret dan tidak menyentuh Firebase.
+# Memindai puluhan tampilan (halaman, panel, formulir, dialog) di HP dan desktop, dan gagal bila ada area berlatar terang di tema gelap
+# (atau sebaliknya) atau teks yang hampir tidak terbaca. Lihat tests/audit/.
+name: Audit tema terang dan gelap
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/css/**'
+      - 'public/js/**'
+      - 'public/*.html'
+      - 'tests/audit/**'
+      - '.github/workflows/tes-audit-tema.yml'
+  pull_request:
+    paths:
+      - 'public/css/**'
+      - 'public/js/**'
+      - 'public/*.html'
+      - 'tests/audit/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Hemat menit Actions: commit baru di cabang atau PR yang sama membatalkan proses lama yang belum selesai.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        tema: [gelap, terang]
+        layar: [hp, desktop]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Pasang Playwright dan Chromium
+        run: |
+          mkdir -p "$RUNNER_TEMP/tes"
+          cd "$RUNNER_TEMP/tes"
+          npm init -y > /dev/null
+          npm install playwright@1.47.2
+          npx playwright install --with-deps chromium
+      - name: Audit halaman utama (${{ matrix.tema }}, ${{ matrix.layar }})
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/audit/audit-tema.js ${{ matrix.tema }} ${{ matrix.layar }} --ketat
+      - name: Audit login, layar menunggu persetujuan, akun sales dan admin
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/audit/audit-halaman-lain.js ${{ matrix.tema }} ${{ matrix.layar }} --ketat

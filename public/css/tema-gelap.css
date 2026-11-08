@@ -1,0 +1,157 @@
+/* ISL HUB — tema gelap untuk komponen yang menulis warna latar terang secara langsung.
+   Dibuat dengan tests/audit/buat-gelap.js dari aturan CSS asli, lalu diperiksa. Tema terang tidak terpengaruh.
+   Kertas dokumen (pratinjau PDF, tanda tangan) sengaja tetap putih. */
+@media (prefers-color-scheme: dark) {
+:root:not([data-theme="light"]) .mr-lok__cek { background: var(--surface); }
+:root:not([data-theme="light"]) .module-card__status.active { background: hsl(155, 25%, 18%); }
+:root:not([data-theme="light"]) .cu-vip { background: hsl(39, 38%, 18%); color: hsl(36, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-tb-prev th { background: hsl(209, 35%, 18%); color: hsl(207, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-warnchip { background: hsl(34, 38%, 18%); color: hsl(36, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-warnbox { border-color: var(--border); }
+:root:not([data-theme="light"]) .qt-chipw { background: hsl(34, 38%, 18%); color: hsl(36, 45%, 82%); }
+:root:not([data-theme="light"]) .tl-sk { background: var(--surface); }
+:root:not([data-theme="light"]) .qt-tu-prev th { background: hsl(203, 35%, 15%); color: hsl(201, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-tu-prev .tu-bag td { background: hsl(203, 37%, 15%); color: hsl(201, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-tu-prev .tu-sub td { background: hsl(202, 32%, 15%); }
+:root:not([data-theme="light"]) .fl-galeri .fl-x { background: var(--surface); }
+:root:not([data-theme="light"]) .qt-st--rw-terkirim { background: hsl(217, 38%, 15%); color: hsl(218, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-st--rw-diterima { background: hsl(210, 38%, 15%); color: hsl(216, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-st--rw-disetujui { background: hsl(150, 29%, 18%); color: hsl(154, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-st--rw-ditolak { background: hsl(6, 38%, 15%); color: hsl(6, 45%, 82%); }
+:root:not([data-theme="light"]) .qt-st--rw-belum_respons { background: hsl(38, 38%, 18%); color: hsl(37, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-kartu { background: var(--surface); }
+:root:not([data-theme="light"]) .ip-ikon { background: hsl(33, 38%, 15%); color: hsl(32, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-ikon--ok { background: hsl(206, 38%, 15%); color: hsl(207, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-x { background: hsl(214, 23%, 15%); color: hsl(212, 18%, 82%); }
+:root:not([data-theme="light"]) .ip-x:hover { background: hsl(212, 22%, 15%); }
+:root:not([data-theme="light"]) .ip-orang { border-color: var(--border); }
+:root:not([data-theme="light"]) .ip-avatar { background: hsl(206, 38%, 15%); color: hsl(207, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-kotak { background: hsl(210, 33%, 15%); border-color: var(--border); }
+:root:not([data-theme="light"]) .ip-btn--tegas { background: var(--surface); color: hsl(207, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-btn--tegas:hover:not(:disabled) { background: hsl(206, 38%, 15%); }
+:root:not([data-theme="light"]) .ip-btn--bahaya { background: var(--surface); color: hsl(0, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-btn--bahaya:hover:not(:disabled) { background: hsl(0, 38%, 15%); }
+:root:not([data-theme="light"]) .ip-btn--wa { background: hsl(146, 28%, 15%); color: hsl(147, 45%, 82%); border-color: var(--border); }
+:root:not([data-theme="light"]) .ip-btn--wa:hover { background: hsl(147, 26%, 18%); }
+:root:not([data-theme="light"]) .ip-input,
+:root:not([data-theme="light"]) .ip-select { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root:not([data-theme="light"]) .ip-item { background: var(--surface); border-color: var(--border); }
+:root:not([data-theme="light"]) .ip-status.is-ok { background: hsl(155, 25%, 18%); color: hsl(155, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-status.is-gagal { background: hsl(0, 38%, 15%); color: hsl(0, 45%, 82%); }
+:root:not([data-theme="light"]) .ip-status.is-info { background: hsl(39, 38%, 15%); color: hsl(36, 45%, 82%); }
+:root:not([data-theme="light"]) .mr-konfirm__kotak { background: var(--surface); color: var(--text); }
+:root:not([data-theme="light"]) .mr-konfirm__aksi button { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root:not([data-theme="light"]) .st-laci > summary:hover { background: hsl(210, 33%, 15%); }
+:root:not([data-theme="light"]) .st-hapus { background: var(--surface); color: hsl(0, 45%, 82%); }
+:root:not([data-theme="light"]) .st-hapus:hover { background: hsl(0, 38%, 15%); }
+:root:not([data-theme="light"]) .mr-konfirm__kotak .mr-f input,
+:root:not([data-theme="light"]) .mr-konfirm__kotak .mr-f select,
+:root:not([data-theme="light"]) .mr-konfirm__kotak .mr-f textarea,
+:root:not([data-theme="light"]) .ip-kartu .mr-f input,
+:root:not([data-theme="light"]) .ip-kartu .mr-f select,
+:root:not([data-theme="light"]) .ip-kartu .mr-f textarea,
+:root:not([data-theme="light"]) .ip-item input,
+:root:not([data-theme="light"]) .ip-item select { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root:not([data-theme="light"]) .mr-tag--asing { background: hsl(211, 38%, 15%); color: hsl(201, 45%, 82%); }
+:root:not([data-theme="light"]) .mr-toast--peringatan { background: hsl(39, 38%, 15%); color: hsl(36, 45%, 82%); }
+:root:not([data-theme="light"]) .vf-nav__t.is-aktif span { background: var(--surface); }
+:root:not([data-theme="light"]) .fl-tbl tr.fl-grup td { background: hsl(208, 34%, 15%); color: hsl(203, 45%, 82%); }
+}
+:root[data-theme="dark"] .mr-lok__cek { background: var(--surface); }
+:root[data-theme="dark"] .module-card__status.active { background: hsl(155, 25%, 18%); }
+:root[data-theme="dark"] .cu-vip { background: hsl(39, 38%, 18%); color: hsl(36, 45%, 82%); }
+:root[data-theme="dark"] .qt-tb-prev th { background: hsl(209, 35%, 18%); color: hsl(207, 45%, 82%); }
+:root[data-theme="dark"] .qt-warnchip { background: hsl(34, 38%, 18%); color: hsl(36, 45%, 82%); }
+:root[data-theme="dark"] .qt-warnbox { border-color: var(--border); }
+:root[data-theme="dark"] .qt-chipw { background: hsl(34, 38%, 18%); color: hsl(36, 45%, 82%); }
+:root[data-theme="dark"] .tl-sk { background: var(--surface); }
+:root[data-theme="dark"] .qt-tu-prev th { background: hsl(203, 35%, 15%); color: hsl(201, 45%, 82%); }
+:root[data-theme="dark"] .qt-tu-prev .tu-bag td { background: hsl(203, 37%, 15%); color: hsl(201, 45%, 82%); }
+:root[data-theme="dark"] .qt-tu-prev .tu-sub td { background: hsl(202, 32%, 15%); }
+:root[data-theme="dark"] .fl-galeri .fl-x { background: var(--surface); }
+:root[data-theme="dark"] .qt-st--rw-terkirim { background: hsl(217, 38%, 15%); color: hsl(218, 45%, 82%); }
+:root[data-theme="dark"] .qt-st--rw-diterima { background: hsl(210, 38%, 15%); color: hsl(216, 45%, 82%); }
+:root[data-theme="dark"] .qt-st--rw-disetujui { background: hsl(150, 29%, 18%); color: hsl(154, 45%, 82%); }
+:root[data-theme="dark"] .qt-st--rw-ditolak { background: hsl(6, 38%, 15%); color: hsl(6, 45%, 82%); }
+:root[data-theme="dark"] .qt-st--rw-belum_respons { background: hsl(38, 38%, 18%); color: hsl(37, 45%, 82%); }
+:root[data-theme="dark"] .ip-kartu { background: var(--surface); }
+:root[data-theme="dark"] .ip-ikon { background: hsl(33, 38%, 15%); color: hsl(32, 45%, 82%); }
+:root[data-theme="dark"] .ip-ikon--ok { background: hsl(206, 38%, 15%); color: hsl(207, 45%, 82%); }
+:root[data-theme="dark"] .ip-x { background: hsl(214, 23%, 15%); color: hsl(212, 18%, 82%); }
+:root[data-theme="dark"] .ip-x:hover { background: hsl(212, 22%, 15%); }
+:root[data-theme="dark"] .ip-orang { border-color: var(--border); }
+:root[data-theme="dark"] .ip-avatar { background: hsl(206, 38%, 15%); color: hsl(207, 45%, 82%); }
+:root[data-theme="dark"] .ip-kotak { background: hsl(210, 33%, 15%); border-color: var(--border); }
+:root[data-theme="dark"] .ip-btn--tegas { background: var(--surface); color: hsl(207, 45%, 82%); }
+:root[data-theme="dark"] .ip-btn--tegas:hover:not(:disabled) { background: hsl(206, 38%, 15%); }
+:root[data-theme="dark"] .ip-btn--bahaya { background: var(--surface); color: hsl(0, 45%, 82%); }
+:root[data-theme="dark"] .ip-btn--bahaya:hover:not(:disabled) { background: hsl(0, 38%, 15%); }
+:root[data-theme="dark"] .ip-btn--wa { background: hsl(146, 28%, 15%); color: hsl(147, 45%, 82%); border-color: var(--border); }
+:root[data-theme="dark"] .ip-btn--wa:hover { background: hsl(147, 26%, 18%); }
+:root[data-theme="dark"] .ip-input,
+:root[data-theme="dark"] .ip-select { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .ip-item { background: var(--surface); border-color: var(--border); }
+:root[data-theme="dark"] .ip-status.is-ok { background: hsl(155, 25%, 18%); color: hsl(155, 45%, 82%); }
+:root[data-theme="dark"] .ip-status.is-gagal { background: hsl(0, 38%, 15%); color: hsl(0, 45%, 82%); }
+:root[data-theme="dark"] .ip-status.is-info { background: hsl(39, 38%, 15%); color: hsl(36, 45%, 82%); }
+:root[data-theme="dark"] .mr-konfirm__kotak { background: var(--surface); color: var(--text); }
+:root[data-theme="dark"] .mr-konfirm__aksi button { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .st-laci > summary:hover { background: hsl(210, 33%, 15%); }
+:root[data-theme="dark"] .st-hapus { background: var(--surface); color: hsl(0, 45%, 82%); }
+:root[data-theme="dark"] .st-hapus:hover { background: hsl(0, 38%, 15%); }
+:root[data-theme="dark"] .mr-konfirm__kotak .mr-f input,
+:root[data-theme="dark"] .mr-konfirm__kotak .mr-f select,
+:root[data-theme="dark"] .mr-konfirm__kotak .mr-f textarea,
+:root[data-theme="dark"] .ip-kartu .mr-f input,
+:root[data-theme="dark"] .ip-kartu .mr-f select,
+:root[data-theme="dark"] .ip-kartu .mr-f textarea,
+:root[data-theme="dark"] .ip-item input,
+:root[data-theme="dark"] .ip-item select { background: var(--surface); color: var(--text); border-color: var(--border); }
+:root[data-theme="dark"] .mr-tag--asing { background: hsl(211, 38%, 15%); color: hsl(201, 45%, 82%); }
+:root[data-theme="dark"] .mr-toast--peringatan { background: hsl(39, 38%, 15%); color: hsl(36, 45%, 82%); }
+:root[data-theme="dark"] .vf-nav__t.is-aktif span { background: var(--surface); }
+:root[data-theme="dark"] .fl-tbl tr.fl-grup td { background: hsl(208, 34%, 15%); color: hsl(203, 45%, 82%); }
+@media (max-width: 640px) { @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fl-tbl tbody tr { background: var(--surface); } } }
+@media (max-width: 640px) { :root[data-theme="dark"] .fl-tbl tbody tr { background: var(--surface); } }
+@media (max-width: 760px) { @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .qt-m-tag--pdf { background: hsl(34, 38%, 18%); color: hsl(36, 45%, 82%); } } }
+@media (max-width: 760px) { :root[data-theme="dark"] .qt-m-tag--pdf { background: hsl(34, 38%, 18%); color: hsl(36, 45%, 82%); } }
+
+/* ---- Perbaikan manual (melengkapi override otomatis di atas) ---- */
+/* Variabel yang dulu tidak punya nilai gelap: komponen "lembut" (status, peringatan, info) tetap terang di tema gelap */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --accent-soft: #33260f; --danger-soft: #3a1a1a; --danger-border: #5a2a2a; --sky-soft: #14283f; --success-soft: #12301f; --mr-ok-garis: #1f5d49; --mr-garis: #33465f; --ck-ak: #f2a65a; --pf-ink: #e6ecf3; }
+}
+:root[data-theme="dark"] { --accent-soft: #33260f; --danger-soft: #3a1a1a; --danger-border: #5a2a2a; --sky-soft: #14283f; --success-soft: #12301f; --mr-ok-garis: #1f5d49; --mr-garis: #33465f; --ck-ak: #f2a65a; --pf-ink: #e6ecf3; }
+/* Variabel yang dipakai tetapi tidak pernah didefinisikan (jatuh ke putih di semua tema) */
+:root { --mr-card: var(--surface, #fff); --mr-garis: #c9d3e0; --mr-ok-garis: #b7e0c8; --mr-primary: #2F8FDB; --ck-ak: #B25600; }
+:root[data-theme="dark"] { --mr-card: var(--surface); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --mr-card: var(--surface); } }
+/* Dialog konfirmasi: mengikuti tema (dulu putih tetap) */
+.mr-konfirm__kotak { background: var(--surface, #fff); color: var(--text, #13283D); border: 1px solid var(--border, #DCE5EF); }
+.mr-konfirm__isi { color: var(--muted, #5D7085); }
+.mr-konfirm__aksi button:not(.mr-btn--utama):not(.mr-btn--bahaya) { background: var(--surface, #fff); color: var(--text, #13283D); border-color: var(--border, #DCE5EF); }
+/* Tautan aksen pada formulir centang: oranye lebih gelap di tema terang supaya terbaca */
+.fl-ck__lnk, .fl-ck__n { color: var(--ck-ak); }
+.fl-ck__lnk--b { color: var(--mr-muted, #6b7a90); }
+/* Teks peringatan kuning pada kotak catatan margin dan label versi: terbaca di tema gelap */
+.qt-warnbox > summary { color: var(--mr-warn-ink, #8a5a00); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .isl-versi { color: rgba(148, 164, 184, 0.75); } }
+:root[data-theme="dark"] .isl-versi { color: rgba(148, 164, 184, 0.75); }
+
+/* ---- Halaman login: ikut tema (dulu selalu terang). Foto pelabuhan tetap, kartu masuk dan kolom isian mengikuti tema. ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .login-screen { --bg: #0e1622; --surface: #162131; --border: #263449; --text: #e6ecf3; --muted: #94a4b8; --head: #9cc4f0; color-scheme: dark; }
+  :root:not([data-theme="light"]) .login-form-wrap { background: rgba(22, 33, 49, .9); border-color: rgba(255, 255, 255, .14); box-shadow: 0 -10px 40px rgba(2, 10, 26, .5), inset 0 1px 0 rgba(255, 255, 255, .06); }
+  :root:not([data-theme="light"]) .login-form-wrap h2, :root:not([data-theme="light"]) .login-mark { color: var(--head); }
+  :root:not([data-theme="light"]) .login-tutup:hover, :root:not([data-theme="light"]) .login-tutup:focus-visible { background: rgba(255, 255, 255, .08); }
+}
+:root[data-theme="dark"] .login-screen { --bg: #0e1622; --surface: #162131; --border: #263449; --text: #e6ecf3; --muted: #94a4b8; --head: #9cc4f0; color-scheme: dark; }
+:root[data-theme="dark"] .login-form-wrap { background: rgba(22, 33, 49, .9); border-color: rgba(255, 255, 255, .14); box-shadow: 0 -10px 40px rgba(2, 10, 26, .5), inset 0 1px 0 rgba(255, 255, 255, .06); }
+:root[data-theme="dark"] .login-form-wrap h2, :root[data-theme="dark"] .login-mark { color: var(--head); }
+:root[data-theme="dark"] .login-tutup:hover, :root[data-theme="dark"] .login-tutup:focus-visible { background: rgba(255, 255, 255, .08); }
+
+/* ---- Kontras tema terang: teks hijau status dan tautan oranye lebih gelap supaya terbaca pada latar pastel/putih ---- */
+:root { --success: #1A7F52; }
+.fl-tambah, .fl-unggah { color: var(--ck-ak); }
+.isl-versi { color: rgba(93, 112, 133, 0.95); }
+.login-mark span { color: var(--ck-ak); }

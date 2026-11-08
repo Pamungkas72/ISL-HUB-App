@@ -1,0 +1,55 @@
+# Tes HANYA-BACA di produksi memakai akun peran "lihat" (secret UJI_EMAIL dan UJI_PASSWORD).
+# Dijalankan manual saja (Actions > Tes produksi (akun lihat) > Run workflow).
+name: Tes produksi (akun lihat)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Pasang Playwright dan Chromium
+        run: |
+          mkdir -p "$RUNNER_TEMP/tes"
+          cd "$RUNNER_TEMP/tes"
+          npm init -y > /dev/null
+          npm install playwright@1.47.2
+          npx playwright install --with-deps chromium
+
+      - name: Jalankan tes lihat
+        env:
+          UJI_EMAIL: ${{ secrets.UJI_EMAIL }}
+          UJI_PASSWORD: ${{ secrets.UJI_PASSWORD }}
+          HASIL_DIR: ${{ runner.temp }}/hasil
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/e2e/lihat-produksi.js
+
+      - name: Ringkasan hasil
+        if: always()
+        run: |
+          echo "### Hasil tes produksi (akun lihat)" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f "$RUNNER_TEMP/hasil/ringkasan.json" ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat "$RUNNER_TEMP/hasil/ringkasan.json" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Tes tidak menghasilkan ringkasan. Periksa log langkah sebelumnya." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hasil-tes-lihat
+          path: ${{ runner.temp }}/hasil
+          if-no-files-found: ignore

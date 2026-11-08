@@ -1,0 +1,43 @@
+# Melihat form Customs Clearance di produksi (hanya-lihat, tidak menyimpan data). Butuh secret UJI_EMAIL dan UJI_PASSWORD.
+# Dijalankan manual saja (Actions > Tes form CC (lihat) > Run workflow).
+name: Tes form CC (lihat)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Pasang Playwright dan Chromium
+        run: |
+          mkdir -p "$RUNNER_TEMP/tes"
+          cd "$RUNNER_TEMP/tes"
+          npm init -y > /dev/null
+          npm install playwright@1.47.2
+          npx playwright install --with-deps chromium
+
+      - name: Lihat form CC
+        env:
+          UJI_EMAIL: ${{ secrets.UJI_EMAIL }}
+          UJI_PASSWORD: ${{ secrets.UJI_PASSWORD }}
+          HASIL_DIR: ${{ runner.temp }}/hasil
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/e2e/lihat-form-cc.js
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hasil-form-cc
+          path: ${{ runner.temp }}/hasil
+          if-no-files-found: ignore

@@ -1,0 +1,65 @@
+
+/* Area login selalu memakai palet terang (tidak ikut tema gelap perangkat): kartu, kolom isian, dan teks tetap terbaca. */
+.login-screen {
+  --bg: #F3F7FB; --surface: #FFFFFF; --border: #D5DEE9; --text: #10233F; --muted: #5b6977; --head: #0A3D66;
+  color-scheme: light;
+}
+
+/* ===========================================================
+   LOGIN HP (<= 760 px) — foto pelabuhan 2,5D di belakang (WebGL, js/portal-parallax.js),
+   kartu masuk kaca di bagian bawah supaya mudah dijangkau ibu jari. Bergerak mengikuti kemiringan HP atau sentuhan.
+   Dimuat hanya di HP (media pada <link>). Form login yang sama dengan desktop, tampil langsung (bukan pop-up).
+   =========================================================== */
+:root { --pt-ease: cubic-bezier(.22, .61, .36, 1); --pt-kuning: #f29a2e; }
+
+.login-screen { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; padding: 0; background: #0b1a30; }
+
+.login-screen .portal { display: block; position: fixed; inset: 0; z-index: 0; overflow: hidden; background: linear-gradient(#16365f, #0b1a30); }
+.portal-kanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 1.2s var(--pt-ease); }
+.portal.siap .portal-kanvas { opacity: 1; }
+.portal-scrim { position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(4, 16, 36, .62) 0%, rgba(4, 16, 36, .12) 34%, rgba(4, 16, 36, 0) 52%, rgba(4, 16, 36, .5) 100%); }
+
+.portal-atas { position: absolute; top: 0; left: 0; right: 0; padding: calc(18px + env(safe-area-inset-top)) 22px 0; pointer-events: none; }
+.portal-merek { font: 800 20px var(--font-head); letter-spacing: .06em; color: #fff; text-shadow: 0 2px 12px rgba(4, 16, 36, .6); }
+.portal-merek span { color: var(--pt-kuning); }
+.portal-judul { position: absolute; top: calc(62px + env(safe-area-inset-top)); left: 22px; right: 22px; color: #fff; text-shadow: 0 2px 18px rgba(4, 16, 36, .6); }
+.portal-kicker { margin: 0 0 8px; font: 700 11px Inter, system-ui, sans-serif; letter-spacing: .26em; text-transform: uppercase; color: #ffd08a; }
+.portal-judul h1 { margin: 0; font: 800 26px/1.12 var(--font-head); letter-spacing: -.01em; max-width: 320px; }
+.portal-sub, .portal-cta, .portal-modul { display: none; }
+.pt-tip { display: none; }
+
+/* deretan modul (chip kaca) di atas kartu masuk */
+.login-screen .mob-modul { display: flex; gap: 8px; position: relative; z-index: 2; overflow-x: auto; padding: 0 14px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.mob-modul::-webkit-scrollbar { display: none; }
+.mob-chip { all: unset; box-sizing: border-box; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px 9px 10px; border-radius: 999px; cursor: pointer;
+  font: 700 13px Inter, system-ui, sans-serif; color: #fff; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .3);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); opacity: .8; transition: transform .25s var(--pt-ease), background-color .25s, opacity .25s; }
+.mob-chip i { width: 18px; height: 12px; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25), inset 5px 0 0 rgba(0, 0, 0, .14); }
+.mob-chip.is-pilih { opacity: 1; background: linear-gradient(135deg, rgba(255, 179, 71, .5), rgba(255, 255, 255, .18)); border-color: rgba(255, 190, 100, .9); }
+.mob-chip:active { transform: scale(.96); }
+.mob-chip:focus-visible { outline: 2px solid #ffd08a; outline-offset: 2px; }
+.login-screen .mob-info { display: block; position: relative; z-index: 2; margin: 0; padding: 0 20px; min-height: 0; max-height: 0; overflow: hidden; opacity: 0; color: #ffe2b0; font: 600 12.5px Inter, system-ui, sans-serif; text-shadow: 0 1px 8px rgba(4, 16, 36, .7); transition: opacity .25s, max-height .25s; }
+.login-screen .mob-info.on { opacity: 1; max-height: 40px; padding-bottom: 6px; }
+
+/* kartu masuk (kaca) di bagian bawah */
+.login-form-side { position: relative; z-index: 2; width: 100%; display: block; padding: 0 10px calc(10px + env(safe-area-inset-bottom)); }
+.login-form-wrap { max-width: none; width: 100%; padding: 14px 16px 10px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, .55);
+  background: rgba(255, 255, 255, .86); -webkit-backdrop-filter: blur(20px) saturate(1.5); backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow: 0 -10px 40px rgba(2, 10, 26, .35), inset 0 1px 0 rgba(255, 255, 255, .8); }
+.login-mark { display: none; } /* merek sudah tampil di atas layar */
+.login-form-wrap h2 { font-size: 18px; margin-bottom: 0; }
+.login-form-wrap .login-sub { margin: 0 0 10px; font-size: 12px; line-height: 1.4; }
+.field { margin-bottom: 8px; }
+.field label { font-size: 12px; margin-bottom: 3px; }
+.field input { padding: 8px 12px; border-radius: 9px; }
+.login-form-wrap .btn-primary { padding: 10px 14px; margin-top: 2px; }
+.field input, .field select { font-size: 16px; } /* 16 px mencegah zoom otomatis iOS saat fokus */
+.field select { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: 10px; font-family: inherit; background: var(--bg); color: var(--text); }
+.field select:focus { outline: none; border-color: var(--sky); box-shadow: 0 0 0 3px var(--sky-soft); }
+.login-hint { margin-top: 8px; font-size: 11.5px; }
+.login-screen .login-hint + .login-hint { margin-top: 2px; }
+.login-form-wrap .btn-primary { font-size: 15px; }
+
+@media (max-height: 760px) { .portal-judul h1 { font-size: 21px; } .portal-judul { top: calc(50px + env(safe-area-inset-top)); } .portal-kicker { margin-bottom: 6px; } }
+@media (prefers-reduced-motion: reduce) { .portal-kanvas { opacity: 1; transition: none; } .mob-chip, .mob-info { transition: none; } }

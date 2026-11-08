@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <script>(function(){var s=null;try{s=localStorage.getItem("islhub-sidebar")}catch(e){}if(s!=="buka")document.documentElement.classList.add("sb-lipat")})();</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+<link rel="shortcut icon" href="favicon.ico" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0A3D66" />
+<script src="js/tema.js"></script>
+<title>ISL HUB — Masuk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/tambahan.css" />
+<link rel="stylesheet" href="css/tema-gelap.css" />
+<!-- Portal foto pelabuhan 2,5D: gaya desktop (>= 761 px) dan gaya HP (<= 760 px) dipisah lewat media pada <link>. -->
+<link rel="stylesheet" href="css/login-portal.css" media="(min-width: 761px)" />
+<link rel="stylesheet" href="css/login-mobile.css" media="(max-width: 760px)" />
+<style>
+.login-tutup{display:none}
+.modul-info{display:none}
+.mob-modul,.mob-info{display:none}
+</style>
+</head>
+<body>
+
+<div class="login-screen">
+  <!-- Desktop: latar foto pelabuhan 2,5D (WebGL, js/portal-parallax.js). Tiap modul membuka pop-up login. Disembunyikan di HP. -->
+  <div class="portal" id="portal">
+    <canvas class="portal-kanvas" id="portal-kanvas" aria-hidden="true"></canvas>
+    <div class="portal-scrim" aria-hidden="true"></div>
+    <header class="portal-atas"><div class="portal-merek">ISL <span>HUB</span></div></header>
+    <div class="portal-judul">
+      <p class="portal-kicker">Portal modul</p>
+      <h1>Satu pintu untuk seluruh operasi logistik Anda</h1>
+      <p class="portal-sub">Pilih modul, lalu masuk dengan akun Anda.</p>
+      <button type="button" class="portal-cta" id="portal-masuk">Masuk ke ISL HUB <span aria-hidden="true">&rarr;</span></button>
+    </div>
+    <nav class="portal-modul" aria-label="Pilih modul">
+      <button type="button" class="tier" data-modul="isl" data-nama="ISL HUB" data-aktif="1" aria-label="ISL HUB - buka login">
+        <svg class="tier-ikon" viewBox="0 0 48 34" aria-hidden="true"><rect x="2" y="3" width="44" height="28" rx="3" fill="#1d5fd6"/><rect x="6" y="7" width="36" height="20" fill="#0d1a2b"/><g class="d-kiri"><rect x="6" y="7" width="18" height="20" fill="#1d5fd6" opacity=".92"/></g><g class="d-kanan"><rect x="24" y="7" width="18" height="20" fill="#1d5fd6" opacity=".92"/></g><path d="M6 7v20M15 7v20M24 7v20M33 7v20M42 7v20" stroke="#000" stroke-opacity=".22"/></svg><span class="tier-teks"><b>ISL HUB</b><i>Quotation, master rate, dan customer</i></span><span class="tier-status">Masuk</span>
+      </button>
+      <button type="button" class="tier" data-modul="m2" data-nama="Modul 2" data-aktif="0" aria-label="Modul 2 - belum aktif">
+        <svg class="tier-ikon" viewBox="0 0 48 34" aria-hidden="true"><rect x="2" y="3" width="44" height="28" rx="3" fill="#e8601c"/><rect x="6" y="7" width="36" height="20" fill="#0d1a2b"/><g class="d-kiri"><rect x="6" y="7" width="18" height="20" fill="#e8601c" opacity=".92"/></g><g class="d-kanan"><rect x="24" y="7" width="18" height="20" fill="#e8601c" opacity=".92"/></g><path d="M6 7v20M15 7v20M24 7v20M33 7v20M42 7v20" stroke="#000" stroke-opacity=".22"/></svg><span class="tier-teks"><b>Modul 2</b><i>Segera hadir</i></span><span class="tier-status">Segera</span>
+      </button>
+      <button type="button" class="tier" data-modul="m3" data-nama="Modul 3" data-aktif="0" aria-label="Modul 3 - belum aktif">
+        <svg class="tier-ikon" viewBox="0 0 48 34" aria-hidden="true"><rect x="2" y="3" width="44" height="28" rx="3" fill="#2a9d3f"/><rect x="6" y="7" width="36" height="20" fill="#0d1a2b"/><g class="d-kiri"><rect x="6" y="7" width="18" height="20" fill="#2a9d3f" opacity=".92"/></g><g class="d-kanan"><rect x="24" y="7" width="18" height="20" fill="#2a9d3f" opacity=".92"/></g><path d="M6 7v20M15 7v20M24 7v20M33 7v20M42 7v20" stroke="#000" stroke-opacity=".22"/></svg><span class="tier-teks"><b>Modul 3</b><i>Segera hadir</i></span><span class="tier-status">Segera</span>
+      </button>
+      <button type="button" class="tier" data-modul="m4" data-nama="Modul 4" data-aktif="0" aria-label="Modul 4 - belum aktif">
+        <svg class="tier-ikon" viewBox="0 0 48 34" aria-hidden="true"><rect x="2" y="3" width="44" height="28" rx="3" fill="#d63a2e"/><rect x="6" y="7" width="36" height="20" fill="#0d1a2b"/><g class="d-kiri"><rect x="6" y="7" width="18" height="20" fill="#d63a2e" opacity=".92"/></g><g class="d-kanan"><rect x="24" y="7" width="18" height="20" fill="#d63a2e" opacity=".92"/></g><path d="M6 7v20M15 7v20M24 7v20M33 7v20M42 7v20" stroke="#000" stroke-opacity=".22"/></svg><span class="tier-teks"><b>Modul 4</b><i>Segera hadir</i></span><span class="tier-status">Segera</span>
+      </button>
+      <button type="button" class="tier" data-modul="m5" data-nama="Modul 5" data-aktif="0" aria-label="Modul 5 - belum aktif">
+        <svg class="tier-ikon" viewBox="0 0 48 34" aria-hidden="true"><rect x="2" y="3" width="44" height="28" rx="3" fill="#f5b81c"/><rect x="6" y="7" width="36" height="20" fill="#0d1a2b"/><g class="d-kiri"><rect x="6" y="7" width="18" height="20" fill="#f5b81c" opacity=".92"/></g><g class="d-kanan"><rect x="24" y="7" width="18" height="20" fill="#f5b81c" opacity=".92"/></g><path d="M6 7v20M15 7v20M24 7v20M33 7v20M42 7v20" stroke="#000" stroke-opacity=".22"/></svg><span class="tier-teks"><b>Modul 5</b><i>Segera hadir</i></span><span class="tier-status">Segera</span>
+      </button>
+    </nav>
+  </div>
+  <!-- HP: deretan modul (kartu desktop disembunyikan di HP) -->
+  <nav class="mob-modul" aria-label="Pilih modul">
+    <button type="button" class="mob-chip is-pilih" data-modul="isl" data-nama="ISL HUB" data-aktif="1"><i style="background:#1d5fd6"></i>ISL HUB</button>
+    <button type="button" class="mob-chip" data-modul="m2" data-nama="Modul 2" data-aktif="0"><i style="background:#e8601c"></i>Modul 2</button>
+    <button type="button" class="mob-chip" data-modul="m3" data-nama="Modul 3" data-aktif="0"><i style="background:#2a9d3f"></i>Modul 3</button>
+    <button type="button" class="mob-chip" data-modul="m4" data-nama="Modul 4" data-aktif="0"><i style="background:#d63a2e"></i>Modul 4</button>
+    <button type="button" class="mob-chip" data-modul="m5" data-nama="Modul 5" data-aktif="0"><i style="background:#f5b81c"></i>Modul 5</button>
+  </nav>
+  <p class="mob-info" id="mob-info" role="status" aria-live="polite"></p>
+  <div class="login-form-side">
+    <div class="login-form-wrap">
+      <button type="button" class="login-tutup" id="login-tutup" aria-label="Tutup form masuk">&times;</button>
+      <div class="login-mark">ISL <span>HUB</span></div>
+      <h2 id="login-judul">Masuk</h2>
+      <p class="login-sub" id="login-sub">Gunakan akun yang sudah terdaftar. Belum punya? Daftar akun.</p>
+
+      <div class="login-error hidden" id="login-error"></div>
+
+      <form id="login-form">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-primary" id="btn-submit">Masuk</button>
+      </form>
+
+      <form id="daftar-form" class="hidden" novalidate>
+        <div class="field"><label for="df-nama">Nama lengkap</label><input type="text" id="df-nama" autocomplete="name" required /></div>
+        <div class="field"><label for="df-email">Email</label><input type="email" id="df-email" autocomplete="username" required /></div>
+        <div class="field"><label for="df-pass">Kata sandi (min. 6 karakter)</label><input type="password" id="df-pass" autocomplete="new-password" required /></div>
+        <button type="submit" class="btn-primary" id="df-submit">Daftar</button>
+        <p class="login-hint">Akun baru aktif setelah disetujui master.</p>
+      </form>
+      <p class="login-hint"><a href="#" id="tog-daftar" style="color:inherit;text-decoration:underline">Belum punya akun? Daftar akun</a></p>
+      <p class="login-hint"><a href="#" id="lupa-sandi" style="color:inherit;text-decoration:underline">Lupa kata sandi?</a></p>
+      <p class="login-hint hidden" id="lupa-info" role="status"></p>
+    </div>
+  </div>
+  <div class="modul-info" id="modul-info" inert>
+    <div class="login-form-wrap" role="dialog" aria-modal="true" aria-labelledby="info-nama">
+      <button type="button" class="login-tutup" id="info-tutup" aria-label="Tutup">&times;</button>
+      <div class="login-mark" id="info-nama">MODUL</div>
+      <h2>Belum aktif</h2>
+      <p class="login-sub">Modul ini belum tersedia. Login-nya akan muncul di sini saat modul dirilis.</p>
+      <button type="button" class="btn-primary" id="info-ok">Mengerti</button>
+    </div>
+  </div>
+</div>
+
+
+<script type="module" src="js/login-portal.js"></script>
+<script type="module" src="js/gulir-tetap.js"></script>
+<script type="module" src="js/login.js"></script>
+<script type="module" src="js/anti-salin.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <script>(function(){var s=null;try{s=localStorage.getItem("islhub-sidebar")}catch(e){}if(s!=="buka")document.documentElement.classList.add("sb-lipat")})();</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+<link rel="shortcut icon" href="favicon.ico" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#10233F" />
+<script src="js/tema.js"></script>
+<script src="js/ribuan.js"></script>
+<meta name="robots" content="noindex, nofollow" />
+<title>ISL HUB — Customer dan Quotation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- style.css dan master-rate.css dulu, app.css sesudahnya: bagian shell (sidebar, konten) tetap dari app.css -->
+<link rel="stylesheet" href="css/style.css" />
+<link rel="stylesheet" href="css/master-rate.css" />
+<link rel="stylesheet" href="css/app.css" />
+<link rel="stylesheet" href="css/tambahan.css" />
+<link rel="stylesheet" href="css/tema-gelap.css" />
+<!-- Pustaka lokal (tidak bergantung CDN): Excel, PDF, tabel PDF, tangkapan halaman, dan Word -->
+  <script>
+  /* Pustaka ekspor (Excel, PDF, Word) dimuat setelah halaman siap dan sedang idle, bukan saat halaman dibuka. Urutannya dijaga. */
+  window.addEventListener("load", function () {
+    var daftar = ["vendor/xlsx.full.min.js", "vendor/jspdf.umd.min.js", "vendor/jspdf.plugin.autotable.min.js", "vendor/html2canvas.min.js", "vendor/docx.iife.js"];
+    var mulai = function () { daftar.forEach(function (src) { var s = document.createElement("script"); s.src = src; s.async = false; document.body.appendChild(s); }); };
+    if ("requestIdleCallback" in window) requestIdleCallback(mulai, { timeout: 1500 }); else setTimeout(mulai, 800);
+  });
+</script>
+<script src="js/sk-parser.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+  <nav id="app-nav" class="app-nav"></nav>
+
+  <div class="app-main">
+    <div class="app-topbar">
+      <h1>Memuat...</h1>
+      <div class="app-topbar__user" id="user-email">Memuat...</div>
+    </div>
+
+    <!-- Kerangka kosong: modul Customer dan Quotation membuat area kerjanya sendiri di sini -->
+    <div class="app-content mr hidden" id="mr-root"></div>
+
+    <!-- Halaman yang dirute di dalam shell ini (lihat app-boot.js) -->
+    <div class="app-content mr hidden" id="mr-kontainer"></div>
+    <div class="app-content mr hidden" id="uj-root"></div>
+    <div class="app-content mr hidden" id="st-root"><p class="mr-sub">Memuat…</p></div>
+    <div class="app-content hidden" id="bd-root">
+      <p style="color:var(--muted); font-size:14px; margin:0;">
+        Kerangka dasar sudah aktif. Modul di bawah akan diisi bertahap sesuai urutan fase.
+      </p>
+      <div class="module-grid" id="module-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="mr-layer" class="mr-layer"></div>
+<div id="mr-toasts" class="mr-toasts" aria-live="polite"></div>
+
+<script src="js/versi.js"></script>
+<script src="js/ke-atas.js"></script>
+<script type="module" src="js/gulir-tetap.js"></script>
+<script type="module" src="js/app-boot.js"></script>
+<script type="module" src="js/pintasan.js"></script>
+<script type="module" src="js/anti-salin.js"></script>
+<script type="module" src="js/keterangan.js"></script>
+</body>
+</html>

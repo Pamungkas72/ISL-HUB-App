@@ -1,0 +1,10 @@
+[
+  {
+    "origin": [
+      "https://system-marketing-bd-isl-2026.web.app",
+      "https://system-marketing-bd-isl-2026.firebaseapp.com"
+    ],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]

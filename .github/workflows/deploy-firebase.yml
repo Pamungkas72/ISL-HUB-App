@@ -1,0 +1,47 @@
+# Deploy otomatis ke Firebase saat perubahan masuk ke main:
+# hosting + aturan Firestore dan Storage. Butuh secret FIREBASE_SERVICE_ACCOUNT
+# (JSON service account proyek system-marketing-bd-isl-2026 dengan peran Firebase Rules Admin dan Firebase Hosting Admin).
+name: Deploy Firebase
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-firebase
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Hanya main yang boleh men-deploy, termasuk lewat Run workflow dari branch lain.
+    # Hanya main milik organisasi ISL-Company1818 (bukan fork orang lain, apa pun nama repositorinya) yang boleh men-deploy.
+    if: github.ref == 'refs/heads/main' && github.repository_owner == 'ISL-Company1818'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pasang Firebase CLI
+        run: npm install -g firebase-tools@13.29.1
+
+      - name: Siapkan kredensial
+        env:
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA_JSON" ]; then echo "Secret FIREBASE_SERVICE_ACCOUNT belum diisi."; exit 1; fi
+          printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+
+      - name: Tulis versi build
+        run: |
+          versi="$(git rev-parse --short HEAD) · $(TZ=Asia/Jakarta date +'%d %b %Y %H:%M') WIB"
+          sed -i "s/^window.ISL_VERSI = .*/window.ISL_VERSI = \"$versi\";/" public/js/versi.js
+          grep -n "ISL_VERSI =" public/js/versi.js
+
+      - name: Deploy aturan dan hosting
+        run: firebase deploy --only firestore:rules,storage,hosting --non-interactive --project system-marketing-bd-isl-2026
+
+      - name: Bersihkan kredensial
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
