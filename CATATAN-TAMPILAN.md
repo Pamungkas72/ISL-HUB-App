@@ -2,6 +2,11 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-08 (Pengaturan dokumen > Lini bisnis: satu daftar gabungan)
+- Template, markup, dan tabel dokumen tiap lini kini satu baris, tidak lagi tiga daftar terpisah yang mengulang nama lini. HP: ketuk baris untuk membuka Atur template, stepper markup, dan Atur tabel. Desktop: tiga kolom langsung terlihat.
+- Ringkasan KPI di atas (template terisi, markup sehat, lini aktif, satuan) dan penyaring Semua / Belum diisi / Markup tipis. Satuan menjadi lipatan.
+- Hanya master dan admin. Sales tetap hanya melihat Satuan. Tombol Tabel universal, Simpan markup, dan sembunyikan lini (master) tetap ada.
+
 ## 2026-11-04 (desktop Quotation dan Master Rate diseragamkan dengan desain HP)
 
 - **Quotation dan Master Rate di desktop kini memakai bahasa desain yang sama dengan HP** (tema, komponen, ikon, warna), dengan data tetap berbentuk tabel berkolom. Disepakati: komponen dan tema seragam dengan tabel tetap; cakupan Quotation dan Master Rate semua tab; aksi baris muncul saat kursor di atas baris; alur pilih banyak dan hapus di desktop tidak berubah (alur 3 pilihan hanya di HP). Halaman lain (Customer, Dashboard, Beranda, Pengaturan) tidak berubah.

@@ -2168,7 +2168,7 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .lg-fil button{border:1px solid var(--mr-border);border-radius:999px;padding:6px 12px;background:var(--mr-surface);color:var(--mr-muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
 .lg-fil button em{font-style:normal;margin-left:3px;padding:0 6px;border-radius:99px;background:var(--mr-navy-soft);color:var(--mr-ink);font-size:11px}
 .lg-fil button.is-aktif{background:var(--mr-navy);border-color:var(--mr-navy);color:#fff}
-.lg-fil button.is-aktif em{background:rgba(255,255,255,.22);color:#fff}
+.lg-fil button.is-aktif em{background:rgba(0,0,0,.3);color:#fff}
 .lg-daftar{border:1px solid var(--mr-border);border-radius:14px;overflow:hidden;background:var(--mr-surface)}
 .lg-daftar[data-f="kosong"] .lg-row:not([data-terisi="0"]),.lg-daftar[data-f="tipis"] .lg-row[data-mk="hijau"]{display:none}
 .lg-row{border-top:1px solid var(--mr-border)}.lg-row:first-child{border-top:0}
