@@ -4690,6 +4690,8 @@ function markupKartuSegarkan(kartu) {
   const n = raw === '' ? AQ.markupBawaan : Number(raw); const kelas = isFinite(n) && n >= 0 ? markupNilaiKelas(n) : null;
   kartu.classList.remove('is-merah', 'is-kuning', 'is-hijau'); if (kelas) kartu.classList.add('is-' + kelas);
   const ket = kartu.querySelector('.qt-mk-ket'); if (ket && kelas) ket.textContent = MARKUP_KET[kelas];
+  const baris = kartu.closest('.lg-row'), tag = baris && baris.querySelector('.lg-tm');
+  if (tag && kelas) { tag.textContent = 'Markup ' + String(n).replace('.', ',') + '%'; tag.className = 'lg-tg lg-tm ' + (kelas === 'hijau' ? 'ok' : 'warn'); baris.dataset.mk = kelas; }
 }
 function htmlMarkupLini(ed) {
   const lini = (MR() && MR().lini) || [];
@@ -4697,6 +4699,31 @@ function htmlMarkupLini(ed) {
   return `<div class="qt-mk-kisi">${lini.map(l => { const t = targetLini(l.id); const tampil = t === null ? '' : String(t).replace('.', ','); const nama = esc(l.nama || l.id); return `<div class="qt-mk-kartu is-${markupNilaiKelas(t === null ? AQ.markupBawaan : t)}"><div class="qt-mk-nama"><span>${nama}${l.aktif === false ? ' <em class="mr-sub">(nonaktif)</em>' : ''}</span>${ed ? `<button type="button" class="qt-mk-edit" data-mk-edit="${esc(l.id)}" aria-label="Ubah markup ${nama}" title="Ubah markup">${ik('edit', 13)}</button>` : ''}</div><div class="qt-mk-step"><button type="button" class="qt-mk-btn" data-mk-step="${esc(l.id)}" data-delta="-1" ${ed ? '' : 'disabled'} aria-label="Kurangi 1% ${nama}">−</button><label class="qt-mk-in"><input data-mk="${esc(l.id)}" inputmode="decimal" value="${tampil}" placeholder="${AQ.markupBawaan}" ${ed ? '' : 'disabled'} autocomplete="off" aria-label="Rekomendasi markup ${nama}"><b>%</b></label><button type="button" class="qt-mk-btn" data-mk-step="${esc(l.id)}" data-delta="1" ${ed ? '' : 'disabled'} aria-label="Tambah 1% ${nama}">+</button></div><div class="mr-sub qt-mk-ket">${MARKUP_KET[markupNilaiKelas(t === null ? AQ.markupBawaan : t)]}</div></div>`; }).join('')}</div>
     ${ed ? `<div class="qt-tbaks" style="margin:12px 0 0"><button type="button" class="mr-btn mr-btn--kecil mr-btn--utama" data-qt="pg-markup-simpan">${ik('cek', 14)} Simpan markup</button></div>` : ''}`;
 }
+/* Lini bisnis (desain 1, 8 Nov 2026): satu daftar gabungan. Template, markup, dan tabel dokumen tiap lini ada di satu baris, dengan ringkasan KPI di atas. */
+function htmlLiniGabungan() {
+  const ed = bisaEdit(), sembunyi = PENG.liniSembunyi || [], lini = daftarLini().filter(l => l.resmi && !sembunyi.includes(l.key));
+  const baris = lini.map(l => {
+    const n = templateBaris(l.key).length, t = targetLini(l.key), nilai = t === null ? AQ.markupBawaan : t, kelas = markupNilaiKelas(nilai), tampil = t === null ? '' : String(t).replace('.', ','), nama = esc(l.nama), kol = kolomLini(l.key).length + 1, diatur = !!tabelSimpan(l.key), key = esc(l.key);
+    const html = `<div class="lg-row" data-terisi="${n ? 1 : 0}" data-mk="${kelas}"><button type="button" class="lg-sum" data-lg="buka" aria-expanded="false"><span class="lg-nm">${nama}</span><span class="lg-at"><span class="lg-tg ${n ? 'ok' : 'kos'}">${n ? n + ' layanan' : 'Belum diisi'}</span><span class="lg-tg lg-tm ${kelas === 'hijau' ? 'ok' : 'warn'}">Markup ${String(nilai).replace('.', ',')}%</span><span class="lg-tg">${kol} kolom</span></span><i class="lg-cv" aria-hidden="true"></i></button>
+      <div class="lg-body"><div class="lg-bl"><div><b>Template</b><small>${n ? n + ' layanan' : 'Belum diisi'}</small></div><button type="button" class="mr-btn mr-btn--kecil" data-qt="atur-template" data-lini="${key}" aria-label="Atur template ${nama}">Atur</button>${masterSaja() ? `<button type="button" class="qt-tl-x" data-qt="tl-sembunyi" data-lini="${key}" aria-label="Hapus ${nama} dari daftar" title="Hapus dari daftar (master)">${ik('tutup', 14)}</button>` : ''}</div>
+        <div class="lg-bl qt-mk-kartu is-${kelas}"><div><b>Markup</b><small class="qt-mk-ket">${MARKUP_KET[kelas]}</small></div><div class="qt-mk-step"><button type="button" class="qt-mk-btn" data-mk-step="${key}" data-delta="-1" ${ed ? '' : 'disabled'} aria-label="Kurangi 1% ${nama}">−</button><label class="qt-mk-in"><input data-mk="${key}" inputmode="decimal" value="${tampil}" placeholder="${AQ.markupBawaan}" ${ed ? '' : 'disabled'} autocomplete="off" aria-label="Rekomendasi markup ${nama}"><b>%</b></label><button type="button" class="qt-mk-btn" data-mk-step="${key}" data-delta="1" ${ed ? '' : 'disabled'} aria-label="Tambah 1% ${nama}">+</button></div></div>
+        <div class="lg-bl"><div><b>Tabel dokumen</b><small>${kol} kolom · ${diatur ? 'diatur' : 'bawaan'}</small></div><button type="button" class="mr-btn mr-btn--kecil" data-qt="atur-tabel" data-lini="${key}" aria-label="Atur tabel ${nama}">Atur</button></div></div></div>`;
+    return { n, kelas, html };
+  });
+  const terisi = baris.filter(b => b.n).length, sehat = baris.filter(b => b.kelas === 'hijau').length, total = baris.length, satuan = ((window.__islMR || {}).satuan || []).length;
+  const kpi = (a, b, c = '') => `<div class="lg-kpi ${c}"><b>${a}</b><span>${b}</span></div>`;
+  const sb = masterSaja() && sembunyi.length ? `<div class="qt-tl-sembunyi"><span class="mr-sub">Disembunyikan:</span>${sembunyi.map(k => { const x = daftarLini().find(z => z.key === k); return `<button type="button" class="qt-chip qt-chip--kosong" data-qt="tl-tampil" data-lini="${esc(k)}">${esc(x ? x.nama : k)} ↺</button>`; }).join('')}</div>` : '';
+  return `<div class="lg">
+    <div class="lg-kpis">${kpi(`${terisi}<small>/${total}</small>`, 'Template terisi', terisi < total ? 'is-warn' : '')}${kpi(`${sehat}<small>/${total}</small>`, 'Markup sehat', sehat < total ? 'is-warn' : '')}${kpi(total, 'Lini aktif')}${kpi(satuan, 'Satuan')}</div>
+    <div class="lg-fil" role="group" aria-label="Saring lini"><button type="button" class="is-aktif" data-lg="saring" data-f="">Semua <em>${total}</em></button><button type="button" data-lg="saring" data-f="kosong">Belum diisi <em>${total - terisi}</em></button><button type="button" data-lg="saring" data-f="tipis">Markup tipis <em>${total - sehat}</em></button></div>
+    <div class="lg-daftar" data-f="">${baris.map(b => b.html).join('') || '<p class="mr-sub" style="padding:12px">Belum ada lini resmi.</p>'}</div>
+    <div class="lg-aksi"><button type="button" class="mr-btn mr-btn--kecil" data-qt="atur-tabel-uni">${ik('file', 14)} Tabel universal</button>${ed ? `<button type="button" class="mr-btn mr-btn--kecil mr-btn--utama" data-qt="pg-markup-simpan">${ik('cek', 14)} Simpan markup</button>` : ''}</div>${sb}</div>`;
+}
+document.addEventListener('click', ev => {
+  const e = ev.target.closest('[data-lg]'); if (!e) return;
+  if (e.dataset.lg === 'buka') { const r = e.closest('.lg-row'), b = r.classList.toggle('is-buka'); e.setAttribute('aria-expanded', b ? 'true' : 'false'); }
+  else if (e.dataset.lg === 'saring') { const w = e.closest('.lg'); w.querySelector('.lg-daftar').dataset.f = e.dataset.f; w.querySelectorAll('[data-lg="saring"]').forEach(x => x.classList.toggle('is-aktif', x === e)); }
+});
 document.addEventListener('input', ev => { const inp = ev.target.closest && ev.target.closest('[data-mk]'); if (inp) markupKartuSegarkan(inp.closest('.qt-mk-kartu')); });
 document.addEventListener('click', ev => {
   const ed = ev.target.closest('[data-mk-edit]');
@@ -4788,6 +4815,7 @@ function paginaPengaturan(html) {
   if (pilih) {
     const banyak = pilih.kartu.length > 1, paraInfo = [], isi = [];
     if (pilih.kartu.every(d => BAGIAN_LANGSUNG.includes(d.dataset.pgd))) paraInfo.push(esc('Isian di bagian ini tersimpan lewat tombol di dalamnya, jadi tidak perlu tombol simpan bagian.'));
+    const GABUNG = ['templateperlinibisni', 'markup', 'tabeldokumenperlinib'], gabung = pilih.id === 'lini' && GABUNG.every(x => ada(x)); let gabungSudah = false;
     pilih.kartu.forEach(d => {
       const k = d.dataset.pgd, sub = ((d.querySelector('summary h3') || {}).textContent || k).trim(), s = d.cloneNode(true);
       if (s.querySelector('summary')) s.querySelector('summary').remove();
@@ -4795,7 +4823,9 @@ function paginaPengaturan(html) {
       const paraAsli = [...s.querySelectorAll(':scope > p.qt-ket')], awalan = banyak ? `<b>${esc(sub)}:</b> ` : '';
       [...(INFO_BAGIAN[k] || []).map(esc), ...paraAsli.map(x => x.innerHTML)].forEach(h => paraInfo.push(awalan + h));
       paraAsli.forEach(x => x.remove());
-      isi.push(`<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${s.innerHTML}</div>`);
+      if (gabung && GABUNG.includes(k)) { if (!gabungSudah) { gabungSudah = true; isi.push(`<div class="qt-subseksi" data-pgd="lini-gabungan">${htmlLiniGabungan()}</div>`); } return; }
+      const lipat = gabung && k === 'satuanquotation';
+      isi.push(`<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${lipat ? `<details class="lg-satuan"><summary><h3 class="qt-subseksi__judul">${esc(sub)}</h3><small>${((window.__islMR || {}).satuan || []).length} satuan</small></summary>${s.innerHTML}</details>` : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${s.innerHTML}`}</div>`);
     });
     const judul = judulGrup(pilih), simpan = ed && kunciBagian(pilih.id).length;
     return `${awal.replace(/<div class="cu-judul">[\s\S]*?<\/div><\/div>/, `<div class="cu-judul qt-seksi__judul"><button type="button" class="mr-ikonbtn" data-qt="pg-daftar-bagian" aria-label="Kembali ke daftar bagian" title="Kembali">${ik('kembali', 18)}</button><h2>${esc(judul)}</h2>${htmlInfoPop(judul, paraInfo)}</div>`)}
@@ -7465,7 +7495,7 @@ document.addEventListener('click', ev => {
     Repo.simpanPengaturan(baru).then(() => { Q.pd = clone(PENG); toast(`Nomor berikutnya: <b>${esc(Repo.nomorBerikut(kode))}</b>`); gambar(); }, er => toast(`<b>GAGAL menyimpan.</b> ${esc(er.message)}`, 'bahaya')); }
   else if (a === 'tuju-warn') {
     const ed = Q.edit; if (!ed) return; const k = e.dataset.k;
-    if (k === 'tanpa-target') { if (Q.edit) bacaForm(); Q.dari = Q.view; Q.view = 'pengaturan'; Q.pd = clone(PENG); Q.pdKotor = false; Q.pdBuka = new Set(['markup']); Q.pdSeksi = 'lini'; tampilkan(); setTimeout(() => { const d = document.querySelector('[data-pgd="markup"]'); if (d) d.scrollIntoView({ block: 'start' }); }, 50); return; }
+    if (k === 'tanpa-target') { if (Q.edit) bacaForm(); Q.dari = Q.view; Q.view = 'pengaturan'; Q.pd = clone(PENG); Q.pdKotor = false; Q.pdBuka = new Set(['markup']); Q.pdSeksi = 'lini'; tampilkan(); setTimeout(() => { const d = document.querySelector('[data-pgd="markup"],[data-pgd="lini-gabungan"]'); if (d) d.scrollIntoView({ block: 'start' }); }, 50); return; }
     const cocok = ed.baris.find(b => k === 'tanpa-modal' ? (b.jenis !== 'kosong' && !R.adaModal(b)) : (R.adaModal(b) && Number(b.jual) > 0 && Number(b.jual) < Number(b.modal))) || ed.baris[0];
     if (!cocok) return; Q.kartuBuka = cocok.id; gambar(); const el = document.querySelector(`#qt-form .qg-row[data-id="${cocok.id}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('is-buka'); }
   }

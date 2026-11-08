@@ -12,7 +12,7 @@ const kode = src.slice(a, b).join('\n');
     const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const ik = () => ''; let peran = 'master';
     const masterAtauAdmin = () => peran === 'master' || peran === 'admin', akunAdmin = () => peran === 'admin', akunSales = () => peran === 'sales', bisaEdit = () => true;
-    const Q = { pdSeksi: null }; const R = {};
+    const Q = { pdSeksi: null }; const R = {}; const htmlLiniGabungan = () => '';
     ${kode}
     const ids = ['kopsurat','penomoranquotation','templateperlinibisni','markup','templatesaya','satuanquotation','tabeldokumenperlinib','pengingatrekapkegiat','penandatangantandata','dokumenumum','kalimatstandar','pustaka'];
     const mk = () => '<div class="cu-judul"><h2>Pengaturan dokumen</h2><div class="cu-judul__tag"></div></div><div class="qt-main">' + ids.map(i => '<details class="mr-kartu qt-pgd" data-pgd="'+i+'"><summary><h3>Kartu '+i+'</h3></summary><p class="mr-sub qt-ket">Ket '+i+'</p><div>ISI-'+i+'</div></details>').join('') + '</div>';

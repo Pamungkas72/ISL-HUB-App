@@ -2157,3 +2157,48 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-mk-kartu{gap:10px;padding:14px 12px 12px}
 .qt-mk-nama{font-size:14px;font-weight:700;line-height:1.25}
 @media(min-width:760px){.qt-mk-kisi{grid-template-columns:repeat(3,1fr)}}
+/* Lini bisnis: satu daftar gabungan dengan ringkasan KPI (desain 1, 8 Nov 2026). Hanya variabel tema. */
+.lg{display:grid;gap:12px}
+.lg-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.lg-kpi{display:flex;flex-direction:column;gap:2px;padding:10px 6px;text-align:center;border:1px solid var(--mr-border);border-radius:12px;background:var(--mr-surface)}
+.lg-kpi b{font-size:20px;line-height:1.2}.lg-kpi b small{font-size:12px;color:var(--mr-muted);font-weight:600}
+.lg-kpi span{font-size:11px;line-height:1.2;color:var(--mr-muted)}
+.lg-kpi.is-warn b{color:var(--mr-warn)}
+.lg-fil{display:flex;gap:6px;flex-wrap:wrap}
+.lg-fil button{border:1px solid var(--mr-border);border-radius:999px;padding:6px 12px;background:var(--mr-surface);color:var(--mr-muted);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.lg-fil button em{font-style:normal;margin-left:3px;padding:0 6px;border-radius:99px;background:var(--mr-navy-soft);color:var(--mr-ink);font-size:11px}
+.lg-fil button.is-aktif{background:var(--mr-navy);border-color:var(--mr-navy);color:#fff}
+.lg-fil button.is-aktif em{background:rgba(255,255,255,.22);color:#fff}
+.lg-daftar{border:1px solid var(--mr-border);border-radius:14px;overflow:hidden;background:var(--mr-surface)}
+.lg-daftar[data-f="kosong"] .lg-row:not([data-terisi="0"]),.lg-daftar[data-f="tipis"] .lg-row[data-mk="hijau"]{display:none}
+.lg-row{border-top:1px solid var(--mr-border)}.lg-row:first-child{border-top:0}
+.lg-sum{display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px 10px;width:100%;padding:12px 14px;border:0;background:none;color:var(--mr-ink);font:inherit;text-align:left;cursor:pointer}
+.lg-sum:hover{background:var(--mr-navy-soft)}.lg-sum:focus-visible{outline:2px solid var(--mr-navy);outline-offset:-2px}
+.lg-nm{flex:1;min-width:0;font-weight:700;font-size:14px;line-height:1.25}
+.lg-at{grid-column:1 / -1;display:flex;gap:5px;flex-wrap:wrap}
+.lg-tg{font-size:11.5px;border-radius:99px;padding:2px 9px;background:var(--mr-bg);color:var(--mr-muted);border:1px solid var(--mr-border);white-space:nowrap}
+.lg-tg.ok{background:var(--mr-ok-bg);color:var(--mr-ok);border-color:transparent}.lg-tg.warn{background:var(--mr-warn-bg);color:var(--mr-warn);border-color:transparent}.lg-tg.kos{border-style:dashed}
+.lg-cv{flex:none;width:7px;height:7px;border-right:2px solid var(--mr-muted);border-bottom:2px solid var(--mr-muted);transform:rotate(45deg);transition:transform .15s}
+.lg-row.is-buka .lg-cv{transform:rotate(-135deg)}
+.lg-body{display:none;gap:10px;padding:0 14px 14px}.lg-row.is-buka .lg-body{display:grid}
+.lg-bl{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--mr-border);border-radius:12px;background:var(--mr-bg)}
+.lg-bl>div:first-child{flex:1;min-width:0}.lg-bl b{display:block;font-size:13.5px}.lg-bl small{display:block;color:var(--mr-muted);font-size:12px;margin-top:2px}
+.lg-bl.qt-mk-kartu{flex-direction:row;gap:10px;padding:10px 12px;border:1px solid var(--mr-border);border-left-width:3px;border-radius:12px;background:var(--mr-bg)}
+.lg-bl .qt-mk-step{margin:0;flex:none;width:auto}.lg-bl .qt-mk-btn{flex:none}.lg-bl .qt-mk-in{flex:none;width:64px}.lg-bl .qt-mk-in input{height:34px;font-size:15px;padding:0 4px}.lg-bl .qt-mk-btn{width:32px;height:34px}
+.lg-bl .qt-tl-x{position:static}
+.lg-aksi{display:flex;gap:8px;flex-wrap:wrap}.lg-aksi .mr-btn{flex:1 1 150px;justify-content:center;padding:10px}
+.lg-satuan{border:1px solid var(--mr-border);border-radius:14px;background:var(--mr-surface);margin-top:12px}
+.lg-satuan>summary{display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;list-style:none}.lg-satuan>summary::-webkit-details-marker{display:none}
+.lg-satuan>summary h3{margin:0;flex:1}.lg-satuan>summary small{color:var(--mr-muted)}
+.lg-satuan>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--mr-muted);border-bottom:2px solid var(--mr-muted);transform:rotate(45deg)}
+.lg-satuan[open]>summary::after{transform:rotate(-135deg)}.lg-satuan>:not(summary){margin:0 14px 14px}
+@media(min-width:760px){
+  .lg-kpis{gap:12px}
+  .lg-row{display:grid;grid-template-columns:230px 1fr;align-items:center}
+  .lg-sum{display:block;cursor:default;padding:12px 14px}.lg-sum:hover{background:none}.lg-at,.lg-cv{display:none}
+  .lg-body{display:grid;grid-template-columns:1fr 1.3fr 1fr;padding:10px 14px 10px 0}
+  .lg-bl{border:0;background:none;padding:2px 8px}
+  .lg-bl.qt-mk-kartu{border-top-width:0;border-right-width:0;border-bottom-width:0;border-left-width:3px;border-radius:0;background:none}
+}
+@media(prefers-reduced-motion:reduce){.lg-cv{transition:none}}
+.lg-bl.qt-mk-kartu.is-merah{border-left-color:#d64545}.lg-bl.qt-mk-kartu.is-kuning{border-left-color:#e0a100}.lg-bl.qt-mk-kartu.is-hijau{border-left-color:#2e9e5b}
