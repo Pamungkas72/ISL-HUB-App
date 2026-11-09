@@ -3041,9 +3041,11 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-ttd{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:28px}.isl-ttd .col{text-align:center}
 .isl-ttd .lbl{height:38px;line-height:1.45}.isl-ttd .lbl b{font-family:ISLPJS,Arial;font-weight:700;color:#10233F}
 .isl-ttd .sg{height:132px;display:flex;align-items:center;justify-content:center;margin:2px 0 4px;position:relative}
-.isl-ttd .sg .cap{height:104px;width:auto;margin-right:-38px}
+/* cap 50% transparan di belakang, tanda tangan di atasnya; keduanya tepat di tengah kolom */
+.isl-ttd .sg img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto}
+.isl-ttd .sg .cap{height:104px;opacity:.5;z-index:1}
 /* nama, jabatan, dan tanggal customer dibuat pudar supaya tulisan pena tidak bertabrakan dengan cetakan */
-.isl-ttd .col:last-child .rA,.isl-ttd .col:last-child .rB,.isl-ttd .col:last-child .rC{opacity:.45}.isl-ttd .sg .tt{height:68px;width:auto;position:relative;z-index:2}
+.isl-ttd .col:last-child .rA,.isl-ttd .col:last-child .rB,.isl-ttd .col:last-child .rC{opacity:.45}.isl-ttd .sg .tt{height:68px;z-index:2}
 .isl-ttd .sg.kos{border:1px dashed #b4bfca;border-radius:4px;align-items:flex-end;padding-bottom:6px;font-size:9px;color:#8a97a4}
 .isl-ttd .rA{height:26px;margin:0 22px;border-bottom:1.5px solid #10233F;font-family:ISLPJS,Arial;font-weight:700;color:#10233F;line-height:22px}
 .isl-ttd .rB{height:20px;font-size:10.5px;color:#4a5866;line-height:20px;margin-top:2px}
@@ -3056,12 +3058,12 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-page.d1 .isl-hd{margin:4px 0 12px;padding:11px 0 10px}.isl-page.d1 .isl-hd h1{font-size:22px}.isl-page.d1 .isl-two{margin-bottom:11px}.isl-page.d1 .isl-two__pr{margin-bottom:7px;padding:4px 10px}.isl-page.d1 .isl-p{margin-bottom:8px}
 .isl-page.d1 table.isl-t{font-size:10.2px}.isl-page.d1 .isl-t th{padding:6px 7px}.isl-page.d1 .isl-t td{padding:4px 7px}.isl-page.d1 .isl-t tr.tot td{padding:7px}.isl-page.d1 .isl-t tr.terb td{padding-top:5px}
 .isl-page.d1 .isl-h4{margin:10px 0 3px}.isl-page.d1 .isl-gt{margin:5px 0 1px}.isl-page.d1 .isl-ti{font-size:10.3px;margin-bottom:1px}
-.isl-page.d1 .isl-ttd{margin-top:14px}.isl-page.d1 .isl-ttd .lbl{height:34px;line-height:1.35}.isl-page.d1 .isl-ttd .sg{height:112px}.isl-page.d1 .isl-ttd .sg .cap{height:90px;margin-right:-32px}.isl-page.d1 .isl-ttd .sg .tt{height:58px}.isl-page.d1 .isl-ttd .rA{height:22px;line-height:20px}.isl-page.d1 .isl-ttd .rB{height:18px;line-height:18px}.isl-page.d1 .isl-ttd .rC{height:22px;line-height:22px;margin-top:4px}.isl-page.d1 .isl-note{margin-top:16px}
+.isl-page.d1 .isl-ttd{margin-top:14px}.isl-page.d1 .isl-ttd .lbl{height:34px;line-height:1.35}.isl-page.d1 .isl-ttd .sg{height:112px}.isl-page.d1 .isl-ttd .sg .cap{height:90px}.isl-page.d1 .isl-ttd .sg .tt{height:58px}.isl-page.d1 .isl-ttd .rA{height:22px;line-height:20px}.isl-page.d1 .isl-ttd .rB{height:18px;line-height:18px}.isl-page.d1 .isl-ttd .rC{height:22px;line-height:22px;margin-top:4px}.isl-page.d1 .isl-note{margin-top:16px}
 .isl-page.d2{font-size:10.6px;line-height:1.45}
 .isl-page.d2 .isl-hd{margin:2px 0 8px;padding:8px 0 7px}.isl-page.d2 .isl-hd h1{font-size:19px}.isl-page.d2 .isl-hd .s{margin-top:3px}.isl-page.d2 .isl-two{margin-bottom:7px}.isl-page.d2 .isl-two__pr{margin-bottom:5px;padding:3px 10px}.isl-page.d2 .isl-two__meta{margin-top:3px}.isl-page.d2 .isl-p{margin-bottom:6px}
 .isl-page.d2 table.isl-t{font-size:10px}.isl-page.d2 .isl-t th{padding:5px 6px}.isl-page.d2 .isl-t td{padding:3px 6px}.isl-page.d2 .isl-t tr.tot td{padding:5px 6px}.isl-page.d2 .isl-t tr.terb td{padding-top:3px;font-size:9.4px}
 .isl-page.d2 .isl-h4{margin:7px 0 2px;font-size:11.5px}.isl-page.d2 .isl-gt{margin:3px 0 1px;font-size:9.8px}.isl-page.d2 .isl-ti{font-size:10px;margin-bottom:0}
-.isl-page.d2 .isl-ttd{margin-top:8px;gap:30px}.isl-page.d2 .isl-ttd .lbl{height:30px;line-height:1.3}.isl-page.d2 .isl-ttd .sg{height:96px;margin:0}.isl-page.d2 .isl-ttd .sg .cap{height:76px;margin-right:-26px}.isl-page.d2 .isl-ttd .sg .tt{height:50px}.isl-page.d2 .isl-ttd .rA{height:20px;line-height:18px}.isl-page.d2 .isl-ttd .rB{height:16px;line-height:16px;font-size:10px}.isl-page.d2 .isl-ttd .rC{height:18px;line-height:18px;margin-top:2px;font-size:10.4px}.isl-page.d2 .isl-note{margin-top:8px;font-size:8.6px}
+.isl-page.d2 .isl-ttd{margin-top:8px;gap:30px}.isl-page.d2 .isl-ttd .lbl{height:30px;line-height:1.3}.isl-page.d2 .isl-ttd .sg{height:96px;margin:0}.isl-page.d2 .isl-ttd .sg .cap{height:76px}.isl-page.d2 .isl-ttd .sg .tt{height:50px}.isl-page.d2 .isl-ttd .rA{height:20px;line-height:18px}.isl-page.d2 .isl-ttd .rB{height:16px;line-height:16px;font-size:10px}.isl-page.d2 .isl-ttd .rC{height:18px;line-height:18px;margin-top:2px;font-size:10.4px}.isl-page.d2 .isl-note{margin-top:8px;font-size:8.6px}
 
 .isl-t th{background:#EEF3F8;color:#1B3556;font-size:8.2px;letter-spacing:.7px;padding:4px 8px;line-height:1.25;border:0;border-top:1.5px solid #2B7BBF;border-bottom:1px solid #C5D3E2}
 .isl-mx thead tr:nth-child(2) th{border-top:0;padding:3px 8px;background:#F5F8FC;color:#3C5575}
@@ -5881,6 +5883,18 @@ function infoGambar(dataUrl) {
   else if (t === 'jpg') { let i = 2; while (i < u.length) { if (u[i] !== 0xFF) { i++; continue; } const k = u[i + 1]; if (k >= 0xC0 && k <= 0xC3) { h = (u[i + 5] << 8) | u[i + 6]; w = (u[i + 7] << 8) | u[i + 8]; break; } i += 2 + ((u[i + 2] << 8) | u[i + 3]); } }
   return { u, t, w: w || 200, h: h || 100 };
 }
+/* cap 50% transparan dengan tanda tangan di atas dan di tengah, digabung jadi satu PNG untuk Word (skala sama dengan PDF: cap 104 px, TTD 68 px) */
+async function gabungTtdCap(cap, ttd) {
+  const muat = d => new Promise(res => { if (!d) return res(null); const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = d; });
+  const [ic, it] = await Promise.all([muat(cap), muat(ttd)]);
+  if (!ic && !it) return null;
+  const T = 104, S = 4, lc = ic ? T * ic.naturalWidth / ic.naturalHeight : 0, lt = it ? 68 * it.naturalWidth / it.naturalHeight : 0, w = Math.max(lc, lt);
+  const kanvas = document.createElement('canvas'); kanvas.width = Math.ceil(w * S); kanvas.height = T * S;
+  const x = kanvas.getContext('2d');
+  if (ic) { x.globalAlpha = .5; x.drawImage(ic, (w - lc) / 2 * S, 0, lc * S, T * S); x.globalAlpha = 1; }
+  if (it) x.drawImage(it, (w - lt) / 2 * S, (T - 68) / 2 * S, lt * S, 68 * S);
+  return kanvas.toDataURL('image/png');
+}
 const htmlTeks = s => String(s ?? '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'");
 const dxa = px => Math.round(px * WLEBAR / 686);
 /* hiasan diagonal desain dokumen, dirender dari SVG ke PNG supaya ikut sebagai gambar latar di Word */
@@ -5913,7 +5927,7 @@ async function buatDocx(m, aset) {
   const cell = (isi, w, o = {}) => new TableCell({ children: Array.isArray(isi) ? isi : [isi], width: { size: w, type: WidthType.DXA }, columnSpan: o.span, rowSpan: o.rowSpan, verticalAlign: o.va || VerticalAlign.CENTER, shading: o.fill ? { type: ShadingType.CLEAR, fill: KISI ? 'BFD6EE' : o.fill, color: 'auto' } : undefined, borders: KISI ? { top: sisi('2B3A4D', 4), bottom: sisi('2B3A4D', 4), left: sisi('2B3A4D', 4), right: sisi('2B3A4D', 4) } : { ...tanpaSemua, ...(o.b || {}) }, margins: { top: o.mt ?? 60, bottom: o.mb ?? 60, left: o.ml ?? 110, right: o.mr ?? 110 } });
   const tabel = (kolom, baris, o = {}) => new Table({ width: { size: kolom.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: kolom, rows: baris, borders: { top: tanpa, left: tanpa, bottom: tanpa, right: tanpa, insideHorizontal: tanpa, insideVertical: tanpa }, ...o });
   const sesuaikan = (px, total = WLEBAR) => { const w = px.map(dxa), selisih = total - w.reduce((a, b) => a + b, 0); w[w.findIndex(x => x === Math.max(...w))] += selisih; return w; };
-  const gLogo = infoGambar(ASET_LOGO()), gCap = m.pakaiCap ? infoGambar(aset && aset.cap) : null, gTtd = m.pakaiTtd ? infoGambar(aset && aset.ttd) : null;
+  const gLogo = infoGambar(ASET_LOGO()), gTanda = infoGambar(await gabungTtdCap(m.pakaiCap ? aset && aset.cap : null, m.pakaiTtd ? aset && aset.ttd : null));
   const gambar = (g, tinggi) => g ? new ImageRun({ type: g.t, data: g.u, transformation: { width: Math.round(tinggi * g.w / g.h), height: tinggi }, altText: { title: 'gambar', description: 'gambar', name: 'gambar' } }) : null;
 
   /* ---- kop surat ---- */
@@ -6049,7 +6063,7 @@ async function buatDocx(m, aset) {
 
   /* ---- tanda tangan ---- */
   const garisNama = { bottom: sisi(WN.navy, 6) }, tengah = AlignmentType.CENTER;
-  const stempel = [gCap && gambar(gCap, 104), gTtd && gambar(gTtd, 68)].filter(Boolean);
+  const stempel = [gambar(gTanda, 104)].filter(Boolean);
   const kiriTtd = [para(run(L.reg, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah }), para(run('PT Indo Sukses Logistik'), { al: tengah, sa: 60 }), para(stempel.length ? stempel : run(' '), { al: tengah, sb: 120, sa: 160 }), para(run(m.penandatangan.nama, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah, sa: 20, border: garisNama }), para(run(m.penandatangan.jabatan, { color: '4A5866' }), { al: tengah }), ...(m.tglRingkas ? [] : [para(run(m.tanggalTeks, { color: '4A5866' }), { al: tengah })])];
   const kananTtd = [para(run(L.appr, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah }), para(run(m.customerNama), { al: tengah, sa: 60 }),
     tabel([4300], [new TableRow({ height: { value: 2300, rule: 'atLeast' }, children: [cell(para(run(L.sg, { size: 15, color: 'A0AAB5' }), { al: tengah }), 4300, { va: VerticalAlign.BOTTOM, b: { top: sisi('B9C4D0', 4, BorderStyle.DASHED), left: sisi('B9C4D0', 4, BorderStyle.DASHED), bottom: sisi('B9C4D0', 4, BorderStyle.DASHED), right: sisi('B9C4D0', 4, BorderStyle.DASHED) } })] })]), para(run(' '), { sa: 20 }),
