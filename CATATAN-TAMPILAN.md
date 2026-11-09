@@ -4,7 +4,7 @@ Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, d
 
 ## 2026-11-09 (Depo: Fee administrasi per invoice, satu tarif)
 
-- **Hanya baris ADM di blok B Handling yang diganti "Fee administrasi"**: satu tarif Rp 60.000 per invoice, tidak terkait ukuran container. Di PDF sel tarif membentang dua kolom dan rata tengah. Di formulir satu kolom "Tarif per invoice". Rekomendasi bawaan 60.000 (Pengaturan > Harga rekomendasi dan Tarif minimum juga satu kolom).
+- **Hanya baris ADM di blok B Handling yang diganti "Fee administrasi"**: satu tarif Rp 60.000 per invoice, tidak terkait ukuran container. Di PDF sel tarif membentang dua kolom dan rata kanan, dengan gaya angka dan "Rp" yang sama dengan kolom lain. Di formulir satu kolom "Tarif per invoice". Rekomendasi bawaan 60.000 (Pengaturan > Harga rekomendasi dan Tarif minimum juga satu kolom).
 - **Layanan lain tidak berubah**, termasuk baris manual di blok lain dengan satuan "per invoice" (aturan hanya berlaku untuk blok B dan nama Fee administrasi).
 - **Extra Moving (Fumigasi Area)** di blok D Trucking REPO kini punya rekomendasi Rp 700.000 untuk 20 ft dan 40 ft (sebelumnya kosong).
 - Teknis: `satuTunggal(b, r)` di `formulir-lini.js` (blok `tunggal: true` dan nama di `NAMA_FEE`); sel PDF dengan `cs` (colspan) dan `a` (rata) di `app-core.js`; terjemahan "Administration fee" di `DOK_EN`. Tes `tests/asap/uji-depo.js` dan `uji-kartu.js` diperbarui.

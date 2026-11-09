@@ -3173,7 +3173,6 @@ table.isl-fl{margin-top:12px}
 .isl-kartu td:first-child b{display:block;font-weight:700;font-size:11.2px}
 .isl-kartu td .isl-sat{font-size:9px;color:#8a97a5;margin-top:0;font-weight:400}
 .isl-page.tema-b table.isl-t.isl-kartu td.r{text-align:right;white-space:nowrap;font-weight:800;font-size:12px;font-variant-numeric:tabular-nums}
-.isl-kartu td.c{text-align:center;font-weight:800;font-size:12px;font-variant-numeric:tabular-nums}
 .isl-kartu td.r .rp{font-style:normal;font-weight:500;font-size:8.6px;color:#8a97a5;margin-right:4px}
 .isl-page.tema-b table.isl-t.isl-kartu:not(.isl-mx):not(.isl-kisi) tbody tr td:nth-child(2){background:#F3F8FD !important}
 .isl-page.tema-b table.isl-t.isl-kartu:not(.isl-mx):not(.isl-kisi) tbody tr td:nth-child(3){background:#E8F2FB !important}
