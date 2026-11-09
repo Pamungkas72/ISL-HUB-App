@@ -464,7 +464,7 @@ LINI.depo = {
       const rows = (st.rows[bi] || []).map(r => barisEf(this, b, r)).filter(r => barisTerisi(r, b.kolom)); if (!rows.length) return;
       const sub = r => [r.satuan, r.ket].filter(Boolean).join(' · ');
       blok.push({ jenis: 'tabel', kelas: 'isl-kartu isl-kartu--dep', huruf: huruf(n++), cap: tanpaHuruf(judulTampil(st, bi, b)), sub: b.sub, kolom: [{ h: 'Layanan', w: 56, a: 'l' }, { h: '20 ft (Rp)', w: 22, a: 'r' }, { h: '40 ft (Rp)', w: 22, a: 'r' }],
-        baris: rows.map(r => ({ c: satuTunggal(r) ? [{ v: r.uraian, b: true, sat: sub(r) }, { v: hargaSel(r.h20), rp: true, cs: 2, a: 'c' }, null] : [{ v: r.uraian, b: true, sat: sub(r) }, { v: hargaSel(r.h20), rp: true }, { v: hargaSel(r.h40), rp: true }] })) });
+        baris: rows.map(r => ({ c: satuTunggal(r) ? [{ v: r.uraian, b: true, sat: sub(r) }, { v: hargaSel(r.h20), rp: true, rpSama: true, cs: 2, a: 'r' }, null] : [{ v: r.uraian, b: true, sat: sub(r) }, { v: hargaSel(r.h20), rp: true }, { v: hargaSel(r.h40), rp: true }] })) });
     });
     return { blok, catatan: [] };   /* catatan "Kolom kosong (—) ..." dihapus di semua lini (4 Nov 2026) */
   },
