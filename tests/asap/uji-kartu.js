@@ -123,7 +123,7 @@ const render = (p, m, d) => p.evaluate(async ({ m, d }) => {
 
   // ===== Dokumen terbit lama (kelas isl-dep, 4 kolom) tetap memakai gaya lama =====
   const lama = JSON.parse(JSON.stringify(depo));
-  lama.fl.blok = depo.fl.blok.map(b => ({ jenis: 'tabel', kelas: 'isl-dep', cap: b.cap, sub: b.sub, kolom: [{ h: 'Layanan', w: 40, a: 'l' }, { h: '20 ft (Rp)', w: 18, a: 'c' }, { h: '40 ft (Rp)', w: 18, a: 'c' }, { h: 'Note', w: 24, a: 'l' }], baris: b.baris.map(r => ({ c: [r.c[0].v, r.c[1].v, r.c[2].v, r.c[0].sat || '—'] })) }));
+  lama.fl.blok = depo.fl.blok.map(b => ({ jenis: 'tabel', kelas: 'isl-dep', cap: b.cap, sub: b.sub, kolom: [{ h: 'Layanan', w: 40, a: 'l' }, { h: '20 ft (Rp)', w: 18, a: 'c' }, { h: '40 ft (Rp)', w: 18, a: 'c' }, { h: 'Note', w: 24, a: 'l' }], baris: b.baris.map(r => ({ c: [r.c[0].v, r.c[1].v, (r.c[2] || { v: '' }).v, r.c[0].sat || '—'] })) }));
   const hl = (await render(p, lama, 0)).flat();
   cek(hl.length >= 4 && hl.every(t => /isl-dep\b/.test(t.kelas) && !/isl-kartu/.test(t.kelas) && t.kolom === 4 && t.thead === 1 && t.lencana === ''), 'dokumen lama: harus tetap gaya isl-dep (4 kolom, judul kolom tiap kelompok, tanpa lencana): ' + JSON.stringify(hl.map(t => [t.kelas, t.kolom, t.thead])));
 
