@@ -4795,7 +4795,9 @@ function paginaPengaturan(html) {
       const paraAsli = [...s.querySelectorAll(':scope > p.qt-ket')], awalan = banyak ? `<b>${esc(sub)}:</b> ` : '';
       [...(INFO_BAGIAN[k] || []).map(esc), ...paraAsli.map(x => x.innerHTML)].forEach(h => paraInfo.push(awalan + h));
       paraAsli.forEach(x => x.remove());
-      isi.push(`<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${s.innerHTML}</div>`);
+      const badan = `<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${s.innerHTML}</div>`;
+      // Lini bisnis: tiap judul jadi kartu lipat (yang pertama terbuka); halaman lain tetap memakai judul biasa
+      isi.push(pilih.id === 'lini' && banyak ? `<details class="qt-lipat"${pilih.kartu.indexOf(d) === 0 ? ' open' : ''}><summary><h3 class="qt-subseksi__judul">${esc(sub)}</h3></summary>${badan}</details>` : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
     });
     const judul = judulGrup(pilih), simpan = ed && kunciBagian(pilih.id).length;
     return `${awal.replace(/<div class="cu-judul">[\s\S]*?<\/div><\/div>/, `<div class="cu-judul qt-seksi__judul"><button type="button" class="mr-ikonbtn" data-qt="pg-daftar-bagian" aria-label="Kembali ke daftar bagian" title="Kembali">${ik('kembali', 18)}</button><h2>${esc(judul)}</h2>${htmlInfoPop(judul, paraInfo)}</div>`)}
@@ -4807,6 +4809,8 @@ function paginaPengaturan(html) {
     <footer class="mr-panel__kaki qt-pgfoot">${ed ? `<button class="mr-btn" data-qt="pg-batal">Batalkan perubahan</button>` : ''}<span class="mr-ruang"></span><button class="mr-btn" data-qt="pg-kembali">${ik('kembali', 16)} Kembali</button>${ed ? `<button class="mr-btn mr-btn--utama" data-qt="pg-simpan">${ik('cek', 16)} Simpan pengaturan</button>` : ''}</footer>`;
 }
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
+// Kartu lipat Lini bisnis: saat satu dibuka, kartu lain di bagian yang sama menutup agar layar tetap lega
+document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.qt-lipat') && d.open) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
 // Pengelolaan satuan di Pengaturan dokumen. Tambah, ubah nama, dan hapus memakai satu kartu formulir di atas daftar.
 let satuanAksi = null;
 let satuanPilih = new Set(); // satuan yang dicentang untuk dihapus sekaligus (hanya master) // { jenis: 'tambah' | 'ubah' | 'hapus', kode } atau null bila tidak ada formulir yang terbuka

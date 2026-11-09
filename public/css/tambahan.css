@@ -1470,6 +1470,16 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 /* Bagian Pengaturan dokumen yang memuat beberapa kartu: tiap kartu punya sub-judul dan garis pemisah */
 .qt-subseksi + .qt-subseksi { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--mr-border); }
 .qt-subseksi__judul { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+/* Kartu lipat Lini bisnis: judul jadi tombol buka-tutup, warna dari variabel tema */
+.qt-lipat { border: 1px solid var(--mr-border); border-radius: 14px; background: var(--mr-surface); overflow: hidden; }
+.qt-lipat + .qt-lipat { margin-top: 10px; }
+.qt-lipat > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 14px; cursor: pointer; }
+.qt-lipat > summary::-webkit-details-marker { display: none; }
+.qt-lipat > summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; flex: none; border-right: 2px solid var(--mr-muted); border-bottom: 2px solid var(--mr-muted); transform: rotate(45deg); transition: transform .15s; }
+.qt-lipat[open] > summary::after { transform: rotate(-135deg); }
+.qt-lipat > summary:focus-visible { outline: 2px solid var(--mr-navy); outline-offset: -2px; }
+.qt-lipat > summary .qt-subseksi__judul { margin: 0; }
+.qt-lipat > .qt-subseksi { padding: 0 14px 14px; }
 
 /* ---------- Daftar Quotation di HP, desain C ----------
    Satu baris ringkasan + Follow up, cari + filter, tab status, baris padat dengan ikon status.
