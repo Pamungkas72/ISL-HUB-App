@@ -15,7 +15,7 @@ const ATURAN = {
   kategori: { reguler: 'Reguler', vip: 'VIP' },
   statusCustomer: { prospek: 'Prospek', aktif: 'Aktif', nonaktif: 'Nonaktif' },
   lini: {
-    depo: 'Depo Container', warehouse_dry: 'Warehouse Dry', warehouse_frozen: 'Warehouse Frozen',
+    depo: 'Depo Container', warehouse_dry: 'Warehouse Dry', warehouse_frozen: 'Warehouse Cold Storage',
     gudang_plb: 'Gudang PLB', open_yard: 'Open Yard', trucking_trailer: 'Trucking Trailer',
     distribusi_kecil: 'Distribusi Kendaraan Kecil', customs_clearance: 'Customs Clearance',
     sewa_container_empty: 'Sewa Container Empty', sewa_unit: 'Sewa Unit Kendaraan', freight_forwarding: 'Freight Forwarding'
@@ -1632,7 +1632,7 @@ const SATUAN_EN = { 'per hari': 'per day', 'per bulan': 'per month', 'per minggu
   'per dokumen': 'per document', 'per project': 'per project', 'lumpsum': 'lump sum', 'per unit': 'per unit', 'per ton': 'per ton', 'per revenue ton': 'per revenue ton' };
 const KATA_EN = { hari: 'day', bulan: 'month', minggu: 'week', tahun: 'year', kontainer: 'container', orang: 'person', jam: 'hour', palet: 'pallet', dokumen: 'document', kendaraan: 'vehicle', lumpsum: 'lump sum', kosong: 'empty' };
 R.satuanEN = s => { const k = norm(s); if (SATUAN_EN[k]) return SATUAN_EN[k]; return String(s || '').replace(/[A-Za-z]+/g, w => KATA_EN[w.toLowerCase()] || w); };
-const LINI_EN = { depo: 'Container Depot', warehouse_dry: 'Dry Warehouse', warehouse_frozen: 'Frozen Warehouse', gudang_plb: 'Bonded Logistics Center (PLB) Warehouse', open_yard: 'Open Yard',
+const LINI_EN = { depo: 'Container Depot', warehouse_dry: 'Dry Warehouse', warehouse_frozen: 'Cold Storage Warehouse', gudang_plb: 'Bonded Logistics Center (PLB) Warehouse', open_yard: 'Open Yard',
   trucking_trailer: 'Trailer Trucking', distribusi_kecil: 'Small Vehicle Distribution', customs_clearance: 'Customs Clearance', sewa_container_empty: 'Empty Container Rental', sewa_unit: 'Vehicle Rental', freight_forwarding: 'Freight Forwarding' };
 R.namaLiniDok = (key, nama, b) => b === 'en' ? (LINI_EN[key] || nama) : nama;
 
@@ -1891,7 +1891,7 @@ const isSyaratSendiri = q => !!(q && q.formLini && SYARAT_SENDIRI[q.formLini.lin
 /* ===== SYARAT DAN KETENTUAN: satu daftar bernomor yang sama untuk SEMUA lini (disepakati 3 Nov 2026) =====
    Template tiap lini ada di Pengaturan dokumen (Template lini bisnis > Syarat dan ketentuan). Quotation baru memakai template lini yang dipakainya;
    selama belum diubah, daftar mengikuti template dan pilihan formulir. Begitu diubah di form (ubah teks, centang Tampil, tambah, hapus), daftar menjadi milik quotation itu (q.tncCc).
-   Konsep "syarat umum" dan "gabungkan" tidak lagi dipakai di quotation; butir umum hanya referensi di Pengaturan. */
+   Konsep "syarat umum" dan "gabungkan" tidak lagi dipakai di quotation; butir Umum (Teks standar > Pustaka) otomatis masuk ke semua lini, kecuali bila sama/mirip dengan butir lini. */
 /* Teks English sebuah butir: pakai isian yang benar-benar berbeda dari teks Indonesia; bila kosong atau sama persis dengan Indonesia (data lama menyalin teks Indonesia ke kolom English), pakai terjemahan baku CC/Depo/Trailer, selain itu kosong (nanti diterjemahkan otomatis). */
 R.enBaku = teksId => {
   const k = norm(teksId); for (const c of Object.values(SYARAT_SENDIRI)) { const i = c.syarat.findIndex(x => norm(x) === k); if (i >= 0 && c.en && c.en[i]) return c.en[i]; }
@@ -1916,6 +1916,17 @@ R.tncDasar = q => {
   const lini = [...new Set([...(FL ? [FL.liniKey(q.formLini)] : []), ...R.liniDipakai(q)].filter(Boolean))], off = new Set(q.tncOff || []), lihat = new Set(), daftar = [];
   if (!ganti) lini.forEach(k => R.tncTemplateLini(k).forEach(t => { const kk = norm(t.teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push(off.has(t.id) ? { ...t, aktif: false } : t); }));
   eng.forEach((teks, i) => { const kk = norm(teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push({ id: 'fx' + i, teks, aktif: true }); });
+  /* butir Umum otomatis masuk ke semua lini, kecuali bila bentrok atau dobel: sama/mirip dengan butir yang ada (kata >= 0,6), sejenis isinya (pajak, pembayaran, biaya tambahan, perubahan harga) dengan butir yang sudah ada,
+     sejenis dengan butir lini menurut kategorinya, atau soal masa berlaku (sudah ada di kalimat penutup baku, keputusan 3 Nov 2026) */
+  const jenisLini = new Set((PENG.tnc || []).filter(t => lini.includes(t.kat) && t.aktif !== false && t.kategori && t.kategori !== 'lainnya').map(t => t.kategori)), kataT = x => new Set(String(x || '').toLowerCase().match(/[a-z0-9]+/g) || []);
+  const miripT = (a, b) => { const u = new Set([...a, ...b]); let i = 0; a.forEach(w => { if (b.has(w)) i++; }); return u.size ? i / u.size : 0; };
+  const jenisT = x => { const n = norm(x), j = new Set(); if (/pajak|ppn/.test(n)) j.add('pajak'); if (/pembayaran|invoice|\{toplayanan\}/.test(n)) j.add('bayar'); if (/biaya (tambahan|di luar|inap)|di luar penawaran|waktu tunggu|demurrage|detention/.test(n)) j.add('biaya'); if (/perubahan harga/.test(n)) j.add('harga'); if (/berlaku sampai|masa berlaku|valid until|\{berlaku\}/.test(n)) j.add('berlaku'); return j; };
+  const adaJenis = new Set(daftar.flatMap(x => [...jenisT(x.teks)]));
+  (PENG.tnc || []).filter(t => t.kat === 'umum' && t.aktif !== false && t.teks && String(t.teks.id || '').trim()).forEach(t => {
+    const kk = norm(t.teks.id), ks = kataT(t.teks.id), jt = jenisT(t.teks.id);
+    if (lihat.has(kk) || jt.has('berlaku') || t.kategori === 'masa_berlaku' || [...jt].some(j => adaJenis.has(j)) || daftar.some(x => miripT(kataT(x.teks), ks) >= 0.6) || (t.kategori && t.kategori !== 'lainnya' && jenisLini.has(t.kategori))) return;
+    lihat.add(kk); jt.forEach(j => adaJenis.add(j)); daftar.push({ id: t.id, teks: t.teks.id, en: R.enAsli(t.teks.id, t.teks.en), aktif: !off.has(t.id) });
+  });
   (q.tncManual || []).filter(m => String(m.teks || '').trim()).forEach(m => { const kk = norm(m.teks); if (!lihat.has(kk)) { lihat.add(kk); daftar.push({ id: m.id, teks: String(m.teks).trim(), aktif: true }); } });   /* butir manual dari draf lama */
   return daftar;
 };
@@ -3030,9 +3041,11 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-ttd{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:28px}.isl-ttd .col{text-align:center}
 .isl-ttd .lbl{height:38px;line-height:1.45}.isl-ttd .lbl b{font-family:ISLPJS,Arial;font-weight:700;color:#10233F}
 .isl-ttd .sg{height:132px;display:flex;align-items:center;justify-content:center;margin:2px 0 4px;position:relative}
-.isl-ttd .sg .cap{height:104px;width:auto;margin-right:-38px}
+/* cap 50% transparan di belakang, tanda tangan di atasnya; keduanya tepat di tengah kolom */
+.isl-ttd .sg img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto}
+.isl-ttd .sg .cap{height:104px;opacity:.5;z-index:1}
 /* nama, jabatan, dan tanggal customer dibuat pudar supaya tulisan pena tidak bertabrakan dengan cetakan */
-.isl-ttd .col:last-child .rA,.isl-ttd .col:last-child .rB,.isl-ttd .col:last-child .rC{opacity:.45}.isl-ttd .sg .tt{height:68px;width:auto;position:relative;z-index:2}
+.isl-ttd .col:last-child .rA,.isl-ttd .col:last-child .rB,.isl-ttd .col:last-child .rC{opacity:.45}.isl-ttd .sg .tt{height:68px;z-index:2}
 .isl-ttd .sg.kos{border:1px dashed #b4bfca;border-radius:4px;align-items:flex-end;padding-bottom:6px;font-size:9px;color:#8a97a4}
 .isl-ttd .rA{height:26px;margin:0 22px;border-bottom:1.5px solid #10233F;font-family:ISLPJS,Arial;font-weight:700;color:#10233F;line-height:22px}
 .isl-ttd .rB{height:20px;font-size:10.5px;color:#4a5866;line-height:20px;margin-top:2px}
@@ -3045,12 +3058,12 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-page.d1 .isl-hd{margin:4px 0 12px;padding:11px 0 10px}.isl-page.d1 .isl-hd h1{font-size:22px}.isl-page.d1 .isl-two{margin-bottom:11px}.isl-page.d1 .isl-two__pr{margin-bottom:7px;padding:4px 10px}.isl-page.d1 .isl-p{margin-bottom:8px}
 .isl-page.d1 table.isl-t{font-size:10.2px}.isl-page.d1 .isl-t th{padding:6px 7px}.isl-page.d1 .isl-t td{padding:4px 7px}.isl-page.d1 .isl-t tr.tot td{padding:7px}.isl-page.d1 .isl-t tr.terb td{padding-top:5px}
 .isl-page.d1 .isl-h4{margin:10px 0 3px}.isl-page.d1 .isl-gt{margin:5px 0 1px}.isl-page.d1 .isl-ti{font-size:10.3px;margin-bottom:1px}
-.isl-page.d1 .isl-ttd{margin-top:14px}.isl-page.d1 .isl-ttd .lbl{height:34px;line-height:1.35}.isl-page.d1 .isl-ttd .sg{height:112px}.isl-page.d1 .isl-ttd .sg .cap{height:90px;margin-right:-32px}.isl-page.d1 .isl-ttd .sg .tt{height:58px}.isl-page.d1 .isl-ttd .rA{height:22px;line-height:20px}.isl-page.d1 .isl-ttd .rB{height:18px;line-height:18px}.isl-page.d1 .isl-ttd .rC{height:22px;line-height:22px;margin-top:4px}.isl-page.d1 .isl-note{margin-top:16px}
+.isl-page.d1 .isl-ttd{margin-top:14px}.isl-page.d1 .isl-ttd .lbl{height:34px;line-height:1.35}.isl-page.d1 .isl-ttd .sg{height:112px}.isl-page.d1 .isl-ttd .sg .cap{height:90px}.isl-page.d1 .isl-ttd .sg .tt{height:58px}.isl-page.d1 .isl-ttd .rA{height:22px;line-height:20px}.isl-page.d1 .isl-ttd .rB{height:18px;line-height:18px}.isl-page.d1 .isl-ttd .rC{height:22px;line-height:22px;margin-top:4px}.isl-page.d1 .isl-note{margin-top:16px}
 .isl-page.d2{font-size:10.6px;line-height:1.45}
 .isl-page.d2 .isl-hd{margin:2px 0 8px;padding:8px 0 7px}.isl-page.d2 .isl-hd h1{font-size:19px}.isl-page.d2 .isl-hd .s{margin-top:3px}.isl-page.d2 .isl-two{margin-bottom:7px}.isl-page.d2 .isl-two__pr{margin-bottom:5px;padding:3px 10px}.isl-page.d2 .isl-two__meta{margin-top:3px}.isl-page.d2 .isl-p{margin-bottom:6px}
 .isl-page.d2 table.isl-t{font-size:10px}.isl-page.d2 .isl-t th{padding:5px 6px}.isl-page.d2 .isl-t td{padding:3px 6px}.isl-page.d2 .isl-t tr.tot td{padding:5px 6px}.isl-page.d2 .isl-t tr.terb td{padding-top:3px;font-size:9.4px}
 .isl-page.d2 .isl-h4{margin:7px 0 2px;font-size:11.5px}.isl-page.d2 .isl-gt{margin:3px 0 1px;font-size:9.8px}.isl-page.d2 .isl-ti{font-size:10px;margin-bottom:0}
-.isl-page.d2 .isl-ttd{margin-top:8px;gap:30px}.isl-page.d2 .isl-ttd .lbl{height:30px;line-height:1.3}.isl-page.d2 .isl-ttd .sg{height:96px;margin:0}.isl-page.d2 .isl-ttd .sg .cap{height:76px;margin-right:-26px}.isl-page.d2 .isl-ttd .sg .tt{height:50px}.isl-page.d2 .isl-ttd .rA{height:20px;line-height:18px}.isl-page.d2 .isl-ttd .rB{height:16px;line-height:16px;font-size:10px}.isl-page.d2 .isl-ttd .rC{height:18px;line-height:18px;margin-top:2px;font-size:10.4px}.isl-page.d2 .isl-note{margin-top:8px;font-size:8.6px}
+.isl-page.d2 .isl-ttd{margin-top:8px;gap:30px}.isl-page.d2 .isl-ttd .lbl{height:30px;line-height:1.3}.isl-page.d2 .isl-ttd .sg{height:96px;margin:0}.isl-page.d2 .isl-ttd .sg .cap{height:76px}.isl-page.d2 .isl-ttd .sg .tt{height:50px}.isl-page.d2 .isl-ttd .rA{height:20px;line-height:18px}.isl-page.d2 .isl-ttd .rB{height:16px;line-height:16px;font-size:10px}.isl-page.d2 .isl-ttd .rC{height:18px;line-height:18px;margin-top:2px;font-size:10.4px}.isl-page.d2 .isl-note{margin-top:8px;font-size:8.6px}
 
 .isl-t th{background:#EEF3F8;color:#1B3556;font-size:8.2px;letter-spacing:.7px;padding:4px 8px;line-height:1.25;border:0;border-top:1.5px solid #2B7BBF;border-bottom:1px solid #C5D3E2}
 .isl-mx thead tr:nth-child(2) th{border-top:0;padding:3px 8px;background:#F5F8FC;color:#3C5575}
@@ -4795,13 +4808,19 @@ function paginaPengaturan(html) {
       const paraAsli = [...s.querySelectorAll(':scope > p.qt-ket')], awalan = banyak ? `<b>${esc(sub)}:</b> ` : '';
       [...(INFO_BAGIAN[k] || []).map(esc), ...paraAsli.map(x => x.innerHTML)].forEach(h => paraInfo.push(awalan + h));
       paraAsli.forEach(x => x.remove());
+      // Lini bisnis dan Teks standar: tiap judul jadi kartu lipat (yang pertama terbuka); halaman lain tetap memakai judul biasa
+      const lipatan = banyak && ['lini', 'teks'].includes(pilih.id), lipat = (j, m, b, buka) => `<details class="qt-lipat"${buka ? ' open' : ''}><summary><div><h3 class="qt-subseksi__judul">${esc(j)}</h3>${m ? `<small class="qt-lipat__meta">${esc(m)}</small>` : ''}</div></summary>${b}</details>`;
+      let meta = '', tambahan = '';
+      if (lipatan && pilih.id === 'teks') {
+        if (k === 'kalimatstandar') { meta = 'Pembuka · Penutup · Catatan'; const pre = s.querySelector('.qt-presetlist'); if (pre) { const b = pre.querySelector(':scope > b'); if (b) b.remove(); tambahan = lipat('Preset kalimat saya', pre.querySelectorAll('.qt-presetlist__i').length + ' preset', `<div class="qt-subseksi">${pre.outerHTML}</div>`, false); pre.remove(); } }
+        else if (k === 'pustaka') { const tn = PENG.tnc || []; meta = `${tn.filter(x => x.aktif).length} dari ${tn.length} butir dipakai`; s.innerHTML = ringkasanTnc(); }
+      }
       const badan = `<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${s.innerHTML}</div>`;
-      // Lini bisnis: tiap judul jadi kartu lipat (yang pertama terbuka); halaman lain tetap memakai judul biasa
-      isi.push(pilih.id === 'lini' && banyak ? `<details class="qt-lipat"${pilih.kartu.indexOf(d) === 0 ? ' open' : ''}><summary><h3 class="qt-subseksi__judul">${esc(sub)}</h3></summary>${badan}</details>` : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
+      isi.push(lipatan ? lipat(sub, meta, badan, pilih.kartu.indexOf(d) === 0) + tambahan : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
     });
     const judul = judulGrup(pilih), simpan = ed && kunciBagian(pilih.id).length;
     return `${awal.replace(/<div class="cu-judul">[\s\S]*?<\/div><\/div>/, `<div class="cu-judul qt-seksi__judul"><button type="button" class="mr-ikonbtn" data-qt="pg-daftar-bagian" aria-label="Kembali ke daftar bagian" title="Kembali">${ik('kembali', 18)}</button><h2>${esc(judul)}</h2>${htmlInfoPop(judul, paraInfo)}</div>`)}
-    <div class="qt-main"><section class="mr-kartu cu-kartu qt-seksi">${isi.join('')}</section></div>
+    <div class="qt-main"><section class="mr-kartu cu-kartu qt-seksi">${pilih.id === 'teks' && banyak ? '<input type="search" class="qt-cari-lipat" placeholder="Cari kalimat atau grup syarat…" aria-label="Cari kalimat atau grup syarat" autocomplete="off">' : ''}${isi.join('')}</section></div>
     ${simpan ? `<footer class="mr-panel__kaki qt-pgfoot"><span class="mr-ruang"></span><button class="mr-btn mr-btn--utama" data-qt="pg-simpan-bagian" data-seksi="${pilih.id}">${ik('cek', 16)} Simpan bagian ini</button></footer>` : ''}`;
   }
   const daftar = grup.map(g => `<button type="button" class="qt-bagian" data-qt="pg-buka" data-seksi="${esc(g.id)}"><span>${esc(judulGrup(g))}</span><span class="qt-bagian__panah" aria-hidden="true">›</span></button>`).join('');
@@ -4809,8 +4828,37 @@ function paginaPengaturan(html) {
     <footer class="mr-panel__kaki qt-pgfoot">${ed ? `<button class="mr-btn" data-qt="pg-batal">Batalkan perubahan</button>` : ''}<span class="mr-ruang"></span><button class="mr-btn" data-qt="pg-kembali">${ik('kembali', 16)} Kembali</button>${ed ? `<button class="mr-btn mr-btn--utama" data-qt="pg-simpan">${ik('cek', 16)} Simpan pengaturan</button>` : ''}</footer>`;
 }
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
-// Kartu lipat Lini bisnis: saat satu dibuka, kartu lain di bagian yang sama menutup agar layar tetap lega
-document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.qt-lipat') && d.open) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
+/* ringkasan Pustaka S&K di halaman Teks standar: jumlah butir dipakai per grup; butirnya dikelola di panel */
+/* kategori S&K yatim (lininya sudah tidak ada di Master Rate) yang punya lini pengganti: Warehouse Frozen dan Cold Storage satu lini */
+const GABUNG_YATIM = { warehouse_frozen: /cold|frozen|chiller/i };
+function tujuanGabung(dari) {
+  const re = GABUNG_YATIM[dari]; if (!re) return null;
+  const resmi = daftarLini().filter(l => l.resmi);
+  return resmi.some(l => l.key === dari) ? null : (resmi.find(l => re.test(l.nama)) || {}).key || null;
+}
+async function gabungTnc(dari, ke) {
+  if (!kelolaSaja() || tujuanGabung(dari) !== ke) return;
+  const butir = (PENG.tnc || []).filter(t => t.kat === dari);
+  if (!(await konfirmasi({ judul: `Gabungkan ke ${namaLini(ke)}?`, isi: `${butir.length} butir S&K dari <b>${esc(namaLini(dari))}</b> dipindah ke <b>${esc(namaLini(ke))}</b> (butir yang sama persis dilewati). Kalimat, syarat, dan template lini ikut dipindah bila lini tujuan belum punya. Quotation yang sudah terbit tidak berubah.`, aksi: 'Gabungkan' }))) return;
+  const lama = clone(PENG), ada = new Set(PENG.tnc.filter(t => t.kat === ke).map(t => norm(t.teks && t.teks.id)));
+  PENG.tnc = PENG.tnc.filter(t => !(t.kat === dari && ada.has(norm(t.teks && t.teks.id)))).map(t => t.kat === dari ? { ...t, kat: ke } : t);
+  ['kalimatLini', 'syaratLini', 'templateLini'].forEach(f => { const o = PENG[f]; if (o && o[dari] !== undefined) { if (o[ke] === undefined) o[ke] = o[dari]; delete o[dari]; } });
+  try { await Repo.simpanPengaturan(PENG); } catch (er) { Object.keys(PENG).forEach(k => delete PENG[k]); Object.assign(PENG, lama); return toast(`<b>GAGAL menyimpan.</b> ${esc(er.message)}`, 'bahaya'); }
+  if (Q.pd) { Q.pd.tnc = clone(PENG.tnc); Q.pd.kalimatLini = clone(PENG.kalimatLini || {}); Q.pd.syaratLini = clone(PENG.syaratLini || {}); Q.pd.templateLini = clone(PENG.templateLini || {}); }
+  gambar(); toast(`S&K ${esc(namaLini(dari))} digabung ke ${esc(namaLini(ke))}.`);
+}
+function ringkasanTnc() {
+  const tn = PENG.tnc || [], kat = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...tn.map(x => x.kat)].filter(k => k !== 'umum'))];
+  return `<div class="qt-ringkas-daftar">${kat.map(k => { const m = tn.filter(x => x.kat === k); const tujuan = kelolaSaja() && m.length ? tujuanGabung(k) : null; return `<div class="qt-ringkas"><span>${esc(k === 'umum' ? 'Syarat umum' : namaLini(k))}</span><small>${m.filter(x => x.aktif).length} dari ${m.length} dipakai</small>${tujuan ? `<button type="button" class="mr-btn mr-btn--kecil" data-qt="tnc-gabung" data-dari="${esc(k)}" data-ke="${esc(tujuan)}">Gabungkan ke ${esc(namaLini(tujuan))}</button>` : ''}</div>`; }).join('')}</div><button type="button" class="mr-btn" data-qt="tnc-pusat">${ik('file', 14)} Kelola butir syarat</button>`;
+}
+// Kartu lipat: saat satu dibuka, kartu lain di bagian yang sama menutup (kecuali sedang mencari); kotak teks menyesuaikan tinggi isi
+const tinggiTa = t => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
+document.addEventListener('toggle', e => { const d = e.target; if (!(d.matches && d.matches('details.qt-lipat') && d.open)) return; d.querySelectorAll('textarea').forEach(tinggiTa); if (!d.parentElement.dataset.cari) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.matches) return;
+  if (t.matches('details.qt-lipat textarea')) tinggiTa(t);
+  else if (t.matches('.qt-cari-lipat')) { const q = norm(t.value), wadah = t.parentElement; wadah.dataset.cari = q ? '1' : ''; wadah.querySelectorAll(':scope > details.qt-lipat').forEach(d => { const teks = norm(d.textContent + ' ' + [...d.querySelectorAll('textarea')].map(x => x.value).join(' ')), cocok = !q || teks.includes(q); d.hidden = !cocok; if (q && cocok) { d.open = true; d.querySelectorAll('textarea').forEach(tinggiTa); } }); }
+});
 // Pengelolaan satuan di Pengaturan dokumen. Tambah, ubah nama, dan hapus memakai satu kartu formulir di atas daftar.
 let satuanAksi = null;
 let satuanPilih = new Set(); // satuan yang dicentang untuk dihapus sekaligus (hanya master) // { jenis: 'tambah' | 'ubah' | 'hapus', kode } atau null bila tidak ada formulir yang terbuka
@@ -4940,7 +4988,7 @@ function viewPengaturanPenuh() {
   <details class="mr-kartu cu-kartu qt-pgd" data-pgd="kalimatstandar"${pgOpen('kalimatstandar')}><summary><h3>Kalimat standar</h3></summary><p class="mr-sub qt-ket">Tulis dalam Bahasa Indonesia saja. Versi English dibuat otomatis saat dokumen dicetak dalam English. Tulis <code>{berlaku}</code> di kalimat penutup supaya tanggal berlaku terisi otomatis. Tiap quotation tetap bisa memilih kalimat per tujuan layanan atau menulis sendiri.</p><div class="qt-grid">
     ${ta('pembuka.id', 'Kalimat pembuka')}${ta('penutup.id', 'Kalimat penutup', '', 4)}${ta('catatan.id', 'Catatan di bawah tanda tangan', '', 2)}</div>
     <div class="qt-presetlist"><b>Preset kalimat saya</b>${sbBanner('preset', SB.jumlah('preset', PENG.presetKalimat || []), 'preset', 'preset')}${SB.saring('preset', PENG.presetKalimat || []).length ? SB.saring('preset', PENG.presetKalimat || []).map(x => `<div class="qt-presetlist__i${SB.ada('preset', x.id) ? ' qt-sembunyi' : ''}"><span>${esc(x.nama)}${x.tujuan ? ` <small>· ${esc(namaLini(x.tujuan))}</small>` : ''}</span>${SB.aktif() ? sbIkon('preset', x.id) : ''}${ed ? `${dilarangHapus() ? '' : `<button type="button" class="mr-ikonbtn mr-ikonbtn--bahaya" data-qt="pg-hapus-preset" data-id="${esc(x.id)}" aria-label="Hapus preset" title="Hapus preset">${ik('tong', 14)}</button>`}` : ''}</div>`).join('') : '<p class="mr-sub qt-ket" style="margin:4px 0 0">Belum ada. Di form quotation pilih Tulis sendiri lalu Simpan jadi preset.</p>'}</div></details>
-  <details class="mr-kartu cu-kartu qt-pgd" id="pg-tnc" data-pgd="pustaka" ${pgOpen('pustaka')}><summary><h3>Pustaka syarat dan ketentuan</h3></summary><p class="mr-sub qt-ket">Butir <b>Umum</b> otomatis masuk ke semua lini. Butir <b>Khusus</b> hanya muncul bila lininya dipakai di quotation. Cukup tulis dalam Bahasa Indonesia; teks English dibuat otomatis saat dokumen dicetak. Tulis <code>{berlaku}</code> untuk tanggal berlaku.</p>
+  <details class="mr-kartu cu-kartu qt-pgd" id="pg-tnc" data-pgd="pustaka" ${pgOpen('pustaka')}><summary><h3>Pustaka syarat dan ketentuan</h3></summary><p class="mr-sub qt-ket">Butir <b>Umum</b> otomatis masuk ke semua lini; yang sama atau mirip dengan butir lini dilewati supaya tidak dobel. Butir <b>Khusus</b> hanya muncul bila lininya dipakai di quotation. Cukup tulis dalam Bahasa Indonesia; teks English dibuat otomatis saat dokumen dicetak. Tulis <code>{berlaku}</code> untuk tanggal berlaku.</p>
     <div id="tp-isi">${tpHtml()}</div>
     ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div>` : ''}</details>
   </div>
@@ -5200,13 +5248,7 @@ function tlTncHtml() {
   return `${tlSkHtml(dis)}<p class="mr-sub qt-ket">Template S&K lini ini: butir di bawah tampil otomatis sebagai daftar bernomor 1…N di setiap quotation lini ${esc(namaLini(TL.lini))}. Di tiap quotation daftar ini tetap bisa disesuaikan manual.</p>
     ${TL.tnc.length ? TL.tnc.map((t, i) => `<div class="qt-pgt"><div class="qt-pgt__kep"><select data-tt="kategori" data-i="${i}" ${dis}>${kat(t)}</select><label class="qt-pgt__aktif"><input type="checkbox" data-tt="aktif" data-i="${i}" ${t.aktif ? 'checked' : ''} ${dis}> Dipakai</label>${masterAtauAdmin() ? `<label class="qt-pgt__aktif"><input type="checkbox" data-tt="wajib" data-i="${i}" ${t.wajib ? 'checked' : ''}> Wajib</label>` : (t.wajib ? '<span class="cu-st cu-st--info">Wajib</span>' : '')}<span class="mr-ruang"></span>${ed ? `${dilarangHapus() ? '' : `<button type="button" class="mr-ikonbtn mr-ikonbtn--bahaya" data-tl="tnc-hapus" data-i="${i}" aria-label="Hapus butir" title="Hapus butir">${ik('tong', 16)}</button>`}` : ''}</div>
       <div class="qt-grid"><label class="mr-f qt-c6"><span>Indonesia</span><textarea data-tt="id" data-i="${i}" rows="2" ${dis}>${esc(t.teks.id)}</textarea></label><label class="mr-f qt-c6"><span>English</span><textarea data-tt="en" data-i="${i}" rows="2" ${dis}>${esc(t.teks.en)}</textarea></label></div></div>`).join('') : '<div class="mr-kosong" style="padding:18px"><p>Belum ada butir khusus untuk lini ini.</p></div>'}
-    ${ed ? `<div class="qt-pgadd"><button type="button" class="mr-btn mr-btn--kecil" data-tl="tnc-tambah">${ik('plus', 14)} Tambah butir</button>${tlUmumOpsi()}</div>` : ''}`;
-}
-/* syarat umum hanya referensi: pilih butirnya, lalu disalin menjadi butir template lini ini (tidak otomatis masuk quotation) */
-function tlUmumOpsi() {
-  const ada = new Set(TL.tnc.map(t => norm(t.teks.id))), sisa = (PENG.tnc || []).filter(t => t.kat === 'umum' && t.teks && String(t.teks.id || '').trim() && !ada.has(norm(t.teks.id)));
-  if (!sisa.length) return '';
-  return `<span class="mr-ruang"></span><select data-tl-umum aria-label="Pilih butir dari referensi umum"><option value="">Ambil dari referensi umum…</option>${sisa.map(t => `<option value="${esc(t.id)}">${esc(String(t.teks.id).slice(0, 70))}</option>`).join('')}</select>`;
+    ${ed ? `<div class="qt-pgadd"><button type="button" class="mr-btn mr-btn--kecil" data-tl="tnc-tambah">${ik('plus', 14)} Tambah butir</button></div>` : ''}`;
 }
 /* saklar tarif minimum Master Rate per lini (hanya master; tersimpan langsung, berlaku untuk semua akun) */
 function tlMinHtml() {
@@ -5703,7 +5745,7 @@ const tpTopDari = t => { const m = /(\d+)\s*hari/i.exec(String(t.teks.id || ''))
 function tpIsi() { const w = $('#tp-isi'); if (w) w.innerHTML = tpHtml(); }
 function tpHtml() {
   const ed = bisaEdit(), dis = ed ? '' : 'disabled', dipakai = new Set(Q.edit ? R.liniDipakai(Q.edit) : []);
-  const kats = ['umum', ...new Set(TP.tnc.map(t => t.kat).filter(k => k !== 'umum'))];
+  const kats = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...TP.tnc.map(t => t.kat)].filter(k => k !== 'umum'))];   /* semua lini resmi tampil, juga yang belum punya butir */
   if (TP.filter !== 'semua' && !kats.includes(TP.filter)) TP.filter = 'semua';
   const milik = k => TP.tnc.filter(t => t.kat === k);
   const katOpt = t => Object.entries(KATEGORI_TNC).map(([k, l]) => `<option value="${k}" ${t.kategori === k ? 'selected' : ''}>${l}</option>`).join('');
@@ -5736,7 +5778,7 @@ function tpHtml() {
 }
 function panelTncPusat() {
   if (Q.edit) bacaForm(); tpMuat(); const ed = bisaEdit();
-  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Kumpulan syarat dan ketentuan (referensi)</h2><p class="mr-sub">Kumpulan butir per lini bisnis. Template tiap lini dipakai otomatis oleh quotation lini itu (dan bisa disesuaikan per quotation). "Syarat umum" hanya referensi: butirnya tidak otomatis masuk quotation, ambil yang diperlukan ke template lini lewat Pengaturan dokumen. Perubahan berlaku untuk quotation berikutnya; yang sudah terbit tidak berubah.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
+  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Kumpulan syarat dan ketentuan (referensi)</h2><p class="mr-sub">Kumpulan butir per lini bisnis. Template tiap lini dipakai otomatis oleh quotation lini itu (dan bisa disesuaikan per quotation). Butir "Syarat umum" yang dicentang dipakai otomatis di semua lini; yang sama atau mirip dengan butir lini dilewati supaya tidak dobel. Perubahan berlaku untuk quotation berikutnya; yang sudah terbit tidak berubah.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
   <div class="mr-panel__isi">
     <div id="tp-isi"></div>
     ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div><p class="mr-sub qt-ket">Butir yang sudah ada tidak digandakan. Periksa lalu klik Simpan.</p>` : ''}
@@ -5756,8 +5798,9 @@ async function aksiTpSimpan(btn) {
 ['input', 'change'].forEach(n => document.addEventListener(n, ev => { if (Q.pd && ev.target.dataset && ev.target.dataset.tp && $('#pg-tnc')) Q.pdKotor = true; }, true));
 document.addEventListener('toggle', ev => { const d = ev.target; if (d && d.dataset && d.dataset.pgd && Q.pdBuka) { d.open ? Q.pdBuka.add(d.dataset.pgd) : Q.pdBuka.delete(d.dataset.pgd); } }, true);
 document.addEventListener('click', ev => {
-  const e = ev.target.closest('[data-tp],[data-qt="tnc-pusat"],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
+  const e = ev.target.closest('[data-tp],[data-qt="tnc-pusat"],[data-qt="tnc-gabung"],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
   if (d.qt === 'tnc-pusat') panelTncPusat();
+  else if (d.qt === 'tnc-gabung') gabungTnc(d.dari, d.ke);
   else if (d.qt === 'ke-master-rate') { if (Q.edit) bacaForm(); window.__pindahHalaman('master-rate'); setTimeout(() => { const t = document.querySelector('[data-aksi=tab][data-v=lini]'); if (t) t.click(); }, 350); toast('Atur <b>Target margin</b> tiap lini di Master Rate → Lini bisnis. Draf quotation tetap tersimpan di sini; kembali lewat menu Quotation.'); }
   else if (d.tp === 'tambah') { const k = d.kat || 'umum'; TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: '', en: '' }, aktif: true }); TP.filter = k; TP.buka.add(TP.tnc.length - 1); tpIsi(); const ta = $$('#tp-isi [data-tp=id]').pop(); if (ta) ta.focus(); }
   else if (d.tp === 'filter') { TP.filter = d.v; tpIsi(); }
@@ -5770,12 +5813,6 @@ document.addEventListener('click', ev => {
   else if (d.tp === 'simpan') aksiTpSimpan(e);
 });
 document.addEventListener('input', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'id' || d.tp === 'en') { const x = TP.tnc[+d.i]; if (x) { x.teks[d.tp] = t.value; if (d.tp === 'id') { const en = terjemahOtomatis(t.value); if (en) { x.teks.en = en; x.enBasi = false; } else x.enBasi = true; } else x.enBasi = false; } } });
-document.addEventListener('change', ev => {
-  const t = ev.target; if (!t || !t.matches || !t.matches('select[data-tl-umum]') || !t.value || !TL.lini) return;
-  const u = (PENG.tnc || []).find(x => x.id === t.value); if (!u) return;
-  TL.tnc.push({ id: uid('t'), kat: TL.lini, kategori: u.kategori || 'lainnya', teks: { id: u.teks.id || '', en: u.teks.en || '' }, aktif: true });
-  const p = $('#tl-p-tnc'); if (p) p.innerHTML = tlTncHtml(); const n = $('[data-tab=tnc] b'); if (n) n.textContent = TL.tnc.length;
-});
 document.addEventListener('change', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'aktif') { const x = TP.tnc[+d.i]; if (x) { x.aktif = t.checked; tpIsi(); } } else if (d.tp === 'kategori') { const x = TP.tnc[+d.i]; if (x) x.kategori = t.value; } else if (t.id === 'tp-gabung') TP.gabung = t.checked; });
 
 /* =============================== Q. KOLOM TANGGAL: BISA DIKETIK + KALENDER DENGAN TOMBOL OK =============================== */
@@ -5845,6 +5882,18 @@ function infoGambar(dataUrl) {
   else if (t === 'jpg') { let i = 2; while (i < u.length) { if (u[i] !== 0xFF) { i++; continue; } const k = u[i + 1]; if (k >= 0xC0 && k <= 0xC3) { h = (u[i + 5] << 8) | u[i + 6]; w = (u[i + 7] << 8) | u[i + 8]; break; } i += 2 + ((u[i + 2] << 8) | u[i + 3]); } }
   return { u, t, w: w || 200, h: h || 100 };
 }
+/* cap 50% transparan dengan tanda tangan di atas dan di tengah, digabung jadi satu PNG untuk Word (skala sama dengan PDF: cap 104 px, TTD 68 px) */
+async function gabungTtdCap(cap, ttd) {
+  const muat = d => new Promise(res => { if (!d) return res(null); const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = d; });
+  const [ic, it] = await Promise.all([muat(cap), muat(ttd)]);
+  if (!ic && !it) return null;
+  const T = 104, S = 4, lc = ic ? T * ic.naturalWidth / ic.naturalHeight : 0, lt = it ? 68 * it.naturalWidth / it.naturalHeight : 0, w = Math.max(lc, lt);
+  const kanvas = document.createElement('canvas'); kanvas.width = Math.ceil(w * S); kanvas.height = T * S;
+  const x = kanvas.getContext('2d');
+  if (ic) { x.globalAlpha = .5; x.drawImage(ic, (w - lc) / 2 * S, 0, lc * S, T * S); x.globalAlpha = 1; }
+  if (it) x.drawImage(it, (w - lt) / 2 * S, (T - 68) / 2 * S, lt * S, 68 * S);
+  return kanvas.toDataURL('image/png');
+}
 const htmlTeks = s => String(s ?? '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'");
 const dxa = px => Math.round(px * WLEBAR / 686);
 /* hiasan diagonal desain dokumen, dirender dari SVG ke PNG supaya ikut sebagai gambar latar di Word */
@@ -5877,7 +5926,7 @@ async function buatDocx(m, aset) {
   const cell = (isi, w, o = {}) => new TableCell({ children: Array.isArray(isi) ? isi : [isi], width: { size: w, type: WidthType.DXA }, columnSpan: o.span, rowSpan: o.rowSpan, verticalAlign: o.va || VerticalAlign.CENTER, shading: o.fill ? { type: ShadingType.CLEAR, fill: KISI ? 'BFD6EE' : o.fill, color: 'auto' } : undefined, borders: KISI ? { top: sisi('2B3A4D', 4), bottom: sisi('2B3A4D', 4), left: sisi('2B3A4D', 4), right: sisi('2B3A4D', 4) } : { ...tanpaSemua, ...(o.b || {}) }, margins: { top: o.mt ?? 60, bottom: o.mb ?? 60, left: o.ml ?? 110, right: o.mr ?? 110 } });
   const tabel = (kolom, baris, o = {}) => new Table({ width: { size: kolom.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: kolom, rows: baris, borders: { top: tanpa, left: tanpa, bottom: tanpa, right: tanpa, insideHorizontal: tanpa, insideVertical: tanpa }, ...o });
   const sesuaikan = (px, total = WLEBAR) => { const w = px.map(dxa), selisih = total - w.reduce((a, b) => a + b, 0); w[w.findIndex(x => x === Math.max(...w))] += selisih; return w; };
-  const gLogo = infoGambar(ASET_LOGO()), gCap = m.pakaiCap ? infoGambar(aset && aset.cap) : null, gTtd = m.pakaiTtd ? infoGambar(aset && aset.ttd) : null;
+  const gLogo = infoGambar(ASET_LOGO()), gTanda = infoGambar(await gabungTtdCap(m.pakaiCap ? aset && aset.cap : null, m.pakaiTtd ? aset && aset.ttd : null));
   const gambar = (g, tinggi) => g ? new ImageRun({ type: g.t, data: g.u, transformation: { width: Math.round(tinggi * g.w / g.h), height: tinggi }, altText: { title: 'gambar', description: 'gambar', name: 'gambar' } }) : null;
 
   /* ---- kop surat ---- */
@@ -6013,7 +6062,7 @@ async function buatDocx(m, aset) {
 
   /* ---- tanda tangan ---- */
   const garisNama = { bottom: sisi(WN.navy, 6) }, tengah = AlignmentType.CENTER;
-  const stempel = [gCap && gambar(gCap, 104), gTtd && gambar(gTtd, 68)].filter(Boolean);
+  const stempel = [gambar(gTanda, 104)].filter(Boolean);
   const kiriTtd = [para(run(L.reg, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah }), para(run('PT Indo Sukses Logistik'), { al: tengah, sa: 60 }), para(stempel.length ? stempel : run(' '), { al: tengah, sb: 120, sa: 160 }), para(run(m.penandatangan.nama, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah, sa: 20, border: garisNama }), para(run(m.penandatangan.jabatan, { color: '4A5866' }), { al: tengah }), ...(m.tglRingkas ? [] : [para(run(m.tanggalTeks, { color: '4A5866' }), { al: tengah })])];
   const kananTtd = [para(run(L.appr, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah }), para(run(m.customerNama), { al: tengah, sa: 60 }),
     tabel([4300], [new TableRow({ height: { value: 2300, rule: 'atLeast' }, children: [cell(para(run(L.sg, { size: 15, color: 'A0AAB5' }), { al: tengah }), 4300, { va: VerticalAlign.BOTTOM, b: { top: sisi('B9C4D0', 4, BorderStyle.DASHED), left: sisi('B9C4D0', 4, BorderStyle.DASHED), bottom: sisi('B9C4D0', 4, BorderStyle.DASHED), right: sisi('B9C4D0', 4, BorderStyle.DASHED) } })] })]), para(run(' '), { sa: 20 }),

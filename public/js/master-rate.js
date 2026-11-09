@@ -2177,6 +2177,11 @@ async function muatData() {
       DB.simpanVendor(VENDOR_INTERNAL, data, { baru: true, oleh: S.user.email }).then(() => { S.vendor.push({ id: VENDOR_INTERNAL, ...data }); render(); }).catch(() => {});
     }
     S.lini = d.lini;
+    // salah ketik "Werehouse" pada nama lini diperbaiki sekali (hanya akun pengelola)
+    if (S.kelola) S.lini.filter((x) => /^werehouse\b/i.test(x.nama || "") || /^werehouse\b/i.test(x.namaLengkap || "")).forEach((x) => {
+      const data = {}; ["nama", "namaLengkap"].forEach((f) => { if (/^werehouse\b/i.test(x[f] || "")) data[f] = x[f].replace(/^werehouse/i, "Warehouse"); });
+      DB.simpanLini(x.id, data, { baru: false, oleh: S.user.email }).then(() => { Object.assign(x, data); render(); }).catch(() => {});
+    });
     S.satuan = d.satuan;
     S.lini.sort(urutLini);
     S.ref = ref;
