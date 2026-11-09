@@ -15,7 +15,7 @@ const ATURAN = {
   kategori: { reguler: 'Reguler', vip: 'VIP' },
   statusCustomer: { prospek: 'Prospek', aktif: 'Aktif', nonaktif: 'Nonaktif' },
   lini: {
-    depo: 'Depo Container', warehouse_dry: 'Warehouse Dry', warehouse_frozen: 'Warehouse Frozen',
+    depo: 'Depo Container', warehouse_dry: 'Warehouse Dry', warehouse_frozen: 'Warehouse Cold Storage',
     gudang_plb: 'Gudang PLB', open_yard: 'Open Yard', trucking_trailer: 'Trucking Trailer',
     distribusi_kecil: 'Distribusi Kendaraan Kecil', customs_clearance: 'Customs Clearance',
     sewa_container_empty: 'Sewa Container Empty', sewa_unit: 'Sewa Unit Kendaraan', freight_forwarding: 'Freight Forwarding'
@@ -1632,7 +1632,7 @@ const SATUAN_EN = { 'per hari': 'per day', 'per bulan': 'per month', 'per minggu
   'per dokumen': 'per document', 'per project': 'per project', 'lumpsum': 'lump sum', 'per unit': 'per unit', 'per ton': 'per ton', 'per revenue ton': 'per revenue ton' };
 const KATA_EN = { hari: 'day', bulan: 'month', minggu: 'week', tahun: 'year', kontainer: 'container', orang: 'person', jam: 'hour', palet: 'pallet', dokumen: 'document', kendaraan: 'vehicle', lumpsum: 'lump sum', kosong: 'empty' };
 R.satuanEN = s => { const k = norm(s); if (SATUAN_EN[k]) return SATUAN_EN[k]; return String(s || '').replace(/[A-Za-z]+/g, w => KATA_EN[w.toLowerCase()] || w); };
-const LINI_EN = { depo: 'Container Depot', warehouse_dry: 'Dry Warehouse', warehouse_frozen: 'Frozen Warehouse', gudang_plb: 'Bonded Logistics Center (PLB) Warehouse', open_yard: 'Open Yard',
+const LINI_EN = { depo: 'Container Depot', warehouse_dry: 'Dry Warehouse', warehouse_frozen: 'Cold Storage Warehouse', gudang_plb: 'Bonded Logistics Center (PLB) Warehouse', open_yard: 'Open Yard',
   trucking_trailer: 'Trailer Trucking', distribusi_kecil: 'Small Vehicle Distribution', customs_clearance: 'Customs Clearance', sewa_container_empty: 'Empty Container Rental', sewa_unit: 'Vehicle Rental', freight_forwarding: 'Freight Forwarding' };
 R.namaLiniDok = (key, nama, b) => b === 'en' ? (LINI_EN[key] || nama) : nama;
 
@@ -4824,9 +4824,27 @@ function paginaPengaturan(html) {
 }
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
 /* ringkasan Pustaka S&K di halaman Teks standar: jumlah butir dipakai per grup; butirnya dikelola di panel */
+/* kategori S&K yatim (lininya sudah tidak ada di Master Rate) yang punya lini pengganti: Warehouse Frozen dan Cold Storage satu lini */
+const GABUNG_YATIM = { warehouse_frozen: /cold|frozen|chiller/i };
+function tujuanGabung(dari) {
+  const re = GABUNG_YATIM[dari]; if (!re) return null;
+  const resmi = daftarLini().filter(l => l.resmi);
+  return resmi.some(l => l.key === dari) ? null : (resmi.find(l => re.test(l.nama)) || {}).key || null;
+}
+async function gabungTnc(dari, ke) {
+  if (!kelolaSaja() || tujuanGabung(dari) !== ke) return;
+  const butir = (PENG.tnc || []).filter(t => t.kat === dari);
+  if (!(await konfirmasi({ judul: `Gabungkan ke ${namaLini(ke)}?`, isi: `${butir.length} butir S&K dari <b>${esc(namaLini(dari))}</b> dipindah ke <b>${esc(namaLini(ke))}</b> (butir yang sama persis dilewati). Kalimat, syarat, dan template lini ikut dipindah bila lini tujuan belum punya. Quotation yang sudah terbit tidak berubah.`, aksi: 'Gabungkan' }))) return;
+  const lama = clone(PENG), ada = new Set(PENG.tnc.filter(t => t.kat === ke).map(t => norm(t.teks && t.teks.id)));
+  PENG.tnc = PENG.tnc.filter(t => !(t.kat === dari && ada.has(norm(t.teks && t.teks.id)))).map(t => t.kat === dari ? { ...t, kat: ke } : t);
+  ['kalimatLini', 'syaratLini', 'templateLini'].forEach(f => { const o = PENG[f]; if (o && o[dari] !== undefined) { if (o[ke] === undefined) o[ke] = o[dari]; delete o[dari]; } });
+  try { await Repo.simpanPengaturan(PENG); } catch (er) { Object.keys(PENG).forEach(k => delete PENG[k]); Object.assign(PENG, lama); return toast(`<b>GAGAL menyimpan.</b> ${esc(er.message)}`, 'bahaya'); }
+  if (Q.pd) { Q.pd.tnc = clone(PENG.tnc); Q.pd.kalimatLini = clone(PENG.kalimatLini || {}); Q.pd.syaratLini = clone(PENG.syaratLini || {}); Q.pd.templateLini = clone(PENG.templateLini || {}); }
+  gambar(); toast(`S&K ${esc(namaLini(dari))} digabung ke ${esc(namaLini(ke))}.`);
+}
 function ringkasanTnc() {
   const tn = PENG.tnc || [], kat = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...tn.map(x => x.kat)].filter(k => k !== 'umum'))];
-  return `<div class="qt-ringkas-daftar">${kat.map(k => { const m = tn.filter(x => x.kat === k); return `<div class="qt-ringkas"><span>${esc(k === 'umum' ? 'Syarat umum' : namaLini(k))}</span><small>${m.filter(x => x.aktif).length} dari ${m.length} dipakai</small></div>`; }).join('')}</div><button type="button" class="mr-btn" data-qt="tnc-pusat">${ik('file', 14)} Kelola butir syarat</button>`;
+  return `<div class="qt-ringkas-daftar">${kat.map(k => { const m = tn.filter(x => x.kat === k); const tujuan = kelolaSaja() && m.length ? tujuanGabung(k) : null; return `<div class="qt-ringkas"><span>${esc(k === 'umum' ? 'Syarat umum' : namaLini(k))}</span><small>${m.filter(x => x.aktif).length} dari ${m.length} dipakai</small>${tujuan ? `<button type="button" class="mr-btn mr-btn--kecil" data-qt="tnc-gabung" data-dari="${esc(k)}" data-ke="${esc(tujuan)}">Gabungkan ke ${esc(namaLini(tujuan))}</button>` : ''}</div>`; }).join('')}</div><button type="button" class="mr-btn" data-qt="tnc-pusat">${ik('file', 14)} Kelola butir syarat</button>`;
 }
 // Kartu lipat: saat satu dibuka, kartu lain di bagian yang sama menutup (kecuali sedang mencari); kotak teks menyesuaikan tinggi isi
 const tinggiTa = t => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
@@ -5775,8 +5793,9 @@ async function aksiTpSimpan(btn) {
 ['input', 'change'].forEach(n => document.addEventListener(n, ev => { if (Q.pd && ev.target.dataset && ev.target.dataset.tp && $('#pg-tnc')) Q.pdKotor = true; }, true));
 document.addEventListener('toggle', ev => { const d = ev.target; if (d && d.dataset && d.dataset.pgd && Q.pdBuka) { d.open ? Q.pdBuka.add(d.dataset.pgd) : Q.pdBuka.delete(d.dataset.pgd); } }, true);
 document.addEventListener('click', ev => {
-  const e = ev.target.closest('[data-tp],[data-qt="tnc-pusat"],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
+  const e = ev.target.closest('[data-tp],[data-qt="tnc-pusat"],[data-qt="tnc-gabung"],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
   if (d.qt === 'tnc-pusat') panelTncPusat();
+  else if (d.qt === 'tnc-gabung') gabungTnc(d.dari, d.ke);
   else if (d.qt === 'ke-master-rate') { if (Q.edit) bacaForm(); window.__pindahHalaman('master-rate'); setTimeout(() => { const t = document.querySelector('[data-aksi=tab][data-v=lini]'); if (t) t.click(); }, 350); toast('Atur <b>Target margin</b> tiap lini di Master Rate → Lini bisnis. Draf quotation tetap tersimpan di sini; kembali lewat menu Quotation.'); }
   else if (d.tp === 'tambah') { const k = d.kat || 'umum'; TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: '', en: '' }, aktif: true }); TP.filter = k; TP.buka.add(TP.tnc.length - 1); tpIsi(); const ta = $$('#tp-isi [data-tp=id]').pop(); if (ta) ta.focus(); }
   else if (d.tp === 'filter') { TP.filter = d.v; tpIsi(); }
