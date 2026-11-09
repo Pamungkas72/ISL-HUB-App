@@ -1916,13 +1916,16 @@ R.tncDasar = q => {
   const lini = [...new Set([...(FL ? [FL.liniKey(q.formLini)] : []), ...R.liniDipakai(q)].filter(Boolean))], off = new Set(q.tncOff || []), lihat = new Set(), daftar = [];
   if (!ganti) lini.forEach(k => R.tncTemplateLini(k).forEach(t => { const kk = norm(t.teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push(off.has(t.id) ? { ...t, aktif: false } : t); }));
   eng.forEach((teks, i) => { const kk = norm(teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push({ id: 'fx' + i, teks, aktif: true }); });
-  /* butir Umum otomatis masuk ke semua lini; dilewati bila sama/mirip dengan butir yang sudah ada (kata >= 0,6) atau sejenis dengan butir lini (mis. sama-sama Pembayaran), supaya tidak ada duplikat atau bentrok */
+  /* butir Umum otomatis masuk ke semua lini, kecuali bila bentrok atau dobel: sama/mirip dengan butir yang ada (kata >= 0,6), sejenis isinya (pajak, pembayaran, biaya tambahan, perubahan harga) dengan butir yang sudah ada,
+     sejenis dengan butir lini menurut kategorinya, atau soal masa berlaku (sudah ada di kalimat penutup baku, keputusan 3 Nov 2026) */
   const jenisLini = new Set((PENG.tnc || []).filter(t => lini.includes(t.kat) && t.aktif !== false && t.kategori && t.kategori !== 'lainnya').map(t => t.kategori)), kataT = x => new Set(String(x || '').toLowerCase().match(/[a-z0-9]+/g) || []);
   const miripT = (a, b) => { const u = new Set([...a, ...b]); let i = 0; a.forEach(w => { if (b.has(w)) i++; }); return u.size ? i / u.size : 0; };
+  const jenisT = x => { const n = norm(x), j = new Set(); if (/pajak|ppn/.test(n)) j.add('pajak'); if (/pembayaran|invoice|\{toplayanan\}/.test(n)) j.add('bayar'); if (/biaya (tambahan|di luar|inap)|di luar penawaran|waktu tunggu|demurrage|detention/.test(n)) j.add('biaya'); if (/perubahan harga/.test(n)) j.add('harga'); if (/berlaku sampai|masa berlaku|valid until|\{berlaku\}/.test(n)) j.add('berlaku'); return j; };
+  const adaJenis = new Set(daftar.flatMap(x => [...jenisT(x.teks)]));
   (PENG.tnc || []).filter(t => t.kat === 'umum' && t.aktif !== false && t.teks && String(t.teks.id || '').trim()).forEach(t => {
-    const kk = norm(t.teks.id), ks = kataT(t.teks.id);
-    if (lihat.has(kk) || daftar.some(x => miripT(kataT(x.teks), ks) >= 0.6) || (t.kategori && t.kategori !== 'lainnya' && jenisLini.has(t.kategori))) return;
-    lihat.add(kk); daftar.push(off.has(t.id) ? { id: t.id, teks: t.teks.id, en: R.enAsli(t.teks.id, t.teks.en), aktif: false } : { id: t.id, teks: t.teks.id, en: R.enAsli(t.teks.id, t.teks.en), aktif: true });
+    const kk = norm(t.teks.id), ks = kataT(t.teks.id), jt = jenisT(t.teks.id);
+    if (lihat.has(kk) || jt.has('berlaku') || t.kategori === 'masa_berlaku' || [...jt].some(j => adaJenis.has(j)) || daftar.some(x => miripT(kataT(x.teks), ks) >= 0.6) || (t.kategori && t.kategori !== 'lainnya' && jenisLini.has(t.kategori))) return;
+    lihat.add(kk); jt.forEach(j => adaJenis.add(j)); daftar.push({ id: t.id, teks: t.teks.id, en: R.enAsli(t.teks.id, t.teks.en), aktif: !off.has(t.id) });
   });
   (q.tncManual || []).filter(m => String(m.teks || '').trim()).forEach(m => { const kk = norm(m.teks); if (!lihat.has(kk)) { lihat.add(kk); daftar.push({ id: m.id, teks: String(m.teks).trim(), aktif: true }); } });   /* butir manual dari draf lama */
   return daftar;
