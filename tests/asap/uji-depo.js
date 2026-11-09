@@ -618,7 +618,7 @@ async function siapkan(browser, peran, pengaturan) {
       r = await lihat(p, LF40); cek(r.ph === '500.000' && r.ghost, peran + ': LOLO FULL 40 ft harus berbayangan 500.000: ' + JSON.stringify(r));
       // kolom dibiarkan kosong -> rekomendasi dipakai otomatis (quotation, ringkasan); layanan tanpa angka tidak ikut
       let br = await baris(p);
-      cek(br['LOLO FULL 20 ft'] === 400000 && br['LOLO FULL 40 ft'] === 500000 && br['Storage Container Dry 20 ft'] === 60000 && br['Container to Container 40 ft'] === 5000000 && br['Terminal Peti Kemas / Depo 20 ft'] === 700000 && br['Biaya administrasi'] === 50000, peran + ': kolom kosong harus otomatis memakai rekomendasi di baris quotation: ' + JSON.stringify(br));
+      cek(br['LOLO FULL 20 ft'] === 400000 && br['LOLO FULL 40 ft'] === 500000 && br['Storage Container Dry 20 ft'] === 60000 && br['Container to Container 40 ft'] === 5000000 && br['Terminal Peti Kemas / Depo 20 ft'] === 700000 && br['Fee administrasi'] === 60000, peran + ': kolom kosong harus otomatis memakai rekomendasi di baris quotation: ' + JSON.stringify(br));
       cek(!Object.keys(br).some(k => /Pengambilan Sampel/.test(k)), peran + ': layanan tanpa angka rekomendasi tidak boleh ikut otomatis: ' + JSON.stringify(Object.keys(br).filter(k => /Pengambilan/.test(k))));
       const ring = await p.evaluate(() => (document.querySelector('.fl-ck__ring .fl-ck__chip') || {}).textContent);
       cek(/^14 layanan terisi/.test(ring), peran + ': ringkasan harus menghitung 14 layanan terisi otomatis: ' + ring);
