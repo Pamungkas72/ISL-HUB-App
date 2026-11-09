@@ -310,7 +310,7 @@ MESIN.tabel = {
     if (cfg.centang) {
       const T = window.ISLTemplate, tpl = cfg.liniKey && T && T.tersimpan(cfg.liniKey) ? T.baris(cfg.liniKey) : [];
       const cocok = nama => { const n = normT(nama); return tpl.some(x => { const ln = normT(x.layananNama || x.layanan); return ln === n || ln.startsWith(n + ' ') || n.startsWith(ln + ' '); }); };
-      Object.values(o.rows).forEach(rows => rows.forEach(r => { r.on = !tpl.length || cocok(r.uraian); }));
+      Object.values(o.rows).forEach(rows => rows.forEach(r => { r.on = !tpl.length || cocok(r.uraian) || NAMA_FEE.includes(r.uraian); }));   /* Fee administrasi selalu tercentang bawaan (9 Nov 2026): bukan layanan Master Rate, jadi tidak ikut daftar template */
     } if (cfg.blokAwalOff) o.off = Object.fromEntries(cfg.blokAwalOff.map(i => [String(i), true])); return o; },
   html(st, cfg, e) {
     let h = cfg.htmlAtas ? cfg.htmlAtas(st, e) : '';
