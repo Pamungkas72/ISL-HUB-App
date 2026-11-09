@@ -21,3 +21,11 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 - **Bila bahasa quotation diganti ke English, SEMUA yang tampil di dokumen (PDF, pratinjau, Word) harus English, di semua lini dan semua quotation yang terbit**: S&K, judul blok, label kolom, satuan, catatan, info, kalimat pembuka/penutup, judul dokumen (tanpa subjudul Indonesia). Hanya isian bebas user (nama customer, rute, lokasi, nama layanan buatan sendiri) yang boleh tetap apa adanya.
 - Teks statis lini yang baru ditambahkan di `formulir-lini.js` atau `app-core.js` **wajib punya terjemahan** di `DOK_EN` / `DOK_EN_POLA` (app-core.js) atau `FL.TNC_LINI_EN` (S&K bawaan lini). Uji asap `tests/asap/uji-asap.js` merender dokumen English tiap lini dan gagal bila masih ada teks Indonesia; tambahkan kata Indonesia baru ke pola `ID` di tes itu bila perlu.
 
+
+## Gaya respon (aturan pemilik, 9 Nov 2026)
+1. **Langsung ke inti.** Tanpa kalimat pembuka, penutup, atau penjelasan yang tidak diminta.
+2. **Format ringkas.** Poin pendek; tabel bila membandingkan.
+3. **Kalimat aktif pendek.** Buang kata sifat, keterangan, dan teori yang tidak ditanyakan.
+4. **Tanpa repetisi.** Jangan mengulang instruksi pemilik atau merangkum isi chat.
+5. **Tebal hanya untuk kata kunci/jawaban utama.**
+6. **Selaraskan dengan gaya coding pemilik** (lihat aturan di atas dan kode yang ada): ringkas, komentar satu baris, variabel tema, Bahasa Indonesia.
