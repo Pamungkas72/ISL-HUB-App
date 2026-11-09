@@ -395,14 +395,14 @@ async function siapkan(browser, peran, pengaturan) {
     const isi = async (path, v) => { await p.focus(`[data-fl="${path}"]`); await p.fill(`[data-fl="${path}"]`, v); };
     await isi('rows.0.0.h20', '45000'); await isi('rows.0.1.h20', '60000');
     let b = await p.evaluate(() => ({ n: document.querySelector('.fl-ck__n').textContent.trim(), ring: document.querySelector('.fl-ck__ring').textContent, baris: window.__qt._Q.edit.baris.length, fokus: document.activeElement.dataset.fl }));
-    cek(b.n === '4 / 4' && /13 layanan terisi/.test(b.ring) && b.baris === 25, 'centang: hitungan live salah (13 layanan berisi rekomendasi otomatis = 25 baris): ' + JSON.stringify(b));
+    cek(b.n === '4 / 4' && /14 layanan terisi/.test(b.ring) && b.baris === 27, 'centang: hitungan live salah (14 layanan berisi rekomendasi otomatis = 27 baris): ' + JSON.stringify(b));
     cek(b.fokus === 'rows.0.1.h20', 'centang: fokus hilang saat mengetik');
     await p.evaluate(() => { const c = document.querySelector('[data-fl="rows.0.1.on"]'); c.click(); }); await p.waitForTimeout(200);
     b = await p.evaluate(() => ({ baris: window.__qt._Q.edit.baris.map(x => x.item), isi: document.querySelector('.fl-ck__n').textContent.trim(), inputs: document.querySelectorAll('[data-fl="rows.0.1.h20"]').length }));
-    cek(b.baris.length === 23 && !b.baris.some(x => /Storage Container DG/.test(x)) && b.isi === '3 / 4' && b.inputs === 0, 'centang: layanan yang dilepas centangnya tidak boleh ikut dan kotak harganya tersembunyi: ' + JSON.stringify(b));
+    cek(b.baris.length === 25 && !b.baris.some(x => /Storage Container DG/.test(x)) && b.isi === '3 / 4' && b.inputs === 0, 'centang: layanan yang dilepas centangnya tidak boleh ikut dan kotak harganya tersembunyi: ' + JSON.stringify(b));
     // PDF: hanya layanan tercentang dan berharga
     const dok = await p.evaluate(() => window.ISLFL.dok(window.__qt._Q.edit).blok.map(x => x.baris.length));
-    cek(JSON.stringify(dok) === '[3,5,3,1]', 'centang: PDF memuat layanan tercentang dan berharga (rekomendasi otomatis), tanpa DG yang dilepas: ' + JSON.stringify(dok));
+    cek(JSON.stringify(dok) === '[3,5,3,2]', 'centang: PDF memuat layanan tercentang dan berharga (rekomendasi otomatis), tanpa DG yang dilepas: ' + JSON.stringify(dok));
     // buka kelompok B, ubah nama, tambah layanan manual dengan keterangan
     await p.evaluate(() => document.querySelector('[data-fla="grup-buka"][data-flx="1"]').click()); await p.waitForTimeout(150);
     await p.evaluate(() => document.querySelector('[data-fla="grup-ubah"][data-flx="1"]').click()); await p.waitForTimeout(150);
@@ -619,9 +619,9 @@ async function siapkan(browser, peran, pengaturan) {
       // kolom dibiarkan kosong -> rekomendasi dipakai otomatis (quotation, ringkasan); layanan tanpa angka tidak ikut
       let br = await baris(p);
       cek(br['LOLO FULL 20 ft'] === 400000 && br['LOLO FULL 40 ft'] === 500000 && br['Storage Container Dry 20 ft'] === 60000 && br['Container to Container 40 ft'] === 5000000 && br['Terminal Peti Kemas / Depo 20 ft'] === 700000 && br['Biaya administrasi'] === 50000, peran + ': kolom kosong harus otomatis memakai rekomendasi di baris quotation: ' + JSON.stringify(br));
-      cek(!Object.keys(br).some(k => /Pengambilan Sampel|Extra Moving/.test(k)), peran + ': layanan tanpa angka rekomendasi tidak boleh ikut otomatis: ' + JSON.stringify(Object.keys(br).filter(k => /Pengambilan|Extra/.test(k))));
+      cek(!Object.keys(br).some(k => /Pengambilan Sampel/.test(k)), peran + ': layanan tanpa angka rekomendasi tidak boleh ikut otomatis: ' + JSON.stringify(Object.keys(br).filter(k => /Pengambilan/.test(k))));
       const ring = await p.evaluate(() => (document.querySelector('.fl-ck__ring .fl-ck__chip') || {}).textContent);
-      cek(/^13 layanan terisi/.test(ring), peran + ': ringkasan harus menghitung 13 layanan terisi otomatis: ' + ring);
+      cek(/^14 layanan terisi/.test(ring), peran + ': ringkasan harus menghitung 14 layanan terisi otomatis: ' + ring);
       // isi sendiri menang; 0 berarti tidak ditawarkan; layanan yang tidak dicentang tidak ikut
       await isi(p, LF20, '410000'); await isi(p, LF40, '0'); await p.waitForTimeout(250); br = await baris(p);
       cek(br['LOLO FULL 20 ft'] === 410000 && !('LOLO FULL 40 ft' in br), peran + ': angka yang diketik menang dan 0 berarti tidak ditawarkan: ' + JSON.stringify([br['LOLO FULL 20 ft'], 'LOLO FULL 40 ft' in br]));
@@ -711,7 +711,7 @@ async function siapkan(browser, peran, pengaturan) {
     await p.evaluate(() => { window.__qt.baru('c1'); const e = window.__qt._Q.edit; window.ISLFL.terapkanAwal(e, 'depo'); e.customerNama = 'PT Lama Terdaftar'; e.customerId = 'c1'; window.__qt.gambar(); }); await p.waitForTimeout(300);
     const kos = () => p.evaluate(() => window.ISLFL.hargaKosong(window.__qt._Q.edit).map(x => x.nama + ':' + x.ukuran.join('/') + (x.semua ? ':semua' : '')));
     let k = await kos();
-    cek(JSON.stringify(k) === JSON.stringify(['Pengambilan Sampel:20 ft/40 ft:semua', 'Extra Moving (Fumigasi Area):20 ft/40 ft:semua']), 'hanya layanan tanpa rekomendasi dan tanpa harga yang tercatat kosong: ' + JSON.stringify(k));
+    cek(JSON.stringify(k) === JSON.stringify(['Pengambilan Sampel:20 ft/40 ft:semua']), 'hanya layanan tanpa rekomendasi dan tanpa harga yang tercatat kosong: ' + JSON.stringify(k));
     // isi sebagian: 20 ft Pengambilan Sampel diisi -> hanya 40 ft yang dicatat; 0 yang diketik = sengaja tidak ditawarkan (tidak dicatat); layanan yang dilepas centang tidak dicatat
     await p.evaluate(() => { const st = window.__qt._Q.edit.formLini.s; st.rows[2][3].h20 = 90000; st.rows[3][1].h20 = 0; st.rows[3][1].h40 = 0; });
     k = await kos(); cek(JSON.stringify(k) === JSON.stringify(['Pengambilan Sampel:40 ft']), 'sebagian terisi dan 0 sengaja: hanya 40 ft Pengambilan Sampel dicatat: ' + JSON.stringify(k));
@@ -720,7 +720,7 @@ async function siapkan(browser, peran, pengaturan) {
     // pop-up: lanjutkan -> true dan tidak ditanya ulang untuk daftar yang sama; kembali -> false
     await p.evaluate(() => { const st = window.__qt._Q.edit.formLini.s; st.rows[2][3].on = true; st.rows[3][1].h20 = ''; st.rows[3][1].h40 = ''; window.__pr = window.ISLFL.konfirmasiKosong(window.__qt._Q.edit); }); await p.waitForTimeout(300);
     const dlg = await p.evaluate(() => { const d = document.querySelector('.mr-konfirm'); return d ? { judul: (d.querySelector('h3') || {}).textContent, tombol: [...d.querySelectorAll('button')].map(b => b.textContent.trim()), isi: d.textContent } : null; });
-    cek(dlg && /Ada tarif yang belum diisi/.test(dlg.judul) && dlg.tombol.includes('Lanjutkan tanpa layanan ini') && dlg.tombol.includes('Kembali, isi tarif') && /Pengambilan Sampel/.test(dlg.isi) && /Extra Moving/.test(dlg.isi) && /tidak ditampilkan di PDF/.test(dlg.isi), 'pop-up harus memuat judul, dua tombol, dan daftar layanan: ' + JSON.stringify(dlg && dlg.tombol));
+    cek(dlg && /Ada tarif yang belum diisi/.test(dlg.judul) && dlg.tombol.includes('Lanjutkan tanpa layanan ini') && dlg.tombol.includes('Kembali, isi tarif') && /Pengambilan Sampel/.test(dlg.isi) && /tidak ditampilkan di PDF/.test(dlg.isi), 'pop-up harus memuat judul, dua tombol, dan daftar layanan: ' + JSON.stringify(dlg && dlg.tombol));
     await p.evaluate(() => [...document.querySelectorAll('.mr-konfirm button')].find(b => /Kembali, isi tarif/.test(b.textContent)).click());
     cek(await p.evaluate(() => window.__pr) === false, 'Kembali: penerbitan dibatalkan (false)'); await p.waitForTimeout(200);
     await p.evaluate(() => { window.__pr = window.ISLFL.konfirmasiKosong(window.__qt._Q.edit); }); await p.waitForTimeout(300);
@@ -730,7 +730,7 @@ async function siapkan(browser, peran, pengaturan) {
     cek(ulang.r === true && !ulang.dlg, 'daftar yang sama tidak ditanya ulang: ' + JSON.stringify(ulang));
     // PDF: layanan tanpa harga tidak tampil; layanan lain tetap
     const pdf = await p.evaluate(async () => { const e = window.__qt._Q.edit; window.ISLFL.sinkron(e); const m = window.__qt._R.bangunModel(e, window.__islCU.S.customers[0]); const h = await window.__qt._renderDok(m, window.__qt._aset(), { watermark: '', densitas: 0 }); const t = h.pages.map(x => x.textContent).join(' '); h.host.remove(); return { sampel: /Pengambilan Sampel/.test(t), extra: /Extra Moving/.test(t), lolo: /LOLO FULL/.test(t) }; });
-    cek(!pdf.sampel && !pdf.extra && pdf.lolo, 'PDF: layanan tanpa harga tidak tampil, layanan berharga tetap: ' + JSON.stringify(pdf));
+    cek(!pdf.sampel && pdf.extra && pdf.lolo, 'PDF: layanan tanpa harga tidak tampil, layanan berharga tetap: ' + JSON.stringify(pdf));
     cek(err.length === 0, 'galat konsol (13): ' + err.join(' | ')); await p.close();
   } catch (er) { gagal.push('skenario 13 berhenti: ' + er.message.split('\n')[0]); }
 

@@ -433,7 +433,7 @@ const LINI = {};
 /* Harga jual rekomendasi bawaan template Depo (tabel tarif dari tim, 4 Nov 2026): [20 ft, 40 ft]; satu angka = satu tarif (per invoice). Master bisa mengubahnya di Pengaturan > Template lini Depo (PENG.rekJual). */
 const REK_DEPO = { 'Storage Container Dry': [60000, 70000], 'Storage Container DG': [80000, 100000], 'Storage Container Reefer': [70000, 100000], 'Storage Empty': [40000, 50000],
   'LOLO FULL': [400000, 500000], 'LOLO EMPTY': [300000, 400000], 'DEPO SHIFTING': [100000, 200000], 'Plugging & Monitoring': [850000, 1200000], 'Biaya administrasi': [50000],
-  'Container to Truck': [2200000, 2500000], 'Container to Container': [4400000, 5000000], 'Reworks Container / Behandle': [2200000, 2500000], 'Terminal Peti Kemas / Depo': [700000, 800000] };
+  'Container to Truck': [2200000, 2500000], 'Container to Container': [4400000, 5000000], 'Reworks Container / Behandle': [2200000, 2500000], 'Terminal Peti Kemas / Depo': [700000, 800000], 'Extra Moving (Fumigasi Area)': [700000, 700000] };
 const rekAwalDari = tabel => Object.fromEntries(Object.entries(tabel).flatMap(([n, t]) => t.map((v, i) => [kunciMin(n, { ukuran: i ? '40ft' : '20ft' }), v])));
 LINI.depo = {
   key: 'depo', mesin: 'tabel', liniKey: 'depo', rekAwal: rekAwalDari(REK_DEPO), sembunyiMin: true, nama: 'Depo Container', judul: 'Penawaran Tarif Depo Container',
