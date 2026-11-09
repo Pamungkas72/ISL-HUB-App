@@ -1891,7 +1891,7 @@ const isSyaratSendiri = q => !!(q && q.formLini && SYARAT_SENDIRI[q.formLini.lin
 /* ===== SYARAT DAN KETENTUAN: satu daftar bernomor yang sama untuk SEMUA lini (disepakati 3 Nov 2026) =====
    Template tiap lini ada di Pengaturan dokumen (Template lini bisnis > Syarat dan ketentuan). Quotation baru memakai template lini yang dipakainya;
    selama belum diubah, daftar mengikuti template dan pilihan formulir. Begitu diubah di form (ubah teks, centang Tampil, tambah, hapus), daftar menjadi milik quotation itu (q.tncCc).
-   Konsep "syarat umum" dan "gabungkan" tidak lagi dipakai di quotation; butir umum hanya referensi di Pengaturan. */
+   Konsep "syarat umum" dan "gabungkan" tidak lagi dipakai di quotation; butir Umum (Teks standar > Pustaka) otomatis masuk ke semua lini, kecuali bila sama/mirip dengan butir lini. */
 /* Teks English sebuah butir: pakai isian yang benar-benar berbeda dari teks Indonesia; bila kosong atau sama persis dengan Indonesia (data lama menyalin teks Indonesia ke kolom English), pakai terjemahan baku CC/Depo/Trailer, selain itu kosong (nanti diterjemahkan otomatis). */
 R.enBaku = teksId => {
   const k = norm(teksId); for (const c of Object.values(SYARAT_SENDIRI)) { const i = c.syarat.findIndex(x => norm(x) === k); if (i >= 0 && c.en && c.en[i]) return c.en[i]; }
@@ -1916,6 +1916,14 @@ R.tncDasar = q => {
   const lini = [...new Set([...(FL ? [FL.liniKey(q.formLini)] : []), ...R.liniDipakai(q)].filter(Boolean))], off = new Set(q.tncOff || []), lihat = new Set(), daftar = [];
   if (!ganti) lini.forEach(k => R.tncTemplateLini(k).forEach(t => { const kk = norm(t.teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push(off.has(t.id) ? { ...t, aktif: false } : t); }));
   eng.forEach((teks, i) => { const kk = norm(teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push({ id: 'fx' + i, teks, aktif: true }); });
+  /* butir Umum otomatis masuk ke semua lini; dilewati bila sama/mirip dengan butir yang sudah ada (kata >= 0,6) atau sejenis dengan butir lini (mis. sama-sama Pembayaran), supaya tidak ada duplikat atau bentrok */
+  const jenisLini = new Set((PENG.tnc || []).filter(t => lini.includes(t.kat) && t.aktif !== false && t.kategori && t.kategori !== 'lainnya').map(t => t.kategori)), kataT = x => new Set(String(x || '').toLowerCase().match(/[a-z0-9]+/g) || []);
+  const miripT = (a, b) => { const u = new Set([...a, ...b]); let i = 0; a.forEach(w => { if (b.has(w)) i++; }); return u.size ? i / u.size : 0; };
+  (PENG.tnc || []).filter(t => t.kat === 'umum' && t.aktif !== false && t.teks && String(t.teks.id || '').trim()).forEach(t => {
+    const kk = norm(t.teks.id), ks = kataT(t.teks.id);
+    if (lihat.has(kk) || daftar.some(x => miripT(kataT(x.teks), ks) >= 0.6) || (t.kategori && t.kategori !== 'lainnya' && jenisLini.has(t.kategori))) return;
+    lihat.add(kk); daftar.push(off.has(t.id) ? { id: t.id, teks: t.teks.id, en: R.enAsli(t.teks.id, t.teks.en), aktif: false } : { id: t.id, teks: t.teks.id, en: R.enAsli(t.teks.id, t.teks.en), aktif: true });
+  });
   (q.tncManual || []).filter(m => String(m.teks || '').trim()).forEach(m => { const kk = norm(m.teks); if (!lihat.has(kk)) { lihat.add(kk); daftar.push({ id: m.id, teks: String(m.teks).trim(), aktif: true }); } });   /* butir manual dari draf lama */
   return daftar;
 };
@@ -4795,13 +4803,19 @@ function paginaPengaturan(html) {
       const paraAsli = [...s.querySelectorAll(':scope > p.qt-ket')], awalan = banyak ? `<b>${esc(sub)}:</b> ` : '';
       [...(INFO_BAGIAN[k] || []).map(esc), ...paraAsli.map(x => x.innerHTML)].forEach(h => paraInfo.push(awalan + h));
       paraAsli.forEach(x => x.remove());
+      // Lini bisnis dan Teks standar: tiap judul jadi kartu lipat (yang pertama terbuka); halaman lain tetap memakai judul biasa
+      const lipatan = banyak && ['lini', 'teks'].includes(pilih.id), lipat = (j, m, b, buka) => `<details class="qt-lipat"${buka ? ' open' : ''}><summary><div><h3 class="qt-subseksi__judul">${esc(j)}</h3>${m ? `<small class="qt-lipat__meta">${esc(m)}</small>` : ''}</div></summary>${b}</details>`;
+      let meta = '', tambahan = '';
+      if (lipatan && pilih.id === 'teks') {
+        if (k === 'kalimatstandar') { meta = 'Pembuka · Penutup · Catatan'; const pre = s.querySelector('.qt-presetlist'); if (pre) { const b = pre.querySelector(':scope > b'); if (b) b.remove(); tambahan = lipat('Preset kalimat saya', pre.querySelectorAll('.qt-presetlist__i').length + ' preset', `<div class="qt-subseksi">${pre.outerHTML}</div>`, false); pre.remove(); } }
+        else if (k === 'pustaka') { const tn = PENG.tnc || []; meta = `${tn.filter(x => x.aktif).length} dari ${tn.length} butir dipakai`; s.innerHTML = ringkasanTnc(); }
+      }
       const badan = `<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${s.innerHTML}</div>`;
-      // Lini bisnis: tiap judul jadi kartu lipat (yang pertama terbuka); halaman lain tetap memakai judul biasa
-      isi.push(pilih.id === 'lini' && banyak ? `<details class="qt-lipat"${pilih.kartu.indexOf(d) === 0 ? ' open' : ''}><summary><h3 class="qt-subseksi__judul">${esc(sub)}</h3></summary>${badan}</details>` : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
+      isi.push(lipatan ? lipat(sub, meta, badan, pilih.kartu.indexOf(d) === 0) + tambahan : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
     });
     const judul = judulGrup(pilih), simpan = ed && kunciBagian(pilih.id).length;
     return `${awal.replace(/<div class="cu-judul">[\s\S]*?<\/div><\/div>/, `<div class="cu-judul qt-seksi__judul"><button type="button" class="mr-ikonbtn" data-qt="pg-daftar-bagian" aria-label="Kembali ke daftar bagian" title="Kembali">${ik('kembali', 18)}</button><h2>${esc(judul)}</h2>${htmlInfoPop(judul, paraInfo)}</div>`)}
-    <div class="qt-main"><section class="mr-kartu cu-kartu qt-seksi">${isi.join('')}</section></div>
+    <div class="qt-main"><section class="mr-kartu cu-kartu qt-seksi">${pilih.id === 'teks' && banyak ? '<input type="search" class="qt-cari-lipat" placeholder="Cari kalimat atau grup syarat…" aria-label="Cari kalimat atau grup syarat" autocomplete="off">' : ''}${isi.join('')}</section></div>
     ${simpan ? `<footer class="mr-panel__kaki qt-pgfoot"><span class="mr-ruang"></span><button class="mr-btn mr-btn--utama" data-qt="pg-simpan-bagian" data-seksi="${pilih.id}">${ik('cek', 16)} Simpan bagian ini</button></footer>` : ''}`;
   }
   const daftar = grup.map(g => `<button type="button" class="qt-bagian" data-qt="pg-buka" data-seksi="${esc(g.id)}"><span>${esc(judulGrup(g))}</span><span class="qt-bagian__panah" aria-hidden="true">›</span></button>`).join('');
@@ -4809,8 +4823,19 @@ function paginaPengaturan(html) {
     <footer class="mr-panel__kaki qt-pgfoot">${ed ? `<button class="mr-btn" data-qt="pg-batal">Batalkan perubahan</button>` : ''}<span class="mr-ruang"></span><button class="mr-btn" data-qt="pg-kembali">${ik('kembali', 16)} Kembali</button>${ed ? `<button class="mr-btn mr-btn--utama" data-qt="pg-simpan">${ik('cek', 16)} Simpan pengaturan</button>` : ''}</footer>`;
 }
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
-// Kartu lipat Lini bisnis: saat satu dibuka, kartu lain di bagian yang sama menutup agar layar tetap lega
-document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.qt-lipat') && d.open) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
+/* ringkasan Pustaka S&K di halaman Teks standar: jumlah butir dipakai per grup; butirnya dikelola di panel */
+function ringkasanTnc() {
+  const tn = PENG.tnc || [], kat = ['umum', ...new Set(tn.map(x => x.kat).filter(k => k !== 'umum'))];
+  return `<div class="qt-ringkas-daftar">${kat.map(k => { const m = tn.filter(x => x.kat === k); return `<div class="qt-ringkas"><span>${esc(k === 'umum' ? 'Syarat umum' : namaLini(k))}</span><small>${m.filter(x => x.aktif).length} dari ${m.length} dipakai</small></div>`; }).join('')}</div><button type="button" class="mr-btn" data-qt="tnc-pusat">${ik('file', 14)} Kelola butir syarat</button>`;
+}
+// Kartu lipat: saat satu dibuka, kartu lain di bagian yang sama menutup (kecuali sedang mencari); kotak teks menyesuaikan tinggi isi
+const tinggiTa = t => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
+document.addEventListener('toggle', e => { const d = e.target; if (!(d.matches && d.matches('details.qt-lipat') && d.open)) return; d.querySelectorAll('textarea').forEach(tinggiTa); if (!d.parentElement.dataset.cari) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.matches) return;
+  if (t.matches('details.qt-lipat textarea')) tinggiTa(t);
+  else if (t.matches('.qt-cari-lipat')) { const q = norm(t.value), wadah = t.parentElement; wadah.dataset.cari = q ? '1' : ''; wadah.querySelectorAll(':scope > details.qt-lipat').forEach(d => { const teks = norm(d.textContent + ' ' + [...d.querySelectorAll('textarea')].map(x => x.value).join(' ')), cocok = !q || teks.includes(q); d.hidden = !cocok; if (q && cocok) { d.open = true; d.querySelectorAll('textarea').forEach(tinggiTa); } }); }
+});
 // Pengelolaan satuan di Pengaturan dokumen. Tambah, ubah nama, dan hapus memakai satu kartu formulir di atas daftar.
 let satuanAksi = null;
 let satuanPilih = new Set(); // satuan yang dicentang untuk dihapus sekaligus (hanya master) // { jenis: 'tambah' | 'ubah' | 'hapus', kode } atau null bila tidak ada formulir yang terbuka
@@ -4940,7 +4965,7 @@ function viewPengaturanPenuh() {
   <details class="mr-kartu cu-kartu qt-pgd" data-pgd="kalimatstandar"${pgOpen('kalimatstandar')}><summary><h3>Kalimat standar</h3></summary><p class="mr-sub qt-ket">Tulis dalam Bahasa Indonesia saja. Versi English dibuat otomatis saat dokumen dicetak dalam English. Tulis <code>{berlaku}</code> di kalimat penutup supaya tanggal berlaku terisi otomatis. Tiap quotation tetap bisa memilih kalimat per tujuan layanan atau menulis sendiri.</p><div class="qt-grid">
     ${ta('pembuka.id', 'Kalimat pembuka')}${ta('penutup.id', 'Kalimat penutup', '', 4)}${ta('catatan.id', 'Catatan di bawah tanda tangan', '', 2)}</div>
     <div class="qt-presetlist"><b>Preset kalimat saya</b>${sbBanner('preset', SB.jumlah('preset', PENG.presetKalimat || []), 'preset', 'preset')}${SB.saring('preset', PENG.presetKalimat || []).length ? SB.saring('preset', PENG.presetKalimat || []).map(x => `<div class="qt-presetlist__i${SB.ada('preset', x.id) ? ' qt-sembunyi' : ''}"><span>${esc(x.nama)}${x.tujuan ? ` <small>· ${esc(namaLini(x.tujuan))}</small>` : ''}</span>${SB.aktif() ? sbIkon('preset', x.id) : ''}${ed ? `${dilarangHapus() ? '' : `<button type="button" class="mr-ikonbtn mr-ikonbtn--bahaya" data-qt="pg-hapus-preset" data-id="${esc(x.id)}" aria-label="Hapus preset" title="Hapus preset">${ik('tong', 14)}</button>`}` : ''}</div>`).join('') : '<p class="mr-sub qt-ket" style="margin:4px 0 0">Belum ada. Di form quotation pilih Tulis sendiri lalu Simpan jadi preset.</p>'}</div></details>
-  <details class="mr-kartu cu-kartu qt-pgd" id="pg-tnc" data-pgd="pustaka" ${pgOpen('pustaka')}><summary><h3>Pustaka syarat dan ketentuan</h3></summary><p class="mr-sub qt-ket">Butir <b>Umum</b> otomatis masuk ke semua lini. Butir <b>Khusus</b> hanya muncul bila lininya dipakai di quotation. Cukup tulis dalam Bahasa Indonesia; teks English dibuat otomatis saat dokumen dicetak. Tulis <code>{berlaku}</code> untuk tanggal berlaku.</p>
+  <details class="mr-kartu cu-kartu qt-pgd" id="pg-tnc" data-pgd="pustaka" ${pgOpen('pustaka')}><summary><h3>Pustaka syarat dan ketentuan</h3></summary><p class="mr-sub qt-ket">Butir <b>Umum</b> otomatis masuk ke semua lini; yang sama atau mirip dengan butir lini dilewati supaya tidak dobel. Butir <b>Khusus</b> hanya muncul bila lininya dipakai di quotation. Cukup tulis dalam Bahasa Indonesia; teks English dibuat otomatis saat dokumen dicetak. Tulis <code>{berlaku}</code> untuk tanggal berlaku.</p>
     <div id="tp-isi">${tpHtml()}</div>
     ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div>` : ''}</details>
   </div>
@@ -5200,13 +5225,7 @@ function tlTncHtml() {
   return `${tlSkHtml(dis)}<p class="mr-sub qt-ket">Template S&K lini ini: butir di bawah tampil otomatis sebagai daftar bernomor 1…N di setiap quotation lini ${esc(namaLini(TL.lini))}. Di tiap quotation daftar ini tetap bisa disesuaikan manual.</p>
     ${TL.tnc.length ? TL.tnc.map((t, i) => `<div class="qt-pgt"><div class="qt-pgt__kep"><select data-tt="kategori" data-i="${i}" ${dis}>${kat(t)}</select><label class="qt-pgt__aktif"><input type="checkbox" data-tt="aktif" data-i="${i}" ${t.aktif ? 'checked' : ''} ${dis}> Dipakai</label>${masterAtauAdmin() ? `<label class="qt-pgt__aktif"><input type="checkbox" data-tt="wajib" data-i="${i}" ${t.wajib ? 'checked' : ''}> Wajib</label>` : (t.wajib ? '<span class="cu-st cu-st--info">Wajib</span>' : '')}<span class="mr-ruang"></span>${ed ? `${dilarangHapus() ? '' : `<button type="button" class="mr-ikonbtn mr-ikonbtn--bahaya" data-tl="tnc-hapus" data-i="${i}" aria-label="Hapus butir" title="Hapus butir">${ik('tong', 16)}</button>`}` : ''}</div>
       <div class="qt-grid"><label class="mr-f qt-c6"><span>Indonesia</span><textarea data-tt="id" data-i="${i}" rows="2" ${dis}>${esc(t.teks.id)}</textarea></label><label class="mr-f qt-c6"><span>English</span><textarea data-tt="en" data-i="${i}" rows="2" ${dis}>${esc(t.teks.en)}</textarea></label></div></div>`).join('') : '<div class="mr-kosong" style="padding:18px"><p>Belum ada butir khusus untuk lini ini.</p></div>'}
-    ${ed ? `<div class="qt-pgadd"><button type="button" class="mr-btn mr-btn--kecil" data-tl="tnc-tambah">${ik('plus', 14)} Tambah butir</button>${tlUmumOpsi()}</div>` : ''}`;
-}
-/* syarat umum hanya referensi: pilih butirnya, lalu disalin menjadi butir template lini ini (tidak otomatis masuk quotation) */
-function tlUmumOpsi() {
-  const ada = new Set(TL.tnc.map(t => norm(t.teks.id))), sisa = (PENG.tnc || []).filter(t => t.kat === 'umum' && t.teks && String(t.teks.id || '').trim() && !ada.has(norm(t.teks.id)));
-  if (!sisa.length) return '';
-  return `<span class="mr-ruang"></span><select data-tl-umum aria-label="Pilih butir dari referensi umum"><option value="">Ambil dari referensi umum…</option>${sisa.map(t => `<option value="${esc(t.id)}">${esc(String(t.teks.id).slice(0, 70))}</option>`).join('')}</select>`;
+    ${ed ? `<div class="qt-pgadd"><button type="button" class="mr-btn mr-btn--kecil" data-tl="tnc-tambah">${ik('plus', 14)} Tambah butir</button></div>` : ''}`;
 }
 /* saklar tarif minimum Master Rate per lini (hanya master; tersimpan langsung, berlaku untuk semua akun) */
 function tlMinHtml() {
@@ -5736,7 +5755,7 @@ function tpHtml() {
 }
 function panelTncPusat() {
   if (Q.edit) bacaForm(); tpMuat(); const ed = bisaEdit();
-  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Kumpulan syarat dan ketentuan (referensi)</h2><p class="mr-sub">Kumpulan butir per lini bisnis. Template tiap lini dipakai otomatis oleh quotation lini itu (dan bisa disesuaikan per quotation). "Syarat umum" hanya referensi: butirnya tidak otomatis masuk quotation, ambil yang diperlukan ke template lini lewat Pengaturan dokumen. Perubahan berlaku untuk quotation berikutnya; yang sudah terbit tidak berubah.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
+  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Kumpulan syarat dan ketentuan (referensi)</h2><p class="mr-sub">Kumpulan butir per lini bisnis. Template tiap lini dipakai otomatis oleh quotation lini itu (dan bisa disesuaikan per quotation). Butir "Syarat umum" yang dicentang dipakai otomatis di semua lini; yang sama atau mirip dengan butir lini dilewati supaya tidak dobel. Perubahan berlaku untuk quotation berikutnya; yang sudah terbit tidak berubah.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
   <div class="mr-panel__isi">
     <div id="tp-isi"></div>
     ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div><p class="mr-sub qt-ket">Butir yang sudah ada tidak digandakan. Periksa lalu klik Simpan.</p>` : ''}
@@ -5770,12 +5789,6 @@ document.addEventListener('click', ev => {
   else if (d.tp === 'simpan') aksiTpSimpan(e);
 });
 document.addEventListener('input', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'id' || d.tp === 'en') { const x = TP.tnc[+d.i]; if (x) { x.teks[d.tp] = t.value; if (d.tp === 'id') { const en = terjemahOtomatis(t.value); if (en) { x.teks.en = en; x.enBasi = false; } else x.enBasi = true; } else x.enBasi = false; } } });
-document.addEventListener('change', ev => {
-  const t = ev.target; if (!t || !t.matches || !t.matches('select[data-tl-umum]') || !t.value || !TL.lini) return;
-  const u = (PENG.tnc || []).find(x => x.id === t.value); if (!u) return;
-  TL.tnc.push({ id: uid('t'), kat: TL.lini, kategori: u.kategori || 'lainnya', teks: { id: u.teks.id || '', en: u.teks.en || '' }, aktif: true });
-  const p = $('#tl-p-tnc'); if (p) p.innerHTML = tlTncHtml(); const n = $('[data-tab=tnc] b'); if (n) n.textContent = TL.tnc.length;
-});
 document.addEventListener('change', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'aktif') { const x = TP.tnc[+d.i]; if (x) { x.aktif = t.checked; tpIsi(); } } else if (d.tp === 'kategori') { const x = TP.tnc[+d.i]; if (x) x.kategori = t.value; } else if (t.id === 'tp-gabung') TP.gabung = t.checked; });
 
 /* =============================== Q. KOLOM TANGGAL: BISA DIKETIK + KALENDER DENGAN TOMBOL OK =============================== */

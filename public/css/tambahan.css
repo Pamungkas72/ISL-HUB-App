@@ -1480,6 +1480,12 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-lipat > summary:focus-visible { outline: 2px solid var(--mr-navy); outline-offset: -2px; }
 .qt-lipat > summary .qt-subseksi__judul { margin: 0; }
 .qt-lipat > .qt-subseksi { padding: 0 14px 14px; }
+.qt-lipat__meta { display: block; margin-top: 3px; font-size: 12px; color: var(--mr-muted); }
+.qt-lipat textarea { field-sizing: content; min-height: 64px; max-height: 60vh; width: 100%; }
+.qt-cari-lipat { width: 100%; margin-bottom: 10px; padding: 10px 12px; border: 1px solid var(--mr-border); border-radius: 10px; background: var(--mr-surface); color: var(--mr-ink); font: inherit; }
+.qt-ringkas-daftar { margin-bottom: 12px; }
+.qt-ringkas { display: flex; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--mr-border); font-size: 13px; }
+.qt-ringkas small { color: var(--mr-muted); }
 
 /* ---------- Daftar Quotation di HP, desain C ----------
    Satu baris ringkasan + Follow up, cari + filter, tab status, baris padat dengan ikon status.
