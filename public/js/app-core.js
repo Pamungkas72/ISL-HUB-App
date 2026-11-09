@@ -3043,7 +3043,7 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-ttd .sg{height:132px;display:flex;align-items:center;justify-content:center;margin:2px 0 4px;position:relative}
 /* cap 50% transparan di belakang, tanda tangan di atasnya; keduanya tepat di tengah kolom */
 .isl-ttd .sg img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto}
-.isl-ttd .sg .cap{height:104px;opacity:.5;z-index:1}
+.isl-ttd .sg .cap{height:104px;opacity:.3;z-index:1}
 /* nama, jabatan, dan tanggal customer dibuat pudar supaya tulisan pena tidak bertabrakan dengan cetakan */
 .isl-ttd .col:last-child .rA,.isl-ttd .col:last-child .rB,.isl-ttd .col:last-child .rC{opacity:.45}.isl-ttd .sg .tt{height:68px;z-index:2}
 .isl-ttd .sg.kos{border:1px dashed #b4bfca;border-radius:4px;align-items:flex-end;padding-bottom:6px;font-size:9px;color:#8a97a4}
@@ -5891,7 +5891,7 @@ async function gabungTtdCap(cap, ttd) {
   const T = 104, S = 4, lc = ic ? T * ic.naturalWidth / ic.naturalHeight : 0, lt = it ? 68 * it.naturalWidth / it.naturalHeight : 0, w = Math.max(lc, lt);
   const kanvas = document.createElement('canvas'); kanvas.width = Math.ceil(w * S); kanvas.height = T * S;
   const x = kanvas.getContext('2d');
-  if (ic) { x.globalAlpha = .5; x.drawImage(ic, (w - lc) / 2 * S, 0, lc * S, T * S); x.globalAlpha = 1; }
+  if (ic) { x.globalAlpha = .3; x.drawImage(ic, (w - lc) / 2 * S, 0, lc * S, T * S); x.globalAlpha = 1; }
   if (it) x.drawImage(it, (w - lt) / 2 * S, (T - 68) / 2 * S, lt * S, 68 * S);
   return kanvas.toDataURL('image/png');
 }
