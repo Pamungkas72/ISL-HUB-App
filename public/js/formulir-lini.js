@@ -15,7 +15,7 @@
 (() => {
 'use strict';
 const FL = window.ISLFL = { versi: 1, katalog: [] };
-const UI = { tambah: null, addTipe: false, langkah: 1, ccTambah: null, buka: new Set([0]), ket: new Set(), minBuka: null, kelasAktif: null, bodyAktif: null, dsbPanel: null, barisAktif: null };  /* keadaan tampilan sementara (tidak disimpan) */
+const UI = { tambah: null, addTipe: false, langkah: 1, ccTambah: null, buka: new Set([0]), ket: new Set(), minBuka: null, kelasAktif: null, bodyAktif: null, dsbPanel: null, barisAktif: null, ubahNamaDsb: false };  /* keadaan tampilan sementara (tidak disimpan) */
 
 /* ============================ UTIL ============================ */
 const C = () => window.__islCU || {};
@@ -1316,6 +1316,10 @@ MESIN.trucking = {
     const kosong = rows.reduce((n, r) => n + pakai.filter(k => !(num((r.h || {})[k]) > 0)).length, 0), rendahN = rows.reduce((n, r) => n + kls.filter(k => this.rendah(r, k)).length, 0), lengkap = rows.filter(r => String(r.tujuan || '').trim() && pakai.length && pakai.every(k => num((r.h || {})[k]) > 0)).length;
     const barisKosong = rows.filter(r => !String(r.tujuan || '').trim() && !String(r.ket || '').trim() && !Object.values(r.h || {}).some(v => num(v) > 0)).length;
     const ubahBuka = ['ubah', 'pick', 'skema', 'unit'].includes(UI.dsbPanel), skPendek = skm === 'tetap' ? 'Satu pick up' : skm === 'pasangan' ? 'Berpasangan' : 'Tanpa pick up';
+    /* judul blok di atas formulir: klik ✎ untuk ubah di tempat, tersimpan di bodies.K.judul (tampil di tab dan PDF) */
+    const ubahNama = edit && UI.ubahNamaDsb, namaTipe = (daftarBody().find(t => t.key === tipeBlok(K)) || {}).nama || '';
+    h += `<div class="fl-bagian fl-bagian--h fl-dsb__judul"><span class="fl-grup-nama">${huruf(daftar.indexOf(b))}. ${ubahNama ? inpTeks(`bodies.${K}.judul`, (st.bodies[K] || {}).judul || '', judulBlok(st, b), 'class="fl-u" data-flblok="1" aria-label="Nama blok"') : `<span>${esc(judulBlok(st, b))}</span>`}</span>${edit ? (ubahNama ? `<button type="button" class="fl-ikon" data-fla="dsbNamaSelesai" aria-label="Selesai mengubah nama blok" title="Selesai (Enter)">${IKON_CEK}</button>` : `<button type="button" class="fl-x fl-x--teks" data-fla="dsbNamaUbah" aria-label="Ubah nama blok ${esc(judulBlok(st, b))}" title="Ubah nama blok: tampil di tab dan PDF">✎ Ubah nama</button>`) : ''}</div>
+    <div class="fl-mut">Tampil di tab dan PDF. Kosong = nama tipe (${esc(namaTipe)})</div>`;
     h += `<button type="button" class="fl-dsb__ring" aria-expanded="${ubahBuka}" data-fla="dsbPanel" data-flx="${ubahBuka ? UI.dsbPanel : 'ubah'}"><span>${skm === 'tetap' ? '📍 <b>' + (pick ? esc(pick) : 'Pick up belum diisi') + '</b> · ' : ''}${skPendek} · Unit ${kls.length}</span><em>${ubahBuka ? 'Tutup' : 'Ubah'}</em></button>
       ${ubahBuka ? `<div class="fl-dsb__chips">${skm === 'tetap' ? chip('pick', '📍 ' + (pick ? esc(pick) : 'Pick up belum diisi')) : ''}${chip('skema', esc(skLabel) + ' ▾')}${chip('unit', '⚙ Unit ' + kls.length)}</div>` : ''}
       <div class="fl-dsb__bar">${edit ? `<button type="button" class="fl-chipbtn" data-fla="tujuan-tambah" data-flx="${esc(K)}">+ Tambah baris</button>${chip('cepat', '⚡ Isi cepat ▾')}${chip('blok', '⋮ Blok')}${barisKosong ? `<button type="button" class="fl-chipbtn fl-dsb__kosong" data-fla="dsbKosong" data-flx="${esc(K)}" title="Hapus baris yang belum berisi tujuan, harga, atau keterangan">🗑 Hapus ${barisKosong} baris kosong</button>` : ''}` : ''}<span class="fl-dsb__sum">${rows.length} tujuan · <b class="is-ok">${lengkap} lengkap</b>${rendahN ? ` · <b class="is-warn">${rendahN} di bawah minimum</b>` : ''}${kosong ? ` · ${kosong} harga kosong` : ''}</span></div>`;
@@ -1329,7 +1333,7 @@ MESIN.trucking = {
         <div class="fl-sub-h" style="margin:6px 0 0">Kapasitas (tampil di bawah nama kolom di PDF)</div><div class="fl-grid2">${kls.map(k => `<label class="fl-f"><span>${esc(k)}</span>${inpTeks(`kap.${k}`, (st.kap || {})[k] ?? KAPASITAS[k] ?? '', 'mis. 2 ton · 4 cbm')}</label>`).join('')}</div>
         </div>`;
     }
-    if (UI.dsbPanel === 'blok' && edit) h += `<div class="fl-dsb__pn"><label class="fl-f"><span>Judul blok (tampil di PDF; kosong = nama tipe)</span>${inpTeks(`bodies.${K}.judul`, (st.bodies[K] || {}).judul || '', judulBlok(st, b))}</label>
+    if (UI.dsbPanel === 'blok' && edit) h += `<div class="fl-dsb__pn">
       <div class="fl-baris-tombol"><button type="button" class="mr-btn mr-btn--kecil fl-dsb__del" data-fla="blokHapus" data-flx="${esc(K)}">Hapus blok ${esc(huruf(daftar.indexOf(b)))}</button>${b.custom && !b.salinan && bisaKatalog() ? `<button type="button" class="mr-btn mr-btn--kecil" data-fla="kat-hapus" data-flx="${esc(b.kid)}">Hapus tipe dari katalog</button>` : ''}</div></div>`;
     if (UI.dsbPanel === 'cepat' && edit) h += `<div class="fl-dsb__pn">${tipeBlok(K) === 'boxdry' ? `<div class="fl-dsb__opt"><button type="button" class="fl-chipbtn fl-dsb__tpl" data-fla="dstTemplat" data-flx="${esc(K)}" title="Tambah rute Jabodetabek dan harga dari template lini">📍 Isi dari template ${esc(isiCepatTpl().pickup)} (Jabodetabek)</button></div>` : ''}<div class="fl-mut">Isi cepat kolom <b>${esc(ka)}</b> (klik nama kolom di grid untuk memilih kolom lain)</div><div class="fl-dsb__opt">
         <button type="button" class="fl-chipbtn" data-fla="dstSalin" data-flx="${esc(K)}" title="Isi sel kosong dengan harga di atasnya">Salin ke bawah ↓</button>
@@ -1389,6 +1393,8 @@ MESIN.trucking = {
       UI.bodyAktif = key; UI.blokBaru = null; UI.dsbPanel = null; UI.barisAktif = null; return true;
     }
     if (a === 'blokHapus') { delete st.bodies[x]; UI.dsbPanel = null; UI.barisAktif = null; return true; }
+    if (a === 'dsbNamaUbah') { UI.ubahNamaDsb = true; setTimeout(() => { const i = rootEl().querySelector('[data-flblok]'); if (i) { i.focus(); i.select(); } }, 0); return true; }
+    if (a === 'dsbNamaSelesai') { UI.ubahNamaDsb = false; return true; }
     if (a === 'dsbBody') { UI.bodyAktif = x; UI.dsbPanel = null; UI.blokBaru = null; UI.barisAktif = null; return true; }
     if (a === 'dsbPanel') { UI.dsbPanel = UI.dsbPanel === x ? null : x; return true; }
     if (a === 'dsbBaris') { UI.barisAktif = x; return true; }
@@ -2063,7 +2069,7 @@ document.addEventListener('keydown', ev => {
   }
   const m = ev.target; if (ev.key === 'Enter' && m && m.dataset && m.dataset.flmin !== undefined && dalamForm(m)) { ev.preventDefault(); const bt = m.parentNode.querySelector('[data-fla="min-simpan"]'); if (bt) bt.click(); return; }
   const t = ev.target; if ((ev.key !== 'Enter' && ev.key !== 'Escape') || !t || !t.dataset || t.dataset.flblok === undefined || !dalamForm(t)) return;
-  ev.preventDefault(); UI.ubahBlok = null; gambarUlang();
+  ev.preventDefault(); UI.ubahBlok = null; UI.ubahNamaDsb = false; gambarUlang();
 });
 document.addEventListener('input', ev => {
   const t = ev.target; if (!dalamForm(t) || !t.dataset || t.dataset.fl === undefined) return;
