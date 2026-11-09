@@ -4825,7 +4825,7 @@ function paginaPengaturan(html) {
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
 /* ringkasan Pustaka S&K di halaman Teks standar: jumlah butir dipakai per grup; butirnya dikelola di panel */
 function ringkasanTnc() {
-  const tn = PENG.tnc || [], kat = ['umum', ...new Set(tn.map(x => x.kat).filter(k => k !== 'umum'))];
+  const tn = PENG.tnc || [], kat = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...tn.map(x => x.kat)].filter(k => k !== 'umum'))];
   return `<div class="qt-ringkas-daftar">${kat.map(k => { const m = tn.filter(x => x.kat === k); return `<div class="qt-ringkas"><span>${esc(k === 'umum' ? 'Syarat umum' : namaLini(k))}</span><small>${m.filter(x => x.aktif).length} dari ${m.length} dipakai</small></div>`; }).join('')}</div><button type="button" class="mr-btn" data-qt="tnc-pusat">${ik('file', 14)} Kelola butir syarat</button>`;
 }
 // Kartu lipat: saat satu dibuka, kartu lain di bagian yang sama menutup (kecuali sedang mencari); kotak teks menyesuaikan tinggi isi
@@ -5722,7 +5722,7 @@ const tpTopDari = t => { const m = /(\d+)\s*hari/i.exec(String(t.teks.id || ''))
 function tpIsi() { const w = $('#tp-isi'); if (w) w.innerHTML = tpHtml(); }
 function tpHtml() {
   const ed = bisaEdit(), dis = ed ? '' : 'disabled', dipakai = new Set(Q.edit ? R.liniDipakai(Q.edit) : []);
-  const kats = ['umum', ...new Set(TP.tnc.map(t => t.kat).filter(k => k !== 'umum'))];
+  const kats = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...TP.tnc.map(t => t.kat)].filter(k => k !== 'umum'))];   /* semua lini resmi tampil, juga yang belum punya butir */
   if (TP.filter !== 'semua' && !kats.includes(TP.filter)) TP.filter = 'semua';
   const milik = k => TP.tnc.filter(t => t.kat === k);
   const katOpt = t => Object.entries(KATEGORI_TNC).map(([k, l]) => `<option value="${k}" ${t.kategori === k ? 'selected' : ''}>${l}</option>`).join('');
