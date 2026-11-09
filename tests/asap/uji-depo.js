@@ -395,11 +395,11 @@ async function siapkan(browser, peran, pengaturan) {
     const isi = async (path, v) => { await p.focus(`[data-fl="${path}"]`); await p.fill(`[data-fl="${path}"]`, v); };
     await isi('rows.0.0.h20', '45000'); await isi('rows.0.1.h20', '60000');
     let b = await p.evaluate(() => ({ n: document.querySelector('.fl-ck__n').textContent.trim(), ring: document.querySelector('.fl-ck__ring').textContent, baris: window.__qt._Q.edit.baris.length, fokus: document.activeElement.dataset.fl }));
-    cek(b.n === '4 / 4' && /13 layanan terisi/.test(b.ring) && b.baris === 26, 'centang: hitungan live salah (13 layanan berisi rekomendasi otomatis = 26 baris): ' + JSON.stringify(b));
+    cek(b.n === '4 / 4' && /13 layanan terisi/.test(b.ring) && b.baris === 25, 'centang: hitungan live salah (13 layanan berisi rekomendasi otomatis = 25 baris): ' + JSON.stringify(b));
     cek(b.fokus === 'rows.0.1.h20', 'centang: fokus hilang saat mengetik');
     await p.evaluate(() => { const c = document.querySelector('[data-fl="rows.0.1.on"]'); c.click(); }); await p.waitForTimeout(200);
     b = await p.evaluate(() => ({ baris: window.__qt._Q.edit.baris.map(x => x.item), isi: document.querySelector('.fl-ck__n').textContent.trim(), inputs: document.querySelectorAll('[data-fl="rows.0.1.h20"]').length }));
-    cek(b.baris.length === 24 && !b.baris.some(x => /Storage Container DG/.test(x)) && b.isi === '3 / 4' && b.inputs === 0, 'centang: layanan yang dilepas centangnya tidak boleh ikut dan kotak harganya tersembunyi: ' + JSON.stringify(b));
+    cek(b.baris.length === 23 && !b.baris.some(x => /Storage Container DG/.test(x)) && b.isi === '3 / 4' && b.inputs === 0, 'centang: layanan yang dilepas centangnya tidak boleh ikut dan kotak harganya tersembunyi: ' + JSON.stringify(b));
     // PDF: hanya layanan tercentang dan berharga
     const dok = await p.evaluate(() => window.ISLFL.dok(window.__qt._Q.edit).blok.map(x => x.baris.length));
     cek(JSON.stringify(dok) === '[3,5,3,1]', 'centang: PDF memuat layanan tercentang dan berharga (rekomendasi otomatis), tanpa DG yang dilepas: ' + JSON.stringify(dok));
@@ -618,7 +618,7 @@ async function siapkan(browser, peran, pengaturan) {
       r = await lihat(p, LF40); cek(r.ph === '500.000' && r.ghost, peran + ': LOLO FULL 40 ft harus berbayangan 500.000: ' + JSON.stringify(r));
       // kolom dibiarkan kosong -> rekomendasi dipakai otomatis (quotation, ringkasan); layanan tanpa angka tidak ikut
       let br = await baris(p);
-      cek(br['LOLO FULL 20 ft'] === 400000 && br['LOLO FULL 40 ft'] === 500000 && br['Storage Container Dry 20 ft'] === 60000 && br['Container to Container 40 ft'] === 5000000 && br['Terminal Peti Kemas / Depo 20 ft'] === 700000 && br['Adm 40 ft'] === 50000, peran + ': kolom kosong harus otomatis memakai rekomendasi di baris quotation: ' + JSON.stringify(br));
+      cek(br['LOLO FULL 20 ft'] === 400000 && br['LOLO FULL 40 ft'] === 500000 && br['Storage Container Dry 20 ft'] === 60000 && br['Container to Container 40 ft'] === 5000000 && br['Terminal Peti Kemas / Depo 20 ft'] === 700000 && br['Biaya administrasi'] === 50000, peran + ': kolom kosong harus otomatis memakai rekomendasi di baris quotation: ' + JSON.stringify(br));
       cek(!Object.keys(br).some(k => /Pengambilan Sampel|Extra Moving/.test(k)), peran + ': layanan tanpa angka rekomendasi tidak boleh ikut otomatis: ' + JSON.stringify(Object.keys(br).filter(k => /Pengambilan|Extra/.test(k))));
       const ring = await p.evaluate(() => (document.querySelector('.fl-ck__ring .fl-ck__chip') || {}).textContent);
       cek(/^13 layanan terisi/.test(ring), peran + ': ringkasan harus menghitung 13 layanan terisi otomatis: ' + ring);
@@ -634,7 +634,7 @@ async function siapkan(browser, peran, pengaturan) {
       await p.evaluate(() => { const b = document.createElement('button'); b.dataset.qt = 'atur-template'; b.dataset.lini = 'depo'; b.dataset.tab = 'rek'; document.body.appendChild(b); b.click(); }); await p.waitForTimeout(500);
       await p.evaluate(() => document.querySelector('[data-tl="tab"][data-tab="rek"]').click()); await p.waitForTimeout(200);
       const t = await p.evaluate(() => { const i = [...document.querySelectorAll('[data-trek]')]; return { n: i.length, ph: i[0] && i[0].placeholder, dis: i.every(x => x.disabled), tampil: !document.querySelector('#tl-p-rek').hidden }; });
-      cek(t.tampil && t.n === 30 && t.ph === '60.000', peran + ': tab Harga rekomendasi harus tampil dengan 30 kolom (15 layanan x 2 ukuran) dan angka bawaan sebagai placeholder: ' + JSON.stringify(t));
+      cek(t.tampil && t.n === 29 && t.ph === '60.000', peran + ': tab Harga rekomendasi harus tampil dengan 29 kolom (15 layanan x 2 ukuran, Biaya administrasi satu tarif) dan angka bawaan sebagai placeholder: ' + JSON.stringify(t));
       if (peran === 'admin') cek(t.dis, 'admin: kolom harga rekomendasi harus nonaktif (hanya master yang mengubah)');
       else {
         await p.evaluate(() => { const i = document.querySelector('[data-trek="lolo_full_20"]'); i.value = ''; i.focus(); }); await p.keyboard.type('1234567');
@@ -679,7 +679,7 @@ async function siapkan(browser, peran, pengaturan) {
       const { p, err } = await buka(peran).then(async x => { await x.p.evaluate(() => { const b = document.createElement('button'); b.dataset.qt = 'atur-template'; b.dataset.lini = 'depo'; b.dataset.tab = 'min'; document.body.appendChild(b); b.click(); }); await x.p.waitForTimeout(500); return x; });
       await p.evaluate(() => document.querySelector('[data-tl="tab"][data-tab="min"]').click()); await p.waitForTimeout(200);
       const t = await p.evaluate(() => { const i = [...document.querySelectorAll('[data-tmin]')], lf = document.querySelector('[data-tmin="lolo_full_20"]'); return { n: i.length, ph: lf && lf.placeholder, dis: i.every(x => x.disabled), tampil: !document.querySelector('#tl-p-min').hidden }; });
-      cek(t.tampil && t.n === 30 && t.ph === '120.000', peran + ': tab Tarif minimum harus tampil, 30 kolom, dan LOLO FULL 20 ft berplaceholder minimum otomatis 120.000: ' + JSON.stringify(t));
+      cek(t.tampil && t.n === 29 && t.ph === '120.000', peran + ': tab Tarif minimum harus tampil, 29 kolom, dan LOLO FULL 20 ft berplaceholder minimum otomatis 120.000: ' + JSON.stringify(t));
       if (peran === 'admin') cek(t.dis, 'admin: kolom tarif minimum harus nonaktif (hanya master yang mengubah)');
       else {
         // diketik betulan: pemisah ribu langsung muncul (tarif minimum dan harga rekomendasi)
