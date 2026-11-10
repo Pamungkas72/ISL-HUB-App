@@ -2747,8 +2747,9 @@ Repo.setujui = async function (id, o) {
 
 
 /* PDF akun sales memakai cap perusahaan + tanda tangan sales sendiri (kalau sudah diunggah di Dashboard Performa > Profil) */
-const ttdPenerbit = () => (akunSales() && window.__ISL.ttdSales) ? window.__ISL.ttdSales : PENG.aset.ttd;
-Repo.aset = id => ({ logo: ASET_LOGO(), ...(DB.aset[id] || { ttd: PENG.aset.ttd, cap: PENG.aset.cap }) });
+/* TTD milik akun yang menerbitkan: master memakai TTD di pengaturan, akun lain memakai TTD profilnya (kosong bila belum diunggah) */
+const ttdPenerbit = () => masterSaja() ? PENG.aset.ttd : ((window.__ISL && window.__ISL.ttdSales) || '');
+Repo.aset = id => ({ logo: ASET_LOGO(), ...(DB.aset[id] || { ttd: ttdPenerbit(), cap: PENG.aset.cap }) });
 Repo.simpanPdfUrl = async function (id, url) { await tulis(() => { const q = DB.list.find(x => x.id === id); if (!q) throw new Error('Quotation tidak ditemukan.'); q.pdfUrl = url; }, () => { const q = DB.list.find(x => x.id === id); return !!q && q.pdfUrl === url; }); };
 Repo.catatKeluaran = async function (id, cara, berkas) {
   await tulis(() => { const q = DB.list.find(x => x.id === id); if (!q) throw new Error('Quotation tidak ditemukan.'); q.keluaran = q.keluaran || []; q.keluaran.push({ waktu: stempel(), oleh: OLEH(), cara, berkas }); },
@@ -2922,9 +2923,11 @@ function dasarPribadi(g) {
   return d;
 }
 function terapkanPribadi() {
-  const g = window.__islPengGlobal; if (!g || kelolaSaja()) return;
+  const g = window.__islPengGlobal; if (!g || masterSaja()) return;
   const sel = (window.__ISL_PROFIL || {}).pengaturanPribadi || {};
   const dasar = dasarPribadi(g);
+  /* admin: hanya penandatangan yang milik akun sendiri; pengaturan lain tetap global bersama master */
+  if (akunAdmin()) { const p = terapkanSelisih(dasar.penandatangan, sel.penandatangan); PENG.penandatangan = clone(p !== undefined ? p : g.penandatangan); return; }
   const hasil = {};
   PENG_PRIBADI.forEach(k => { hasil[k] = terapkanSelisih(dasar[k], sel[k]); });
   Object.keys(PENG).forEach(k => { PENG[k] = clone(PENG_PRIBADI.includes(k) ? (hasil[k] !== undefined ? hasil[k] : g[k]) : g[k]); });
@@ -2939,9 +2942,17 @@ Repo.simpanPribadi = async function (baru) {
   if (window.__ISL_PROFIL) window.__ISL_PROFIL.pengaturanPribadi = sel;
   terapkanPribadi();
 };
+/* penandatangan admin disimpan di profilnya sendiri, bukan di pengaturan global */
+async function simpanPenandatanganAdmin(p) {
+  const d = selisihPeng(p, dasarPribadi(window.__islPengGlobal || PENG).penandatangan), sel = { ...((window.__ISL_PROFIL || {}).pengaturanPribadi || {}) };
+  if (d === undefined) delete sel.penandatangan; else sel.penandatangan = d;
+  await window.__islSimpanProfil({ pengaturanPribadi: sel });
+  if (window.__ISL_PROFIL) window.__ISL_PROFIL.pengaturanPribadi = sel;
+}
 Repo.simpanPengaturan = async function (baru) {
   if (!kelolaSaja()) return Repo.simpanPribadi(baru);
   const salin = clone(baru);
+  if (akunAdmin()) await simpanPenandatanganAdmin(salin.penandatangan);
   /* "Nomor terakhir terpakai" yang diisi lebih besar dari hitungan berjalan menaikkan hitungan (penghitung hanya boleh naik; lihat aturan qt_counters) */
   const atur = {}, resetBaru = (salin.nomor || {}).reset || 'bulanan';
   ((salin.nomor && salin.nomor.seri) || []).forEach(x => {
@@ -4232,11 +4243,13 @@ function formOpsi(e) {
 }
 /* L-01: unggah TTD/cap dan atur nomor langsung dari Opsi dokumen (sumber sama dengan Pengaturan dokumen) */
 function kartuOpsiAset(e) {
-  const ed = kelolaSaja(), a = PENG.aset || {};
-  const satu = (j, judul) => `<div class="qt-aset qt-aset--mini"><div class="qt-aset__p">${a[j] ? `<img src="${a[j]}" alt="${judul}">` : '<span class="mr-sub">Belum ada</span>'}</div>
-    <div class="qt-aset__t"><b>${judul}</b>${a[j] ? (a[j + 'Contoh'] !== false ? ' <span class="cu-st cu-st--warn">contoh</span>' : ' <span class="cu-st cu-st--ok">milik ISL</span>') : ''}</div>
-    ${ed ? `<div class="qt-aset__a"><button type="button" class="mr-btn mr-btn--kecil" data-qt="opsi-unggah" data-j="${j}">${ik('upload', 14)} Unggah</button>${a[j] ? `${dilarangHapus() ? '' : `<button type="button" class="mr-btn mr-btn--kecil" data-qt="opsi-hapus-aset" data-j="${j}">${ik('tong', 14)} Hapus</button>`}` : ''}<input type="file" id="opsi-file-${j}" accept="image/*" hidden></div>` : ''}</div>`;
-  return `<div class="qx-opsi2"><div class="mr-f"><span>Gambar tanda tangan dan cap (dipakai semua quotation)</span><div class="qt-asets">${satu('ttd', 'Tanda tangan')}${satu('cap', 'Cap perusahaan')}</div></div></div>`;
+  const a = PENG.aset || {}, pribadi = j => j === 'ttd' && !masterSaja(); // TTD akun non-master ada di profilnya sendiri
+  const gbr = j => pribadi(j) ? ((window.__ISL && window.__ISL.ttdSales) || '') : a[j], boleh = j => pribadi(j) ? bisaEdit() : kelolaSaja();
+  const satu = (j, judul) => { const g = gbr(j), pr = pribadi(j);
+    return `<div class="qt-aset qt-aset--mini"><div class="qt-aset__p">${g ? `<img src="${g}" alt="${judul}">` : '<span class="mr-sub">Belum ada</span>'}</div>
+    <div class="qt-aset__t"><b>${judul}</b>${g ? (pr ? ' <span class="cu-st cu-st--ok">milik akunmu</span>' : a[j + 'Contoh'] !== false ? ' <span class="cu-st cu-st--warn">contoh</span>' : ' <span class="cu-st cu-st--ok">milik ISL</span>') : ''}</div>
+    ${boleh(j) ? `<div class="qt-aset__a"><button type="button" class="mr-btn mr-btn--kecil" data-qt="${pr ? 'pg-unggah-ttd-saya' : 'opsi-unggah'}" data-j="${j}">${ik('upload', 14)} Unggah</button>${g ? `${dilarangHapus() ? '' : `<button type="button" class="mr-btn mr-btn--kecil" data-qt="${pr ? 'pg-hapus-ttd-saya' : 'opsi-hapus-aset'}" data-j="${j}">${ik('tong', 14)} Hapus</button>`}` : ''}<input type="file" id="${pr ? 'pg-file-ttd-saya' : 'opsi-file-' + j}" accept="image/*" hidden></div>` : ''}</div>`; };
+  return `<div class="qx-opsi2"><div class="mr-f"><span>${masterSaja() ? 'Gambar tanda tangan dan cap (dipakai semua quotation)' : 'Tanda tangan milik akunmu; cap dipakai semua akun'}</span><div class="qt-asets">${satu('ttd', 'Tanda tangan')}${satu('cap', 'Cap perusahaan')}</div></div></div>`;
 }
 function kartuOpsiNomor(e) {
   const kode = seriValid(e.seri), k = Repo.kunciUrut(HARI_INI(), kode), c = DB.urutTahun[k] || 0, awal = Repo.awalSeri(kode), pakai = Math.max(c, awal), ed = kelolaSaja();
@@ -4981,9 +4994,9 @@ function viewPengaturanPenuh() {
     <div class="qt-tl-daftar qt-tlk-kisi">${liniPilihan().map(l => { const n = kolomLini(l.key).length + 1, ok = !!tabelSimpan(l.key); return `<div class="qt-tlk"><button type="button" class="qt-tlk__utama" data-qt="atur-tabel" data-lini="${l.key}"><b class="qt-tlk__nama">${esc(l.nama)}</b><span class="qt-tlk__info"><i class="qt-dot${ok ? ' is-ok' : ''}"></i>${n} kolom${ok ? ' · diatur' : ''}</span></button></div>`; }).join('')}</div></details>
   <details class="mr-kartu cu-kartu qt-pgd" data-pgd="pengingatrekapkegiat" ${pgOpen('pengingatrekapkegiat')}><summary><h3>Pengingat dan tindak lanjut</h3></summary><p class="mr-sub qt-ket">Muncul sebagai banner kalau periode yang sudah lewat belum direkap untuk customer yang punya tarif disetujui. Aktifkan sesuai kebiasaan pencatatanmu.</p><div class="qt-cek"><label><input type="checkbox" data-pg="pengingat.bulan" ${p.pengingat && p.pengingat.bulan ? 'checked' : ''} ${dis}> Ingatkan rekap <b>bulan lalu</b></label><label><input type="checkbox" data-pg="pengingat.minggu" ${p.pengingat && p.pengingat.minggu ? 'checked' : ''} ${dis}> Ingatkan rekap <b>minggu lalu</b></label></div>
     ${kelolaSaja() ? `    <div class="qt-grid" style="margin-top:12px"><label class="mr-f qt-c12"><span>Penawaran terkirim perlu tindak lanjut setelah (hari)</span><input data-pg="tindakLanjutHari" inputmode="numeric" value="${esc(p.tindakLanjutHari ?? 3)}" ${dis} style="max-width:160px"><small class="cu-hint">Dihitung dari tanggal kirim atau tindak lanjut terakhir.</small></label></div>` : ''}</details>
-  <details class="mr-kartu cu-kartu qt-pgd" data-pgd="penandatangantandata" ${pgOpen('penandatangantandata')}><summary><h3>${akunSales() ? 'Penandatangan dan tanda tangan' : 'Penandatangan, tanda tangan, dan cap'}</h3></summary><div class="qt-grid">
+  <details class="mr-kartu cu-kartu qt-pgd" data-pgd="penandatangantandata" ${pgOpen('penandatangantandata')}><summary><h3>${kelolaSaja() ? 'Penandatangan, tanda tangan, dan cap' : 'Penandatangan dan tanda tangan'}</h3></summary>${masterSaja() ? '' : '<p class="mr-sub qt-ket">Nama, jabatan, dan tanda tangan di sini milik akunmu dan terbit di quotation yang kamu buat. Cap perusahaan dipakai semua akun.</p>'}<div class="qt-grid">
     ${f('penandatangan.nama', 'Nama lengkap penandatangan', 'Mis. Ega Pratama', 'qt-c4')}${f('penandatangan.jabatan.id', 'Jabatan (Indonesia)', '', 'qt-c4')}${f('penandatangan.jabatan.en', 'Jabatan (English)', '', 'qt-c4')}</div>
-    <div class="qt-asets">${akunSales() ? ttdSalesKartu(ed) : aset('ttd', 'Tanda tangan') + aset('cap', 'Cap perusahaan')}</div>
+    <div class="qt-asets">${masterSaja() ? aset('ttd', 'Tanda tangan') + aset('cap', 'Cap perusahaan') : ttdSalesKartu(ed) + (kelolaSaja() ? aset('cap', 'Cap perusahaan') : '')}</div>
     <p class="mr-sub qt-ket" style="margin-top:10px">Foto tanda tangan atau cap di atas kertas putih, lalu unggah. Latar kertas dihapus otomatis dan tintanya tetap, jadi tampil seperti tanda tangan dan cap basah. Tiap quotation bisa mematikan keduanya untuk tanda tangan basah.</p></details>
   <details class="mr-kartu cu-kartu qt-pgd" data-pgd="dokumenumum" ${pgOpen('dokumenumum')}><summary><h3>Aturan dokumen umum</h3></summary><p class="mr-sub qt-ket">Berlaku untuk semua lini quotation. Quotation baru mengambil nilai ini; quotation yang sudah dibuat tidak ikut berubah. Tanda tangan, cap, dan nomor diatur di bagian lain pengaturan ini.</p>
     <div class="qt-grid"><label class="mr-f qt-c6"><span>PPN</span><select data-pg="ppnBawaan" ${dis}>${opt(Object.entries(AQ.ppn), p.ppnBawaan || 'exclude')}</select></label>
@@ -7967,7 +7980,7 @@ window.__islMuatQT = d => {
 window.__ISL_REG = {
   ambil() { return { cu_customers: S.customers, cu_rates: S.rates, cu_paket: S.paket,
     qt_quotations: DB.list.map(q => ({ ...q, _dok: DB.dok[q.id] || null, _dokFinal: DB.dok[q.id + '#final'] || null })),
-    qt_orders: DB.orders, qt_templates: DB.tmpl, qt_pengaturan: [{ id: 'utama', ...PENG }],
+    qt_orders: DB.orders, qt_templates: DB.tmpl, qt_pengaturan: [{ id: 'utama', ...PENG, ...(akunAdmin() && window.__islPengGlobal ? { penandatangan: window.__islPengGlobal.penandatangan } : {}) }],
     qt_counters: [...Object.entries(DB.urutTahun).map(([k, v]) => ({ id: k, nilai: v })), { id: 'urut_draf', nilai: DB.urutDraf }],
     layanan_tambahan: window.ISLFL ? window.ISLFL.katalog : [], qt_riwayat: DB.riwayat || [], format_lini: window.ISLFL ? window.ISLFL.formatBuatan : [] }; },
   pulihkan(sn) {
