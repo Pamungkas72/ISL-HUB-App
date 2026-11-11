@@ -47,8 +47,9 @@ async function ujiPeran(browser, peran) {
   await p.evaluate(() => { window.__qt._Q.view = 'list'; window.__qt.gambar(); });
   cek(await baris() === 4, `[${peran}] daftar harus berisi 4 baris (3 quotation + 1 riwayat), dapat ${await baris()}`);
   const m = (await menu()).join('|');
-  if (peran === 'master') cek(/Hapus permanen/.test(m) && !/Sembunyikan/.test(m), `[master] menu baris salah: ${m}`);
-  else cek(/Sembunyikan/.test(m) && !/Hapus permanen/.test(m), `[${peran}] menu baris salah: ${m}`);
+  // Hapus permanen, Ganti nomor, dan Tandai perhatian pindah ke halaman detail (tidak lagi di menu baris)
+  if (peran === 'master') cek(!/Hapus permanen|Ganti nomor|Tandai perlu/.test(m) && !/Sembunyikan/.test(m), `[master] menu baris salah: ${m}`);
+  else cek(/Sembunyikan/.test(m) && !/Hapus permanen|Ganti nomor|Tandai perlu/.test(m), `[${peran}] menu baris salah: ${m}`);
 
   if (peran !== 'master') {
     await p.evaluate(() => document.querySelector('#qt-root button[data-qt="sembunyikan"][data-id="qb"]').click());

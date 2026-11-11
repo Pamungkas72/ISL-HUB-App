@@ -1574,6 +1574,12 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
   .qt-sheet__i b { display: block; font-size: 15px; font-weight: 600; }
   .qt-sheet__i small { display: block; margin-top: 1px; font-size: 12.5px; font-weight: 400; color: var(--mr-muted); }
   .qt-sheet__i.is-bahaya, .qt-sheet__i.is-bahaya svg { color: var(--mr-bahaya); }
+  .qt-sheet__st { margin: 0 0 4px; font-size: 13px; color: var(--mr-muted); } .qt-sheet__st b { margin-right: 2px; padding: 3px 10px; border-radius: 999px; background: var(--qt-n); color: var(--mr-ink); font-weight: 600; }
+  .qt-sheet__g { margin: 14px 0 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mr-muted); }
+  .qt-sheet__seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--mr-border); border-radius: 12px; overflow: hidden; }
+  .qt-sheet__seg button { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 64px; padding: 10px 4px; border: 0; border-left: 1px solid var(--mr-border); background: none; font: inherit; font-size: 13px; font-weight: 600; color: inherit; cursor: pointer; } .qt-sheet__seg button:first-child { border-left: 0; }
+  .qt-sheet__seg .is-ok, .qt-sheet__seg .is-ok svg { color: var(--mr-ok); } .qt-sheet__seg .is-bahaya, .qt-sheet__seg .is-bahaya svg { color: var(--mr-bahaya); }
+  .qt-sheet__dl > span { flex: 1; } .qt-sheet__dl .mr-btn { min-height: 38px; border-radius: 999px; padding: 0 16px; }
   .qt-m-fs { padding: 6px 0 10px; }
   .qt-m-fs h4, .qt-m-sh { margin: 10px 0 8px; font-size: 13px; font-weight: 700; color: var(--mr-muted); text-transform: uppercase; letter-spacing: .04em; }
   .qt-m-pils { display: flex; flex-wrap: wrap; gap: 8px; }
