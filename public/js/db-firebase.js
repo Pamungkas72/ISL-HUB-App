@@ -9,6 +9,7 @@
 //     (atomik): keduanya tersimpan atau keduanya tidak.
 // ===========================================================
 import { db, app, auth } from "./firebase-config.js";
+import { kecilkanBerkas } from "./gambar.js";
 import { adalahMaster } from "./config-akses.js";
 import {
   collection,
@@ -469,6 +470,7 @@ const galatIzin = (err) => (err && (err.code === "permission-denied" || err.code
 
 export async function unggahFile(path, file, { oleh }) {
   const r = sRef(getStorage(app), path);
+  file = await kecilkanBerkas(file); // batas 4 MB berlaku di semua jalur unggah
   try {
     await Promise.race([
       uploadBytes(r, file, { contentType: file.type, customMetadata: { oleh: oleh || "" } }),
