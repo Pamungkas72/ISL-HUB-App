@@ -4581,30 +4581,27 @@ async function panelDokumen(q) {
   const w = $('#qt-dokwrap'); if (!w) { r.host.remove(); return; }
   taruhPratinjau(w, r); r.host.remove(); const i = $('#qt-dokinfo'); if (i) i.textContent = r.n + ' halaman' + (r.d ? ' · tata letak dirapatkan otomatis' : '');
 }
-// Syarat kritis vendor (nomor 1-15) untuk lini yang dipakai penawaran ini, yang perlu tercakup di S&K.
+// Syarat kritis vendor untuk penawaran ini. Vendor dianggap dipakai bila ada baris tarifnya (lokasi ikut), atau bila lini form (fasilitas) sama dengan lini vendor.
 const syaratKritisVendor = (q, bahasa = 'en') => {
   const vs = (MR() && MR().vendor) || [], hasil = [], seen = new Set();
-  (q.baris || []).forEach(b => {
-    if (b.jenis !== 'rate' || !b.vendorId || !b.liniKey) return;
-    const k = b.vendorId + '|' + b.liniKey; if (seen.has(k)) return; seen.add(k);
-    const v = vs.find(x => x.id === b.vendorId); if (!v) return;
-    // syarat kritis = kalimat yang ditandai Kritis di form vendor (data lama tanpa tanda: nomor urut 1-4)
-    const items = (v.tnc || []).filter(t => t.liniBisnisId === b.liniKey && (t.kritis !== undefined ? !!t.kritis : Number(t.urutan) >= 1 && Number(t.urutan) <= 4))
-      .map(t => (bahasa === 'id' ? (t.isi || t.terjemahan || '') : (t.terjemahan || t.isi || '')).trim()).filter(Boolean);
-    if (items.length) hasil.push({ vendor: v.nama || v.id, lini: namaLini(b.liniKey), items });
-  });
+  // syarat kritis = kalimat yang ditandai Kritis di form vendor (data lama tanpa tanda: nomor urut 1-4)
+  const kritis = (v, lini) => (v.tnc || []).filter(t => (t.liniBisnisId === lini || t.liniBisnisId === 'semua') && (t.kritis !== undefined ? !!t.kritis : Number(t.urutan) >= 1 && Number(t.urutan) <= 4))
+    .map(t => (bahasa === 'id' ? (t.isi || t.terjemahan || '') : (t.terjemahan || t.isi || '')).trim()).filter(Boolean);
+  const tambah = (v, lini, via) => { const k = v.id + '|' + lini; if (seen.has(k)) return; seen.add(k); const items = kritis(v, lini); if (items.length) hasil.push({ vendor: v.nama || v.id, lini: namaLini(lini), via, items }); };
+  (q.baris || []).forEach(b => { if (b.jenis !== 'rate' || !b.vendorId || !b.liniKey) return; const v = vs.find(x => x.id === b.vendorId); if (v) tambah(v, b.liniKey, 'tarif'); });
+  const lk = q.formLini && window.ISLFL ? window.ISLFL.liniKey(q.formLini) : null;
+  if (lk) vs.filter(v => (v.liniBisnis || []).includes(lk) || (v.tnc || []).some(t => t.liniBisnisId === lk)).forEach(v => tambah(v, lk, 'fasilitas'));
   return hasil;
 };
-// Peringatan sebelum cetak/unduh: syarat kritis vendor harus tercakup di S&K penawaran. Tidak memblokir jika pengguna lanjut.
+// Peringatan sebelum terbit: syarat kritis vendor yang dipakai (tarif, lokasi, atau fasilitas) harus tercakup di S&K penawaran. Tidak memblokir jika pengguna lanjut.
 async function konfirmasiSyaratKritis(q) {
   const daftar = syaratKritisVendor(q);
   if (!daftar.length) return true;
-  const isi = daftar.map(d => `<b>${esc(d.vendor)}</b> · ${esc(d.lini)}<ul class="mr-konfirm__daftar">${d.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('');
-  return konfirmasi({ judul: 'Pastikan syarat kritis vendor tercakup', aksi: 'Sudah tercakup, cetak', isi: `Syarat kritis vendor berikut dipakai di penawaran ini. Pastikan S&K penawaran sudah memuat semuanya sebelum dicetak.${isi}` });
+  const isi = daftar.map(d => `<b>${esc(d.vendor)}</b> · ${esc(d.lini)} <small class="mr-sub">(${d.via === 'tarif' ? 'tarif dan lokasi dipakai' : 'fasilitas lini dipakai'})</small><ul class="mr-konfirm__daftar">${d.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('');
+  return konfirmasi({ judul: 'Vendor punya syarat kritis', aksi: 'Sudah tercakup, lanjut terbitkan', bahaya: true, isi: `Pastikan S&K penawaran sudah memuat semua syarat kritis vendor berikut sebelum diterbitkan.${isi}` });
 }
 async function aksiUnduh(id, cara = 'unduh') {
   const q = Repo.baca(id); if (!q || !q.dokumenModel) return toast('Dokumen belum diterbitkan.', 'bahaya');
-  if (!await konfirmasiSyaratKritis(q)) return;
   const namaT = namaFilePdf(q.dokumenModel);
   if (q.pdfUrl) { try { toast('Mengambil PDF tersimpan…'); const rs = await fetch(q.pdfUrl); if (!rs.ok) throw new Error('HTTP ' + rs.status); simpanBlob(await rs.blob(), namaT); try { await Repo.catatKeluaran(id, cara, namaT); } catch (er) { toast(`PDF terunduh, tetapi <b>catatan riwayat gagal tersimpan</b>.<br>${esc(er.message)}`, 'bahaya'); return segarSemua(); } toast(`PDF <b>${esc(namaT)}</b> (versi tersimpan) diunduh dan dicatat di riwayat.`); return segarSemua(); } catch (er) { /* gagal ambil: buat ulang dari isi yang dibekukan */ } }
   toast('Menyiapkan PDF…');
@@ -4653,7 +4650,6 @@ const nomorWa = t => { let d = String(t || '').replace(/\D/g, ''); if (!d) retur
 /* Bagikan file langsung lewat menu bagi HP (WhatsApp, email, dan lainnya), PDF bawaan atau Word */
 async function aksiBagikan(id, fmt) {
   const q = Repo.baca(id); if (!q || !q.dokumenModel) return toast('Dokumen belum diterbitkan.', 'bahaya');
-  if (!await konfirmasiSyaratKritis(q)) return;
   const word = fmt === 'word', nama = word ? namaFileWord(q.dokumenModel) : namaFilePdf(q.dokumenModel); let blob;
   toast('Menyiapkan file…');
   try {
@@ -4828,7 +4824,7 @@ function paginaPengaturan(html) {
       let meta = '', tambahan = '';
       if (lipatan && pilih.id === 'teks') {
         if (k === 'kalimatstandar') { meta = 'Pembuka · Penutup · Catatan'; const pre = s.querySelector('.qt-presetlist'); if (pre) { const b = pre.querySelector(':scope > b'); if (b) b.remove(); tambahan = lipat('Preset kalimat saya', pre.querySelectorAll('.qt-presetlist__i').length + ' preset', `<div class="qt-subseksi">${pre.outerHTML}</div>`, false); pre.remove(); } }
-        else if (k === 'pustaka') { const tn = PENG.tnc || []; meta = `${tn.filter(x => x.aktif).length} dari ${tn.length} butir dipakai`; s.innerHTML = ringkasanTnc(); }
+        else if (k === 'pustaka') { const tn = PENG.tnc || []; meta = `${tn.filter(x => x.aktif).length} dari ${tn.length} butir dipakai`; }
       }
       const badan = `<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${s.innerHTML}</div>`;
       isi.push(lipatan ? lipat(sub, meta, badan, pilih.kartu.indexOf(d) === 0) + tambahan : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
@@ -4843,29 +4839,6 @@ function paginaPengaturan(html) {
     <footer class="mr-panel__kaki qt-pgfoot">${ed ? `<button class="mr-btn" data-qt="pg-batal">Batalkan perubahan</button>` : ''}<span class="mr-ruang"></span><button class="mr-btn" data-qt="pg-kembali">${ik('kembali', 16)} Kembali</button>${ed ? `<button class="mr-btn mr-btn--utama" data-qt="pg-simpan">${ik('cek', 16)} Simpan pengaturan</button>` : ''}</footer>`;
 }
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
-/* ringkasan Pustaka S&K di halaman Teks standar: jumlah butir dipakai per grup; butirnya dikelola di panel */
-/* kategori S&K yatim (lininya sudah tidak ada di Master Rate) yang punya lini pengganti: Warehouse Frozen dan Cold Storage satu lini */
-const GABUNG_YATIM = { warehouse_frozen: /cold|frozen|chiller/i };
-function tujuanGabung(dari) {
-  const re = GABUNG_YATIM[dari]; if (!re) return null;
-  const resmi = daftarLini().filter(l => l.resmi);
-  return resmi.some(l => l.key === dari) ? null : (resmi.find(l => re.test(l.nama)) || {}).key || null;
-}
-async function gabungTnc(dari, ke) {
-  if (!kelolaSaja() || tujuanGabung(dari) !== ke) return;
-  const butir = (PENG.tnc || []).filter(t => t.kat === dari);
-  if (!(await konfirmasi({ judul: `Gabungkan ke ${namaLini(ke)}?`, isi: `${butir.length} butir S&K dari <b>${esc(namaLini(dari))}</b> dipindah ke <b>${esc(namaLini(ke))}</b> (butir yang sama persis dilewati). Kalimat, syarat, dan template lini ikut dipindah bila lini tujuan belum punya. Quotation yang sudah terbit tidak berubah.`, aksi: 'Gabungkan' }))) return;
-  const lama = clone(PENG), ada = new Set(PENG.tnc.filter(t => t.kat === ke).map(t => norm(t.teks && t.teks.id)));
-  PENG.tnc = PENG.tnc.filter(t => !(t.kat === dari && ada.has(norm(t.teks && t.teks.id)))).map(t => t.kat === dari ? { ...t, kat: ke } : t);
-  ['kalimatLini', 'syaratLini', 'templateLini'].forEach(f => { const o = PENG[f]; if (o && o[dari] !== undefined) { if (o[ke] === undefined) o[ke] = o[dari]; delete o[dari]; } });
-  try { await Repo.simpanPengaturan(PENG); } catch (er) { Object.keys(PENG).forEach(k => delete PENG[k]); Object.assign(PENG, lama); return toast(`<b>GAGAL menyimpan.</b> ${esc(er.message)}`, 'bahaya'); }
-  if (Q.pd) { Q.pd.tnc = clone(PENG.tnc); Q.pd.kalimatLini = clone(PENG.kalimatLini || {}); Q.pd.syaratLini = clone(PENG.syaratLini || {}); Q.pd.templateLini = clone(PENG.templateLini || {}); }
-  gambar(); toast(`S&K ${esc(namaLini(dari))} digabung ke ${esc(namaLini(ke))}.`);
-}
-function ringkasanTnc() {
-  const tn = PENG.tnc || [], kat = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...tn.map(x => x.kat)].filter(k => k !== 'umum'))];
-  return `<div class="qt-ringkas-daftar">${kat.map(k => { const m = tn.filter(x => x.kat === k); const tujuan = kelolaSaja() && m.length ? tujuanGabung(k) : null; return `<div class="qt-ringkas"><span>${esc(k === 'umum' ? 'Syarat umum' : namaLini(k))}</span><small>${m.filter(x => x.aktif).length} dari ${m.length} dipakai</small>${tujuan ? `<button type="button" class="mr-btn mr-btn--kecil" data-qt="tnc-gabung" data-dari="${esc(k)}" data-ke="${esc(tujuan)}">Gabungkan ke ${esc(namaLini(tujuan))}</button>` : ''}</div>`; }).join('')}</div><button type="button" class="mr-btn" data-qt="tnc-pusat">${ik('file', 14)} Kelola butir syarat</button>`;
-}
 // Kartu lipat: saat satu dibuka, kartu lain di bagian yang sama menutup (kecuali sedang mencari); kotak teks menyesuaikan tinggi isi
 const tinggiTa = t => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
 document.addEventListener('toggle', e => { const d = e.target; if (!(d.matches && d.matches('details.qt-lipat') && d.open)) return; d.querySelectorAll('textarea').forEach(tinggiTa); if (!d.parentElement.dataset.cari) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
@@ -5754,81 +5727,47 @@ function terjemahOtomatis(teksId) {
   return null;
 }
 const katJudul = k => k === 'umum' ? 'Umum (semua quotation)' : 'Khusus ' + namaLini(k);
-function tpMuat() { TP.tnc = clone(PENG.tnc || []); TP.gabung = PENG.tncGabung !== false; TP.filter = 'semua'; TP.buka = new Set(); TP.eng = new Set(); }
 const TP_TOP = [3, 7, 14, 30, 45];
 const tpTopDari = t => { const m = /(\d+)\s*hari/i.exec(String(t.teks.id || '')); return m ? +m[1] : null; };
-function tpIsi() { const w = $('#tp-isi'); if (w) w.innerHTML = tpHtml(); }
+function tpIsi() { const w = $('#tp-isi'); if (w) { w.innerHTML = tpHtml(); w.querySelectorAll('textarea').forEach(tinggiTa); } }
+/* Pustaka S&K: chip lini, lalu butir lini itu langsung bisa diedit (English dibuat otomatis dari teks Indonesia) */
 function tpHtml() {
-  const ed = bisaEdit(), dis = ed ? '' : 'disabled', dipakai = new Set(Q.edit ? R.liniDipakai(Q.edit) : []);
+  const ed = bisaEdit(), dis = ed ? '' : 'disabled';
   const kats = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...TP.tnc.map(t => t.kat)].filter(k => k !== 'umum'))];   /* semua lini resmi tampil, juga yang belum punya butir */
-  if (TP.filter !== 'semua' && !kats.includes(TP.filter)) TP.filter = 'semua';
-  const milik = k => TP.tnc.filter(t => t.kat === k);
+  if (!kats.includes(TP.filter)) TP.filter = 'umum';
   const katOpt = t => Object.entries(KATEGORI_TNC).map(([k, l]) => `<option value="${k}" ${t.kategori === k ? 'selected' : ''}>${l}</option>`).join('');
-  const kartu = [{ k: 'semua', n: 'Semua butir', aktif: TP.tnc.filter(t => t.aktif).length, total: TP.tnc.length }, ...kats.map(k => ({ k, n: k === 'umum' ? 'Syarat umum' : namaLini(k), aktif: milik(k).filter(t => t.aktif).length, total: milik(k).length }))];
-  const pilih = `<div class="tp-pilih" role="group" aria-label="Pilih lini">${kartu.map(x => `<button type="button" class="tp-lini ${TP.filter === x.k ? 'is-aktif' : ''}" data-tp="filter" data-v="${esc(x.k)}" aria-pressed="${TP.filter === x.k}"><span class="tp-lini__n">${esc(x.n)}</span><small>${x.aktif} dari ${x.total} dipakai${dipakai.has(x.k) ? ' · dipakai di quotation ini' : ''}</small></button>`).join('')}</div>`;
+  const chip = k => `<button type="button" class="tp-lini ${TP.filter === k ? 'is-aktif' : ''}" data-tp="filter" data-v="${esc(k)}" aria-pressed="${TP.filter === k}">${esc(k === 'umum' ? 'Umum' : namaLini(k))} <small>${TP.tnc.filter(t => t.kat === k && t.aktif).length}</small></button>`;
+  const ikon = (a, i, ik2, label) => `<button type="button" class="mr-ikonbtn" data-tp="${a}" data-i="${i}" aria-label="${label}" title="${label}">${ik(ik2, 14)}</button>`;
   const butir = (t, i) => {
-    const buka = TP.buka.has(i), top = t.kategori === 'pembayaran' ? tpTopDari(t) : null, basi = !String(t.teks.en || '').trim() || t.enBasi;
-    const aksi = ed
-      ? `<button type="button" class="mr-ikonbtn" data-tp="ubah" data-i="${i}" aria-expanded="${buka}" aria-label="${buka ? 'Tutup butir' : 'Ubah butir'}" title="${buka ? 'Tutup' : 'Ubah'}">${ik(buka ? 'tutup' : 'edit', 16)}</button>`
-      : `<button type="button" class="mr-btn mr-btn--kecil" data-tp="ubah" data-i="${i}" aria-expanded="${buka}">${buka ? 'Tutup' : 'Lihat'}</button>`;
-    const editor = `<div class="tp-butir__ed">
-        <label class="mr-f"><span>Teks (Indonesia)</span><textarea data-tp="id" data-i="${i}" rows="4" ${dis}>${esc(t.teks.id)}</textarea></label>
-        <label class="mr-f"><span>Jenis</span><select data-tp="kategori" data-i="${i}" ${dis}>${katOpt(t)}</select></label>
-        ${t.kategori === 'pembayaran' && ed ? `<div class="mr-f"><span>Tempo pembayaran (TOP)</span><div class="qt-tpf">${TP_TOP.map(h => `<button type="button" class="qt-chip ${top === h ? 'qt-chip--on' : ''}" data-tp="top" data-i="${i}" data-v="${h}">${h} hari</button>`).join('')}</div></div>` : ''}
-        <div><button type="button" class="qt-link" data-tp="eng" data-i="${i}">${TP.eng.has(i) ? 'Sembunyikan teks English' : 'Lihat teks English'}</button>${TP.eng.has(i) ? `<label class="mr-f" style="margin-top:6px"><span>English (dipakai saat dokumen dicetak dalam English)</span><textarea data-tp="en" data-i="${i}" rows="3" ${dis}>${esc(t.teks.en)}</textarea></label>` : ''}</div>
-        ${ed ? `<div class="tp-butir__aksi"><button type="button" class="mr-ikonbtn" data-tp="naik" data-i="${i}" aria-label="Naikkan" title="Naikkan">${ik('naik', 14)}</button><button type="button" class="mr-ikonbtn" data-tp="turun" data-i="${i}" aria-label="Turunkan" title="Turunkan">${ik('turun', 14)}</button><span class="mr-ruang"></span>${dilarangHapus() ? '' : `<button type="button" class="mr-btn mr-btn--kecil mr-btn--hapus" data-tp="hapus" data-i="${i}">${ik('tong', 14)} Hapus</button>`}</div>` : ''}
-      </div>`;
+    const top = t.kategori === 'pembayaran' ? tpTopDari(t) : null;
     return `<article class="tp-butir ${t.aktif ? '' : 'is-mati'}">
       <header class="tp-butir__h"><label class="qt-sw" title="${t.aktif ? 'Dipakai di quotation' : 'Tidak dipakai'}"><input type="checkbox" data-tp="aktif" data-i="${i}" ${t.aktif ? 'checked' : ''} ${dis} aria-label="Dipakai"><span></span></label>
-        <div class="tp-butir__judul"><b>${esc(KATEGORI_TNC[t.kategori] || 'Lainnya')}</b>${top ? ` <span class="qt-pill">TOP ${top} hari</span>` : ''}${basi ? ' <span class="qt-pill qt-pill--warn" title="Teks Inggris belum diperbarui mengikuti teks Indonesia">Inggris perlu diperbarui</span>' : ''}</div>${aksi}</header>
-      ${buka ? editor : `<p class="tp-butir__teks">${esc(t.teks.id || '(kosong)')}</p>`}
+        <select class="tp-jenis" data-tp="kategori" data-i="${i}" ${dis} aria-label="Jenis butir">${katOpt(t)}</select>
+        <span class="mr-ruang"></span>${ed ? `${ikon('naik', i, 'naik', 'Naikkan')}${ikon('turun', i, 'turun', 'Turunkan')}${dilarangHapus() ? '' : ikon('hapus', i, 'tong', 'Hapus butir')}` : ''}</header>
+      <textarea class="tp-teks" data-tp="id" data-i="${i}" rows="2" ${dis} aria-label="Teks butir (Indonesia)" placeholder="Tulis butir syarat…">${esc(t.teks.id)}</textarea>
+      ${t.kategori === 'pembayaran' && ed ? `<div class="qt-tpf">${TP_TOP.map(h => `<button type="button" class="qt-chip ${top === h ? 'qt-chip--on' : ''}" data-tp="top" data-i="${i}" data-v="${h}">${h} hari</button>`).join('')}</div>` : ''}
     </article>`;
   };
-  const tampil = TP.filter === 'semua' ? kats : [TP.filter];
-  return pilih + tampil.map(k => {
-    const it = TP.tnc.map((t, i) => [t, i]).filter(([t]) => t.kat === k);
-    return `<section class="tp-grup"><div class="tp-grup__h"><div><b>${k === 'umum' ? 'Syarat umum' : 'Syarat khusus ' + esc(namaLini(k))}</b><small>${k === 'umum' ? 'Dipakai di semua quotation' : 'Hanya muncul kalau lini ini dipakai di quotation'}</small></div>${ed ? `<button type="button" class="mr-btn mr-btn--kecil" data-tp="tambah" data-kat="${esc(k)}">${ik('plus', 14)} Tambah butir</button>` : ''}</div>
-      ${it.map(([t, i]) => butir(t, i)).join('') || '<p class="cu-kosong">Belum ada butir.</p>'}</section>`;
-  }).join('');
-}
-function panelTncPusat() {
-  if (Q.edit) bacaForm(); tpMuat(); const ed = bisaEdit();
-  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Kumpulan syarat dan ketentuan (referensi)</h2><p class="mr-sub">Kumpulan butir per lini bisnis. Template tiap lini dipakai otomatis oleh quotation lini itu (dan bisa disesuaikan per quotation). Butir "Syarat umum" yang dicentang dipakai otomatis di semua lini; yang sama atau mirip dengan butir lini dilewati supaya tidak dobel. Perubahan berlaku untuk quotation berikutnya; yang sudah terbit tidak berubah.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
-  <div class="mr-panel__isi">
-    <div id="tp-isi"></div>
-    ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div><p class="mr-sub qt-ket">Butir yang sudah ada tidak digandakan. Periksa lalu klik Simpan.</p>` : ''}
-    <p class="mr-galat" id="pn-galat" hidden></p></div>
-  <footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Tutup</button>${ed ? `<button class="mr-btn mr-btn--utama" data-tp="simpan">${ik('cek', 16)} Simpan</button>` : ''}</footer>`, 'lebar');
-  tpIsi();
-}
-async function aksiTpSimpan(btn) {
-  const err = []; TP.tnc.forEach(t => { if (t.aktif && !String(t.teks.id).trim()) err.push(`Ada butir ${katJudul(t.kat)} yang dipakai tetapi teks Indonesianya kosong.`); });
-  if (err.length) return galatPanel('<b>Belum bisa disimpan:</b><br>' + [...new Set(err)].map(esc).join('<br>'));
-  TP.tnc.forEach(t => { if (!String(t.teks.en).trim()) t.teks.en = t.teks.id; });
-  const lama = { n: clone(PENG.tnc || []), g: PENG.tncGabung }; PENG.tnc = clone(TP.tnc); PENG.tncGabung = TP.gabung; const pulih = sibuk(btn, 'Menyimpan…');
-  try { await Repo.simpanPengaturan(PENG); } catch (er) { PENG.tnc = lama.n; PENG.tncGabung = lama.g; pulih(); return galatPanel(`<b>GAGAL menyimpan.</b> Belum tersimpan.<br>${esc(er.message)}`); }
-  if (Q.pd) { Q.pd.tnc = clone(PENG.tnc); Q.pd.tncGabung = PENG.tncGabung; }
-  tutupPanel(); if (Q.edit) gambar(); toast(`Syarat dan ketentuan tersimpan dan terverifikasi (${TP.tnc.length} butir).`);
+  const it = TP.tnc.map((t, i) => [t, i]).filter(([t]) => t.kat === TP.filter);
+  return `<div class="tp-pilih" role="group" aria-label="Pilih lini">${kats.map(chip).join('')}</div>
+    <p class="tp-info">${TP.filter === 'umum' ? 'Dipakai di semua quotation.' : 'Muncul bila lini ini dipakai; syarat umum ikut otomatis.'}</p>
+    <section class="tp-grup">${it.map(([t, i]) => butir(t, i)).join('') || '<p class="cu-kosong">Belum ada butir.</p>'}
+      ${ed ? `<button type="button" class="tp-tambah" data-tp="tambah" data-kat="${esc(TP.filter)}">${ik('plus', 14)} Tambah butir</button>` : ''}</section>`;
 }
 ['input', 'change'].forEach(n => document.addEventListener(n, ev => { if (Q.pd && ev.target.dataset && ev.target.dataset.tp && $('#pg-tnc')) Q.pdKotor = true; }, true));
 document.addEventListener('toggle', ev => { const d = ev.target; if (d && d.dataset && d.dataset.pgd && Q.pdBuka) { d.open ? Q.pdBuka.add(d.dataset.pgd) : Q.pdBuka.delete(d.dataset.pgd); } }, true);
 document.addEventListener('click', ev => {
-  const e = ev.target.closest('[data-tp],[data-qt="tnc-pusat"],[data-qt="tnc-gabung"],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
-  if (d.qt === 'tnc-pusat') panelTncPusat();
-  else if (d.qt === 'tnc-gabung') gabungTnc(d.dari, d.ke);
-  else if (d.qt === 'ke-master-rate') { if (Q.edit) bacaForm(); window.__pindahHalaman('master-rate'); setTimeout(() => { const t = document.querySelector('[data-aksi=tab][data-v=lini]'); if (t) t.click(); }, 350); toast('Atur <b>Target margin</b> tiap lini di Master Rate → Lini bisnis. Draf quotation tetap tersimpan di sini; kembali lewat menu Quotation.'); }
-  else if (d.tp === 'tambah') { const k = d.kat || 'umum'; TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: '', en: '' }, aktif: true }); TP.filter = k; TP.buka.add(TP.tnc.length - 1); tpIsi(); const ta = $$('#tp-isi [data-tp=id]').pop(); if (ta) ta.focus(); }
+  const e = ev.target.closest('[data-tp],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
+  if (d.qt === 'ke-master-rate') { if (Q.edit) bacaForm(); window.__pindahHalaman('master-rate'); setTimeout(() => { const t = document.querySelector('[data-aksi=tab][data-v=lini]'); if (t) t.click(); }, 350); toast('Atur <b>Target margin</b> tiap lini di Master Rate → Lini bisnis. Draf quotation tetap tersimpan di sini; kembali lewat menu Quotation.'); }
+  else if (d.tp === 'tambah') { const k = d.kat || 'umum'; TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: '', en: '' }, aktif: true }); TP.filter = k; tpIsi(); const ta = $$('#tp-isi [data-tp=id]').pop(); if (ta) ta.focus(); }
   else if (d.tp === 'filter') { TP.filter = d.v; tpIsi(); }
-  else if (d.tp === 'ubah') { const i = +d.i; TP.buka.has(i) ? TP.buka.delete(i) : TP.buka.add(i); tpIsi(); }
-  else if (d.tp === 'eng') { const i = +d.i; TP.eng.has(i) ? TP.eng.delete(i) : TP.eng.add(i); tpIsi(); }
   else if (d.tp === 'top') { const x = TP.tnc[+d.i]; if (x) { const h = d.v; const gantiId = String(x.teks.id || '').replace(/\d+\s*hari/i, h + ' hari'); x.teks.id = /\d+\s*hari/i.test(x.teks.id || '') ? gantiId : (String(x.teks.id || '').trim() + ' Pembayaran ' + h + ' hari setelah invoice diterima.').trim(); x.teks.en = String(x.teks.en || '').replace(/\d+\s*days/i, h + ' days'); const enAuto = terjemahOtomatis(x.teks.id); if (enAuto) { x.teks.en = enAuto; x.enBasi = false; } else if (!/days/i.test(x.teks.en)) x.enBasi = true; tpIsi(); } }
   else if (d.tp === 'isi-excel') { const bersih = t => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, ''); let n = 0; Object.entries(TNC_EXCEL).forEach(([k, arr]) => arr.forEach(tx => { if (!TP.tnc.some(x => x.kat === k && bersih(x.teks.id) === bersih(tx))) { const enAuto = terjemahOtomatis(tx); TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: tx, en: enAuto || '' }, aktif: true, enBasi: !enAuto }); n++; } })); tpIsi(); toast(n ? `${n} butir ditambahkan. Klik Simpan untuk menyimpan.` : 'Semua butir sudah ada.'); }
   else if (d.tp === 'hapus' && !dilarangHapus()) { TP.tnc.splice(+d.i, 1); tpIsi(); }
   else if (d.tp === 'naik' || d.tp === 'turun') { const i = +d.i, k = TP.tnc[i].kat, dir = d.tp === 'naik' ? -1 : 1; let j = i + dir; while (j >= 0 && j < TP.tnc.length && TP.tnc[j].kat !== k) j += dir; if (j >= 0 && j < TP.tnc.length) { [TP.tnc[i], TP.tnc[j]] = [TP.tnc[j], TP.tnc[i]]; tpIsi(); } }
-  else if (d.tp === 'simpan') aksiTpSimpan(e);
 });
-document.addEventListener('input', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'id' || d.tp === 'en') { const x = TP.tnc[+d.i]; if (x) { x.teks[d.tp] = t.value; if (d.tp === 'id') { const en = terjemahOtomatis(t.value); if (en) { x.teks.en = en; x.enBasi = false; } else x.enBasi = true; } else x.enBasi = false; } } });
-document.addEventListener('change', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'aktif') { const x = TP.tnc[+d.i]; if (x) { x.aktif = t.checked; tpIsi(); } } else if (d.tp === 'kategori') { const x = TP.tnc[+d.i]; if (x) x.kategori = t.value; } else if (t.id === 'tp-gabung') TP.gabung = t.checked; });
+document.addEventListener('input', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'id' || d.tp === 'en') { tinggiTa(t); const x = TP.tnc[+d.i]; if (x) { x.teks[d.tp] = t.value; if (d.tp === 'id') { const en = terjemahOtomatis(t.value); if (en) { x.teks.en = en; x.enBasi = false; } else x.enBasi = true; } else x.enBasi = false; } } });
+document.addEventListener('change', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'aktif') { const x = TP.tnc[+d.i]; if (x) { x.aktif = t.checked; tpIsi(); } } else if (d.tp === 'kategori') { const x = TP.tnc[+d.i]; if (x) { x.kategori = t.value; tpIsi(); } } else if (t.id === 'tp-gabung') TP.gabung = t.checked; });
 
 /* =============================== Q. KOLOM TANGGAL: BISA DIKETIK + KALENDER DENGAN TOMBOL OK =============================== */
 /* Pemilih tanggal bawaan HP sering tanpa tombol OK dan tidak bisa diketik. Semua kolom tanggal diganti: ketik hh/bb/tttt atau pilih di kalender dengan tombol OK.
@@ -7214,6 +7153,7 @@ async function aksiKirim(btn, format = 'pdf') {
   const rg = R.ringkas(e.baris, R.targetLive), ws = R.peringatan(rg).filter(w => w.j !== 'info'), nomor = Repo.nomorBerikut(e.seri = seriValid(e.seri), format === 'docx');
   const word = format === 'docx';
   const kodeSeri = e.seri, terakhir = Math.max(DB.urutTahun[Repo.kunciUrut(HARI_INI(), kodeSeri)] || 0, Repo.awalSeri(kodeSeri));
+  if (!await konfirmasiSyaratKritis(e)) return;
   const ok = await konfirmasi({ judul: word ? 'Terbitkan quotation dan unduh Word?' : 'Terbitkan quotation dan unduh PDF?', bahaya: rg.rugiTotal, aksi: word ? 'Beri nomor, kunci, dan unduh Word' : 'Beri nomor, kunci, dan unduh PDF',
     pintas: k => { if (k === 'penomoran') bukaPenomoran(); },
     isi: `<div class="qt-nomorinfo"><span class="qt-nomorinfo__l">Nomor resmi yang akan dipakai</span><b class="qt-nomorinfo__n">${esc(nomor)}</b><small>Nomor terakhir yang terpakai di periode ini: <b>${terakhir}</b>.</small>${kelolaSaja() ? `<button type="button" class="qt-link" data-pintas="penomoran">Nomor tidak sesuai urutan? Atur penomoran</button>` : '<small>Nomor tidak sesuai urutan? Minta master atau admin mengaturnya di Pengaturan dokumen &gt; Penomoran.</small>'}</div>
