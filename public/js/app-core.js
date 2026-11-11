@@ -3199,7 +3199,6 @@ table.isl-fl{margin-top:12px}
 .isl-kartu td:first-child b{display:block;font-weight:700;font-size:11.2px}
 .isl-kartu td .isl-sat{font-size:9px;color:#8a97a5;margin-top:0;font-weight:400}
 .isl-page.tema-b table.isl-t.isl-kartu td.r{text-align:right;white-space:nowrap;font-weight:800;font-size:12px;font-variant-numeric:tabular-nums}
-.isl-kartu td.c{text-align:center;font-weight:800;font-size:12px;font-variant-numeric:tabular-nums}
 .isl-kartu td.r .rp{font-style:normal;font-weight:500;font-size:8.6px;color:#8a97a5;margin-right:4px}
 .isl-page.tema-b table.isl-t.isl-kartu:not(.isl-mx):not(.isl-kisi) tbody tr td:nth-child(2){background:#F3F8FD !important}
 .isl-page.tema-b table.isl-t.isl-kartu:not(.isl-mx):not(.isl-kisi) tbody tr td:nth-child(3){background:#E8F2FB !important}
@@ -5669,7 +5668,7 @@ function enIsi(o, teksId) { const en = terjemahOtomatis(teksId); if (en) { o.en 
 /* ===== Dokumen berbahasa Inggris: SEMUA teks di dokumen harus English (aturan pemilik, 4 Nov 2026) =====
    Teks statis blok lini (judul, kolom, label, catatan, satuan) dan butir S&K dari mesin formulir diterjemahkan di sini. Isian bebas user (nama rute, lokasi, nama layanan buatan sendiri) tetap apa adanya. */
 const DOK_EN = new Map(Object.entries({
-  'per hari / per container': 'per day / per container', 'Biaya administrasi': 'Administration fee','Belum termasuk biaya gatepass pelabuhan yang berlaku': 'Excludes applicable port gate pass fees', 'per container · Belum termasuk biaya gatepass pelabuhan yang berlaku': 'per container · Excludes applicable port gate pass fees',
+  'per hari / per container': 'per day / per container', 'Fee administrasi': 'Administration fee','Belum termasuk biaya gatepass pelabuhan yang berlaku': 'Excludes applicable port gate pass fees', 'per container · Belum termasuk biaya gatepass pelabuhan yang berlaku': 'per container · Excludes applicable port gate pass fees',
   'Sewa / bulan (Rp)': 'Rent / month (IDR)', 'Driver / orang (Rp)': 'Driver / person (IDR)', 'Jumlah (Rp)': 'Amount (IDR)', 'Harga jual (Rp)': 'Selling price (IDR)', 'Impor & ekspor': 'Import & export', 'Impor': 'Import', 'Ekspor': 'Export', 'Suhu ruang': 'Room temperature', '-18 °C atau lebih rendah': '-18 °C or lower', '0 s.d. +5 °C': '0 to +5 °C',
   'Layanan': 'Services', 'Satuan': 'Unit', 'Keterangan': 'Remarks', 'Rute': 'Route', 'Tipe': 'Type', 'Grup': 'Group', 'Ukuran': 'Size', 'Periode': 'Period', 'Harian': 'Daily', 'Mingguan': 'Weekly', 'Bulanan': 'Monthly', 'harian': 'daily', 'mingguan': 'weekly', 'bulanan': 'monthly',
   'Tahun / tonase': 'Year / tonnage', 'Lokasi gudang': 'Warehouse location', 'Rute (asal – tujuan)': 'Route (origin – destination)', 'Komponen biaya': 'Cost component', 'Tarif (asal)': 'Rate (original)', 'Keterangan domestik': 'Domestic remarks',
