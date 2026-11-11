@@ -10,6 +10,7 @@
 // Tampilan (app-core.js) hanya memanggil tulis(); tidak ada kode Firebase di sana.
 // ===========================================================
 import { db, app, auth } from "./firebase-config.js";
+import { kecilkanBerkas } from "./gambar.js";
 import {
   collection, doc, getDocs, getDocFromServer, setDoc, writeBatch, runTransaction, query, where, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
@@ -178,7 +179,8 @@ export async function diagnosa() {
 }
 export async function unggahBlob(path, blob, tipe) {
   const r = sRef(getStorage(app), path);
-  await dengBatas(uploadBytes(r, blob, { contentType: tipe || blob.type }), "Unggah file");
+  blob = await kecilkanBerkas(blob); // batas 4 MB berlaku di semua jalur unggah
+  await dengBatas(uploadBytes(r, blob, { contentType: blob.type || tipe }), "Unggah file");
   return dengBatas(getDownloadURL(r), "Ambil tautan file");
 }
 

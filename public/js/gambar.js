@@ -94,3 +94,54 @@ export async function hapusLatarGambar(file, { maks = 600 } = {}) {
   hasil.getContext("2d").drawImage(kanvas, x0, y0, x1 - x0, y1 - y0, 0, 0, x1 - x0, y1 - y0);
   return hasil.toDataURL("image/png");
 }
+
+/* ---------- batas dan pemampatan semua unggahan (hemat storage) ---------- */
+export const BATAS_BERKAS = 4 * 1024 * 1024; // ukuran akhir maksimal yang disimpan
+export const BATAS_MENTAH = 30 * 1024 * 1024; // berkas asli di atas ini ditolak sebelum diproses (browser bisa kehabisan memori)
+export const fmtUkuran = (b) => b >= 1048576 ? (b / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB";
+const muatSkrip = (src) => new Promise((ok, gagal) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => gagal(new Error("Gagal memuat " + src)); document.head.appendChild(s); });
+
+export async function muatPdfjs() {
+  if (!window.pdfjsLib) await muatSkrip("vendor/pdf.min.js");
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+  return window.pdfjsLib;
+}
+
+/* PDF di atas batas dirender ulang per halaman (lebar makin kecil, JPEG makin rendah) sampai muat. Teks tidak bisa diseleksi lagi, tanda tangan tetap terbaca. */
+async function mampatkanPdf(file, maks) {
+  const lib = await muatPdfjs();
+  if (!(window.jspdf && window.jspdf.jsPDF)) await muatSkrip("vendor/jspdf.umd.min.js");
+  const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  if (pdf.numPages > 60) throw new Error("PDF lebih dari 60 halaman. Pecah dulu menjadi beberapa file.");
+  for (const [lebar, mutu] of [[1240, 0.72], [1000, 0.6], [800, 0.5]]) {
+    let dok = null;
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const hal = await pdf.getPage(n), v1 = hal.getViewport({ scale: 1 }), vp = hal.getViewport({ scale: lebar / v1.width });
+      const c = document.createElement("canvas"); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+      await hal.render({ canvasContext: x, viewport: vp }).promise;
+      const ori = v1.width > v1.height ? "l" : "p";
+      if (dok) dok.addPage([v1.width, v1.height], ori); else dok = new window.jspdf.jsPDF({ unit: "pt", format: [v1.width, v1.height], orientation: ori, compress: true });
+      dok.addImage(c.toDataURL("image/jpeg", mutu), "JPEG", 0, 0, v1.width, v1.height, undefined, "FAST");
+    }
+    const blob = dok.output("blob");
+    if (blob.size <= maks) return new File([blob], file.name, { type: "application/pdf" });
+  }
+  throw new Error("PDF tetap di atas " + fmtUkuran(maks) + " setelah dikecilkan. Pecah menjadi beberapa file.");
+}
+
+/* Dipakai semua jalur unggah. Gambar: diperkecil (1600 px, JPEG). PDF: dikecilkan bila di atas batas. Lainnya (Word, Excel): hanya dicek batas. Melempar galat berbahasa Indonesia. */
+export async function kecilkanBerkas(file, { maks = BATAS_BERKAS } = {}) {
+  if (!file) throw new Error("Berkas kosong.");
+  if (file.size > BATAS_MENTAH) throw new Error("Berkas " + fmtUkuran(file.size) + " terlalu besar. Maksimal " + fmtUkuran(BATAS_MENTAH) + ".");
+  const tipe = String(file.type || "");
+  if (tipe.startsWith("image/") && tipe !== "image/gif") {
+    let f = await perkecilGambar(file, { maks: 1600, kualitas: 0.8 });
+    if (f.size > maks) f = await perkecilGambar(f, { maks: 1200, kualitas: 0.6 });
+    if (f.size > maks) throw new Error("Gambar tetap di atas " + fmtUkuran(maks) + " setelah dikecilkan.");
+    return f;
+  }
+  if (file.size <= maks) return file;
+  if (tipe === "application/pdf" || /\.pdf$/i.test(file.name || "")) return mampatkanPdf(file, maks);
+  throw new Error("Berkas " + fmtUkuran(file.size) + " melebihi batas " + fmtUkuran(maks) + " dan jenis ini tidak bisa dikecilkan otomatis. Kecilkan dulu lalu unggah lagi.");
+}

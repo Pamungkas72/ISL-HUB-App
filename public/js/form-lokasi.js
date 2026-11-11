@@ -138,7 +138,6 @@ export function bukaLokasi({ S, DB, id, render }) {
     for (const f0 of berkas) {
       try {
         const f = await perkecilGambar(f0);
-        if (f.size > 5 * 1024 * 1024) throw new Error("Ukuran foto lebih dari 5 MB setelah diperkecil.");
         const path = `open_yard/${lid}/${Date.now()}_${d.fotos.length}.jpg`;
         const h = await DB.unggahFile(path, f, { oleh: S.user.email });
         d.fotos.push({ url: h.url, path: h.path, nama: h.nama });
