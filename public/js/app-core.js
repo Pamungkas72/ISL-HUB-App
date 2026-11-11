@@ -3551,10 +3551,7 @@ const pembuatDokumen = x => x.pemilikNama || x.pemilikEmail || '—';
 const itemAksi = x => {
   const it = []; if (x.dokumenModel && !x.kosong) it.push(['unduh', 'download', 'Unduh PDF', '']); if (x.dokumenModel) it.push(['unduh-word', 'download', 'Unduh Word', '']);
   if (x.status === 'terkirim' && !x.digantikanOleh && bisaEdit()) it.push(['tindak-lanjut', 'riwayat', 'Catat tindak lanjut', ''], ['setujui-cepat', 'setuju', 'Disetujui customer', ''], ['tolak-cepat', 'tolak', 'Ditolak customer', 'is-bahaya'], ['tidak-dipakai-cepat', 'blok', 'Tidak dipakai', '']);
-  if (bisaEdit() && x.status !== 'draf' && x.nomor) it.push(['tandai', 'peringatan', x.perhatian ? 'Hapus tanda perhatian' : 'Tandai perlu perhatian', '']);
   if (x.status === 'disetujui' && x.nomor && (masterAtauAdmin() || (bisaEdit() && x.pemilikUid === window.__ISL.uid))) it.push(['kegiatan', 'riwayat', 'Catat kegiatan', ''], ['volume', 'truk', 'Catat volume', '']);
-  if (masterAtauAdmin() && x.status !== 'draf' && x.nomor) it.push(['ganti-nomor', 'edit', 'Ganti nomor', '']);
-  if (masterSaja() && x.status !== 'draf' && !alasanHapusPermanen(x)) it.push(['hapus-permanen', 'tong', 'Hapus permanen', 'is-bahaya']);
   if (SB.aktif()) it.push(SB.ada('quotation', x.id) ? ['tampil-lagi', 'mata', 'Tampilkan lagi', ''] : ['sembunyikan', 'mataTutup', 'Sembunyikan dari tampilan saya', '']);
   return it;
 };
@@ -3845,7 +3842,14 @@ function sheetFollow() {
     ${daftar.length ? `<h4 class="qt-m-sh">Perlu tindak lanjut (${daftar.length})</h4><p class="qt-m-sm">Menggantung tanpa pembaruan ≥ 7 hari, tanpa kabar ≥ ${PENG.tindakLanjutHari || 3} hari, atau riwayat PDF ≥ ${RW_HARI} hari.</p>${daftar.slice(0, 20).map(i => `<div class="qt-m-tl"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)} · ${i.ket}</small></div>${i.aksi}</div>`).join('')}` : ''}` });
 }
 function sheetAksi(x) {
-  bukaSheet({ judul: namaQ(x), sub: namaCust(x), isi: itemSheet('buka', 'maju', 'Buka detail', '', `data-id="${esc(x.id)}"`) + itemAksi(x).map(([a, ic, l, c]) => itemSheet(a, ic, l, '', `data-id="${esc(x.id)}"`, c)).join('') });
+  const id = `data-id="${esc(x.id)}"`, it = itemAksi(x), ada = a => it.find(i => i[0] === a);
+  const KEP = [['setujui-cepat', 'setuju', 'Disetujui', 'is-ok'], ['tolak-cepat', 'tolak', 'Ditolak', 'is-bahaya'], ['tidak-dipakai-cepat', 'blok', 'Tidak dipakai', '']].filter(k => ada(k[0]));
+  const lain = it.filter(([a]) => !['unduh', 'unduh-word', ...KEP.map(k => k[0])].includes(a));
+  const dl = ['unduh', 'unduh-word'].filter(ada), h = x.status === 'terkirim' ? perluTL(x) : null;
+  bukaSheet({ judul: namaQ(x), sub: namaCust(x), isi: `<p class="qt-sheet__st">Status <b>${AQ.status[x.status] || x.status}</b>${h ? ` · ${h} hari tanpa kabar` : ''}</p>`
+    + (KEP.length ? `<h4 class="qt-sheet__g">Ubah status</h4><div class="qt-sheet__seg">${KEP.map(([a, ic, l, c]) => `<button type="button" class="${c}" data-qt="${a}" ${id}>${ik(ic, 20)}${l}</button>`).join('')}</div>` : '')
+    + (lain.length || dl.length ? `<h4 class="qt-sheet__g">Aksi</h4>` : '') + lain.map(([a, ic, l, c]) => itemSheet(a, ic, l, '', id, c)).join('')
+    + (dl.length ? `<div class="qt-sheet__i qt-sheet__dl">${ik('download', 20)}<span><b>Unduh</b></span>${dl.map(a => `<button type="button" class="mr-btn" data-qt="${a}" ${id}>${a === 'unduh' ? 'PDF' : 'Word'}</button>`).join('')}</div>` : '') });
 }
 function sheetAksiRw(x) {
   const ed = bisaEdit(), id = `data-id="${esc(x.id)}"`;
@@ -4022,9 +4026,11 @@ const dlVendorHtml = () => `<datalist id="qt-dl-vendor">${mrVendors().map(v => `
 
 function aksiKepala(q, ed) {
   if (!bisaEdit()) return '';
-  const k = (a, ikn, lbl, cls = '') => `<button class="mr-btn ${cls}" data-qt="${a}">${ik(ikn, 16)} ${lbl}</button>`;
+  const k = (a, ikn, lbl, cls = '') => `<button class="mr-btn ${cls}" data-qt="${a}" data-id="${esc(q.id)}">${ik(ikn, 16)} ${lbl}</button>`;
   if (ed) return '';
-  const hapusSales = (akunSales() && q.status !== 'draf' ? k('ajukan-hapus', 'tong', 'Ajukan hapus') : '') + (masterAtauAdmin() && q.status !== 'draf' && q.nomor ? k('ganti-nomor', 'edit', 'Ganti nomor') : '');
+  const hapusSales = (akunSales() && q.status !== 'draf' ? k('ajukan-hapus', 'tong', 'Ajukan hapus') : '') + (masterAtauAdmin() && q.status !== 'draf' && q.nomor ? k('ganti-nomor', 'edit', 'Ganti nomor') : '')
+    + (q.status !== 'draf' && q.nomor ? k('tandai', 'peringatan', q.perhatian ? 'Hapus tanda perhatian' : 'Tandai perlu perhatian') : '')
+    + (masterSaja() && q.status !== 'draf' && !alasanHapusPermanen(q) ? k('hapus-permanen', 'tong', 'Hapus permanen', 'mr-btn--bahaya') : '');
   if (hapusSales) return hapusSales + aksiKepalaInti(q, k);
   return aksiKepalaInti(q, k);
 }
