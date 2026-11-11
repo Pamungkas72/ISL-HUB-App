@@ -310,7 +310,7 @@ MESIN.tabel = {
     if (cfg.centang) {
       const T = window.ISLTemplate, tpl = cfg.liniKey && T && T.tersimpan(cfg.liniKey) ? T.baris(cfg.liniKey) : [];
       const cocok = nama => { const n = normT(nama); return tpl.some(x => { const ln = normT(x.layananNama || x.layanan); return ln === n || ln.startsWith(n + ' ') || n.startsWith(ln + ' '); }); };
-      Object.values(o.rows).forEach(rows => rows.forEach(r => { r.on = !tpl.length || cocok(r.uraian); }));
+      Object.values(o.rows).forEach(rows => rows.forEach(r => { r.on = !tpl.length || cocok(r.uraian) || NAMA_FEE.includes(r.uraian); }));   /* Fee administrasi selalu tercentang bawaan (9 Nov 2026): bukan layanan Master Rate, jadi tidak ikut daftar template */
     } if (cfg.blokAwalOff) o.off = Object.fromEntries(cfg.blokAwalOff.map(i => [String(i), true])); return o; },
   html(st, cfg, e) {
     let h = cfg.htmlAtas ? cfg.htmlAtas(st, e) : '';
@@ -404,7 +404,7 @@ MESIN.tabel = {
       const ket = ketK ? ((String(r.ket || '').trim() || UI.ket.has(kunciKet))
         ? `<label class="fl-ck__ketw"><span class="fl-ck__kl">Keterangan <small>(tampil di PDF, opsional)</small></span>${inpTeks(`${p}.ket`, r.ket, 'Mis. Buka pintu')}</label>`
         : `<div class="fl-ck__ketw"><button type="button" class="fl-ck__lnk" data-fla="ket-buka" data-flx="${kunciKet}">+ Tambah keterangan</button></div>`) : '';
-      return `<div class="fl-ck__r on">${kepala}<div class="fl-ck__f2">${numK.map(f).join('')}</div>${ket}</div>`;
+      return `<div class="fl-ck__r on">${kepala}<div class="fl-ck__f2">${(satuTunggal(b, r) ? numK.slice(0, 1).map(k => ({ ...k, nama: 'Tarif per invoice (Rp)' })) : numK).map(f).join('')}</div>${ket}</div>`;
     }).join('');
     /* ubah/hapus blok: ikon sejajar dengan nama blok di kepala kelompok (tanpa baris sendiri); baris nama hanya muncul saat mengubah nama */
     const tb = ed && ubah ? `<div class="fl-ck__tb fl-ck__tb--ubah"><span class="fl-grup-nama">${inpTeks(`judulBlok.${bi}`, judulTampil(st, bi, b), b.judul, 'class="fl-u" data-flblok="1" aria-label="Nama blok"')}</span><button type="button" class="fl-ikon" data-fla="grup-selesai" data-flx="${bi}" aria-label="Selesai mengubah nama blok" title="Selesai (Enter)">${IKON_CEK}</button></div>` : '';
@@ -427,19 +427,22 @@ const kolUkuran = (adm) => [{ k: 'uraian', nama: 'Uraian', tetap: true, ph: 'Nam
   ...(adm ? [{ k: 'h20', nama: 'Harga satu untuk 20 ft dan 40 ft (Rp)', num: true }] : [{ k: 'h20', nama: '20 ft (Rp)', num: true }, { k: 'h40', nama: '40 ft (Rp)', num: true }]),
   { k: 'ket', nama: 'Keterangan', ph: 'Opsional' }];
 const brs = (uraian, satuan, ket = '') => ({ uraian, satuan, h20: '', h40: '', ket });
+/* Fee administrasi (blok B Depo saja, 9 Nov 2026): satu tarif per invoice, tampil satu sel rata tengah di PDF dan satu kolom di formulir */
+const NAMA_FEE = ['Fee administrasi', 'Biaya administrasi', 'Adm'];
+const satuTunggal = (b, r) => !!b.tunggal && NAMA_FEE.includes(r.uraian);
 const LINI = {};
-/* Harga jual rekomendasi bawaan template Depo (tabel tarif dari tim, 4 Nov 2026): [20 ft, 40 ft]. Master bisa mengubahnya di Pengaturan > Template lini Depo (PENG.rekJual). */
+/* Harga jual rekomendasi bawaan template Depo (tabel tarif dari tim, 4 Nov 2026): [20 ft, 40 ft]; satu angka = satu tarif (per invoice). Master bisa mengubahnya di Pengaturan > Template lini Depo (PENG.rekJual). */
 const REK_DEPO = { 'Storage Container Dry': [60000, 70000], 'Storage Container DG': [80000, 100000], 'Storage Container Reefer': [70000, 100000], 'Storage Empty': [40000, 50000],
-  'LOLO FULL': [400000, 500000], 'LOLO EMPTY': [300000, 400000], 'DEPO SHIFTING': [100000, 200000], 'Plugging & Monitoring': [850000, 1200000], 'Adm': [50000, 50000],
-  'Container to Truck': [2200000, 2500000], 'Container to Container': [4400000, 5000000], 'Reworks Container / Behandle': [2200000, 2500000], 'Terminal Peti Kemas / Depo': [700000, 800000] };
-const rekAwalDari = tabel => Object.fromEntries(Object.entries(tabel).flatMap(([n, [a, b]]) => [[kunciMin(n, { ukuran: '20ft' }), a], [kunciMin(n, { ukuran: '40ft' }), b]]));
+  'LOLO FULL': [400000, 500000], 'LOLO EMPTY': [300000, 400000], 'DEPO SHIFTING': [100000, 200000], 'Plugging & Monitoring': [850000, 1200000], 'Fee administrasi': [60000],
+  'Container to Truck': [2200000, 2500000], 'Container to Container': [4400000, 5000000], 'Reworks Container / Behandle': [2200000, 2500000], 'Terminal Peti Kemas / Depo': [700000, 800000], 'Extra Moving (Fumigasi Area)': [700000, 700000] };
+const rekAwalDari = tabel => Object.fromEntries(Object.entries(tabel).flatMap(([n, t]) => t.map((v, i) => [kunciMin(n, { ukuran: i ? '40ft' : '20ft' }), v])));
 LINI.depo = {
   key: 'depo', mesin: 'tabel', liniKey: 'depo', rekAwal: rekAwalDari(REK_DEPO), sembunyiMin: true, nama: 'Depo Container', judul: 'Penawaran Tarif Depo Container',
   ket: 'Centang layanan yang ditawarkan, lalu isi harga 20 ft dan 40 ft. Tarif minimum (modal + markup) tampil di bawah kotak harga.',
   saranJual: true, kartuHp: true, tarifMinimum: true, centang: true,
   bagian: [
     { judul: 'A. Storage', sub: 'Per hari per container', kolom: kolUkuran(), baris: [brs('Storage Container Dry', 'per hari'), brs('Storage Container DG', 'per hari'), brs('Storage Container Reefer', 'per hari'), brs('Storage Empty', 'per hari')] },
-    { judul: 'B. Handling', sub: 'Layanan per container', kolom: kolUkuran(), baris: [brs('LOLO FULL', 'per container'), brs('LOLO EMPTY', 'per container'), brs('DEPO SHIFTING', 'per container'), brs('Plugging & Monitoring', 'per hari / per container'), brs('Adm', 'per invoice')] },
+    { judul: 'B. Handling', sub: 'Layanan per container', tunggal: true, kolom: kolUkuran(), baris: [brs('LOLO FULL', 'per container'), brs('LOLO EMPTY', 'per container'), brs('DEPO SHIFTING', 'per container'), brs('Plugging & Monitoring', 'per hari / per container'), brs('Fee administrasi', 'per invoice')] },
     { judul: 'C. Stripping / Stuffing', sub: '', kolom: kolUkuran(), baris: [brs('Container to Truck', 'per container'), brs('Container to Container', 'per container'), brs('Reworks Container / Behandle', 'per container'), brs('Pengambilan Sampel', 'per container', 'Buka pintu')] },
     { judul: 'D. Trucking REPO', sub: '', kolom: kolUkuran(), baris: [brs('Terminal Peti Kemas / Depo', 'per container', 'Belum termasuk biaya gatepass pelabuhan yang berlaku'), brs('Extra Moving (Fumigasi Area)', 'per container')] }
   ],
@@ -447,8 +450,8 @@ LINI.depo = {
   namaSel: (r, k) => `${r.uraian} ${k.k === 'h40' ? '40 ft' : '20 ft'}`,
   baris(st) {
     const out = [];
-    this.bagian.forEach((b, bi) => (st.off && st.off[bi] ? [] : (st.rows[bi] || []).map(r => barisEf(this, b, r))).filter(r => rowAktif(r, b.kolom)).forEach(r => b.kolom.filter(k => k.num).forEach(k => {
-      const j = num(r[k.k]); if (!(j > 0)) return; const uk = b.kolom.some(z => z.k === 'h40') ? (k.k === 'h40' ? '40 ft' : '20 ft') : '';
+    this.bagian.forEach((b, bi) => (st.off && st.off[bi] ? [] : (st.rows[bi] || []).map(r => barisEf(this, b, r))).filter(r => rowAktif(r, b.kolom)).forEach(r => b.kolom.filter(k => k.num && !(k.k === 'h40' && satuTunggal(b, r))).forEach(k => {
+      const j = num(r[k.k]); if (!(j > 0)) return; const uk = b.kolom.some(z => z.k === 'h40') && !satuTunggal(b, r) ? (k.k === 'h40' ? '40 ft' : '20 ft') : '';
       out.push({ item: `${r.uraian}${uk ? ' ' + uk : ''}`, satuan: r.satuan || 'per kontainer', jual: j, modal: this.modalSel(r, k), min: minAktifCfg(this) ? tarifMinimum(this.liniKey, r.uraian, dimUkuran(b, k)) : null, desk: r.ket || '', bagian: tanpaHuruf(b.judul) });
     })));
     return out;
@@ -462,7 +465,7 @@ LINI.depo = {
       const rows = (st.rows[bi] || []).map(r => barisEf(this, b, r)).filter(r => barisTerisi(r, b.kolom)); if (!rows.length) return;
       const sub = r => [r.satuan, r.ket].filter(Boolean).join(' · ');
       blok.push({ jenis: 'tabel', kelas: 'isl-kartu isl-kartu--dep', huruf: huruf(n++), cap: tanpaHuruf(judulTampil(st, bi, b)), sub: b.sub, kolom: [{ h: 'Layanan', w: 56, a: 'l' }, { h: '20 ft (Rp)', w: 22, a: 'r' }, { h: '40 ft (Rp)', w: 22, a: 'r' }],
-        baris: rows.map(r => ({ c: [{ v: r.uraian, b: true, sat: sub(r) }, { v: hargaSel(r.h20), rp: true }, { v: hargaSel(r.h40), rp: true }] })) });
+        baris: rows.map(r => ({ c: satuTunggal(b, r) ? [{ v: r.uraian, b: true, sat: sub(r) }, { v: hargaSel(r.h20), rp: true, rpSama: true, cs: 2, a: 'r' }, null] : [{ v: r.uraian, b: true, sat: sub(r) }, { v: hargaSel(r.h20), rp: true }, { v: hargaSel(r.h40), rp: true }] })) });
     });
     return { blok, catatan: [] };   /* catatan "Kolom kosong (—) ..." dihapus di semua lini (4 Nov 2026) */
   },
@@ -1867,8 +1870,8 @@ FL.hargaKosong = e => {
   const st = e.formLini.s, out = [];
   cfg.bagian.forEach((b, bi) => { if (st.off && st.off[bi]) return; (st.rows[bi] || []).forEach(r => {
     if (!rowAktif(r, b.kolom) || !String(r.uraian || '').trim()) return;
-    const ukuran = b.kolom.filter(k => k.num && tanpaIsi(r[k.k]) && rekOtomatis(cfg, b, r, k) === null).map(k => String(k.nama).replace(/\s*\(Rp\)\s*$/i, ''));
-    if (ukuran.length) out.push({ nama: String(r.uraian).trim(), ukuran, semua: ukuran.length === b.kolom.filter(k => k.num).length });
+    const kolNum = b.kolom.filter(k => k.num && !(k.k === 'h40' && satuTunggal(b, r))), ukuran = kolNum.filter(k => tanpaIsi(r[k.k]) && rekOtomatis(cfg, b, r, k) === null).map(k => String(k.nama).replace(/\s*\(Rp\)\s*$/i, ''));
+    if (ukuran.length) out.push({ nama: String(r.uraian).trim(), ukuran, semua: ukuran.length === kolNum.length });
   }); });
   return out;
 };
@@ -1923,12 +1926,12 @@ FL.dukungMin = k => !!(LINI[k] && LINI[k].tarifMinimum);
 /* daftar harga rekomendasi template (untuk tab di Pengaturan lini): blok > layanan > kolom ukuran, dengan angka bawaan */
 FL.rekDaftar = lini => {
   const cfg = LINI[lini]; if (!cfg || !cfg.rekAwal) return null;
-  return cfg.bagian.map(b => ({ judul: tanpaHuruf(b.judul), baris: b.baris.map(r => ({ nama: r.uraian, sel: b.kolom.filter(k => k.num).map(k => { const sp = minSpek(cfg, b, r, k); if (!sp) return null; const kunci = kunciMin(sp.nama, sp.dim); return { label: String(k.nama).replace(/\s*\(Rp\)\s*$/i, ''), kunci, def: cfg.rekAwal[kunci] ?? null }; }).filter(Boolean) })) }));
+  return cfg.bagian.map(b => ({ judul: tanpaHuruf(b.judul), baris: b.baris.map(r => ({ nama: r.uraian, sel: b.kolom.filter(k => k.num && !(k.k === 'h40' && satuTunggal(b, r))).map(k => { const sp = minSpek(cfg, b, r, k); if (!sp) return null; const kunci = kunciMin(sp.nama, sp.dim); return { label: satuTunggal(b, r) ? 'Tarif' : String(k.nama).replace(/\s*\(Rp\)\s*$/i, ''), kunci, def: cfg.rekAwal[kunci] ?? null, span: satuTunggal(b, r) }; }).filter(Boolean) })) }));
 };
 /* daftar tarif minimum untuk tab di Pengaturan lini: sama dengan rekDaftar, tetapi angka abu-abu = minimum otomatis (modal tertinggi vendor + markup) */
 FL.minDaftar = lini => {
   const cfg = LINI[lini]; if (!cfg || !cfg.rekAwal) return null;
-  return cfg.bagian.map(b => ({ judul: tanpaHuruf(b.judul), baris: b.baris.map(r => ({ nama: r.uraian, sel: b.kolom.filter(k => k.num).map(k => { const sp = minSpek(cfg, b, r, k); if (!sp) return null; const kand = minKandidat(cfg.liniKey, sp.nama, sp.dim); return { label: String(k.nama).replace(/\s*\(Rp\)\s*$/i, ''), kunci: kunciMin(sp.nama, sp.dim), def: kand.length ? kand[0].min : null }; }).filter(Boolean) })) }));
+  return cfg.bagian.map(b => ({ judul: tanpaHuruf(b.judul), baris: b.baris.map(r => ({ nama: r.uraian, sel: b.kolom.filter(k => k.num && !(k.k === 'h40' && satuTunggal(b, r))).map(k => { const sp = minSpek(cfg, b, r, k); if (!sp) return null; const kand = minKandidat(cfg.liniKey, sp.nama, sp.dim); return { label: satuTunggal(b, r) ? 'Tarif' : String(k.nama).replace(/\s*\(Rp\)\s*$/i, ''), kunci: kunciMin(sp.nama, sp.dim), def: kand.length ? kand[0].min : null, span: satuTunggal(b, r) }; }).filter(Boolean) })) }));
 };
 FL.daftar = () => [...URUT_DAFTAR, ...FL.formatBuatan.map(d => d.kode).filter(k => LINI[k] && !URUT_DAFTAR.includes(k))].map(k => ({ key: k, nama: LINI[k].nama, ket: LINI[k].ket, custom: !!LINI[k].custom }));
 function migrasiSce(fl) {

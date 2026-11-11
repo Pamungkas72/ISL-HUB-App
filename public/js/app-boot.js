@@ -25,7 +25,8 @@ import { buatKunci } from "./kunci.js";
 import { URUTAN_LINI } from "./standar.js";
 import * as store from "./app-store.js";
 import { ambilSalinan, simpanSalinan, bannerSinkron } from "./cache-lokal.js";
-import { hapusLatarGambar } from "./gambar.js";
+import { hapusLatarGambar, kecilkanBerkas, BATAS_BERKAS, BATAS_MENTAH, fmtUkuran, muatPdfjs } from "./gambar.js";
+window.__islFile = { kecilkan: kecilkanBerkas, BATAS: BATAS_BERKAS, MENTAH: BATAS_MENTAH, fmt: fmtUkuran, pdfjs: muatPdfjs }; // pemampat unggahan, dipakai app-core.js
 window.__islHapusLatar = hapusLatarGambar; // dipakai app-core.js dan sales.js untuk tanda tangan dan cap
 import { toast } from "./ui.js";
 import "./riwayat.js";

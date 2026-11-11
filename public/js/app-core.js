@@ -15,7 +15,7 @@ const ATURAN = {
   kategori: { reguler: 'Reguler', vip: 'VIP' },
   statusCustomer: { prospek: 'Prospek', aktif: 'Aktif', nonaktif: 'Nonaktif' },
   lini: {
-    depo: 'Depo Container', warehouse_dry: 'Warehouse Dry', warehouse_frozen: 'Warehouse Frozen',
+    depo: 'Depo Container', warehouse_dry: 'Warehouse Dry', warehouse_frozen: 'Warehouse Cold Storage',
     gudang_plb: 'Gudang PLB', open_yard: 'Open Yard', trucking_trailer: 'Trucking Trailer',
     distribusi_kecil: 'Distribusi Kendaraan Kecil', customs_clearance: 'Customs Clearance',
     sewa_container_empty: 'Sewa Container Empty', sewa_unit: 'Sewa Unit Kendaraan', freight_forwarding: 'Freight Forwarding'
@@ -635,7 +635,7 @@ document.addEventListener('change', async ev => {
   const nomor = ($('#kt-nomor') || {}).value || '', tanggal = ($('#kt-tanggal') || {}).value || '';
   if (!nomor.trim()) return toast('<b>Isi nomor kontrak dulu.</b>', 'bahaya');
   if (file.type !== 'application/pdf') return toast('<b>Kontrak harus berupa PDF.</b>', 'bahaya');
-  if (file.size > 10 * 1024 * 1024) return toast('<b>File terlalu besar.</b> Maksimal 10 MB.', 'bahaya');
+  if (file.size > BATAS_MENTAH) return toast('<b>File terlalu besar.</b> Maksimal 30 MB (dikecilkan otomatis ke 4 MB).', 'bahaya');
   const id = uid('k');
   try {
     const path = `dokumen/kontrak_customer/${c.id}/${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g, '_')}`;
@@ -664,7 +664,7 @@ document.addEventListener('change', async ev => {
   const file = t.files[0]; if (!file) return;
   const i = +t.dataset.legalFile;
   bacaLegal();
-  if (file.size > 10 * 1024 * 1024) return toast('<b>File terlalu besar.</b> Maksimal 10 MB.', 'bahaya');
+  if (file.size > BATAS_MENTAH) return toast('<b>File terlalu besar.</b> Maksimal 30 MB (dikecilkan otomatis ke 4 MB).', 'bahaya');
   if (!(file.type === 'application/pdf' || file.type.startsWith('image/'))) return toast('<b>Format file tidak didukung.</b> Unggah PDF atau gambar.', 'bahaya');
   const lbl = t.closest('.mr-unggah'); if (lbl) lbl.classList.add('is-simpan');
   try {
@@ -734,10 +734,15 @@ const perkecilGambar = f => new Promise(res => {
   };
   fr.readAsDataURL(f);
 });
-const bacaFile = f => new Promise(res => {
-  if (!f || f.size > 8 * 1024 * 1024) return res(null);
-  const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(f);
-});
+/* Semua dokumen unggahan dikecilkan otomatis (gambar 1600 px, PDF dirender ulang) agar maksimal 4 MB sebelum disimpan */
+const BATAS_MENTAH = 30 * 1024 * 1024;
+const bacaFile = async f => {
+  bacaFile.galat = '';
+  if (!f) return null;
+  try { f = await window.__islFile.kecilkan(f); } catch (er) { bacaFile.galat = er.message; return null; }
+  return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => { bacaFile.galat = 'File tidak bisa dibaca.'; res(null); }; fr.readAsDataURL(f); });
+};
+const galatFile = () => esc(bacaFile.galat || 'File tidak bisa dibaca.');
 const tampilkan = (el, on) => { el.hidden = !on; el.style.display = on ? '' : 'none'; };
 const setV = (el, v) => { if (el) el.value = v === null || v === undefined ? '' : v; };
 
@@ -925,7 +930,7 @@ function formRate(cid, opsi = {}) {
       <label class="mr-f"><span>Berlaku sampai</span><input type="date" id="rf-sampai" value="${esc(sd.sampai && ed ? sd.sampai : '')}"><small>Kosongkan kalau tanpa batas.</small></label>
       <label class="mr-f mr-f--lebar"><span>Nomor quotation</span><input id="rf-noq" value="${esc(ed ? (sd.noQ || '') : '')}" placeholder="Mis. 058/QL-ISL/IX/2026" autocomplete="off"><small>Isi manual sesuai quotation yang sudah terbit dan ditandatangani (yang final, bukan revisi nego sebelumnya). Di modul Quotation nanti nomor dibuat otomatis.</small></label>
       <div class="mr-f mr-f--lebar"><span>Dokumen penawaran bertanda tangan ${ed && ed.dok ? '' : '*'}</span>
-        <div class="cu-upload"><input type="file" id="rf-file" accept=".pdf,.png,.jpg,.jpeg"><small id="rf-filenama">${ed && ed.dok ? `Dokumen saat ini: ${esc(ed.dok)}. Pilih file baru hanya kalau ingin menggantinya.` : 'Belum ada file. Format PDF atau gambar, maksimal 8 MB.'}</small></div>
+        <div class="cu-upload"><input type="file" id="rf-file" accept=".pdf,.png,.jpg,.jpeg"><small id="rf-filenama">${ed && ed.dok ? `Dokumen saat ini: ${esc(ed.dok)}. Pilih file baru hanya kalau ingin menggantinya.` : 'Belum ada file. Format PDF atau gambar, dikecilkan otomatis ke maksimal 4 MB.'}</small></div>
         ${ed && ed.dok ? '' : `<label class="cu-cek"><input type="checkbox" id="rf-tanpa"> Tarif lama, belum ada dokumen (ditandai “Tanpa bukti dokumen”)</label>`}</div>
       <label class="mr-f mr-f--lebar"><span>Catatan</span><textarea id="rf-catatan" rows="2">${esc(sd.catatan || '')}</textarea></label>
     </div>
@@ -941,7 +946,7 @@ function formRate(cid, opsi = {}) {
 /* ---- simpan ---- */
 function galatDasar(d, f, adaDok) {
   const err = [];
-  if (f && f.size > 8 * 1024 * 1024) err.push('Dokumen bertanda tangan maksimal 8 MB. Kecilkan file (mis. PDF hasil scan dengan resolusi lebih rendah) lalu pilih lagi.');
+  if (f && f.size > BATAS_MENTAH) err.push('Dokumen maksimal 30 MB (dikecilkan otomatis ke 4 MB).');
   if (!d.appr) err.push('Tanggal approve wajib diisi.'); else if (d.appr > ATURAN.hariIni) err.push('Tanggal approve tidak boleh di masa depan.');
   if (d.sampai && d.appr && d.sampai < d.appr) err.push('“Berlaku sampai” tidak boleh sebelum tanggal approve.');
   if (!f && !adaDok && !($('#rf-tanpa') && $('#rf-tanpa').checked)) err.push('Unggah dokumen bertanda tangan, atau centang “Tarif lama, belum ada dokumen”. Rate tanpa salah satunya tidak disimpan.');
@@ -1168,7 +1173,7 @@ function duplikatPaket(id) { const p = S.paket.find(x => x.id === id); if (p) fo
 const cariDok = id => S.rates.find(r => r.id === id) || S.paket.find(p => p.id === id);
 function unggahDok(id) {
   const r = cariDok(id); if (!r) return; const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.pdf,.png,.jpg,.jpeg';
-  inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const data = await bacaFile(f); if (!data) return toast('<b>Dokumen tidak tersimpan.</b> Maksimal 8 MB, berupa PDF atau gambar.', 'bahaya');
+  inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const data = await bacaFile(f); if (!data) return toast(`<b>Dokumen tidak tersimpan.</b> ${galatFile()}`, 'bahaya');
     try { await tulisDB(() => { r.dok = f.name; r.dokData = data; r.tanpaDok = false; }, () => r.dok === f.name); } catch (e) { return toast(`<b>GAGAL menyimpan dokumen.</b><br>${esc(e.message)}`, 'bahaya'); }
     toast('Dokumen tercatat dan terverifikasi. Klik ikon dokumen untuk mereviewnya.'); gambar(); };
   inp.click();
@@ -1320,7 +1325,7 @@ document.addEventListener('click', ev => { const t = ev.target.closest && ev.tar
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && $('#mr-layer.is-open') && !document.querySelector('.mr-konfirm')) tutupPanel(); });
 
 /* ---------- jembatan untuk modul Quotation (skrip berikutnya) ---------- */
-window.__islCU = { S, ATURAN, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, angka, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, tulisDB, galatPanel, bacaFile, setV, vendorDipakai, perkecilGambar,
+window.__islCU = { S, ATURAN, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, angka, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, tulisDB, galatPanel, bacaFile, galatFile, BATAS_MENTAH, setV, vendorDipakai, perkecilGambar,
   cust, namaLini, liniResmi, daftarLini, daftarSatuan, resolveLini, targetLini, bench, kunciGrup, statusRate, namaVendor, mrVendors, idVendorDariNama, vendorTampil,
   namaSatuanMR, satuanKanon, bisaEdit, masterSaja, masterAtauAdmin, akunSales, akunAdmin, adaDiMR, MR, mg, peran, sleep, statusPaket, simpanMarkup, gambarCust: gambar };
 
@@ -1354,7 +1359,7 @@ if (window.__ISL_DATA) window.__islMuatCU(window.__ISL_DATA);
 'use strict';
 const CU = window.__islCU;
 if (!CU) { console.error('Modul Customer belum siap'); return; }
-const { S, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, galatPanel, bacaFile, setV,
+const { S, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, galatPanel, bacaFile, galatFile, BATAS_MENTAH, setV,
   cust, namaLini, liniResmi, daftarLini, daftarSatuan, resolveLini, targetLini, bench, kunciGrup, statusRate, namaVendor, mrVendors,
   idVendorDariNama, vendorTampil, namaSatuanMR, satuanKanon, bisaEdit, masterSaja, masterAtauAdmin, akunSales, akunAdmin, MR, mg, vendorDipakai, simpanMarkup } = CU;
 /* kelolaSaja: sama dengan di modul customer (master dan admin). Didefinisikan ulang karena modul ini tidak memakai hasil ekspor modul customer. */
@@ -1632,7 +1637,7 @@ const SATUAN_EN = { 'per hari': 'per day', 'per bulan': 'per month', 'per minggu
   'per dokumen': 'per document', 'per project': 'per project', 'lumpsum': 'lump sum', 'per unit': 'per unit', 'per ton': 'per ton', 'per revenue ton': 'per revenue ton' };
 const KATA_EN = { hari: 'day', bulan: 'month', minggu: 'week', tahun: 'year', kontainer: 'container', orang: 'person', jam: 'hour', palet: 'pallet', dokumen: 'document', kendaraan: 'vehicle', lumpsum: 'lump sum', kosong: 'empty' };
 R.satuanEN = s => { const k = norm(s); if (SATUAN_EN[k]) return SATUAN_EN[k]; return String(s || '').replace(/[A-Za-z]+/g, w => KATA_EN[w.toLowerCase()] || w); };
-const LINI_EN = { depo: 'Container Depot', warehouse_dry: 'Dry Warehouse', warehouse_frozen: 'Frozen Warehouse', gudang_plb: 'Bonded Logistics Center (PLB) Warehouse', open_yard: 'Open Yard',
+const LINI_EN = { depo: 'Container Depot', warehouse_dry: 'Dry Warehouse', warehouse_frozen: 'Cold Storage Warehouse', gudang_plb: 'Bonded Logistics Center (PLB) Warehouse', open_yard: 'Open Yard',
   trucking_trailer: 'Trailer Trucking', distribusi_kecil: 'Small Vehicle Distribution', customs_clearance: 'Customs Clearance', sewa_container_empty: 'Empty Container Rental', sewa_unit: 'Vehicle Rental', freight_forwarding: 'Freight Forwarding' };
 R.namaLiniDok = (key, nama, b) => b === 'en' ? (LINI_EN[key] || nama) : nama;
 
@@ -1891,7 +1896,7 @@ const isSyaratSendiri = q => !!(q && q.formLini && SYARAT_SENDIRI[q.formLini.lin
 /* ===== SYARAT DAN KETENTUAN: satu daftar bernomor yang sama untuk SEMUA lini (disepakati 3 Nov 2026) =====
    Template tiap lini ada di Pengaturan dokumen (Template lini bisnis > Syarat dan ketentuan). Quotation baru memakai template lini yang dipakainya;
    selama belum diubah, daftar mengikuti template dan pilihan formulir. Begitu diubah di form (ubah teks, centang Tampil, tambah, hapus), daftar menjadi milik quotation itu (q.tncCc).
-   Konsep "syarat umum" dan "gabungkan" tidak lagi dipakai di quotation; butir umum hanya referensi di Pengaturan. */
+   Konsep "syarat umum" dan "gabungkan" tidak lagi dipakai di quotation; butir Umum (Teks standar > Pustaka) otomatis masuk ke semua lini, kecuali bila sama/mirip dengan butir lini. */
 /* Teks English sebuah butir: pakai isian yang benar-benar berbeda dari teks Indonesia; bila kosong atau sama persis dengan Indonesia (data lama menyalin teks Indonesia ke kolom English), pakai terjemahan baku CC/Depo/Trailer, selain itu kosong (nanti diterjemahkan otomatis). */
 R.enBaku = teksId => {
   const k = norm(teksId); for (const c of Object.values(SYARAT_SENDIRI)) { const i = c.syarat.findIndex(x => norm(x) === k); if (i >= 0 && c.en && c.en[i]) return c.en[i]; }
@@ -1916,6 +1921,17 @@ R.tncDasar = q => {
   const lini = [...new Set([...(FL ? [FL.liniKey(q.formLini)] : []), ...R.liniDipakai(q)].filter(Boolean))], off = new Set(q.tncOff || []), lihat = new Set(), daftar = [];
   if (!ganti) lini.forEach(k => R.tncTemplateLini(k).forEach(t => { const kk = norm(t.teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push(off.has(t.id) ? { ...t, aktif: false } : t); }));
   eng.forEach((teks, i) => { const kk = norm(teks); if (lihat.has(kk)) return; lihat.add(kk); daftar.push({ id: 'fx' + i, teks, aktif: true }); });
+  /* butir Umum otomatis masuk ke semua lini, kecuali bila bentrok atau dobel: sama/mirip dengan butir yang ada (kata >= 0,6), sejenis isinya (pajak, pembayaran, biaya tambahan, perubahan harga) dengan butir yang sudah ada,
+     sejenis dengan butir lini menurut kategorinya, atau soal masa berlaku (sudah ada di kalimat penutup baku, keputusan 3 Nov 2026) */
+  const jenisLini = new Set((PENG.tnc || []).filter(t => lini.includes(t.kat) && t.aktif !== false && t.kategori && t.kategori !== 'lainnya').map(t => t.kategori)), kataT = x => new Set(String(x || '').toLowerCase().match(/[a-z0-9]+/g) || []);
+  const miripT = (a, b) => { const u = new Set([...a, ...b]); let i = 0; a.forEach(w => { if (b.has(w)) i++; }); return u.size ? i / u.size : 0; };
+  const jenisT = x => { const n = norm(x), j = new Set(); if (/pajak|ppn/.test(n)) j.add('pajak'); if (/pembayaran|invoice|\{toplayanan\}/.test(n)) j.add('bayar'); if (/biaya (tambahan|di luar|inap)|di luar penawaran|waktu tunggu|demurrage|detention/.test(n)) j.add('biaya'); if (/perubahan harga/.test(n)) j.add('harga'); if (/berlaku sampai|masa berlaku|valid until|\{berlaku\}/.test(n)) j.add('berlaku'); return j; };
+  const adaJenis = new Set(daftar.flatMap(x => [...jenisT(x.teks)]));
+  (PENG.tnc || []).filter(t => t.kat === 'umum' && t.aktif !== false && t.teks && String(t.teks.id || '').trim()).forEach(t => {
+    const kk = norm(t.teks.id), ks = kataT(t.teks.id), jt = jenisT(t.teks.id);
+    if (lihat.has(kk) || jt.has('berlaku') || t.kategori === 'masa_berlaku' || [...jt].some(j => adaJenis.has(j)) || daftar.some(x => miripT(kataT(x.teks), ks) >= 0.6) || (t.kategori && t.kategori !== 'lainnya' && jenisLini.has(t.kategori))) return;
+    lihat.add(kk); jt.forEach(j => adaJenis.add(j)); daftar.push({ id: t.id, teks: t.teks.id, en: R.enAsli(t.teks.id, t.teks.en), aktif: !off.has(t.id) });
+  });
   (q.tncManual || []).filter(m => String(m.teks || '').trim()).forEach(m => { const kk = norm(m.teks); if (!lihat.has(kk)) { lihat.add(kk); daftar.push({ id: m.id, teks: String(m.teks).trim(), aktif: true }); } });   /* butir manual dari draf lama */
   return daftar;
 };
@@ -2736,8 +2752,9 @@ Repo.setujui = async function (id, o) {
 
 
 /* PDF akun sales memakai cap perusahaan + tanda tangan sales sendiri (kalau sudah diunggah di Dashboard Performa > Profil) */
-const ttdPenerbit = () => (akunSales() && window.__ISL.ttdSales) ? window.__ISL.ttdSales : PENG.aset.ttd;
-Repo.aset = id => ({ logo: ASET_LOGO(), ...(DB.aset[id] || { ttd: PENG.aset.ttd, cap: PENG.aset.cap }) });
+/* TTD milik akun yang menerbitkan: master memakai TTD di pengaturan, akun lain memakai TTD profilnya (kosong bila belum diunggah) */
+const ttdPenerbit = () => masterSaja() ? PENG.aset.ttd : ((window.__ISL && window.__ISL.ttdSales) || '');
+Repo.aset = id => ({ logo: ASET_LOGO(), ...(DB.aset[id] || { ttd: ttdPenerbit(), cap: PENG.aset.cap }) });
 Repo.simpanPdfUrl = async function (id, url) { await tulis(() => { const q = DB.list.find(x => x.id === id); if (!q) throw new Error('Quotation tidak ditemukan.'); q.pdfUrl = url; }, () => { const q = DB.list.find(x => x.id === id); return !!q && q.pdfUrl === url; }); };
 Repo.catatKeluaran = async function (id, cara, berkas) {
   await tulis(() => { const q = DB.list.find(x => x.id === id); if (!q) throw new Error('Quotation tidak ditemukan.'); q.keluaran = q.keluaran || []; q.keluaran.push({ waktu: stempel(), oleh: OLEH(), cara, berkas }); },
@@ -2911,9 +2928,11 @@ function dasarPribadi(g) {
   return d;
 }
 function terapkanPribadi() {
-  const g = window.__islPengGlobal; if (!g || kelolaSaja()) return;
+  const g = window.__islPengGlobal; if (!g || masterSaja()) return;
   const sel = (window.__ISL_PROFIL || {}).pengaturanPribadi || {};
   const dasar = dasarPribadi(g);
+  /* admin: hanya penandatangan yang milik akun sendiri; pengaturan lain tetap global bersama master */
+  if (akunAdmin()) { const p = terapkanSelisih(dasar.penandatangan, sel.penandatangan); PENG.penandatangan = clone(p !== undefined ? p : g.penandatangan); return; }
   const hasil = {};
   PENG_PRIBADI.forEach(k => { hasil[k] = terapkanSelisih(dasar[k], sel[k]); });
   Object.keys(PENG).forEach(k => { PENG[k] = clone(PENG_PRIBADI.includes(k) ? (hasil[k] !== undefined ? hasil[k] : g[k]) : g[k]); });
@@ -2928,9 +2947,17 @@ Repo.simpanPribadi = async function (baru) {
   if (window.__ISL_PROFIL) window.__ISL_PROFIL.pengaturanPribadi = sel;
   terapkanPribadi();
 };
+/* penandatangan admin disimpan di profilnya sendiri, bukan di pengaturan global */
+async function simpanPenandatanganAdmin(p) {
+  const d = selisihPeng(p, dasarPribadi(window.__islPengGlobal || PENG).penandatangan), sel = { ...((window.__ISL_PROFIL || {}).pengaturanPribadi || {}) };
+  if (d === undefined) delete sel.penandatangan; else sel.penandatangan = d;
+  await window.__islSimpanProfil({ pengaturanPribadi: sel });
+  if (window.__ISL_PROFIL) window.__ISL_PROFIL.pengaturanPribadi = sel;
+}
 Repo.simpanPengaturan = async function (baru) {
   if (!kelolaSaja()) return Repo.simpanPribadi(baru);
   const salin = clone(baru);
+  if (akunAdmin()) await simpanPenandatanganAdmin(salin.penandatangan);
   /* "Nomor terakhir terpakai" yang diisi lebih besar dari hitungan berjalan menaikkan hitungan (penghitung hanya boleh naik; lihat aturan qt_counters) */
   const atur = {}, resetBaru = (salin.nomor || {}).reset || 'bulanan';
   ((salin.nomor && salin.nomor.seri) || []).forEach(x => {
@@ -2990,6 +3017,8 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-t td{padding:6px 8px;border-bottom:1px solid #DDE6EF;vertical-align:middle;word-wrap:break-word}
 .isl-t tbody tr:not(.bag):not(.sub):not(.tot):not(.terb):nth-child(even) td{background:#F6FAFD}
 .isl-t .r{text-align:right;white-space:nowrap}.isl-t .c{text-align:center}
+/* "Rp" ikut font dan warna angkanya (em bawaan browser miring); hanya untuk baris yang ditandai rpSama */
+.isl-page .isl-t em.rp.rp--sama{font:inherit;color:inherit;margin-right:3px}
 .isl-t tr.bag td{background:#EAF2FA;font-family:ISLPJS,Arial;font-weight:700;font-size:9.6px;letter-spacing:.6px;color:#10233F;border-left:3px solid #F2994A}
 .isl-t tr.sub td{font-family:ISLPJS,Arial;font-weight:700;font-size:10px;color:#10233F;background:#F1F7FC}
 .isl-t tr.tot td{background:#FDEBD3;color:#10233F;font-family:ISLPJS,Arial;font-weight:800;font-size:11.6px;padding:9px 8px;border:none;border-top:2px solid #F2994A}
@@ -3030,9 +3059,11 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-ttd{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:28px}.isl-ttd .col{text-align:center}
 .isl-ttd .lbl{height:38px;line-height:1.45}.isl-ttd .lbl b{font-family:ISLPJS,Arial;font-weight:700;color:#10233F}
 .isl-ttd .sg{height:132px;display:flex;align-items:center;justify-content:center;margin:2px 0 4px;position:relative}
-.isl-ttd .sg .cap{height:104px;width:auto;margin-right:-38px}
+/* cap 50% transparan di belakang, tanda tangan di atasnya; keduanya tepat di tengah kolom */
+.isl-ttd .sg img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:auto}
+.isl-ttd .sg .cap{height:104px;opacity:.3;z-index:1}
 /* nama, jabatan, dan tanggal customer dibuat pudar supaya tulisan pena tidak bertabrakan dengan cetakan */
-.isl-ttd .col:last-child .rA,.isl-ttd .col:last-child .rB,.isl-ttd .col:last-child .rC{opacity:.45}.isl-ttd .sg .tt{height:68px;width:auto;position:relative;z-index:2}
+.isl-ttd .col:last-child .rA,.isl-ttd .col:last-child .rB,.isl-ttd .col:last-child .rC{opacity:.45}.isl-ttd .sg .tt{height:68px;z-index:2}
 .isl-ttd .sg.kos{border:1px dashed #b4bfca;border-radius:4px;align-items:flex-end;padding-bottom:6px;font-size:9px;color:#8a97a4}
 .isl-ttd .rA{height:26px;margin:0 22px;border-bottom:1.5px solid #10233F;font-family:ISLPJS,Arial;font-weight:700;color:#10233F;line-height:22px}
 .isl-ttd .rB{height:20px;font-size:10.5px;color:#4a5866;line-height:20px;margin-top:2px}
@@ -3045,12 +3076,12 @@ table.isl-t{width:100%;border-collapse:collapse;font-size:10.6px;margin-top:4px;
 .isl-page.d1 .isl-hd{margin:4px 0 12px;padding:11px 0 10px}.isl-page.d1 .isl-hd h1{font-size:22px}.isl-page.d1 .isl-two{margin-bottom:11px}.isl-page.d1 .isl-two__pr{margin-bottom:7px;padding:4px 10px}.isl-page.d1 .isl-p{margin-bottom:8px}
 .isl-page.d1 table.isl-t{font-size:10.2px}.isl-page.d1 .isl-t th{padding:6px 7px}.isl-page.d1 .isl-t td{padding:4px 7px}.isl-page.d1 .isl-t tr.tot td{padding:7px}.isl-page.d1 .isl-t tr.terb td{padding-top:5px}
 .isl-page.d1 .isl-h4{margin:10px 0 3px}.isl-page.d1 .isl-gt{margin:5px 0 1px}.isl-page.d1 .isl-ti{font-size:10.3px;margin-bottom:1px}
-.isl-page.d1 .isl-ttd{margin-top:14px}.isl-page.d1 .isl-ttd .lbl{height:34px;line-height:1.35}.isl-page.d1 .isl-ttd .sg{height:112px}.isl-page.d1 .isl-ttd .sg .cap{height:90px;margin-right:-32px}.isl-page.d1 .isl-ttd .sg .tt{height:58px}.isl-page.d1 .isl-ttd .rA{height:22px;line-height:20px}.isl-page.d1 .isl-ttd .rB{height:18px;line-height:18px}.isl-page.d1 .isl-ttd .rC{height:22px;line-height:22px;margin-top:4px}.isl-page.d1 .isl-note{margin-top:16px}
+.isl-page.d1 .isl-ttd{margin-top:14px}.isl-page.d1 .isl-ttd .lbl{height:34px;line-height:1.35}.isl-page.d1 .isl-ttd .sg{height:112px}.isl-page.d1 .isl-ttd .sg .cap{height:90px}.isl-page.d1 .isl-ttd .sg .tt{height:58px}.isl-page.d1 .isl-ttd .rA{height:22px;line-height:20px}.isl-page.d1 .isl-ttd .rB{height:18px;line-height:18px}.isl-page.d1 .isl-ttd .rC{height:22px;line-height:22px;margin-top:4px}.isl-page.d1 .isl-note{margin-top:16px}
 .isl-page.d2{font-size:10.6px;line-height:1.45}
 .isl-page.d2 .isl-hd{margin:2px 0 8px;padding:8px 0 7px}.isl-page.d2 .isl-hd h1{font-size:19px}.isl-page.d2 .isl-hd .s{margin-top:3px}.isl-page.d2 .isl-two{margin-bottom:7px}.isl-page.d2 .isl-two__pr{margin-bottom:5px;padding:3px 10px}.isl-page.d2 .isl-two__meta{margin-top:3px}.isl-page.d2 .isl-p{margin-bottom:6px}
 .isl-page.d2 table.isl-t{font-size:10px}.isl-page.d2 .isl-t th{padding:5px 6px}.isl-page.d2 .isl-t td{padding:3px 6px}.isl-page.d2 .isl-t tr.tot td{padding:5px 6px}.isl-page.d2 .isl-t tr.terb td{padding-top:3px;font-size:9.4px}
 .isl-page.d2 .isl-h4{margin:7px 0 2px;font-size:11.5px}.isl-page.d2 .isl-gt{margin:3px 0 1px;font-size:9.8px}.isl-page.d2 .isl-ti{font-size:10px;margin-bottom:0}
-.isl-page.d2 .isl-ttd{margin-top:8px;gap:30px}.isl-page.d2 .isl-ttd .lbl{height:30px;line-height:1.3}.isl-page.d2 .isl-ttd .sg{height:96px;margin:0}.isl-page.d2 .isl-ttd .sg .cap{height:76px;margin-right:-26px}.isl-page.d2 .isl-ttd .sg .tt{height:50px}.isl-page.d2 .isl-ttd .rA{height:20px;line-height:18px}.isl-page.d2 .isl-ttd .rB{height:16px;line-height:16px;font-size:10px}.isl-page.d2 .isl-ttd .rC{height:18px;line-height:18px;margin-top:2px;font-size:10.4px}.isl-page.d2 .isl-note{margin-top:8px;font-size:8.6px}
+.isl-page.d2 .isl-ttd{margin-top:8px;gap:30px}.isl-page.d2 .isl-ttd .lbl{height:30px;line-height:1.3}.isl-page.d2 .isl-ttd .sg{height:96px;margin:0}.isl-page.d2 .isl-ttd .sg .cap{height:76px}.isl-page.d2 .isl-ttd .sg .tt{height:50px}.isl-page.d2 .isl-ttd .rA{height:20px;line-height:18px}.isl-page.d2 .isl-ttd .rB{height:16px;line-height:16px;font-size:10px}.isl-page.d2 .isl-ttd .rC{height:18px;line-height:18px;margin-top:2px;font-size:10.4px}.isl-page.d2 .isl-note{margin-top:8px;font-size:8.6px}
 
 .isl-t th{background:#EEF3F8;color:#1B3556;font-size:8.2px;letter-spacing:.7px;padding:4px 8px;line-height:1.25;border:0;border-top:1.5px solid #2B7BBF;border-bottom:1px solid #C5D3E2}
 .isl-mx thead tr:nth-child(2) th{border-top:0;padding:3px 8px;background:#F5F8FC;color:#3C5575}
@@ -3366,7 +3397,7 @@ async function renderDok(m, aset, o = {}) {
         : r.g !== undefined ? htmlTr(`<tr class="bag${r.w ? ' bag--' + esc(r.w) : ''}"><td colspan="${n}">${esc(r.g)}</td></tr>`)
         : r.sub ? htmlTr(`<tr class="sub"><td colspan="${n - 1}" style="text-align:right">${esc(r.sub[0])}</td><td class="r">${esc(r.sub[1])}</td></tr>`)
         : r.tot ? htmlTr(`<tr class="tot"><td colspan="${n - 1}" style="text-align:right">${esc(r.tot[0])}</td><td class="r">${esc(r.tot[1])}</td></tr>`)
-        : htmlTr(`<tr${r.k ? ` class="${esc(r.k.trim())}"` : ''}>${r.c.map((v, i) => { if (v === null) return ''; const o = (v && typeof v === 'object') ? v : { v }; if (o.ln) return `<td class="r">${o.ln.map(x => `<div class="ln">${x.l ? `<span class="pl pl--${esc(x.w || 'abu')}">${esc(x.l)}</span>` : ''}<span>${x.v !== '—' ? '<em class="rp">Rp</em>' : ''}${esc(x.v)}</span></div>`).join('')}</td>`; return `<td class="${[kol[i] && kol[i].a !== 'l' ? kol[i].a : '', o.ind ? 'ind' : ''].filter(Boolean).join(' ')}"${o.rs ? ` rowspan="${o.rs}"` : ''}>${o.rp && String(o.v) !== '—' ? '<em class="rp">Rp</em>' : ''}${o.chip ? `<span class="isl-chip isl-chip--${esc(o.chip)}">${esc(m.bahasa === 'en' && o.vEn ? o.vEn : o.v)}</span>` : o.b ? `<b>${esc(o.v)}</b>` : esc(o.v)}${o.sat ? `<small class="isl-sat">${esc(o.sat)}</small>` : ''}${o.tag ? `<small class="isl-sat"><span class="isl-chip isl-chip--${esc(o.tagK)}">${esc(m.bahasa === 'en' && o.tagEn ? o.tagEn : o.tag)}</span></small>` : ''}</td>`; }).join('')}</tr>`);
+        : htmlTr(`<tr${r.k ? ` class="${esc(r.k.trim())}"` : ''}>${r.c.map((v, i) => { if (v === null) return ''; const o = (v && typeof v === 'object') ? v : { v }; if (o.ln) return `<td class="r">${o.ln.map(x => `<div class="ln">${x.l ? `<span class="pl pl--${esc(x.w || 'abu')}">${esc(x.l)}</span>` : ''}<span>${x.v !== '—' ? '<em class="rp">Rp</em>' : ''}${esc(x.v)}</span></div>`).join('')}</td>`; return `<td class="${[o.a || (kol[i] && kol[i].a !== 'l' ? kol[i].a : ''), o.ind ? 'ind' : ''].filter(Boolean).join(' ')}"${o.cs ? ` colspan="${o.cs}"` : ''}${o.rs ? ` rowspan="${o.rs}"` : ''}>${o.rp && String(o.v) !== '—' ? `<em class="rp${o.rpSama ? ' rp--sama' : ''}">Rp</em>` : ''}${o.chip ? `<span class="isl-chip isl-chip--${esc(o.chip)}">${esc(m.bahasa === 'en' && o.vEn ? o.vEn : o.v)}</span>` : o.b ? `<b>${esc(o.v)}</b>` : esc(o.v)}${o.sat ? `<small class="isl-sat">${esc(o.sat)}</small>` : ''}${o.tag ? `<small class="isl-sat"><span class="isl-chip isl-chip--${esc(o.tagK)}">${esc(m.bahasa === 'en' && o.tagEn ? o.tagEn : o.tag)}</span></small>` : ''}</td>`; }).join('')}</tr>`);
       const rs = kv ? bk.baris : bk.baris, units = []; let i = 0;
       /* baris yang punya sel dengan rowspan (mis. nomor untuk baris utama + baris "Additional" di bawahnya) harus satu unit: tidak boleh terpisah antar halaman */
       const jmlGrup = k => { const c = !kv && rs[k] && rs[k].c && rs[k].c[0]; return (c && typeof c === 'object' && c.rs > 1) ? c.rs : 1; };
@@ -4216,11 +4247,13 @@ function formOpsi(e) {
 }
 /* L-01: unggah TTD/cap dan atur nomor langsung dari Opsi dokumen (sumber sama dengan Pengaturan dokumen) */
 function kartuOpsiAset(e) {
-  const ed = kelolaSaja(), a = PENG.aset || {};
-  const satu = (j, judul) => `<div class="qt-aset qt-aset--mini"><div class="qt-aset__p">${a[j] ? `<img src="${a[j]}" alt="${judul}">` : '<span class="mr-sub">Belum ada</span>'}</div>
-    <div class="qt-aset__t"><b>${judul}</b>${a[j] ? (a[j + 'Contoh'] !== false ? ' <span class="cu-st cu-st--warn">contoh</span>' : ' <span class="cu-st cu-st--ok">milik ISL</span>') : ''}</div>
-    ${ed ? `<div class="qt-aset__a"><button type="button" class="mr-btn mr-btn--kecil" data-qt="opsi-unggah" data-j="${j}">${ik('upload', 14)} Unggah</button>${a[j] ? `${dilarangHapus() ? '' : `<button type="button" class="mr-btn mr-btn--kecil" data-qt="opsi-hapus-aset" data-j="${j}">${ik('tong', 14)} Hapus</button>`}` : ''}<input type="file" id="opsi-file-${j}" accept="image/*" hidden></div>` : ''}</div>`;
-  return `<div class="qx-opsi2"><div class="mr-f"><span>Gambar tanda tangan dan cap (dipakai semua quotation)</span><div class="qt-asets">${satu('ttd', 'Tanda tangan')}${satu('cap', 'Cap perusahaan')}</div></div></div>`;
+  const a = PENG.aset || {}, pribadi = j => j === 'ttd' && !masterSaja(); // TTD akun non-master ada di profilnya sendiri
+  const gbr = j => pribadi(j) ? ((window.__ISL && window.__ISL.ttdSales) || '') : a[j], boleh = j => pribadi(j) ? bisaEdit() : kelolaSaja();
+  const satu = (j, judul) => { const g = gbr(j), pr = pribadi(j);
+    return `<div class="qt-aset qt-aset--mini"><div class="qt-aset__p">${g ? `<img src="${g}" alt="${judul}">` : '<span class="mr-sub">Belum ada</span>'}</div>
+    <div class="qt-aset__t"><b>${judul}</b>${g ? (pr ? ' <span class="cu-st cu-st--ok">milik akunmu</span>' : a[j + 'Contoh'] !== false ? ' <span class="cu-st cu-st--warn">contoh</span>' : ' <span class="cu-st cu-st--ok">milik ISL</span>') : ''}</div>
+    ${boleh(j) ? `<div class="qt-aset__a"><button type="button" class="mr-btn mr-btn--kecil" data-qt="${pr ? 'pg-unggah-ttd-saya' : 'opsi-unggah'}" data-j="${j}">${ik('upload', 14)} Unggah</button>${g ? `${dilarangHapus() ? '' : `<button type="button" class="mr-btn mr-btn--kecil" data-qt="${pr ? 'pg-hapus-ttd-saya' : 'opsi-hapus-aset'}" data-j="${j}">${ik('tong', 14)} Hapus</button>`}` : ''}<input type="file" id="${pr ? 'pg-file-ttd-saya' : 'opsi-file-' + j}" accept="image/*" hidden></div>` : ''}</div>`; };
+  return `<div class="qx-opsi2"><div class="mr-f"><span>${masterSaja() ? 'Gambar tanda tangan dan cap (dipakai semua quotation)' : 'Tanda tangan milik akunmu; cap dipakai semua akun'}</span><div class="qt-asets">${satu('ttd', 'Tanda tangan')}${satu('cap', 'Cap perusahaan')}</div></div></div>`;
 }
 function kartuOpsiNomor(e) {
   const kode = seriValid(e.seri), k = Repo.kunciUrut(HARI_INI(), kode), c = DB.urutTahun[k] || 0, awal = Repo.awalSeri(kode), pakai = Math.max(c, awal), ed = kelolaSaja();
@@ -4553,30 +4586,27 @@ async function panelDokumen(q) {
   const w = $('#qt-dokwrap'); if (!w) { r.host.remove(); return; }
   taruhPratinjau(w, r); r.host.remove(); const i = $('#qt-dokinfo'); if (i) i.textContent = r.n + ' halaman' + (r.d ? ' · tata letak dirapatkan otomatis' : '');
 }
-// Syarat kritis vendor (nomor 1-15) untuk lini yang dipakai penawaran ini, yang perlu tercakup di S&K.
+// Syarat kritis vendor untuk penawaran ini. Vendor dianggap dipakai bila ada baris tarifnya (lokasi ikut), atau bila lini form (fasilitas) sama dengan lini vendor.
 const syaratKritisVendor = (q, bahasa = 'en') => {
   const vs = (MR() && MR().vendor) || [], hasil = [], seen = new Set();
-  (q.baris || []).forEach(b => {
-    if (b.jenis !== 'rate' || !b.vendorId || !b.liniKey) return;
-    const k = b.vendorId + '|' + b.liniKey; if (seen.has(k)) return; seen.add(k);
-    const v = vs.find(x => x.id === b.vendorId); if (!v) return;
-    // syarat kritis = kalimat yang ditandai Kritis di form vendor (data lama tanpa tanda: nomor urut 1-4)
-    const items = (v.tnc || []).filter(t => t.liniBisnisId === b.liniKey && (t.kritis !== undefined ? !!t.kritis : Number(t.urutan) >= 1 && Number(t.urutan) <= 4))
-      .map(t => (bahasa === 'id' ? (t.isi || t.terjemahan || '') : (t.terjemahan || t.isi || '')).trim()).filter(Boolean);
-    if (items.length) hasil.push({ vendor: v.nama || v.id, lini: namaLini(b.liniKey), items });
-  });
+  // syarat kritis = kalimat yang ditandai Kritis di form vendor (data lama tanpa tanda: nomor urut 1-4)
+  const kritis = (v, lini) => (v.tnc || []).filter(t => (t.liniBisnisId === lini || t.liniBisnisId === 'semua') && (t.kritis !== undefined ? !!t.kritis : Number(t.urutan) >= 1 && Number(t.urutan) <= 4))
+    .map(t => (bahasa === 'id' ? (t.isi || t.terjemahan || '') : (t.terjemahan || t.isi || '')).trim()).filter(Boolean);
+  const tambah = (v, lini, via) => { const k = v.id + '|' + lini; if (seen.has(k)) return; seen.add(k); const items = kritis(v, lini); if (items.length) hasil.push({ vendor: v.nama || v.id, lini: namaLini(lini), via, items }); };
+  (q.baris || []).forEach(b => { if (b.jenis !== 'rate' || !b.vendorId || !b.liniKey) return; const v = vs.find(x => x.id === b.vendorId); if (v) tambah(v, b.liniKey, 'tarif'); });
+  const lk = q.formLini && window.ISLFL ? window.ISLFL.liniKey(q.formLini) : null;
+  if (lk) vs.filter(v => (v.liniBisnis || []).includes(lk) || (v.tnc || []).some(t => t.liniBisnisId === lk)).forEach(v => tambah(v, lk, 'fasilitas'));
   return hasil;
 };
-// Peringatan sebelum cetak/unduh: syarat kritis vendor harus tercakup di S&K penawaran. Tidak memblokir jika pengguna lanjut.
+// Peringatan sebelum terbit: syarat kritis vendor yang dipakai (tarif, lokasi, atau fasilitas) harus tercakup di S&K penawaran. Tidak memblokir jika pengguna lanjut.
 async function konfirmasiSyaratKritis(q) {
   const daftar = syaratKritisVendor(q);
   if (!daftar.length) return true;
-  const isi = daftar.map(d => `<b>${esc(d.vendor)}</b> · ${esc(d.lini)}<ul class="mr-konfirm__daftar">${d.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('');
-  return konfirmasi({ judul: 'Pastikan syarat kritis vendor tercakup', aksi: 'Sudah tercakup, cetak', isi: `Syarat kritis vendor berikut dipakai di penawaran ini. Pastikan S&K penawaran sudah memuat semuanya sebelum dicetak.${isi}` });
+  const isi = daftar.map(d => `<b>${esc(d.vendor)}</b> · ${esc(d.lini)} <small class="mr-sub">(${d.via === 'tarif' ? 'tarif dan lokasi dipakai' : 'fasilitas lini dipakai'})</small><ul class="mr-konfirm__daftar">${d.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('');
+  return konfirmasi({ judul: 'Vendor punya syarat kritis', aksi: 'Sudah tercakup, lanjut terbitkan', bahaya: true, isi: `Pastikan S&K penawaran sudah memuat semua syarat kritis vendor berikut sebelum diterbitkan.${isi}` });
 }
 async function aksiUnduh(id, cara = 'unduh') {
   const q = Repo.baca(id); if (!q || !q.dokumenModel) return toast('Dokumen belum diterbitkan.', 'bahaya');
-  if (!await konfirmasiSyaratKritis(q)) return;
   const namaT = namaFilePdf(q.dokumenModel);
   if (q.pdfUrl) { try { toast('Mengambil PDF tersimpan…'); const rs = await fetch(q.pdfUrl); if (!rs.ok) throw new Error('HTTP ' + rs.status); simpanBlob(await rs.blob(), namaT); try { await Repo.catatKeluaran(id, cara, namaT); } catch (er) { toast(`PDF terunduh, tetapi <b>catatan riwayat gagal tersimpan</b>.<br>${esc(er.message)}`, 'bahaya'); return segarSemua(); } toast(`PDF <b>${esc(namaT)}</b> (versi tersimpan) diunduh dan dicatat di riwayat.`); return segarSemua(); } catch (er) { /* gagal ambil: buat ulang dari isi yang dibekukan */ } }
   toast('Menyiapkan PDF…');
@@ -4625,7 +4655,6 @@ const nomorWa = t => { let d = String(t || '').replace(/\D/g, ''); if (!d) retur
 /* Bagikan file langsung lewat menu bagi HP (WhatsApp, email, dan lainnya), PDF bawaan atau Word */
 async function aksiBagikan(id, fmt) {
   const q = Repo.baca(id); if (!q || !q.dokumenModel) return toast('Dokumen belum diterbitkan.', 'bahaya');
-  if (!await konfirmasiSyaratKritis(q)) return;
   const word = fmt === 'word', nama = word ? namaFileWord(q.dokumenModel) : namaFilePdf(q.dokumenModel); let blob;
   toast('Menyiapkan file…');
   try {
@@ -4795,13 +4824,19 @@ function paginaPengaturan(html) {
       const paraAsli = [...s.querySelectorAll(':scope > p.qt-ket')], awalan = banyak ? `<b>${esc(sub)}:</b> ` : '';
       [...(INFO_BAGIAN[k] || []).map(esc), ...paraAsli.map(x => x.innerHTML)].forEach(h => paraInfo.push(awalan + h));
       paraAsli.forEach(x => x.remove());
+      // Lini bisnis dan Teks standar: tiap judul jadi kartu lipat (yang pertama terbuka); halaman lain tetap memakai judul biasa
+      const lipatan = banyak && ['lini', 'teks'].includes(pilih.id), lipat = (j, m, b, buka) => `<details class="qt-lipat"${buka ? ' open' : ''}><summary><div><h3 class="qt-subseksi__judul">${esc(j)}</h3>${m ? `<small class="qt-lipat__meta">${esc(m)}</small>` : ''}</div></summary>${b}</details>`;
+      let meta = '', tambahan = '';
+      if (lipatan && pilih.id === 'teks') {
+        if (k === 'kalimatstandar') { meta = 'Pembuka · Penutup · Catatan'; const pre = s.querySelector('.qt-presetlist'); if (pre) { const b = pre.querySelector(':scope > b'); if (b) b.remove(); tambahan = lipat('Preset kalimat saya', pre.querySelectorAll('.qt-presetlist__i').length + ' preset', `<div class="qt-subseksi">${pre.outerHTML}</div>`, false); pre.remove(); } }
+        else if (k === 'pustaka') { const tn = PENG.tnc || []; meta = `${tn.filter(x => x.aktif).length} dari ${tn.length} butir dipakai`; }
+      }
       const badan = `<div class="qt-subseksi"${k === 'pustaka' ? ' id="pg-tnc"' : ''} data-pgd="${esc(k)}">${s.innerHTML}</div>`;
-      // Lini bisnis: tiap judul jadi kartu lipat (yang pertama terbuka); halaman lain tetap memakai judul biasa
-      isi.push(pilih.id === 'lini' && banyak ? `<details class="qt-lipat"${pilih.kartu.indexOf(d) === 0 ? ' open' : ''}><summary><h3 class="qt-subseksi__judul">${esc(sub)}</h3></summary>${badan}</details>` : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
+      isi.push(lipatan ? lipat(sub, meta, badan, pilih.kartu.indexOf(d) === 0) + tambahan : `${banyak ? `<h3 class="qt-subseksi__judul">${esc(sub)}</h3>` : ''}${badan}`);
     });
     const judul = judulGrup(pilih), simpan = ed && kunciBagian(pilih.id).length;
     return `${awal.replace(/<div class="cu-judul">[\s\S]*?<\/div><\/div>/, `<div class="cu-judul qt-seksi__judul"><button type="button" class="mr-ikonbtn" data-qt="pg-daftar-bagian" aria-label="Kembali ke daftar bagian" title="Kembali">${ik('kembali', 18)}</button><h2>${esc(judul)}</h2>${htmlInfoPop(judul, paraInfo)}</div>`)}
-    <div class="qt-main"><section class="mr-kartu cu-kartu qt-seksi">${isi.join('')}</section></div>
+    <div class="qt-main"><section class="mr-kartu cu-kartu qt-seksi">${pilih.id === 'teks' && banyak ? '<input type="search" class="qt-cari-lipat" placeholder="Cari kalimat atau grup syarat…" aria-label="Cari kalimat atau grup syarat" autocomplete="off">' : ''}${isi.join('')}</section></div>
     ${simpan ? `<footer class="mr-panel__kaki qt-pgfoot"><span class="mr-ruang"></span><button class="mr-btn mr-btn--utama" data-qt="pg-simpan-bagian" data-seksi="${pilih.id}">${ik('cek', 16)} Simpan bagian ini</button></footer>` : ''}`;
   }
   const daftar = grup.map(g => `<button type="button" class="qt-bagian" data-qt="pg-buka" data-seksi="${esc(g.id)}"><span>${esc(judulGrup(g))}</span><span class="qt-bagian__panah" aria-hidden="true">›</span></button>`).join('');
@@ -4809,8 +4844,14 @@ function paginaPengaturan(html) {
     <footer class="mr-panel__kaki qt-pgfoot">${ed ? `<button class="mr-btn" data-qt="pg-batal">Batalkan perubahan</button>` : ''}<span class="mr-ruang"></span><button class="mr-btn" data-qt="pg-kembali">${ik('kembali', 16)} Kembali</button>${ed ? `<button class="mr-btn mr-btn--utama" data-qt="pg-simpan">${ik('cek', 16)} Simpan pengaturan</button>` : ''}</footer>`;
 }
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
-// Kartu lipat Lini bisnis: saat satu dibuka, kartu lain di bagian yang sama menutup agar layar tetap lega
-document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details.qt-lipat') && d.open) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
+// Kartu lipat: saat satu dibuka, kartu lain di bagian yang sama menutup (kecuali sedang mencari); kotak teks menyesuaikan tinggi isi
+const tinggiTa = t => { t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
+document.addEventListener('toggle', e => { const d = e.target; if (!(d.matches && d.matches('details.qt-lipat') && d.open)) return; d.querySelectorAll('textarea').forEach(tinggiTa); if (!d.parentElement.dataset.cari) d.parentElement.querySelectorAll(':scope > details.qt-lipat[open]').forEach(x => { if (x !== d) x.open = false; }); }, true);
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.matches) return;
+  if (t.matches('details.qt-lipat textarea')) tinggiTa(t);
+  else if (t.matches('.qt-cari-lipat')) { const q = norm(t.value), wadah = t.parentElement; wadah.dataset.cari = q ? '1' : ''; wadah.querySelectorAll(':scope > details.qt-lipat').forEach(d => { const teks = norm(d.textContent + ' ' + [...d.querySelectorAll('textarea')].map(x => x.value).join(' ')), cocok = !q || teks.includes(q); d.hidden = !cocok; if (q && cocok) { d.open = true; d.querySelectorAll('textarea').forEach(tinggiTa); } }); }
+});
 // Pengelolaan satuan di Pengaturan dokumen. Tambah, ubah nama, dan hapus memakai satu kartu formulir di atas daftar.
 let satuanAksi = null;
 let satuanPilih = new Set(); // satuan yang dicentang untuk dihapus sekaligus (hanya master) // { jenis: 'tambah' | 'ubah' | 'hapus', kode } atau null bila tidak ada formulir yang terbuka
@@ -4930,9 +4971,9 @@ function viewPengaturanPenuh() {
     <div class="qt-tl-daftar qt-tlk-kisi">${liniPilihan().map(l => { const n = kolomLini(l.key).length + 1, ok = !!tabelSimpan(l.key); return `<div class="qt-tlk"><button type="button" class="qt-tlk__utama" data-qt="atur-tabel" data-lini="${l.key}"><b class="qt-tlk__nama">${esc(l.nama)}</b><span class="qt-tlk__info"><i class="qt-dot${ok ? ' is-ok' : ''}"></i>${n} kolom${ok ? ' · diatur' : ''}</span></button></div>`; }).join('')}</div></details>
   <details class="mr-kartu cu-kartu qt-pgd" data-pgd="pengingatrekapkegiat" ${pgOpen('pengingatrekapkegiat')}><summary><h3>Pengingat dan tindak lanjut</h3></summary><p class="mr-sub qt-ket">Muncul sebagai banner kalau periode yang sudah lewat belum direkap untuk customer yang punya tarif disetujui. Aktifkan sesuai kebiasaan pencatatanmu.</p><div class="qt-cek"><label><input type="checkbox" data-pg="pengingat.bulan" ${p.pengingat && p.pengingat.bulan ? 'checked' : ''} ${dis}> Ingatkan rekap <b>bulan lalu</b></label><label><input type="checkbox" data-pg="pengingat.minggu" ${p.pengingat && p.pengingat.minggu ? 'checked' : ''} ${dis}> Ingatkan rekap <b>minggu lalu</b></label></div>
     ${kelolaSaja() ? `    <div class="qt-grid" style="margin-top:12px"><label class="mr-f qt-c12"><span>Penawaran terkirim perlu tindak lanjut setelah (hari)</span><input data-pg="tindakLanjutHari" inputmode="numeric" value="${esc(p.tindakLanjutHari ?? 3)}" ${dis} style="max-width:160px"><small class="cu-hint">Dihitung dari tanggal kirim atau tindak lanjut terakhir.</small></label></div>` : ''}</details>
-  <details class="mr-kartu cu-kartu qt-pgd" data-pgd="penandatangantandata" ${pgOpen('penandatangantandata')}><summary><h3>${akunSales() ? 'Penandatangan dan tanda tangan' : 'Penandatangan, tanda tangan, dan cap'}</h3></summary><div class="qt-grid">
+  <details class="mr-kartu cu-kartu qt-pgd" data-pgd="penandatangantandata" ${pgOpen('penandatangantandata')}><summary><h3>${kelolaSaja() ? 'Penandatangan, tanda tangan, dan cap' : 'Penandatangan dan tanda tangan'}</h3></summary>${masterSaja() ? '' : '<p class="mr-sub qt-ket">Nama, jabatan, dan tanda tangan di sini milik akunmu dan terbit di quotation yang kamu buat. Cap perusahaan dipakai semua akun.</p>'}<div class="qt-grid">
     ${f('penandatangan.nama', 'Nama lengkap penandatangan', 'Mis. Ega Pratama', 'qt-c4')}${f('penandatangan.jabatan.id', 'Jabatan (Indonesia)', '', 'qt-c4')}${f('penandatangan.jabatan.en', 'Jabatan (English)', '', 'qt-c4')}</div>
-    <div class="qt-asets">${akunSales() ? ttdSalesKartu(ed) : aset('ttd', 'Tanda tangan') + aset('cap', 'Cap perusahaan')}</div>
+    <div class="qt-asets">${masterSaja() ? aset('ttd', 'Tanda tangan') + aset('cap', 'Cap perusahaan') : ttdSalesKartu(ed) + (kelolaSaja() ? aset('cap', 'Cap perusahaan') : '')}</div>
     <p class="mr-sub qt-ket" style="margin-top:10px">Foto tanda tangan atau cap di atas kertas putih, lalu unggah. Latar kertas dihapus otomatis dan tintanya tetap, jadi tampil seperti tanda tangan dan cap basah. Tiap quotation bisa mematikan keduanya untuk tanda tangan basah.</p></details>
   <details class="mr-kartu cu-kartu qt-pgd" data-pgd="dokumenumum" ${pgOpen('dokumenumum')}><summary><h3>Aturan dokumen umum</h3></summary><p class="mr-sub qt-ket">Berlaku untuk semua lini quotation. Quotation baru mengambil nilai ini; quotation yang sudah dibuat tidak ikut berubah. Tanda tangan, cap, dan nomor diatur di bagian lain pengaturan ini.</p>
     <div class="qt-grid"><label class="mr-f qt-c6"><span>PPN</span><select data-pg="ppnBawaan" ${dis}>${opt(Object.entries(AQ.ppn), p.ppnBawaan || 'exclude')}</select></label>
@@ -4940,7 +4981,7 @@ function viewPengaturanPenuh() {
   <details class="mr-kartu cu-kartu qt-pgd" data-pgd="kalimatstandar"${pgOpen('kalimatstandar')}><summary><h3>Kalimat standar</h3></summary><p class="mr-sub qt-ket">Tulis dalam Bahasa Indonesia saja. Versi English dibuat otomatis saat dokumen dicetak dalam English. Tulis <code>{berlaku}</code> di kalimat penutup supaya tanggal berlaku terisi otomatis. Tiap quotation tetap bisa memilih kalimat per tujuan layanan atau menulis sendiri.</p><div class="qt-grid">
     ${ta('pembuka.id', 'Kalimat pembuka')}${ta('penutup.id', 'Kalimat penutup', '', 4)}${ta('catatan.id', 'Catatan di bawah tanda tangan', '', 2)}</div>
     <div class="qt-presetlist"><b>Preset kalimat saya</b>${sbBanner('preset', SB.jumlah('preset', PENG.presetKalimat || []), 'preset', 'preset')}${SB.saring('preset', PENG.presetKalimat || []).length ? SB.saring('preset', PENG.presetKalimat || []).map(x => `<div class="qt-presetlist__i${SB.ada('preset', x.id) ? ' qt-sembunyi' : ''}"><span>${esc(x.nama)}${x.tujuan ? ` <small>· ${esc(namaLini(x.tujuan))}</small>` : ''}</span>${SB.aktif() ? sbIkon('preset', x.id) : ''}${ed ? `${dilarangHapus() ? '' : `<button type="button" class="mr-ikonbtn mr-ikonbtn--bahaya" data-qt="pg-hapus-preset" data-id="${esc(x.id)}" aria-label="Hapus preset" title="Hapus preset">${ik('tong', 14)}</button>`}` : ''}</div>`).join('') : '<p class="mr-sub qt-ket" style="margin:4px 0 0">Belum ada. Di form quotation pilih Tulis sendiri lalu Simpan jadi preset.</p>'}</div></details>
-  <details class="mr-kartu cu-kartu qt-pgd" id="pg-tnc" data-pgd="pustaka" ${pgOpen('pustaka')}><summary><h3>Pustaka syarat dan ketentuan</h3></summary><p class="mr-sub qt-ket">Butir <b>Umum</b> otomatis masuk ke semua lini. Butir <b>Khusus</b> hanya muncul bila lininya dipakai di quotation. Cukup tulis dalam Bahasa Indonesia; teks English dibuat otomatis saat dokumen dicetak. Tulis <code>{berlaku}</code> untuk tanggal berlaku.</p>
+  <details class="mr-kartu cu-kartu qt-pgd" id="pg-tnc" data-pgd="pustaka" ${pgOpen('pustaka')}><summary><h3>Pustaka syarat dan ketentuan</h3></summary><p class="mr-sub qt-ket">Butir <b>Umum</b> otomatis masuk ke semua lini; yang sama atau mirip dengan butir lini dilewati supaya tidak dobel. Butir <b>Khusus</b> hanya muncul bila lininya dipakai di quotation. Cukup tulis dalam Bahasa Indonesia; teks English dibuat otomatis saat dokumen dicetak. Tulis <code>{berlaku}</code> untuk tanggal berlaku.</p>
     <div id="tp-isi">${tpHtml()}</div>
     ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div>` : ''}</details>
   </div>
@@ -5065,11 +5106,11 @@ async function aksiTrSimpan(btn) {
     if (b.modal != null && b.modal < 0) err.push(n + 'modal tidak boleh negatif.'); if (paket && b.modal == null) err.push(n + 'modal wajib diisi supaya margin paket bisa dihitung.'); });
   if (!o.appr) err.push('Tanggal approve wajib diisi.'); else if (o.appr > hi) err.push('Tanggal approve tidak boleh di masa depan.');
   if (o.sampai && o.appr && o.sampai < o.appr) err.push('“Berlaku sampai” tidak boleh sebelum tanggal approve.');
-  if (f && f.size > 8 * 1024 * 1024) err.push('Ukuran dokumen melebihi 8 MB.');
+  if (f && f.size > BATAS_MENTAH) err.push('Ukuran dokumen melebihi 30 MB.');
   if (!paket) { const seen = new Map(); rows.forEach((b, i) => { const k = [b.liniKey, norm(b.item), b.satuan].join('|'); if (seen.has(k)) err.push(`Baris ${seen.get(k) + 1} dan ${i + 1} sama (lini, uraian, satuan). Ubah salah satu, atau pilih Paket Project.`); else seen.set(k, i); }); }
   if (err.length) return galatPanel('<b>Belum bisa disimpan:</b><br>' + err.map(esc).join('<br>'));
   const pulih = sibuk(btn, 'Menyimpan…'); $('#pn-galat').hidden = true;
-  if (f) { const d = await bacaFile(f); if (!d) { pulih(); return galatPanel('<b>Dokumen tidak bisa dibaca.</b> Coba file lain.'); } o.dokNama = f.name; o.dokData = d; }
+  if (f) { const d = await bacaFile(f); if (!d) { pulih(); return galatPanel(`<b>Dokumen tidak bisa diproses.</b> ${galatFile()}`); } o.dokNama = f.name; o.dokData = d; }
   o.baris = rows.map(b => ({ lini: b.liniKey, liniNama: b.liniNama, item: b.item, satuan: b.satuan, qty: 1, jual: Number(b.jual), modal: b.modal, vendorId: b.vendorId, vendorNama: b.vendorNama, tarifKunci: b.tarifKunci, modalDariMR: b.modalMR != null && b.modal === b.modalMR }));
   let h; try { h = await Repo.tambahRate(TR.cid, o); } catch (er) { pulih(); return galatPanel(`<b>GAGAL.</b> Tidak ada yang tersimpan.<br>${esc(er.message)}`); }
   tutupPanel(); if (CU.gambarCust) { S.tab = 'rate'; CU.gambarCust(); } toast(h.paketId ? `Paket Project <b>${esc(o.namaPaket)}</b> (${rows.length} komponen) tersimpan dan terverifikasi.` : `<b>${h.rateIds.length} rate</b> tersimpan dan terverifikasi${h.versiBaru ? ` (${h.versiBaru} menjadi versi baru)` : ''}.${f ? '' : ' Belum ada dokumen bertanda tangan; unggah dari daftar rate.'}`);
@@ -5200,13 +5241,7 @@ function tlTncHtml() {
   return `${tlSkHtml(dis)}<p class="mr-sub qt-ket">Template S&K lini ini: butir di bawah tampil otomatis sebagai daftar bernomor 1…N di setiap quotation lini ${esc(namaLini(TL.lini))}. Di tiap quotation daftar ini tetap bisa disesuaikan manual.</p>
     ${TL.tnc.length ? TL.tnc.map((t, i) => `<div class="qt-pgt"><div class="qt-pgt__kep"><select data-tt="kategori" data-i="${i}" ${dis}>${kat(t)}</select><label class="qt-pgt__aktif"><input type="checkbox" data-tt="aktif" data-i="${i}" ${t.aktif ? 'checked' : ''} ${dis}> Dipakai</label>${masterAtauAdmin() ? `<label class="qt-pgt__aktif"><input type="checkbox" data-tt="wajib" data-i="${i}" ${t.wajib ? 'checked' : ''}> Wajib</label>` : (t.wajib ? '<span class="cu-st cu-st--info">Wajib</span>' : '')}<span class="mr-ruang"></span>${ed ? `${dilarangHapus() ? '' : `<button type="button" class="mr-ikonbtn mr-ikonbtn--bahaya" data-tl="tnc-hapus" data-i="${i}" aria-label="Hapus butir" title="Hapus butir">${ik('tong', 16)}</button>`}` : ''}</div>
       <div class="qt-grid"><label class="mr-f qt-c6"><span>Indonesia</span><textarea data-tt="id" data-i="${i}" rows="2" ${dis}>${esc(t.teks.id)}</textarea></label><label class="mr-f qt-c6"><span>English</span><textarea data-tt="en" data-i="${i}" rows="2" ${dis}>${esc(t.teks.en)}</textarea></label></div></div>`).join('') : '<div class="mr-kosong" style="padding:18px"><p>Belum ada butir khusus untuk lini ini.</p></div>'}
-    ${ed ? `<div class="qt-pgadd"><button type="button" class="mr-btn mr-btn--kecil" data-tl="tnc-tambah">${ik('plus', 14)} Tambah butir</button>${tlUmumOpsi()}</div>` : ''}`;
-}
-/* syarat umum hanya referensi: pilih butirnya, lalu disalin menjadi butir template lini ini (tidak otomatis masuk quotation) */
-function tlUmumOpsi() {
-  const ada = new Set(TL.tnc.map(t => norm(t.teks.id))), sisa = (PENG.tnc || []).filter(t => t.kat === 'umum' && t.teks && String(t.teks.id || '').trim() && !ada.has(norm(t.teks.id)));
-  if (!sisa.length) return '';
-  return `<span class="mr-ruang"></span><select data-tl-umum aria-label="Pilih butir dari referensi umum"><option value="">Ambil dari referensi umum…</option>${sisa.map(t => `<option value="${esc(t.id)}">${esc(String(t.teks.id).slice(0, 70))}</option>`).join('')}</select>`;
+    ${ed ? `<div class="qt-pgadd"><button type="button" class="mr-btn mr-btn--kecil" data-tl="tnc-tambah">${ik('plus', 14)} Tambah butir</button></div>` : ''}`;
 }
 /* saklar tarif minimum Master Rate per lini (hanya master; tersimpan langsung, berlaku untuk semua akun) */
 function tlMinHtml() {
@@ -5225,7 +5260,7 @@ const tlAdaRek = () => !!(TL.lini && window.ISLFL && window.ISLFL.rekDaftar && w
 /* tabel layanan x ukuran dengan kolom isian (dipakai tab Harga rekomendasi dan Tarif minimum): nilai = objek kunci->angka, atribut = nama data-* untuk isian */
 function tlKolomHtml(daftar, nilai, atribut) {
   const dis = masterSaja() ? '' : 'disabled';
-  return '<div class="tl-rek">' + daftar.map(g => `<div class="tl-rek__g"><span>${esc(g.judul)}</span>${((g.baris[0] || {}).sel || []).map(c => `<span>${esc(c.label)}</span>`).join('')}</div>` + g.baris.map(r => `<div class="tl-rek__r"><span class="tl-rek__n">${esc(r.nama)}</span>${r.sel.map(c => `<input inputmode="numeric" ${atribut}="${esc(c.kunci)}" value="${nilai[c.kunci] ? esc(fmtRpIn(nilai[c.kunci])) : ''}" placeholder="${c.def ? esc(Number(c.def).toLocaleString('id-ID')) : '-'}" aria-label="${esc(r.nama + ' ' + c.label)}" ${dis}>`).join('')}</div>`).join('')).join('') + '</div>';
+  return '<div class="tl-rek">' + daftar.map(g => `<div class="tl-rek__g"><span>${esc(g.judul)}</span>${((g.baris[0] || {}).sel || []).map(c => `<span>${esc(c.label)}</span>`).join('')}</div>` + g.baris.map(r => `<div class="tl-rek__r"><span class="tl-rek__n">${esc(r.nama)}</span>${r.sel.map(c => `<input inputmode="numeric" ${atribut}="${esc(c.kunci)}"${c.span ? ' style="grid-column:span 2"' : ''} value="${nilai[c.kunci] ? esc(fmtRpIn(nilai[c.kunci])) : ''}" placeholder="${c.def ? esc(Number(c.def).toLocaleString('id-ID')) : '-'}" aria-label="${esc(r.nama + ' ' + c.label)}" ${dis}>`).join('')}</div>`).join('')).join('') + '</div>';
 }
 function tlRekHtml() {
   if (!tlAdaRek()) return '';
@@ -5611,7 +5646,7 @@ function enIsi(o, teksId) { const en = terjemahOtomatis(teksId); if (en) { o.en 
 /* ===== Dokumen berbahasa Inggris: SEMUA teks di dokumen harus English (aturan pemilik, 4 Nov 2026) =====
    Teks statis blok lini (judul, kolom, label, catatan, satuan) dan butir S&K dari mesin formulir diterjemahkan di sini. Isian bebas user (nama rute, lokasi, nama layanan buatan sendiri) tetap apa adanya. */
 const DOK_EN = new Map(Object.entries({
-  'per hari / per container': 'per day / per container', 'Belum termasuk biaya gatepass pelabuhan yang berlaku': 'Excludes applicable port gate pass fees', 'per container · Belum termasuk biaya gatepass pelabuhan yang berlaku': 'per container · Excludes applicable port gate pass fees',
+  'per hari / per container': 'per day / per container', 'Fee administrasi': 'Administration fee','Belum termasuk biaya gatepass pelabuhan yang berlaku': 'Excludes applicable port gate pass fees', 'per container · Belum termasuk biaya gatepass pelabuhan yang berlaku': 'per container · Excludes applicable port gate pass fees',
   'Sewa / bulan (Rp)': 'Rent / month (IDR)', 'Driver / orang (Rp)': 'Driver / person (IDR)', 'Jumlah (Rp)': 'Amount (IDR)', 'Harga jual (Rp)': 'Selling price (IDR)', 'Impor & ekspor': 'Import & export', 'Impor': 'Import', 'Ekspor': 'Export', 'Suhu ruang': 'Room temperature', '-18 °C atau lebih rendah': '-18 °C or lower', '0 s.d. +5 °C': '0 to +5 °C',
   'Layanan': 'Services', 'Satuan': 'Unit', 'Keterangan': 'Remarks', 'Rute': 'Route', 'Tipe': 'Type', 'Grup': 'Group', 'Ukuran': 'Size', 'Periode': 'Period', 'Harian': 'Daily', 'Mingguan': 'Weekly', 'Bulanan': 'Monthly', 'harian': 'daily', 'mingguan': 'weekly', 'bulanan': 'monthly',
   'Tahun / tonase': 'Year / tonnage', 'Lokasi gudang': 'Warehouse location', 'Rute (asal – tujuan)': 'Route (origin – destination)', 'Komponen biaya': 'Cost component', 'Tarif (asal)': 'Rate (original)', 'Keterangan domestik': 'Domestic remarks',
@@ -5697,86 +5732,47 @@ function terjemahOtomatis(teksId) {
   return null;
 }
 const katJudul = k => k === 'umum' ? 'Umum (semua quotation)' : 'Khusus ' + namaLini(k);
-function tpMuat() { TP.tnc = clone(PENG.tnc || []); TP.gabung = PENG.tncGabung !== false; TP.filter = 'semua'; TP.buka = new Set(); TP.eng = new Set(); }
 const TP_TOP = [3, 7, 14, 30, 45];
 const tpTopDari = t => { const m = /(\d+)\s*hari/i.exec(String(t.teks.id || '')); return m ? +m[1] : null; };
-function tpIsi() { const w = $('#tp-isi'); if (w) w.innerHTML = tpHtml(); }
+function tpIsi() { const w = $('#tp-isi'); if (w) { w.innerHTML = tpHtml(); w.querySelectorAll('textarea').forEach(tinggiTa); } }
+/* Pustaka S&K: chip lini, lalu butir lini itu langsung bisa diedit (English dibuat otomatis dari teks Indonesia) */
 function tpHtml() {
-  const ed = bisaEdit(), dis = ed ? '' : 'disabled', dipakai = new Set(Q.edit ? R.liniDipakai(Q.edit) : []);
-  const kats = ['umum', ...new Set(TP.tnc.map(t => t.kat).filter(k => k !== 'umum'))];
-  if (TP.filter !== 'semua' && !kats.includes(TP.filter)) TP.filter = 'semua';
-  const milik = k => TP.tnc.filter(t => t.kat === k);
+  const ed = bisaEdit(), dis = ed ? '' : 'disabled';
+  const kats = ['umum', ...new Set([...daftarLini().filter(l => l.resmi).map(l => l.key), ...TP.tnc.map(t => t.kat)].filter(k => k !== 'umum'))];   /* semua lini resmi tampil, juga yang belum punya butir */
+  if (!kats.includes(TP.filter)) TP.filter = 'umum';
   const katOpt = t => Object.entries(KATEGORI_TNC).map(([k, l]) => `<option value="${k}" ${t.kategori === k ? 'selected' : ''}>${l}</option>`).join('');
-  const kartu = [{ k: 'semua', n: 'Semua butir', aktif: TP.tnc.filter(t => t.aktif).length, total: TP.tnc.length }, ...kats.map(k => ({ k, n: k === 'umum' ? 'Syarat umum' : namaLini(k), aktif: milik(k).filter(t => t.aktif).length, total: milik(k).length }))];
-  const pilih = `<div class="tp-pilih" role="group" aria-label="Pilih lini">${kartu.map(x => `<button type="button" class="tp-lini ${TP.filter === x.k ? 'is-aktif' : ''}" data-tp="filter" data-v="${esc(x.k)}" aria-pressed="${TP.filter === x.k}"><span class="tp-lini__n">${esc(x.n)}</span><small>${x.aktif} dari ${x.total} dipakai${dipakai.has(x.k) ? ' · dipakai di quotation ini' : ''}</small></button>`).join('')}</div>`;
+  const chip = k => `<button type="button" class="tp-lini ${TP.filter === k ? 'is-aktif' : ''}" data-tp="filter" data-v="${esc(k)}" aria-pressed="${TP.filter === k}">${esc(k === 'umum' ? 'Umum' : namaLini(k))} <small>${TP.tnc.filter(t => t.kat === k && t.aktif).length}</small></button>`;
+  const ikon = (a, i, ik2, label) => `<button type="button" class="mr-ikonbtn" data-tp="${a}" data-i="${i}" aria-label="${label}" title="${label}">${ik(ik2, 14)}</button>`;
   const butir = (t, i) => {
-    const buka = TP.buka.has(i), top = t.kategori === 'pembayaran' ? tpTopDari(t) : null, basi = !String(t.teks.en || '').trim() || t.enBasi;
-    const aksi = ed
-      ? `<button type="button" class="mr-ikonbtn" data-tp="ubah" data-i="${i}" aria-expanded="${buka}" aria-label="${buka ? 'Tutup butir' : 'Ubah butir'}" title="${buka ? 'Tutup' : 'Ubah'}">${ik(buka ? 'tutup' : 'edit', 16)}</button>`
-      : `<button type="button" class="mr-btn mr-btn--kecil" data-tp="ubah" data-i="${i}" aria-expanded="${buka}">${buka ? 'Tutup' : 'Lihat'}</button>`;
-    const editor = `<div class="tp-butir__ed">
-        <label class="mr-f"><span>Teks (Indonesia)</span><textarea data-tp="id" data-i="${i}" rows="4" ${dis}>${esc(t.teks.id)}</textarea></label>
-        <label class="mr-f"><span>Jenis</span><select data-tp="kategori" data-i="${i}" ${dis}>${katOpt(t)}</select></label>
-        ${t.kategori === 'pembayaran' && ed ? `<div class="mr-f"><span>Tempo pembayaran (TOP)</span><div class="qt-tpf">${TP_TOP.map(h => `<button type="button" class="qt-chip ${top === h ? 'qt-chip--on' : ''}" data-tp="top" data-i="${i}" data-v="${h}">${h} hari</button>`).join('')}</div></div>` : ''}
-        <div><button type="button" class="qt-link" data-tp="eng" data-i="${i}">${TP.eng.has(i) ? 'Sembunyikan teks English' : 'Lihat teks English'}</button>${TP.eng.has(i) ? `<label class="mr-f" style="margin-top:6px"><span>English (dipakai saat dokumen dicetak dalam English)</span><textarea data-tp="en" data-i="${i}" rows="3" ${dis}>${esc(t.teks.en)}</textarea></label>` : ''}</div>
-        ${ed ? `<div class="tp-butir__aksi"><button type="button" class="mr-ikonbtn" data-tp="naik" data-i="${i}" aria-label="Naikkan" title="Naikkan">${ik('naik', 14)}</button><button type="button" class="mr-ikonbtn" data-tp="turun" data-i="${i}" aria-label="Turunkan" title="Turunkan">${ik('turun', 14)}</button><span class="mr-ruang"></span>${dilarangHapus() ? '' : `<button type="button" class="mr-btn mr-btn--kecil mr-btn--hapus" data-tp="hapus" data-i="${i}">${ik('tong', 14)} Hapus</button>`}</div>` : ''}
-      </div>`;
+    const top = t.kategori === 'pembayaran' ? tpTopDari(t) : null;
     return `<article class="tp-butir ${t.aktif ? '' : 'is-mati'}">
       <header class="tp-butir__h"><label class="qt-sw" title="${t.aktif ? 'Dipakai di quotation' : 'Tidak dipakai'}"><input type="checkbox" data-tp="aktif" data-i="${i}" ${t.aktif ? 'checked' : ''} ${dis} aria-label="Dipakai"><span></span></label>
-        <div class="tp-butir__judul"><b>${esc(KATEGORI_TNC[t.kategori] || 'Lainnya')}</b>${top ? ` <span class="qt-pill">TOP ${top} hari</span>` : ''}${basi ? ' <span class="qt-pill qt-pill--warn" title="Teks Inggris belum diperbarui mengikuti teks Indonesia">Inggris perlu diperbarui</span>' : ''}</div>${aksi}</header>
-      ${buka ? editor : `<p class="tp-butir__teks">${esc(t.teks.id || '(kosong)')}</p>`}
+        <select class="tp-jenis" data-tp="kategori" data-i="${i}" ${dis} aria-label="Jenis butir">${katOpt(t)}</select>
+        <span class="mr-ruang"></span>${ed ? `${ikon('naik', i, 'naik', 'Naikkan')}${ikon('turun', i, 'turun', 'Turunkan')}${dilarangHapus() ? '' : ikon('hapus', i, 'tong', 'Hapus butir')}` : ''}</header>
+      <textarea class="tp-teks" data-tp="id" data-i="${i}" rows="2" ${dis} aria-label="Teks butir (Indonesia)" placeholder="Tulis butir syarat…">${esc(t.teks.id)}</textarea>
+      ${t.kategori === 'pembayaran' && ed ? `<div class="qt-tpf">${TP_TOP.map(h => `<button type="button" class="qt-chip ${top === h ? 'qt-chip--on' : ''}" data-tp="top" data-i="${i}" data-v="${h}">${h} hari</button>`).join('')}</div>` : ''}
     </article>`;
   };
-  const tampil = TP.filter === 'semua' ? kats : [TP.filter];
-  return pilih + tampil.map(k => {
-    const it = TP.tnc.map((t, i) => [t, i]).filter(([t]) => t.kat === k);
-    return `<section class="tp-grup"><div class="tp-grup__h"><div><b>${k === 'umum' ? 'Syarat umum' : 'Syarat khusus ' + esc(namaLini(k))}</b><small>${k === 'umum' ? 'Dipakai di semua quotation' : 'Hanya muncul kalau lini ini dipakai di quotation'}</small></div>${ed ? `<button type="button" class="mr-btn mr-btn--kecil" data-tp="tambah" data-kat="${esc(k)}">${ik('plus', 14)} Tambah butir</button>` : ''}</div>
-      ${it.map(([t, i]) => butir(t, i)).join('') || '<p class="cu-kosong">Belum ada butir.</p>'}</section>`;
-  }).join('');
-}
-function panelTncPusat() {
-  if (Q.edit) bacaForm(); tpMuat(); const ed = bisaEdit();
-  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Kumpulan syarat dan ketentuan (referensi)</h2><p class="mr-sub">Kumpulan butir per lini bisnis. Template tiap lini dipakai otomatis oleh quotation lini itu (dan bisa disesuaikan per quotation). "Syarat umum" hanya referensi: butirnya tidak otomatis masuk quotation, ambil yang diperlukan ke template lini lewat Pengaturan dokumen. Perubahan berlaku untuk quotation berikutnya; yang sudah terbit tidak berubah.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
-  <div class="mr-panel__isi">
-    <div id="tp-isi"></div>
-    ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div><p class="mr-sub qt-ket">Butir yang sudah ada tidak digandakan. Periksa lalu klik Simpan.</p>` : ''}
-    <p class="mr-galat" id="pn-galat" hidden></p></div>
-  <footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Tutup</button>${ed ? `<button class="mr-btn mr-btn--utama" data-tp="simpan">${ik('cek', 16)} Simpan</button>` : ''}</footer>`, 'lebar');
-  tpIsi();
-}
-async function aksiTpSimpan(btn) {
-  const err = []; TP.tnc.forEach(t => { if (t.aktif && !String(t.teks.id).trim()) err.push(`Ada butir ${katJudul(t.kat)} yang dipakai tetapi teks Indonesianya kosong.`); });
-  if (err.length) return galatPanel('<b>Belum bisa disimpan:</b><br>' + [...new Set(err)].map(esc).join('<br>'));
-  TP.tnc.forEach(t => { if (!String(t.teks.en).trim()) t.teks.en = t.teks.id; });
-  const lama = { n: clone(PENG.tnc || []), g: PENG.tncGabung }; PENG.tnc = clone(TP.tnc); PENG.tncGabung = TP.gabung; const pulih = sibuk(btn, 'Menyimpan…');
-  try { await Repo.simpanPengaturan(PENG); } catch (er) { PENG.tnc = lama.n; PENG.tncGabung = lama.g; pulih(); return galatPanel(`<b>GAGAL menyimpan.</b> Belum tersimpan.<br>${esc(er.message)}`); }
-  if (Q.pd) { Q.pd.tnc = clone(PENG.tnc); Q.pd.tncGabung = PENG.tncGabung; }
-  tutupPanel(); if (Q.edit) gambar(); toast(`Syarat dan ketentuan tersimpan dan terverifikasi (${TP.tnc.length} butir).`);
+  const it = TP.tnc.map((t, i) => [t, i]).filter(([t]) => t.kat === TP.filter);
+  return `<div class="tp-pilih" role="group" aria-label="Pilih lini">${kats.map(chip).join('')}</div>
+    <p class="tp-info">${TP.filter === 'umum' ? 'Dipakai di semua quotation.' : 'Muncul bila lini ini dipakai; syarat umum ikut otomatis.'}</p>
+    <section class="tp-grup">${it.map(([t, i]) => butir(t, i)).join('') || '<p class="cu-kosong">Belum ada butir.</p>'}
+      ${ed ? `<button type="button" class="tp-tambah" data-tp="tambah" data-kat="${esc(TP.filter)}">${ik('plus', 14)} Tambah butir</button>` : ''}</section>`;
 }
 ['input', 'change'].forEach(n => document.addEventListener(n, ev => { if (Q.pd && ev.target.dataset && ev.target.dataset.tp && $('#pg-tnc')) Q.pdKotor = true; }, true));
 document.addEventListener('toggle', ev => { const d = ev.target; if (d && d.dataset && d.dataset.pgd && Q.pdBuka) { d.open ? Q.pdBuka.add(d.dataset.pgd) : Q.pdBuka.delete(d.dataset.pgd); } }, true);
 document.addEventListener('click', ev => {
-  const e = ev.target.closest('[data-tp],[data-qt="tnc-pusat"],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
-  if (d.qt === 'tnc-pusat') panelTncPusat();
-  else if (d.qt === 'ke-master-rate') { if (Q.edit) bacaForm(); window.__pindahHalaman('master-rate'); setTimeout(() => { const t = document.querySelector('[data-aksi=tab][data-v=lini]'); if (t) t.click(); }, 350); toast('Atur <b>Target margin</b> tiap lini di Master Rate → Lini bisnis. Draf quotation tetap tersimpan di sini; kembali lewat menu Quotation.'); }
-  else if (d.tp === 'tambah') { const k = d.kat || 'umum'; TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: '', en: '' }, aktif: true }); TP.filter = k; TP.buka.add(TP.tnc.length - 1); tpIsi(); const ta = $$('#tp-isi [data-tp=id]').pop(); if (ta) ta.focus(); }
+  const e = ev.target.closest('[data-tp],[data-qt="ke-master-rate"]'); if (!e) return; const d = e.dataset; if (Q.pd && d.tp && $('#pg-tnc')) Q.pdKotor = true;
+  if (d.qt === 'ke-master-rate') { if (Q.edit) bacaForm(); window.__pindahHalaman('master-rate'); setTimeout(() => { const t = document.querySelector('[data-aksi=tab][data-v=lini]'); if (t) t.click(); }, 350); toast('Atur <b>Target margin</b> tiap lini di Master Rate → Lini bisnis. Draf quotation tetap tersimpan di sini; kembali lewat menu Quotation.'); }
+  else if (d.tp === 'tambah') { const k = d.kat || 'umum'; TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: '', en: '' }, aktif: true }); TP.filter = k; tpIsi(); const ta = $$('#tp-isi [data-tp=id]').pop(); if (ta) ta.focus(); }
   else if (d.tp === 'filter') { TP.filter = d.v; tpIsi(); }
-  else if (d.tp === 'ubah') { const i = +d.i; TP.buka.has(i) ? TP.buka.delete(i) : TP.buka.add(i); tpIsi(); }
-  else if (d.tp === 'eng') { const i = +d.i; TP.eng.has(i) ? TP.eng.delete(i) : TP.eng.add(i); tpIsi(); }
   else if (d.tp === 'top') { const x = TP.tnc[+d.i]; if (x) { const h = d.v; const gantiId = String(x.teks.id || '').replace(/\d+\s*hari/i, h + ' hari'); x.teks.id = /\d+\s*hari/i.test(x.teks.id || '') ? gantiId : (String(x.teks.id || '').trim() + ' Pembayaran ' + h + ' hari setelah invoice diterima.').trim(); x.teks.en = String(x.teks.en || '').replace(/\d+\s*days/i, h + ' days'); const enAuto = terjemahOtomatis(x.teks.id); if (enAuto) { x.teks.en = enAuto; x.enBasi = false; } else if (!/days/i.test(x.teks.en)) x.enBasi = true; tpIsi(); } }
   else if (d.tp === 'isi-excel') { const bersih = t => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, ''); let n = 0; Object.entries(TNC_EXCEL).forEach(([k, arr]) => arr.forEach(tx => { if (!TP.tnc.some(x => x.kat === k && bersih(x.teks.id) === bersih(tx))) { const enAuto = terjemahOtomatis(tx); TP.tnc.push({ id: uid('t'), kat: k, kategori: 'lainnya', teks: { id: tx, en: enAuto || '' }, aktif: true, enBasi: !enAuto }); n++; } })); tpIsi(); toast(n ? `${n} butir ditambahkan. Klik Simpan untuk menyimpan.` : 'Semua butir sudah ada.'); }
   else if (d.tp === 'hapus' && !dilarangHapus()) { TP.tnc.splice(+d.i, 1); tpIsi(); }
   else if (d.tp === 'naik' || d.tp === 'turun') { const i = +d.i, k = TP.tnc[i].kat, dir = d.tp === 'naik' ? -1 : 1; let j = i + dir; while (j >= 0 && j < TP.tnc.length && TP.tnc[j].kat !== k) j += dir; if (j >= 0 && j < TP.tnc.length) { [TP.tnc[i], TP.tnc[j]] = [TP.tnc[j], TP.tnc[i]]; tpIsi(); } }
-  else if (d.tp === 'simpan') aksiTpSimpan(e);
 });
-document.addEventListener('input', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'id' || d.tp === 'en') { const x = TP.tnc[+d.i]; if (x) { x.teks[d.tp] = t.value; if (d.tp === 'id') { const en = terjemahOtomatis(t.value); if (en) { x.teks.en = en; x.enBasi = false; } else x.enBasi = true; } else x.enBasi = false; } } });
-document.addEventListener('change', ev => {
-  const t = ev.target; if (!t || !t.matches || !t.matches('select[data-tl-umum]') || !t.value || !TL.lini) return;
-  const u = (PENG.tnc || []).find(x => x.id === t.value); if (!u) return;
-  TL.tnc.push({ id: uid('t'), kat: TL.lini, kategori: u.kategori || 'lainnya', teks: { id: u.teks.id || '', en: u.teks.en || '' }, aktif: true });
-  const p = $('#tl-p-tnc'); if (p) p.innerHTML = tlTncHtml(); const n = $('[data-tab=tnc] b'); if (n) n.textContent = TL.tnc.length;
-});
-document.addEventListener('change', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'aktif') { const x = TP.tnc[+d.i]; if (x) { x.aktif = t.checked; tpIsi(); } } else if (d.tp === 'kategori') { const x = TP.tnc[+d.i]; if (x) x.kategori = t.value; } else if (t.id === 'tp-gabung') TP.gabung = t.checked; });
+document.addEventListener('input', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'id' || d.tp === 'en') { tinggiTa(t); const x = TP.tnc[+d.i]; if (x) { x.teks[d.tp] = t.value; if (d.tp === 'id') { const en = terjemahOtomatis(t.value); if (en) { x.teks.en = en; x.enBasi = false; } else x.enBasi = true; } else x.enBasi = false; } } });
+document.addEventListener('change', ev => { const t = ev.target, d = t.dataset || {}; if (d.tp === 'aktif') { const x = TP.tnc[+d.i]; if (x) { x.aktif = t.checked; tpIsi(); } } else if (d.tp === 'kategori') { const x = TP.tnc[+d.i]; if (x) { x.kategori = t.value; tpIsi(); } } else if (t.id === 'tp-gabung') TP.gabung = t.checked; });
 
 /* =============================== Q. KOLOM TANGGAL: BISA DIKETIK + KALENDER DENGAN TOMBOL OK =============================== */
 /* Pemilih tanggal bawaan HP sering tanpa tombol OK dan tidak bisa diketik. Semua kolom tanggal diganti: ketik hh/bb/tttt atau pilih di kalender dengan tombol OK.
@@ -5845,6 +5841,18 @@ function infoGambar(dataUrl) {
   else if (t === 'jpg') { let i = 2; while (i < u.length) { if (u[i] !== 0xFF) { i++; continue; } const k = u[i + 1]; if (k >= 0xC0 && k <= 0xC3) { h = (u[i + 5] << 8) | u[i + 6]; w = (u[i + 7] << 8) | u[i + 8]; break; } i += 2 + ((u[i + 2] << 8) | u[i + 3]); } }
   return { u, t, w: w || 200, h: h || 100 };
 }
+/* cap 50% transparan dengan tanda tangan di atas dan di tengah, digabung jadi satu PNG untuk Word (skala sama dengan PDF: cap 104 px, TTD 68 px) */
+async function gabungTtdCap(cap, ttd) {
+  const muat = d => new Promise(res => { if (!d) return res(null); const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = d; });
+  const [ic, it] = await Promise.all([muat(cap), muat(ttd)]);
+  if (!ic && !it) return null;
+  const T = 104, S = 4, lc = ic ? T * ic.naturalWidth / ic.naturalHeight : 0, lt = it ? 68 * it.naturalWidth / it.naturalHeight : 0, w = Math.max(lc, lt);
+  const kanvas = document.createElement('canvas'); kanvas.width = Math.ceil(w * S); kanvas.height = T * S;
+  const x = kanvas.getContext('2d');
+  if (ic) { x.globalAlpha = .3; x.drawImage(ic, (w - lc) / 2 * S, 0, lc * S, T * S); x.globalAlpha = 1; }
+  if (it) x.drawImage(it, (w - lt) / 2 * S, (T - 68) / 2 * S, lt * S, 68 * S);
+  return kanvas.toDataURL('image/png');
+}
 const htmlTeks = s => String(s ?? '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;/g, "'");
 const dxa = px => Math.round(px * WLEBAR / 686);
 /* hiasan diagonal desain dokumen, dirender dari SVG ke PNG supaya ikut sebagai gambar latar di Word */
@@ -5877,7 +5885,7 @@ async function buatDocx(m, aset) {
   const cell = (isi, w, o = {}) => new TableCell({ children: Array.isArray(isi) ? isi : [isi], width: { size: w, type: WidthType.DXA }, columnSpan: o.span, rowSpan: o.rowSpan, verticalAlign: o.va || VerticalAlign.CENTER, shading: o.fill ? { type: ShadingType.CLEAR, fill: KISI ? 'BFD6EE' : o.fill, color: 'auto' } : undefined, borders: KISI ? { top: sisi('2B3A4D', 4), bottom: sisi('2B3A4D', 4), left: sisi('2B3A4D', 4), right: sisi('2B3A4D', 4) } : { ...tanpaSemua, ...(o.b || {}) }, margins: { top: o.mt ?? 60, bottom: o.mb ?? 60, left: o.ml ?? 110, right: o.mr ?? 110 } });
   const tabel = (kolom, baris, o = {}) => new Table({ width: { size: kolom.reduce((a, b) => a + b, 0), type: WidthType.DXA }, columnWidths: kolom, rows: baris, borders: { top: tanpa, left: tanpa, bottom: tanpa, right: tanpa, insideHorizontal: tanpa, insideVertical: tanpa }, ...o });
   const sesuaikan = (px, total = WLEBAR) => { const w = px.map(dxa), selisih = total - w.reduce((a, b) => a + b, 0); w[w.findIndex(x => x === Math.max(...w))] += selisih; return w; };
-  const gLogo = infoGambar(ASET_LOGO()), gCap = m.pakaiCap ? infoGambar(aset && aset.cap) : null, gTtd = m.pakaiTtd ? infoGambar(aset && aset.ttd) : null;
+  const gLogo = infoGambar(ASET_LOGO()), gTanda = infoGambar(await gabungTtdCap(m.pakaiCap ? aset && aset.cap : null, m.pakaiTtd ? aset && aset.ttd : null));
   const gambar = (g, tinggi) => g ? new ImageRun({ type: g.t, data: g.u, transformation: { width: Math.round(tinggi * g.w / g.h), height: tinggi }, altText: { title: 'gambar', description: 'gambar', name: 'gambar' } }) : null;
 
   /* ---- kop surat ---- */
@@ -6013,7 +6021,7 @@ async function buatDocx(m, aset) {
 
   /* ---- tanda tangan ---- */
   const garisNama = { bottom: sisi(WN.navy, 6) }, tengah = AlignmentType.CENTER;
-  const stempel = [gCap && gambar(gCap, 104), gTtd && gambar(gTtd, 68)].filter(Boolean);
+  const stempel = [gambar(gTanda, 104)].filter(Boolean);
   const kiriTtd = [para(run(L.reg, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah }), para(run('PT Indo Sukses Logistik'), { al: tengah, sa: 60 }), para(stempel.length ? stempel : run(' '), { al: tengah, sb: 120, sa: 160 }), para(run(m.penandatangan.nama, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah, sa: 20, border: garisNama }), para(run(m.penandatangan.jabatan, { color: '4A5866' }), { al: tengah }), ...(m.tglRingkas ? [] : [para(run(m.tanggalTeks, { color: '4A5866' }), { al: tengah })])];
   const kananTtd = [para(run(L.appr, { h: 1, bold: 1, size: 20, color: WN.navy }), { al: tengah }), para(run(m.customerNama), { al: tengah, sa: 60 }),
     tabel([4300], [new TableRow({ height: { value: 2300, rule: 'atLeast' }, children: [cell(para(run(L.sg, { size: 15, color: 'A0AAB5' }), { al: tengah }), 4300, { va: VerticalAlign.BOTTOM, b: { top: sisi('B9C4D0', 4, BorderStyle.DASHED), left: sisi('B9C4D0', 4, BorderStyle.DASHED), bottom: sisi('B9C4D0', 4, BorderStyle.DASHED), right: sisi('B9C4D0', 4, BorderStyle.DASHED) } })] })]), para(run(' '), { sa: 20 }),
@@ -6148,8 +6156,8 @@ Repo.simpanDokFinal = async function (id, nama, data) {
     () => { const q = DB.list.find(x => x.id === id); return !!q && !!q.dokFinal && q.dokFinal.nama === nama && !!DB.dok[id + '#final']; });
 };
 async function aksiUnggahFinal(input) {
-  const f = input.files[0]; if (!f) return; const id = Q.id; if (f.size > 8 * 1024 * 1024) return toast('Ukuran file melebihi 8 MB.', 'bahaya');
-  const data = await bacaFile(f); if (!data) return toast('<b>File tidak bisa dibaca.</b> Coba file lain (maksimal 8 MB).', 'bahaya');
+  const f = input.files[0]; if (!f) return; const id = Q.id; if (f.size > BATAS_MENTAH) return toast('Ukuran file melebihi 30 MB.', 'bahaya');
+  const data = await bacaFile(f); if (!data) return toast(`<b>File tidak bisa diproses.</b> ${galatFile()}`, 'bahaya');
   try { await Repo.simpanDokFinal(id, f.name, data); } catch (er) { return toast(`<b>GAGAL menyimpan dokumen.</b> ${esc(er.message)}`, 'bahaya'); }
   toast(`Dokumen final <b>${esc(f.name)}</b> tersimpan dan terverifikasi.`); segarSemua();
 }
@@ -7150,6 +7158,7 @@ async function aksiKirim(btn, format = 'pdf') {
   const rg = R.ringkas(e.baris, R.targetLive), ws = R.peringatan(rg).filter(w => w.j !== 'info'), nomor = Repo.nomorBerikut(e.seri = seriValid(e.seri), format === 'docx');
   const word = format === 'docx';
   const kodeSeri = e.seri, terakhir = Math.max(DB.urutTahun[Repo.kunciUrut(HARI_INI(), kodeSeri)] || 0, Repo.awalSeri(kodeSeri));
+  if (!await konfirmasiSyaratKritis(e)) return;
   const ok = await konfirmasi({ judul: word ? 'Terbitkan quotation dan unduh Word?' : 'Terbitkan quotation dan unduh PDF?', bahaya: rg.rugiTotal, aksi: word ? 'Beri nomor, kunci, dan unduh Word' : 'Beri nomor, kunci, dan unduh PDF',
     pintas: k => { if (k === 'penomoran') bukaPenomoran(); },
     isi: `<div class="qt-nomorinfo"><span class="qt-nomorinfo__l">Nomor resmi yang akan dipakai</span><b class="qt-nomorinfo__n">${esc(nomor)}</b><small>Nomor terakhir yang terpakai di periode ini: <b>${terakhir}</b>.</small>${kelolaSaja() ? `<button type="button" class="qt-link" data-pintas="penomoran">Nomor tidak sesuai urutan? Atur penomoran</button>` : '<small>Nomor tidak sesuai urutan? Minta master atau admin mengaturnya di Pengaturan dokumen &gt; Penomoran.</small>'}</div>
@@ -7227,39 +7236,66 @@ function panelSetuju(q) {
   const hitung = bentuk => { const rc = R.rancangRate(q, bentuk); if (bentuk === 'paket') return `1 Paket Project “${q.judul}” dengan ${rc.komponen.length} komponen.`;
     const baru = rc.komponen.filter(k => S.rates.some(r => r.cid === q.customerId && r.lini === k.lini && norm(r.item) === norm(k.item) && r.satuan === k.satuan && statusRate(r) === 'aktif')).length;
     return `${rc.komponen.length} rate tunggal${baru ? `; ${baru} di antaranya menjadi versi baru dari rate aktif yang sudah ada` : ''}.`; };
-  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Setujui quotation</h2><p class="mr-sub">${esc(q.nomor)} · ${esc(namaCust(q))}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
-  <div class="mr-panel__isi">
-    <div class="mr-banner">${ik('info')}<div>Quotation dianggap disetujui setelah dokumen bertanda tangan customer diunggah. Rate Disetujui terbentuk otomatis, tanpa input ulang.</div></div>
-    <div class="qt-grid">
-      <label class="mr-f qt-c6"><span>Tanggal approve *</span><input id="qs-appr" type="date" value="${hi}" max="${hi}"></label>
-      <label class="mr-f qt-c6"><span>Rate berlaku sampai <em class="cu-opsional">(kosong = tanpa batas)</em></span><input id="qs-sampai" type="date" value="${tambahBulan(hi, AQ.masaRateBulan)}"></label>
-      <label class="mr-f qt-c12"><span>Dokumen penawaran bertanda tangan *</span><input id="qs-file" type="file" accept=".pdf,.png,.jpg,.jpeg"><small class="cu-hint">PDF atau gambar, maksimal 8 MB.</small></label>
+  const ringkas = q.ringkasan && q.ringkasan.totalJual != null ? rp(q.ringkasan.totalJual) : '—';
+  const info = q.kosong ? `<div class="mr-banner mr-banner--peringatan">${ik('peringatan')}<div><b>Quotation manual tanpa rincian di sistem.</b> Status dan dokumen dicatat, tetapi <b>Rate Disetujui tidak terbentuk otomatis</b>. Tambahkan lewat Customer → Tambah rate.</div></div>`
+    : `<p class="mr-sub qs-info">${q.tipe === 'project' ? `<b>Harga total project</b>: ${esc(hitung('paket'))}` : `<b>Harga per layanan</b>: ${esc(hitung('terpisah'))}`}</p>`;
+  QS.file = null;
+  const d = document.createElement('div'); d.className = 'mr-konfirm qs-pop'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.innerHTML = `<div class="qs-kotak">
+    <header class="qs-kep"><div><h3>Setujui quotation</h3><p class="mr-sub">Bukti persetujuan customer · ${esc(q.nomor)}</p></div><button type="button" class="mr-ikonbtn" data-qs="tutup" aria-label="Tutup">${ik('tutup')}</button></header>
+    <div class="qs-isi">
+      <div class="qs-ring"><div><b>${esc(namaCust(q))}</b><small>${esc(q.judul || '')}${q.baris ? ` · ${q.baris.length} baris` : ''}</small></div><div class="qs-ring__nilai"><b>${ringkas}</b><small>${q.dikirim ? 'Dikirim ' + tgl(q.dikirim) : ''}</small></div></div>
+      <span class="qs-lbl">Dokumen bertanda tangan *</span>
+      <label class="qs-drop" id="qs-drop"><input id="qs-file" type="file" accept=".pdf,.png,.jpg,.jpeg" hidden><b>${ik('upload', 16)} Pilih PDF bertanda tangan</b><small>Wajib · dikecilkan otomatis ke maksimal 4 MB</small></label>
+      <div class="qs-berkas" id="qs-berkas" hidden></div>
+      <div class="qt-grid">
+        <label class="mr-f qt-c6"><span>Tanggal approve *</span><input id="qs-appr" type="date" value="${hi}" max="${hi}"></label>
+        <label class="mr-f qt-c6"><span>Berlaku sampai <em class="cu-opsional">(kosong = tanpa batas)</em></span><input id="qs-sampai" type="date" value="${tambahBulan(hi, AQ.masaRateBulan)}"></label>
+      </div>
+      ${info}${!q.kosong && q.jalur === 'word' ? koreksiHtml(q) : ''}
+      <p class="mr-galat" id="pn-galat" hidden></p>
     </div>
-    <div class="mr-banner" style="margin-top:12px">${ik(q.tipe === 'project' ? 'file' : 'riwayat')}<div>${q.tipe === 'project' ? `<b>Harga total project</b>: dicatat sebagai <b>satu Paket Project</b> (${esc(hitung('paket'))}) Sekali jadi, tidak menggantikan rate mana pun dan tidak berlanjut.` : `<b>Harga per layanan</b>: dicatat sebagai <b>rate terpisah per baris</b> (${esc(hitung('terpisah'))}) Berlanjut sebagai Rate Disetujui; rute yang sama menjadi versi baru.`}</div></div>
-    ${q.kosong ? `<div class="mr-banner mr-banner--peringatan" style="margin-top:12px">${ik('peringatan')}<div><b>Quotation manual tanpa rincian di sistem.</b> Status dan dokumen bertanda tangan dicatat, tetapi <b>Rate Disetujui tidak terbentuk otomatis</b>. Tambahkan lewat Customer → Tambah rate setelah ini.</div></div>` : (q.jalur === 'word' ? koreksiHtml(q) : '')}
-    <p class="mr-galat" id="pn-galat" hidden></p>
-  </div>
-  <footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" id="qs-ok" data-qt="setujui-ok" data-id="${q.id}">${ik('setuju', 16)} Setujui dan buat rate</button></footer>`);
+    <footer class="qs-kaki"><button type="button" class="mr-btn" data-qs="tutup">Batal</button><button type="button" class="mr-btn mr-btn--utama" id="qs-ok" data-qt="setujui-ok" data-id="${q.id}" disabled>${ik('setuju', 16)} Setujui</button></footer></div>`;
+  document.body.appendChild(d); document.body.classList.add('mr-kunci-scroll');
+  d.addEventListener('click', ev => { if (ev.target === d || ev.target.closest('[data-qs=tutup]')) tutupSetuju(); });
+  $('#qs-file').addEventListener('change', ev => pilihBerkasSetuju(ev.target.files[0]));
+}
+const QS = { file: null };
+function tutupSetuju() { const p = $('.qs-pop'); if (p) p.remove(); document.body.classList.remove('mr-kunci-scroll'); QS.file = null; }
+/* berkas dikecilkan saat dipilih supaya ukuran sebelum dan sesudahnya langsung terlihat; thumbnail halaman 1 untuk PDF */
+async function pilihBerkasSetuju(f) {
+  const box = $('#qs-berkas'), ok = $('#qs-ok'), drop = $('#qs-drop'), FL = window.__islFile; QS.file = null; ok.disabled = true; $('#pn-galat').hidden = true; if (!f) { box.hidden = true; drop.hidden = false; return; }
+  drop.hidden = true; box.hidden = false; box.innerHTML = `<div class="qs-fl"><div class="qs-th"></div><div class="qs-fl__t"><b>${esc(f.name)}</b><small>Mengecilkan…</small></div></div>`;
+  try {
+    if (!/^(application\/pdf|image\/(png|jpe?g|webp))$/.test(f.type)) throw new Error('Pilih file PDF, PNG, atau JPG.');
+    const k = await FL.kecilkan(f); QS.file = k; let hal = '', th = '';
+    if (k.type === 'application/pdf') { const lib = await FL.pdfjs(), pdf = await lib.getDocument({ data: new Uint8Array(await k.arrayBuffer()) }).promise; hal = pdf.numPages + ' halaman · ';
+      const pg = await pdf.getPage(1), v = pg.getViewport({ scale: 120 / pg.getViewport({ scale: 1 }).width }), c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pg.render({ canvasContext: c.getContext('2d'), viewport: v }).promise; th = `<img src="${c.toDataURL('image/jpeg', 0.7)}" alt="Halaman 1">`; }
+    else th = `<img src="${URL.createObjectURL(k)}" alt="Pratinjau">`;
+    const kecil = k.size < f.size;
+    box.innerHTML = `<div class="qs-fl"><div class="qs-th">${th}</div><div class="qs-fl__t"><b>${esc(f.name)}</b><small>${hal}${kecil ? `${FL.fmt(f.size)} → <span class="qs-ok">${FL.fmt(k.size)}</span>` : FL.fmt(k.size)}</small><small class="qs-ingat">Pastikan tanda tangan dan cap customer terlihat</small></div><button type="button" class="mr-btn mr-btn--kecil" id="qs-ganti">Ganti</button></div>`;
+    $('#qs-ganti').onclick = () => { $('#qs-file').value = ''; $('#qs-file').click(); };
+    ok.disabled = false;
+  } catch (er) { QS.file = null; box.hidden = true; drop.hidden = false; $('#qs-file').value = ''; galatPanel(`<b>File tidak bisa dipakai.</b> ${esc(er.message)}`); }
 }
 async function aksiSetujuOk(btn) {
   const q = Repo.baca(btn.dataset.id); if (!q) return;
-  const appr = $('#qs-appr').value, sampai = $('#qs-sampai').value, f = $('#qs-file').files[0], hi = HARI_INI();
+  const appr = $('#qs-appr').value, sampai = $('#qs-sampai').value, f = QS.file, hi = HARI_INI();
   const bentuk = q.tipe === 'project' ? 'paket' : 'terpisah';
   const err = [];
   if (!appr) err.push('Tanggal approve wajib diisi.'); else if (appr > hi) err.push('Tanggal approve tidak boleh di masa depan.');
   if (sampai && appr && sampai < appr) err.push('“Rate berlaku sampai” tidak boleh sebelum tanggal approve.');
   if (!f) err.push('Unggah dokumen penawaran bertanda tangan. Tanpa dokumen, quotation tidak bisa disetujui.');
-  if (f && f.size > 8 * 1024 * 1024) err.push('Ukuran file melebihi 8 MB.');
   if (bentuk === 'terpisah') { const seen = new Map(); R.rancangRate(q, 'terpisah').komponen.forEach((k, i) => { const key = [k.lini, norm(k.item), k.satuan].join('|'); if (seen.has(key)) err.push(`Baris ${seen.get(key) + 1} dan ${i + 1} sama (lini, item, satuan). Ubah salah satu, atau pilih Paket Project.`); else seen.set(key, i); }); }
   let koreksi = null; if ($$('[data-kr-id]').length) { koreksi = {}; $$('[data-kr-id]').forEach(r => { const id = r.dataset.krId, hapus = $('[data-kr=hapus]', r).checked, jual = angkaRp($('[data-kr=jual]', r).value); if (!hapus && !(jual > 0)) err.push('Harga akhir ' + (q.baris.find(b => b.id === id) || {}).item + ' harus lebih dari 0, atau centang “Tidak jadi”.'); koreksi[id] = { jual: hapus ? null : jual, hapus }; }); if (!err.length && Object.values(koreksi).every(k => k.hapus)) err.push('Semua baris ditandai tidak jadi. Tandai quotation Ditolak atau Tidak dipakai saja.'); }
   if (err.length) return galatPanel('<b>Belum bisa disimpan:</b><br>' + err.map(esc).join('<br>'));
   $('#pn-galat').hidden = true; const pulih = sibuk(btn, 'Menyimpan…');
   const dokData = await bacaFile(f);
-  if (!dokData) { pulih(); return galatPanel('<b>File tidak bisa dibaca.</b> Coba file lain (maksimal 8 MB).'); }
+  if (!dokData) { pulih(); return galatPanel(`<b>File tidak bisa diproses.</b> ${galatFile()}`); }
   let hasil;
   try { hasil = await Repo.setujui(q.id, { appr, sampai, bentuk, dokNama: f.name, dokData, koreksi }); }
   catch (er) { pulih(); return galatPanel(`<b>GAGAL.</b> Tidak ada yang tersimpan: status quotation dan Rate Disetujui tidak berubah.<br>${esc(er.message)}`); }
-  tutupPanel(); segarSemua();
+  tutupSetuju(); segarSemua();
   if (q.kosong) { toast(`Quotation <b>${esc(q.nomor)}</b> disetujui dan terverifikasi. <b>Tidak ada rate otomatis</b>: tambahkan lewat Customer → Tambah rate.`); return; }
   toast(`Quotation <b>${esc(q.nomor)}</b> disetujui dan terverifikasi. ${hasil.paketId ? 'Terbentuk <b>1 Paket Project</b>' : `Terbentuk <b>${hasil.rateIds.length} rate</b>${hasil.versiBaru ? ` (${hasil.versiBaru} menjadi versi baru)` : ''}`} di Rate Disetujui ${esc(namaCust(q))}.${hasil.custAktif ? ' Status customer menjadi Aktif.' : ''}`);
 }
@@ -7745,7 +7781,7 @@ function panelUnggahRiwayat() {
   RWU = [];
   const liniOpt = daftarLini().filter(l => l.resmi).map(l => [l.key, l.nama]);
   bukaPanel(`<header class="mr-panel__kepala"><div><h2>Unggah PDF quotation terkirim</h2><p class="mr-sub">Bisa beberapa PDF sekaligus (quotation lama juga lewat sini). Bertanda tangan atau tidak.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
-  <div class="mr-panel__isi"><label class="fl-unggah" style="position:relative"><input type="file" id="rw-file" accept="application/pdf" multiple> + Pilih file PDF</label><div id="rw-isi" class="rw-isi"><p class="mr-sub">Belum ada file dipilih. Maksimal 10 MB per file.</p></div>
+  <div class="mr-panel__isi"><label class="fl-unggah" style="position:relative"><input type="file" id="rw-file" accept="application/pdf" multiple> + Pilih file PDF</label><div id="rw-isi" class="rw-isi"><p class="mr-sub">Belum ada file dipilih. Maksimal 4 MB per file (dikecilkan otomatis).</p></div>
     <datalist id="rw-dl-cust">${S.customers.map(c => `<option value="${esc(c.nama)}">`).join('')}</datalist><p class="mr-galat" id="pn-galat" hidden></p></div>
   <footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-qt="rw-simpan">${ik('cek', 16)} Simpan riwayat</button></footer>`);
   const gambarRw = () => { const w = $('#rw-isi'); if (!w) return; w.innerHTML = RWU.length ? RWU.map((x, i) => `<div class="rw-baris" data-i="${i}"><div class="rw-baris__h"><b>${esc(x.file.name)}</b><small>${Math.round(x.file.size / 1024)} KB</small><button type="button" class="mr-ikonbtn" data-qt="rw-buang" data-i="${i}" aria-label="Buang file" title="Buang file">${ik('tutup', 14)}</button></div>
@@ -7753,10 +7789,10 @@ function panelUnggahRiwayat() {
     <label class="mr-f"><span>Tanggal kirim *</span><input data-rw="tanggalKirim" type="date" value="${esc(x.tanggalKirim)}"></label><label class="mr-f"><span>Lini bisnis</span><select data-rw="lini"><option value="">Pilih lini…</option>${opt(liniOpt, x.lini)}</select></label>
     <label class="mr-f"><span>Nilai (Rp, opsional)</span><input data-rw="nilai" inputmode="numeric" value="${esc(x.nilai ? fmtRpIn(x.nilai) : '')}" autocomplete="off"></label><label class="mr-f"><span>Status</span><select data-rw="status">${opt(Object.entries(RW_STATUS), x.status)}</select></label></div>
     <label class="mr-f" style="margin-top:10px"><span>Perihal (subjek penawaran)</span><input data-rw="perihal" value="${esc(x.perihal || '')}" placeholder="Mis. Penawaran jasa trucking kawasan Cikarang" autocomplete="off"></label>
-    <label class="qt-cek"><span><input type="checkbox" data-rw="bertandaTangan" ${x.bertandaTangan ? 'checked' : ''}> PDF sudah bertanda tangan</span></label></div>`).join('') : '<p class="mr-sub">Belum ada file dipilih. Maksimal 10 MB per file.</p>'; };
+    <label class="qt-cek"><span><input type="checkbox" data-rw="bertandaTangan" ${x.bertandaTangan ? 'checked' : ''}> PDF sudah bertanda tangan</span></label></div>`).join('') : '<p class="mr-sub">Belum ada file dipilih. Maksimal 4 MB per file (dikecilkan otomatis).</p>'; };
   RWU.gambar = gambarRw;
   $('#rw-file').addEventListener('change', ev => {
-    [...ev.target.files].forEach(f => { if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) return toast(`${esc(f.name)} bukan PDF.`, 'bahaya'); if (f.size > 10 * 1024 * 1024) return toast(`${esc(f.name)} lebih dari 10 MB.`, 'bahaya');
+    [...ev.target.files].forEach(f => { if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) return toast(`${esc(f.name)} bukan PDF.`, 'bahaya'); if (f.size > BATAS_MENTAH) return toast(`${esc(f.name)} lebih dari 30 MB.`, 'bahaya');
       const nm = f.name.replace(/\.pdf$/i, ''), nomor = nomorDariNamaFile(nm);
       RWU.push({ file: f, nomor, customerNama: '', tanggalKirim: HARI_INI(), lini: '', perihal: '', nilai: null, status: 'terkirim', bertandaTangan: /ttd|sign/i.test(nm) }); });
     ev.target.value = ''; bacaRwu(); gambarRw();
@@ -7915,7 +7951,7 @@ window.__islMuatQT = d => {
 window.__ISL_REG = {
   ambil() { return { cu_customers: S.customers, cu_rates: S.rates, cu_paket: S.paket,
     qt_quotations: DB.list.map(q => ({ ...q, _dok: DB.dok[q.id] || null, _dokFinal: DB.dok[q.id + '#final'] || null })),
-    qt_orders: DB.orders, qt_templates: DB.tmpl, qt_pengaturan: [{ id: 'utama', ...PENG }],
+    qt_orders: DB.orders, qt_templates: DB.tmpl, qt_pengaturan: [{ id: 'utama', ...PENG, ...(akunAdmin() && window.__islPengGlobal ? { penandatangan: window.__islPengGlobal.penandatangan } : {}) }],
     qt_counters: [...Object.entries(DB.urutTahun).map(([k, v]) => ({ id: k, nilai: v })), { id: 'urut_draf', nilai: DB.urutDraf }],
     layanan_tambahan: window.ISLFL ? window.ISLFL.katalog : [], qt_riwayat: DB.riwayat || [], format_lini: window.ISLFL ? window.ISLFL.formatBuatan : [] }; },
   pulihkan(sn) {

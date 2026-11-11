@@ -2,6 +2,13 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-09 (Depo: Fee administrasi per invoice, satu tarif)
+
+- **Hanya baris ADM di blok B Handling yang diganti "Fee administrasi"**: satu tarif Rp 60.000 per invoice, tidak terkait ukuran container. Di PDF sel tarif membentang dua kolom dan rata kanan, dengan gaya angka dan "Rp" yang sama dengan kolom lain. Di formulir satu kolom "Tarif per invoice". Rekomendasi bawaan 60.000 (Pengaturan > Harga rekomendasi dan Tarif minimum juga satu kolom).
+- **Layanan lain tidak berubah**, termasuk baris manual di blok lain dengan satuan "per invoice" (aturan hanya berlaku untuk blok B dan nama Fee administrasi).
+- **Extra Moving (Fumigasi Area)** di blok D Trucking REPO kini punya rekomendasi Rp 700.000 untuk 20 ft dan 40 ft (sebelumnya kosong).
+- Teknis: `satuTunggal(b, r)` di `formulir-lini.js` (blok `tunggal: true` dan nama di `NAMA_FEE`); sel PDF dengan `cs` (colspan) dan `a` (rata) di `app-core.js`; terjemahan "Administration fee" di `DOK_EN`. Tes `tests/asap/uji-depo.js` dan `uji-kartu.js` diperbarui.
+
 ## 2026-11-04 (desktop Quotation dan Master Rate diseragamkan dengan desain HP)
 
 - **Quotation dan Master Rate di desktop kini memakai bahasa desain yang sama dengan HP** (tema, komponen, ikon, warna), dengan data tetap berbentuk tabel berkolom. Disepakati: komponen dan tema seragam dengan tabel tetap; cakupan Quotation dan Master Rate semua tab; aksi baris muncul saat kursor di atas baris; alur pilih banyak dan hapus di desktop tidak berubah (alur 3 pilihan hanya di HP). Halaman lain (Customer, Dashboard, Beranda, Pengaturan) tidak berubah.
