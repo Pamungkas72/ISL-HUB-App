@@ -41,8 +41,9 @@ service firebase.storage {
         && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'admin';
     }
 
+    // Batas 4 MB per file di semua folder; aplikasi mengecilkan file sebelum diunggah (gambar-> 1600 px, PDF dirender ulang).
     function fileBolehDiunggah(maks) {
-      return request.resource.size < maks
+      return request.resource.size <= maks
         && (request.resource.contentType.matches('image/.*')
             || request.resource.contentType == 'application/pdf'
             || request.resource.contentType == 'application/msword'
@@ -51,12 +52,12 @@ service firebase.storage {
 
     match /vendor_rahasia/{vendorId}/{file} {
       allow read, delete: if isMaster();
-      allow create, update: if isMaster() && fileBolehDiunggah(10 * 1024 * 1024);
+      allow create, update: if isMaster() && fileBolehDiunggah(4 * 1024 * 1024);
     }
 
     match /rahasia/{allPaths=**} {
       allow read, delete: if isMaster();
-      allow create, update: if isMaster() && fileBolehDiunggah(5 * 1024 * 1024);
+      allow create, update: if isMaster() && fileBolehDiunggah(4 * 1024 * 1024);
     }
 
     // Sales dan admin boleh mengunggah PDF dan lampiran quotation miliknya, tanda tangannya sendiri, dan foto galeri formulir.
@@ -64,7 +65,7 @@ service firebase.storage {
       allow read: if aktif() && folder != 'vendor_rahasia' && folder != 'rahasia';
       allow create, update: if (isMaster() || ((isSales() || isAdmin()) && folder in ['quotation_pdf', 'dokumen', 'quotation_riwayat'])
           || (isAdmin() && folder in ['open_yard', 'vendor_dokumen', 'profil_fasilitas']))
-        && folder != 'vendor_rahasia' && folder != 'rahasia' && fileBolehDiunggah(10 * 1024 * 1024);
+        && folder != 'vendor_rahasia' && folder != 'rahasia' && fileBolehDiunggah(4 * 1024 * 1024);
       allow delete: if isMaster() && folder != 'vendor_rahasia' && folder != 'rahasia';
     }
   }

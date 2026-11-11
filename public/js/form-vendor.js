@@ -109,11 +109,10 @@ export async function bukaVendor({ S, DB, id, namaLini, render }) {
     }
   }
 
-  // ---------- unggah berkas (dibatasi 10 MB, gambar diperkecil) ----------
+  // ---------- unggah berkas (dikecilkan otomatis ke maksimal 4 MB) ----------
   const unggahBerkas = async (file0, folder) => {
     const vid = lama ? lama.id : slug(d.nama);
     const file = await perkecilGambar(file0);
-    if (file.size > 10 * 1024 * 1024) throw new Error("Ukuran file lebih dari 10 MB.");
     const path = `${folder}/${vid}/${Date.now()}_${String(file.name).replace(/[^A-Za-z0-9._-]/g, "_")}`;
     return DB.unggahFile(path, file, { oleh: S.user.email });
   };

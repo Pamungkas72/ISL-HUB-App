@@ -504,7 +504,7 @@ export function bukaProfil({ S, DB, id, render }) {
       <h3 class="mr-pf-sek">8. Lampiran dokumen</h3>
       <div class="mr-f mr-f--lebar"><ul class="mr-pf-lamp mr-pf-lamp--edit" id="p-lamp"></ul>
         <div class="mr-pf-unggah"><select id="p-kat-lamp" aria-label="Kategori lampiran">${KAT_LAMP.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select><label class="mr-btn mr-btn--kecil mr-unggah">${ikon("upload", 14)}Tambah lampiran<input type="file" id="p-lampiran" accept="application/pdf,image/*" hidden></label></div>
-        <small>PDF atau gambar (layout, izin, sertifikat). Maksimal 5 MB.</small></div>
+        <small>PDF atau gambar (layout, izin, sertifikat). Dikecilkan otomatis ke maksimal 4 MB.</small></div>
 
       <h3 class="mr-pf-sek">9. Catatan</h3>
       <label class="mr-f mr-f--lebar"><span>Kondisi fasilitas</span><textarea id="p-kondisi" rows="2">${e(d.deskripsi)}</textarea></label>
@@ -579,7 +579,6 @@ export function bukaProfil({ S, DB, id, render }) {
       for (const f0 of berkas) {
         try {
           const f = foto || String(f0.type).startsWith("image/") ? await perkecilGambar(f0) : f0;
-          if (f.size > 5 * 1024 * 1024) throw new Error("Ukuran berkas lebih dari 5 MB.");
           const ext = (String(f.name).match(/\.[a-z0-9]+$/i) || [foto ? ".jpg" : ""])[0];
           const path = `profil_fasilitas/${idProfil()}/${foto ? "foto" : "lampiran"}_${Date.now()}_${(foto ? d.fotos : d.lampiran).length}${ext}`;
           const h = await DB.unggahFile(path, f, { oleh: S.user.email });

@@ -635,7 +635,7 @@ document.addEventListener('change', async ev => {
   const nomor = ($('#kt-nomor') || {}).value || '', tanggal = ($('#kt-tanggal') || {}).value || '';
   if (!nomor.trim()) return toast('<b>Isi nomor kontrak dulu.</b>', 'bahaya');
   if (file.type !== 'application/pdf') return toast('<b>Kontrak harus berupa PDF.</b>', 'bahaya');
-  if (file.size > 10 * 1024 * 1024) return toast('<b>File terlalu besar.</b> Maksimal 10 MB.', 'bahaya');
+  if (file.size > BATAS_MENTAH) return toast('<b>File terlalu besar.</b> Maksimal 30 MB (dikecilkan otomatis ke 4 MB).', 'bahaya');
   const id = uid('k');
   try {
     const path = `dokumen/kontrak_customer/${c.id}/${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g, '_')}`;
@@ -664,7 +664,7 @@ document.addEventListener('change', async ev => {
   const file = t.files[0]; if (!file) return;
   const i = +t.dataset.legalFile;
   bacaLegal();
-  if (file.size > 10 * 1024 * 1024) return toast('<b>File terlalu besar.</b> Maksimal 10 MB.', 'bahaya');
+  if (file.size > BATAS_MENTAH) return toast('<b>File terlalu besar.</b> Maksimal 30 MB (dikecilkan otomatis ke 4 MB).', 'bahaya');
   if (!(file.type === 'application/pdf' || file.type.startsWith('image/'))) return toast('<b>Format file tidak didukung.</b> Unggah PDF atau gambar.', 'bahaya');
   const lbl = t.closest('.mr-unggah'); if (lbl) lbl.classList.add('is-simpan');
   try {
@@ -734,10 +734,15 @@ const perkecilGambar = f => new Promise(res => {
   };
   fr.readAsDataURL(f);
 });
-const bacaFile = f => new Promise(res => {
-  if (!f || f.size > 8 * 1024 * 1024) return res(null);
-  const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => res(null); fr.readAsDataURL(f);
-});
+/* Semua dokumen unggahan dikecilkan otomatis (gambar 1600 px, PDF dirender ulang) agar maksimal 4 MB sebelum disimpan */
+const BATAS_MENTAH = 30 * 1024 * 1024;
+const bacaFile = async f => {
+  bacaFile.galat = '';
+  if (!f) return null;
+  try { f = await window.__islFile.kecilkan(f); } catch (er) { bacaFile.galat = er.message; return null; }
+  return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => { bacaFile.galat = 'File tidak bisa dibaca.'; res(null); }; fr.readAsDataURL(f); });
+};
+const galatFile = () => esc(bacaFile.galat || 'File tidak bisa dibaca.');
 const tampilkan = (el, on) => { el.hidden = !on; el.style.display = on ? '' : 'none'; };
 const setV = (el, v) => { if (el) el.value = v === null || v === undefined ? '' : v; };
 
@@ -925,7 +930,7 @@ function formRate(cid, opsi = {}) {
       <label class="mr-f"><span>Berlaku sampai</span><input type="date" id="rf-sampai" value="${esc(sd.sampai && ed ? sd.sampai : '')}"><small>Kosongkan kalau tanpa batas.</small></label>
       <label class="mr-f mr-f--lebar"><span>Nomor quotation</span><input id="rf-noq" value="${esc(ed ? (sd.noQ || '') : '')}" placeholder="Mis. 058/QL-ISL/IX/2026" autocomplete="off"><small>Isi manual sesuai quotation yang sudah terbit dan ditandatangani (yang final, bukan revisi nego sebelumnya). Di modul Quotation nanti nomor dibuat otomatis.</small></label>
       <div class="mr-f mr-f--lebar"><span>Dokumen penawaran bertanda tangan ${ed && ed.dok ? '' : '*'}</span>
-        <div class="cu-upload"><input type="file" id="rf-file" accept=".pdf,.png,.jpg,.jpeg"><small id="rf-filenama">${ed && ed.dok ? `Dokumen saat ini: ${esc(ed.dok)}. Pilih file baru hanya kalau ingin menggantinya.` : 'Belum ada file. Format PDF atau gambar, maksimal 8 MB.'}</small></div>
+        <div class="cu-upload"><input type="file" id="rf-file" accept=".pdf,.png,.jpg,.jpeg"><small id="rf-filenama">${ed && ed.dok ? `Dokumen saat ini: ${esc(ed.dok)}. Pilih file baru hanya kalau ingin menggantinya.` : 'Belum ada file. Format PDF atau gambar, dikecilkan otomatis ke maksimal 4 MB.'}</small></div>
         ${ed && ed.dok ? '' : `<label class="cu-cek"><input type="checkbox" id="rf-tanpa"> Tarif lama, belum ada dokumen (ditandai “Tanpa bukti dokumen”)</label>`}</div>
       <label class="mr-f mr-f--lebar"><span>Catatan</span><textarea id="rf-catatan" rows="2">${esc(sd.catatan || '')}</textarea></label>
     </div>
@@ -941,7 +946,7 @@ function formRate(cid, opsi = {}) {
 /* ---- simpan ---- */
 function galatDasar(d, f, adaDok) {
   const err = [];
-  if (f && f.size > 8 * 1024 * 1024) err.push('Dokumen bertanda tangan maksimal 8 MB. Kecilkan file (mis. PDF hasil scan dengan resolusi lebih rendah) lalu pilih lagi.');
+  if (f && f.size > BATAS_MENTAH) err.push('Dokumen maksimal 30 MB (dikecilkan otomatis ke 4 MB).');
   if (!d.appr) err.push('Tanggal approve wajib diisi.'); else if (d.appr > ATURAN.hariIni) err.push('Tanggal approve tidak boleh di masa depan.');
   if (d.sampai && d.appr && d.sampai < d.appr) err.push('“Berlaku sampai” tidak boleh sebelum tanggal approve.');
   if (!f && !adaDok && !($('#rf-tanpa') && $('#rf-tanpa').checked)) err.push('Unggah dokumen bertanda tangan, atau centang “Tarif lama, belum ada dokumen”. Rate tanpa salah satunya tidak disimpan.');
@@ -1168,7 +1173,7 @@ function duplikatPaket(id) { const p = S.paket.find(x => x.id === id); if (p) fo
 const cariDok = id => S.rates.find(r => r.id === id) || S.paket.find(p => p.id === id);
 function unggahDok(id) {
   const r = cariDok(id); if (!r) return; const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.pdf,.png,.jpg,.jpeg';
-  inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const data = await bacaFile(f); if (!data) return toast('<b>Dokumen tidak tersimpan.</b> Maksimal 8 MB, berupa PDF atau gambar.', 'bahaya');
+  inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const data = await bacaFile(f); if (!data) return toast(`<b>Dokumen tidak tersimpan.</b> ${galatFile()}`, 'bahaya');
     try { await tulisDB(() => { r.dok = f.name; r.dokData = data; r.tanpaDok = false; }, () => r.dok === f.name); } catch (e) { return toast(`<b>GAGAL menyimpan dokumen.</b><br>${esc(e.message)}`, 'bahaya'); }
     toast('Dokumen tercatat dan terverifikasi. Klik ikon dokumen untuk mereviewnya.'); gambar(); };
   inp.click();
@@ -5113,11 +5118,11 @@ async function aksiTrSimpan(btn) {
     if (b.modal != null && b.modal < 0) err.push(n + 'modal tidak boleh negatif.'); if (paket && b.modal == null) err.push(n + 'modal wajib diisi supaya margin paket bisa dihitung.'); });
   if (!o.appr) err.push('Tanggal approve wajib diisi.'); else if (o.appr > hi) err.push('Tanggal approve tidak boleh di masa depan.');
   if (o.sampai && o.appr && o.sampai < o.appr) err.push('“Berlaku sampai” tidak boleh sebelum tanggal approve.');
-  if (f && f.size > 8 * 1024 * 1024) err.push('Ukuran dokumen melebihi 8 MB.');
+  if (f && f.size > BATAS_MENTAH) err.push('Ukuran dokumen melebihi 30 MB.');
   if (!paket) { const seen = new Map(); rows.forEach((b, i) => { const k = [b.liniKey, norm(b.item), b.satuan].join('|'); if (seen.has(k)) err.push(`Baris ${seen.get(k) + 1} dan ${i + 1} sama (lini, uraian, satuan). Ubah salah satu, atau pilih Paket Project.`); else seen.set(k, i); }); }
   if (err.length) return galatPanel('<b>Belum bisa disimpan:</b><br>' + err.map(esc).join('<br>'));
   const pulih = sibuk(btn, 'Menyimpan…'); $('#pn-galat').hidden = true;
-  if (f) { const d = await bacaFile(f); if (!d) { pulih(); return galatPanel('<b>Dokumen tidak bisa dibaca.</b> Coba file lain.'); } o.dokNama = f.name; o.dokData = d; }
+  if (f) { const d = await bacaFile(f); if (!d) { pulih(); return galatPanel(`<b>Dokumen tidak bisa diproses.</b> ${galatFile()}`); } o.dokNama = f.name; o.dokData = d; }
   o.baris = rows.map(b => ({ lini: b.liniKey, liniNama: b.liniNama, item: b.item, satuan: b.satuan, qty: 1, jual: Number(b.jual), modal: b.modal, vendorId: b.vendorId, vendorNama: b.vendorNama, tarifKunci: b.tarifKunci, modalDariMR: b.modalMR != null && b.modal === b.modalMR }));
   let h; try { h = await Repo.tambahRate(TR.cid, o); } catch (er) { pulih(); return galatPanel(`<b>GAGAL.</b> Tidak ada yang tersimpan.<br>${esc(er.message)}`); }
   tutupPanel(); if (CU.gambarCust) { S.tab = 'rate'; CU.gambarCust(); } toast(h.paketId ? `Paket Project <b>${esc(o.namaPaket)}</b> (${rows.length} komponen) tersimpan dan terverifikasi.` : `<b>${h.rateIds.length} rate</b> tersimpan dan terverifikasi${h.versiBaru ? ` (${h.versiBaru} menjadi versi baru)` : ''}.${f ? '' : ' Belum ada dokumen bertanda tangan; unggah dari daftar rate.'}`);
@@ -6197,8 +6202,8 @@ Repo.simpanDokFinal = async function (id, nama, data) {
     () => { const q = DB.list.find(x => x.id === id); return !!q && !!q.dokFinal && q.dokFinal.nama === nama && !!DB.dok[id + '#final']; });
 };
 async function aksiUnggahFinal(input) {
-  const f = input.files[0]; if (!f) return; const id = Q.id; if (f.size > 8 * 1024 * 1024) return toast('Ukuran file melebihi 8 MB.', 'bahaya');
-  const data = await bacaFile(f); if (!data) return toast('<b>File tidak bisa dibaca.</b> Coba file lain (maksimal 8 MB).', 'bahaya');
+  const f = input.files[0]; if (!f) return; const id = Q.id; if (f.size > BATAS_MENTAH) return toast('Ukuran file melebihi 30 MB.', 'bahaya');
+  const data = await bacaFile(f); if (!data) return toast(`<b>File tidak bisa diproses.</b> ${galatFile()}`, 'bahaya');
   try { await Repo.simpanDokFinal(id, f.name, data); } catch (er) { return toast(`<b>GAGAL menyimpan dokumen.</b> ${esc(er.message)}`, 'bahaya'); }
   toast(`Dokumen final <b>${esc(f.name)}</b> tersimpan dan terverifikasi.`); segarSemua();
 }
@@ -7276,39 +7281,66 @@ function panelSetuju(q) {
   const hitung = bentuk => { const rc = R.rancangRate(q, bentuk); if (bentuk === 'paket') return `1 Paket Project “${q.judul}” dengan ${rc.komponen.length} komponen.`;
     const baru = rc.komponen.filter(k => S.rates.some(r => r.cid === q.customerId && r.lini === k.lini && norm(r.item) === norm(k.item) && r.satuan === k.satuan && statusRate(r) === 'aktif')).length;
     return `${rc.komponen.length} rate tunggal${baru ? `; ${baru} di antaranya menjadi versi baru dari rate aktif yang sudah ada` : ''}.`; };
-  bukaPanel(`<header class="mr-panel__kepala"><div><h2>Setujui quotation</h2><p class="mr-sub">${esc(q.nomor)} · ${esc(namaCust(q))}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
-  <div class="mr-panel__isi">
-    <div class="mr-banner">${ik('info')}<div>Quotation dianggap disetujui setelah dokumen bertanda tangan customer diunggah. Rate Disetujui terbentuk otomatis, tanpa input ulang.</div></div>
-    <div class="qt-grid">
-      <label class="mr-f qt-c6"><span>Tanggal approve *</span><input id="qs-appr" type="date" value="${hi}" max="${hi}"></label>
-      <label class="mr-f qt-c6"><span>Rate berlaku sampai <em class="cu-opsional">(kosong = tanpa batas)</em></span><input id="qs-sampai" type="date" value="${tambahBulan(hi, AQ.masaRateBulan)}"></label>
-      <label class="mr-f qt-c12"><span>Dokumen penawaran bertanda tangan *</span><input id="qs-file" type="file" accept=".pdf,.png,.jpg,.jpeg"><small class="cu-hint">PDF atau gambar, maksimal 8 MB.</small></label>
+  const ringkas = q.ringkasan && q.ringkasan.totalJual != null ? rp(q.ringkasan.totalJual) : '—';
+  const info = q.kosong ? `<div class="mr-banner mr-banner--peringatan">${ik('peringatan')}<div><b>Quotation manual tanpa rincian di sistem.</b> Status dan dokumen dicatat, tetapi <b>Rate Disetujui tidak terbentuk otomatis</b>. Tambahkan lewat Customer → Tambah rate.</div></div>`
+    : `<p class="mr-sub qs-info">${q.tipe === 'project' ? `<b>Harga total project</b>: ${esc(hitung('paket'))}` : `<b>Harga per layanan</b>: ${esc(hitung('terpisah'))}`}</p>`;
+  QS.file = null;
+  const d = document.createElement('div'); d.className = 'mr-konfirm qs-pop'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.innerHTML = `<div class="qs-kotak">
+    <header class="qs-kep"><div><h3>Setujui quotation</h3><p class="mr-sub">Bukti persetujuan customer · ${esc(q.nomor)}</p></div><button type="button" class="mr-ikonbtn" data-qs="tutup" aria-label="Tutup">${ik('tutup')}</button></header>
+    <div class="qs-isi">
+      <div class="qs-ring"><div><b>${esc(namaCust(q))}</b><small>${esc(q.judul || '')}${q.baris ? ` · ${q.baris.length} baris` : ''}</small></div><div class="qs-ring__nilai"><b>${ringkas}</b><small>${q.dikirim ? 'Dikirim ' + tgl(q.dikirim) : ''}</small></div></div>
+      <span class="qs-lbl">Dokumen bertanda tangan *</span>
+      <label class="qs-drop" id="qs-drop"><input id="qs-file" type="file" accept=".pdf,.png,.jpg,.jpeg" hidden><b>${ik('upload', 16)} Pilih PDF bertanda tangan</b><small>Wajib · dikecilkan otomatis ke maksimal 4 MB</small></label>
+      <div class="qs-berkas" id="qs-berkas" hidden></div>
+      <div class="qt-grid">
+        <label class="mr-f qt-c6"><span>Tanggal approve *</span><input id="qs-appr" type="date" value="${hi}" max="${hi}"></label>
+        <label class="mr-f qt-c6"><span>Berlaku sampai <em class="cu-opsional">(kosong = tanpa batas)</em></span><input id="qs-sampai" type="date" value="${tambahBulan(hi, AQ.masaRateBulan)}"></label>
+      </div>
+      ${info}${!q.kosong && q.jalur === 'word' ? koreksiHtml(q) : ''}
+      <p class="mr-galat" id="pn-galat" hidden></p>
     </div>
-    <div class="mr-banner" style="margin-top:12px">${ik(q.tipe === 'project' ? 'file' : 'riwayat')}<div>${q.tipe === 'project' ? `<b>Harga total project</b>: dicatat sebagai <b>satu Paket Project</b> (${esc(hitung('paket'))}) Sekali jadi, tidak menggantikan rate mana pun dan tidak berlanjut.` : `<b>Harga per layanan</b>: dicatat sebagai <b>rate terpisah per baris</b> (${esc(hitung('terpisah'))}) Berlanjut sebagai Rate Disetujui; rute yang sama menjadi versi baru.`}</div></div>
-    ${q.kosong ? `<div class="mr-banner mr-banner--peringatan" style="margin-top:12px">${ik('peringatan')}<div><b>Quotation manual tanpa rincian di sistem.</b> Status dan dokumen bertanda tangan dicatat, tetapi <b>Rate Disetujui tidak terbentuk otomatis</b>. Tambahkan lewat Customer → Tambah rate setelah ini.</div></div>` : (q.jalur === 'word' ? koreksiHtml(q) : '')}
-    <p class="mr-galat" id="pn-galat" hidden></p>
-  </div>
-  <footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" id="qs-ok" data-qt="setujui-ok" data-id="${q.id}">${ik('setuju', 16)} Setujui dan buat rate</button></footer>`);
+    <footer class="qs-kaki"><button type="button" class="mr-btn" data-qs="tutup">Batal</button><button type="button" class="mr-btn mr-btn--utama" id="qs-ok" data-qt="setujui-ok" data-id="${q.id}" disabled>${ik('setuju', 16)} Setujui</button></footer></div>`;
+  document.body.appendChild(d); document.body.classList.add('mr-kunci-scroll');
+  d.addEventListener('click', ev => { if (ev.target === d || ev.target.closest('[data-qs=tutup]')) tutupSetuju(); });
+  $('#qs-file').addEventListener('change', ev => pilihBerkasSetuju(ev.target.files[0]));
+}
+const QS = { file: null };
+function tutupSetuju() { const p = $('.qs-pop'); if (p) p.remove(); document.body.classList.remove('mr-kunci-scroll'); QS.file = null; }
+/* berkas dikecilkan saat dipilih supaya ukuran sebelum dan sesudahnya langsung terlihat; thumbnail halaman 1 untuk PDF */
+async function pilihBerkasSetuju(f) {
+  const box = $('#qs-berkas'), ok = $('#qs-ok'), drop = $('#qs-drop'), FL = window.__islFile; QS.file = null; ok.disabled = true; $('#pn-galat').hidden = true; if (!f) { box.hidden = true; drop.hidden = false; return; }
+  drop.hidden = true; box.hidden = false; box.innerHTML = `<div class="qs-fl"><div class="qs-th"></div><div class="qs-fl__t"><b>${esc(f.name)}</b><small>Mengecilkan…</small></div></div>`;
+  try {
+    if (!/^(application\/pdf|image\/(png|jpe?g|webp))$/.test(f.type)) throw new Error('Pilih file PDF, PNG, atau JPG.');
+    const k = await FL.kecilkan(f); QS.file = k; let hal = '', th = '';
+    if (k.type === 'application/pdf') { const lib = await FL.pdfjs(), pdf = await lib.getDocument({ data: new Uint8Array(await k.arrayBuffer()) }).promise; hal = pdf.numPages + ' halaman · ';
+      const pg = await pdf.getPage(1), v = pg.getViewport({ scale: 120 / pg.getViewport({ scale: 1 }).width }), c = document.createElement('canvas'); c.width = v.width; c.height = v.height; await pg.render({ canvasContext: c.getContext('2d'), viewport: v }).promise; th = `<img src="${c.toDataURL('image/jpeg', 0.7)}" alt="Halaman 1">`; }
+    else th = `<img src="${URL.createObjectURL(k)}" alt="Pratinjau">`;
+    const kecil = k.size < f.size;
+    box.innerHTML = `<div class="qs-fl"><div class="qs-th">${th}</div><div class="qs-fl__t"><b>${esc(f.name)}</b><small>${hal}${kecil ? `${FL.fmt(f.size)} → <span class="qs-ok">${FL.fmt(k.size)}</span>` : FL.fmt(k.size)}</small><small class="qs-ingat">Pastikan tanda tangan dan cap customer terlihat</small></div><button type="button" class="mr-btn mr-btn--kecil" id="qs-ganti">Ganti</button></div>`;
+    $('#qs-ganti').onclick = () => { $('#qs-file').value = ''; $('#qs-file').click(); };
+    ok.disabled = false;
+  } catch (er) { QS.file = null; box.hidden = true; drop.hidden = false; $('#qs-file').value = ''; galatPanel(`<b>File tidak bisa dipakai.</b> ${esc(er.message)}`); }
 }
 async function aksiSetujuOk(btn) {
   const q = Repo.baca(btn.dataset.id); if (!q) return;
-  const appr = $('#qs-appr').value, sampai = $('#qs-sampai').value, f = $('#qs-file').files[0], hi = HARI_INI();
+  const appr = $('#qs-appr').value, sampai = $('#qs-sampai').value, f = QS.file, hi = HARI_INI();
   const bentuk = q.tipe === 'project' ? 'paket' : 'terpisah';
   const err = [];
   if (!appr) err.push('Tanggal approve wajib diisi.'); else if (appr > hi) err.push('Tanggal approve tidak boleh di masa depan.');
   if (sampai && appr && sampai < appr) err.push('“Rate berlaku sampai” tidak boleh sebelum tanggal approve.');
   if (!f) err.push('Unggah dokumen penawaran bertanda tangan. Tanpa dokumen, quotation tidak bisa disetujui.');
-  if (f && f.size > 8 * 1024 * 1024) err.push('Ukuran file melebihi 8 MB.');
   if (bentuk === 'terpisah') { const seen = new Map(); R.rancangRate(q, 'terpisah').komponen.forEach((k, i) => { const key = [k.lini, norm(k.item), k.satuan].join('|'); if (seen.has(key)) err.push(`Baris ${seen.get(key) + 1} dan ${i + 1} sama (lini, item, satuan). Ubah salah satu, atau pilih Paket Project.`); else seen.set(key, i); }); }
   let koreksi = null; if ($$('[data-kr-id]').length) { koreksi = {}; $$('[data-kr-id]').forEach(r => { const id = r.dataset.krId, hapus = $('[data-kr=hapus]', r).checked, jual = angkaRp($('[data-kr=jual]', r).value); if (!hapus && !(jual > 0)) err.push('Harga akhir ' + (q.baris.find(b => b.id === id) || {}).item + ' harus lebih dari 0, atau centang “Tidak jadi”.'); koreksi[id] = { jual: hapus ? null : jual, hapus }; }); if (!err.length && Object.values(koreksi).every(k => k.hapus)) err.push('Semua baris ditandai tidak jadi. Tandai quotation Ditolak atau Tidak dipakai saja.'); }
   if (err.length) return galatPanel('<b>Belum bisa disimpan:</b><br>' + err.map(esc).join('<br>'));
   $('#pn-galat').hidden = true; const pulih = sibuk(btn, 'Menyimpan…');
   const dokData = await bacaFile(f);
-  if (!dokData) { pulih(); return galatPanel('<b>File tidak bisa dibaca.</b> Coba file lain (maksimal 8 MB).'); }
+  if (!dokData) { pulih(); return galatPanel(`<b>File tidak bisa diproses.</b> ${galatFile()}`); }
   let hasil;
   try { hasil = await Repo.setujui(q.id, { appr, sampai, bentuk, dokNama: f.name, dokData, koreksi }); }
   catch (er) { pulih(); return galatPanel(`<b>GAGAL.</b> Tidak ada yang tersimpan: status quotation dan Rate Disetujui tidak berubah.<br>${esc(er.message)}`); }
-  tutupPanel(); segarSemua();
+  tutupSetuju(); segarSemua();
   if (q.kosong) { toast(`Quotation <b>${esc(q.nomor)}</b> disetujui dan terverifikasi. <b>Tidak ada rate otomatis</b>: tambahkan lewat Customer → Tambah rate.`); return; }
   toast(`Quotation <b>${esc(q.nomor)}</b> disetujui dan terverifikasi. ${hasil.paketId ? 'Terbentuk <b>1 Paket Project</b>' : `Terbentuk <b>${hasil.rateIds.length} rate</b>${hasil.versiBaru ? ` (${hasil.versiBaru} menjadi versi baru)` : ''}`} di Rate Disetujui ${esc(namaCust(q))}.${hasil.custAktif ? ' Status customer menjadi Aktif.' : ''}`);
 }
@@ -7794,7 +7826,7 @@ function panelUnggahRiwayat() {
   RWU = [];
   const liniOpt = daftarLini().filter(l => l.resmi).map(l => [l.key, l.nama]);
   bukaPanel(`<header class="mr-panel__kepala"><div><h2>Unggah PDF quotation terkirim</h2><p class="mr-sub">Bisa beberapa PDF sekaligus (quotation lama juga lewat sini). Bertanda tangan atau tidak.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></header>
-  <div class="mr-panel__isi"><label class="fl-unggah" style="position:relative"><input type="file" id="rw-file" accept="application/pdf" multiple> + Pilih file PDF</label><div id="rw-isi" class="rw-isi"><p class="mr-sub">Belum ada file dipilih. Maksimal 10 MB per file.</p></div>
+  <div class="mr-panel__isi"><label class="fl-unggah" style="position:relative"><input type="file" id="rw-file" accept="application/pdf" multiple> + Pilih file PDF</label><div id="rw-isi" class="rw-isi"><p class="mr-sub">Belum ada file dipilih. Maksimal 4 MB per file (dikecilkan otomatis).</p></div>
     <datalist id="rw-dl-cust">${S.customers.map(c => `<option value="${esc(c.nama)}">`).join('')}</datalist><p class="mr-galat" id="pn-galat" hidden></p></div>
   <footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-qt="rw-simpan">${ik('cek', 16)} Simpan riwayat</button></footer>`);
   const gambarRw = () => { const w = $('#rw-isi'); if (!w) return; w.innerHTML = RWU.length ? RWU.map((x, i) => `<div class="rw-baris" data-i="${i}"><div class="rw-baris__h"><b>${esc(x.file.name)}</b><small>${Math.round(x.file.size / 1024)} KB</small><button type="button" class="mr-ikonbtn" data-qt="rw-buang" data-i="${i}" aria-label="Buang file" title="Buang file">${ik('tutup', 14)}</button></div>
@@ -7802,10 +7834,10 @@ function panelUnggahRiwayat() {
     <label class="mr-f"><span>Tanggal kirim *</span><input data-rw="tanggalKirim" type="date" value="${esc(x.tanggalKirim)}"></label><label class="mr-f"><span>Lini bisnis</span><select data-rw="lini"><option value="">Pilih lini…</option>${opt(liniOpt, x.lini)}</select></label>
     <label class="mr-f"><span>Nilai (Rp, opsional)</span><input data-rw="nilai" inputmode="numeric" value="${esc(x.nilai ? fmtRpIn(x.nilai) : '')}" autocomplete="off"></label><label class="mr-f"><span>Status</span><select data-rw="status">${opt(Object.entries(RW_STATUS), x.status)}</select></label></div>
     <label class="mr-f" style="margin-top:10px"><span>Perihal (subjek penawaran)</span><input data-rw="perihal" value="${esc(x.perihal || '')}" placeholder="Mis. Penawaran jasa trucking kawasan Cikarang" autocomplete="off"></label>
-    <label class="qt-cek"><span><input type="checkbox" data-rw="bertandaTangan" ${x.bertandaTangan ? 'checked' : ''}> PDF sudah bertanda tangan</span></label></div>`).join('') : '<p class="mr-sub">Belum ada file dipilih. Maksimal 10 MB per file.</p>'; };
+    <label class="qt-cek"><span><input type="checkbox" data-rw="bertandaTangan" ${x.bertandaTangan ? 'checked' : ''}> PDF sudah bertanda tangan</span></label></div>`).join('') : '<p class="mr-sub">Belum ada file dipilih. Maksimal 4 MB per file (dikecilkan otomatis).</p>'; };
   RWU.gambar = gambarRw;
   $('#rw-file').addEventListener('change', ev => {
-    [...ev.target.files].forEach(f => { if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) return toast(`${esc(f.name)} bukan PDF.`, 'bahaya'); if (f.size > 10 * 1024 * 1024) return toast(`${esc(f.name)} lebih dari 10 MB.`, 'bahaya');
+    [...ev.target.files].forEach(f => { if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) return toast(`${esc(f.name)} bukan PDF.`, 'bahaya'); if (f.size > BATAS_MENTAH) return toast(`${esc(f.name)} lebih dari 30 MB.`, 'bahaya');
       const nm = f.name.replace(/\.pdf$/i, ''), nomor = nomorDariNamaFile(nm);
       RWU.push({ file: f, nomor, customerNama: '', tanggalKirim: HARI_INI(), lini: '', perihal: '', nilai: null, status: 'terkirim', bertandaTangan: /ttd|sign/i.test(nm) }); });
     ev.target.value = ''; bacaRwu(); gambarRw();
