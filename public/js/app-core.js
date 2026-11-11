@@ -1325,7 +1325,7 @@ document.addEventListener('click', ev => { const t = ev.target.closest && ev.tar
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && $('#mr-layer.is-open') && !document.querySelector('.mr-konfirm')) tutupPanel(); });
 
 /* ---------- jembatan untuk modul Quotation (skrip berikutnya) ---------- */
-window.__islCU = { S, ATURAN, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, angka, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, tulisDB, galatPanel, bacaFile, setV, vendorDipakai, perkecilGambar,
+window.__islCU = { S, ATURAN, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, angka, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, tulisDB, galatPanel, bacaFile, galatFile, BATAS_MENTAH, setV, vendorDipakai, perkecilGambar,
   cust, namaLini, liniResmi, daftarLini, daftarSatuan, resolveLini, targetLini, bench, kunciGrup, statusRate, namaVendor, mrVendors, idVendorDariNama, vendorTampil,
   namaSatuanMR, satuanKanon, bisaEdit, masterSaja, masterAtauAdmin, akunSales, akunAdmin, adaDiMR, MR, mg, peran, sleep, statusPaket, simpanMarkup, gambarCust: gambar };
 
@@ -1359,7 +1359,7 @@ if (window.__ISL_DATA) window.__islMuatCU(window.__ISL_DATA);
 'use strict';
 const CU = window.__islCU;
 if (!CU) { console.error('Modul Customer belum siap'); return; }
-const { S, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, galatPanel, bacaFile, setV,
+const { S, $, $$, esc, rp, rpS, tgl, fmtPct, fmtPoin, uid, norm, ik, IK, toast, bukaPanel, tutupPanel, konfirmasi, galatPanel, bacaFile, galatFile, BATAS_MENTAH, setV,
   cust, namaLini, liniResmi, daftarLini, daftarSatuan, resolveLini, targetLini, bench, kunciGrup, statusRate, namaVendor, mrVendors,
   idVendorDariNama, vendorTampil, namaSatuanMR, satuanKanon, bisaEdit, masterSaja, masterAtauAdmin, akunSales, akunAdmin, MR, mg, vendorDipakai, simpanMarkup } = CU;
 /* kelolaSaja: sama dengan di modul customer (master dan admin). Didefinisikan ulang karena modul ini tidak memakai hasil ekspor modul customer. */
