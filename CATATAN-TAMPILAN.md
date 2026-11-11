@@ -424,3 +424,8 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 ## 8 Nov 2026: pemisah ribuan langsung saat mengetik di semua kolom uang
 - Kolom **Tarif minimum** dan **Harga rekomendasi** di panel Template lini sebelumnya tidak memakai pemisah ribuan (mengetik 3500 tampil 3500, bukan 3.500). Kini langsung 3.500, dan nilai tersimpan tampil berformat saat panel dibuka lagi.
 - Kolom uang lain yang sebelumnya hanya dirapikan saat selesai mengetik (Order Layanan: jual/modal; Rekap: jual/modal; koreksi harga akhir; nilai quotation terkirim; omzet kegiatan; target bulanan sales; solar/tol/biaya lain di kalkulator rute; harga rekomendasi dan harga referensi di Master Rate) kini rapi langsung saat mengetik. Dipasang lewat daftar selector di `public/js/ribuan.js`; kolom ukuran (m², ton, persen, hari) sengaja tidak dipasang karena titik di sana bisa berarti desimal.
+
+## Ringkasan quotation (11 Nov 2026)
+- Tab **Daftar | Ringkasan** di halaman Quotation. Ringkasan memuat semua quotation terbit (sistem + riwayat PDF) dengan filter periode (bulan ini, 3 bulan, 6 bulan, 1 tahun, semua, rentang), sales, lini, dan pencarian. Periode dihitung dari tanggal terbit/kirim.
+- Desain B: kategori di kiri (HP: baris geser), lalu komposisi, tren per bulan, tabel per sales/lini, dan daftar. **Perlu follow up** = ditolak + diabaikan (tanpa kabar ≥ 14 hari) + menunggu yang tanpa kabar. Ekspor Excel/PDF mengikuti filter aktif.
+- Quotation Ditolak dan Tidak dipakai **tidak lagi dihapus otomatis** supaya riwayat penuh tersimpan. Pembersihan manual tetap ada di Pengaturan.

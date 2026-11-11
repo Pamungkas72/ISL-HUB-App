@@ -2639,22 +2639,8 @@ Repo.hapusPermanen = async function (id) {
   const q = DB.list.find(x => x.id === id), alasan = alasanHapusPermanen(q); if (alasan) throw new Error(alasan);
   await tulis(() => { DB.list = DB.list.filter(x => x.id !== id); delete DB.dok[id]; delete DB.dok[id + '#final']; }, () => !DB.list.some(x => x.id === id));
 };
-/* R-02: Ditolak dan Tidak dipakai dihapus permanen otomatis 30 hari setelah diputuskan. Nomor terbit tidak dipakai ulang (penghitung hanya naik).
-   Customer yang jadi tanpa quotation aktif ditandai belumMaksimal supaya tetap muncul di halaman "Customer belum dimaksimalkan". */
-const HARI_SIMPAN_TOLAK = 30;
+/* Ditolak dan Tidak dipakai disimpan selamanya (aturan pemilik, 11 Nov 2026) supaya halaman Ringkasan memuat riwayat penuh. Pembersihan manual ada di Pengaturan. */
 const selisihHari = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
-Repo.sisaHariHapus = q => (q.status === 'ditolak' || q.status === 'tidak_dipakai') && q.diputuskan ? HARI_SIMPAN_TOLAK - selisihHari(q.diputuskan, HARI_INI()) : null;
-Repo.kedaluwarsa = () => DB.list.filter(q => { const s = Repo.sisaHariHapus(q); return s !== null && s <= 0; });
-Repo.bersihkanKedaluwarsa = async function () {
-  const ids = Repo.kedaluwarsa().map(q => q.id); if (!ids.length) return 0;
-  const tgl = HARI_INI(), peta = {};
-  ids.forEach(id => { const q = DB.list.find(x => x.id === id); if (q && q.customerId) peta[q.customerId] = q.status; });
-  await tulis(() => {
-    DB.list = DB.list.filter(x => !ids.includes(x.id)); ids.forEach(id => { delete DB.dok[id]; delete DB.dok[id + '#final']; });
-    Object.entries(peta).forEach(([cid, st]) => { const c = cust(cid); if (!c) return; const sisa = DB.list.filter(x => x.customerId === cid); if (!sisa.some(x => ['draf', 'disetujui', 'terkirim'].includes(x.status))) c.belumMaksimal = { sejak: tgl, alasan: st === 'ditolak' ? 'ditolak' : 'tidak dipakai' }; });
-  }, () => ids.every(id => !DB.list.some(x => x.id === id)));
-  return ids.length;
-};
 /* customer yang belum dimaksimalkan: tidak punya quotation draf/disetujui/terkirim-aktif, tetapi pernah ditolak, tidak dipakai, atau diabaikan (menggantung) */
 Repo.belumMaksimal = () => {
   const hasil = [];
@@ -3581,18 +3567,15 @@ const aksiBaris = x => {
 const HARI_ABAIKAN = 14;
 const sejakUbah = q => { const t = [q.diubahPada, ((q.tindakLanjut || []).slice(-1)[0] || {}).tanggal, q.dikirim, q.dibuat].filter(Boolean).map(x => String(x).slice(0, 10)).sort().pop(); return t ? selisihHari(t, HARI_INI()) : null; };
 const kategoriKpi = (st, lama) => st === 'disetujui' ? 'disetujui' : st === 'ditolak' ? 'ditolak' : (['terkirim', 'diterima', 'belum_respons'].includes(st) ? (lama ? 'diabaikan' : 'menunggu') : 'lainnya');
+/* kategori hasil satu quotation (sistem atau riwayat PDF), dipakai KPI bulan ini dan halaman Ringkasan */
+const katQ = (x, rw) => rw ? kategoriKpi(x.status, RW_INGAT.includes(x.status) && rwHari(x) !== null && rwHari(x) >= HARI_ABAIKAN)
+  : (x.digantikanOleh || x.status === 'tidak_dipakai') ? 'lainnya' : kategoriKpi(x.status, x.status === 'terkirim' && sejakUbah(x) >= HARI_ABAIKAN);
+const tglTerbitQ = (x, rw) => String((rw ? x.tanggalKirim : x.tanggalTerbit || x.dikirim) || '').slice(0, 10);
 function kpiTerbitBulanIni() {
   const bln = HARI_INI().slice(0, 7), k = { terbit: 0, disetujui: 0, ditolak: 0, menunggu: 0, diabaikan: 0, lainnya: 0 }, item = [];
-  const catat = (x, rw, kat) => { k.terbit++; k[kat]++; item.push({ x, rw, kat }); };
-  Repo.semua().forEach(q => {
-    if (!q.nomor || q.status === 'draf' || String(q.tanggalTerbit || q.dikirim || '').slice(0, 7) !== bln) return;
-    catat(q, false, (q.digantikanOleh || q.status === 'tidak_dipakai') ? 'lainnya' : kategoriKpi(q.status, q.status === 'terkirim' && sejakUbah(q) >= HARI_ABAIKAN));
-  });
-  rwSemua().forEach(x => {
-    if (String(x.tanggalKirim || '').slice(0, 7) !== bln) return;
-    const h = rwHari(x);
-    catat(x, true, kategoriKpi(x.status, RW_INGAT.includes(x.status) && h !== null && h >= HARI_ABAIKAN));
-  });
+  const catat = (x, rw) => { const kat = katQ(x, rw); k.terbit++; k[kat]++; item.push({ x, rw, kat }); };
+  Repo.semua().forEach(q => { if (q.nomor && q.status !== 'draf' && tglTerbitQ(q, false).slice(0, 7) === bln) catat(q, false); });
+  rwSemua().forEach(x => { if (tglTerbitQ(x, true).slice(0, 7) === bln) catat(x, true); });
   return { k, item };
 }
 /* urutan daftar: tanggal terbit (terbaru di atas), lalu nomor terbesar. Nomor direset tiap bulan, jadi tanggal didahulukan. */
@@ -3631,6 +3614,114 @@ function blokKpiBulan() {
     <div class="mr-stat">${kartu('terbit', 'file', k.terbit, `Quotation terbit${k.lainnya ? ` · ${k.lainnya} digantikan atau tidak dipakai` : ''}`)}${kartu('belum', 'kirim', belum, `Belum disetujui${k.diabaikan ? ` · ${k.diabaikan} diabaikan` : ''}`, belum ? 'is-perhatian' : '')}${kartu('draf', 'edit', draf, 'Draf (belum terbit)')}${kartu('disetujui', 'setuju', k.disetujui, 'Disetujui')}</div></div></div>
 `
 }
+
+
+/* =============================== RINGKASAN: semua quotation terbit ===============================
+   Desain B (dipilih pemilik 11 Nov 2026): kategori di kiri, hasil di kanan. Periode difilter dari tanggal terbit/kirim.
+   Follow up = ditolak + diabaikan (>= HARI_ABAIKAN hari) + menunggu yang tanpa kabar. Sistem dan riwayat PDF digabung; modal dan margin tidak tampil. */
+const RG_KAT = { disetujui: 'Disetujui', ditolak: 'Ditolak', menunggu: 'Menunggu', diabaikan: 'Diabaikan', lainnya: 'Digantikan / tidak dipakai' };
+const RG_WARNA = { disetujui: 'ok', ditolak: 'no', menunggu: 'wt', diabaikan: 'ab', lainnya: 'ab' };
+const RG_PER = [['bln', 'Bulan ini'], ['3b', '3 bulan'], ['6b', '6 bulan'], ['1t', '1 tahun'], ['semua', 'Semua'], ['rentang', 'Rentang']];
+Q.rg = { per: '3b', dari: '', sampai: '', kat: 'fu', sales: '', lini: '', q: '', grup: 'sales' };
+function rgPeriode() {
+  const h = HARI_INI(), r = Q.rg, g = n => { const d = new Date(h + 'T00:00:00'); d.setMonth(d.getMonth() + n); return d.toLocaleDateString('sv-SE'); };
+  return { bln: [h.slice(0, 8) + '01', h], '3b': [g(-3), h], '6b': [g(-6), h], '1t': [g(-12), h], semua: ['', ''], rentang: [r.dari, r.sampai] }[r.per];
+}
+function rgSemua() {
+  const [a, b] = rgPeriode(), out = [];
+  const tambah = (x, rw) => {
+    const t = tglTerbitQ(x, rw); if (!t || (a && t < a) || (b && t > b)) return;
+    const kat = katQ(x, rw), hari = (rw ? rwHari(x) : sejakUbah(x)) || 0, c = rw ? cust(rwCid(x)) : cust(x.customerId);
+    out.push({ x, rw, t, kat, hari, fu: kat === 'ditolak' || kat === 'diabaikan' || (kat === 'menunggu' && (rw ? hari >= RW_HARI : perluTL(x) !== null)),
+      cust: c ? c.nama : (x.customerNama || '—'), cid: c ? c.id : '', sales: pembuatDokumen(x), perihal: rw ? (x.perihal || '') : (x.judul || ''),
+      lini: rw ? (x.lini ? [x.lini] : []) : [...new Set((x.baris || []).map(z => z.liniKey).filter(Boolean))],
+      nilai: rw ? Number(x.nilai) || 0 : Number(rgQ(x).totalJual) || 0, putus: rw ? rwPutus(x) : String(x.diputuskan || '').slice(0, 10) });
+  };
+  Repo.semua().forEach(q => { if (q.nomor && q.status !== 'draf') tambah(q, false); });
+  rwSemua().forEach(x => tambah(x, true));
+  return out;
+}
+/* saring sales, lini, dan pencarian; hitung per kategori; lalu saring kategori terpilih */
+function rgData() {
+  const r = Q.rg, cari = norm(r.q), semua = rgSemua();
+  const dasar = semua.filter(i => (!r.sales || i.sales === r.sales) && (!r.lini || i.lini.includes(r.lini)) && (!cari || norm([namaQ(i.x), i.cust, i.perihal, i.sales].join(' ')).includes(cari)));
+  const n = { fu: 0, '': dasar.length, disetujui: 0, ditolak: 0, menunggu: 0, diabaikan: 0, lainnya: 0 }, nilai = { disetujui: 0, ditolak: 0, belum: 0 };
+  dasar.forEach(i => { n[i.kat]++; if (i.fu) n.fu++; if (i.kat === 'disetujui') nilai.disetujui += i.nilai; else if (i.kat === 'ditolak') nilai.ditolak += i.nilai; else if (i.kat === 'menunggu' || i.kat === 'diabaikan') nilai.belum += i.nilai; });
+  const list = dasar.filter(i => r.kat === '' || (r.kat === 'fu' ? i.fu : i.kat === r.kat)).sort((p, q) => r.kat === 'fu' ? q.hari - p.hari : q.t.localeCompare(p.t) || nomorUrutList({ x: q.x, rw: q.rw }) - nomorUrutList({ x: p.x, rw: p.rw }));
+  return { semua, dasar, list, n, nilai, win: n.disetujui + n.ditolak ? Math.round(n.disetujui / (n.disetujui + n.ditolak) * 100) : null };
+}
+const waCust = i => {
+  const c = i.cid && cust(i.cid), k = c && (c.kontak || []).find(z => z.utama && z.telp) || c && (c.kontak || []).find(z => z.telp); if (!k) return '';
+  const no = String(k.telp).replace(/[^\d+]/g, '').replace(/^0/, '62').replace(/^\+/, ''), teks = encodeURIComponent(`Selamat siang, kami dari ISL menindaklanjuti penawaran ${namaQ(i.x)}. Apakah ada yang bisa kami bantu?`);
+  return `<a class="mr-btn mr-btn--kecil" target="_blank" rel="noopener" href="https://wa.me/${no}?text=${teks}">WhatsApp</a>`;
+};
+const blnSingkat = b => new Date(b + '-01T00:00:00').toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
+function rgTren(dasar) {
+  const per = {}; dasar.forEach(i => { if (RG_KAT[i.kat] && i.kat !== 'lainnya') { const b = i.t.slice(0, 7); (per[b] = per[b] || { disetujui: 0, ditolak: 0, menunggu: 0, diabaikan: 0 })[i.kat]++; } });
+  const bln = Object.keys(per).sort().slice(-18), maks = Math.max(1, ...bln.map(b => Object.values(per[b]).reduce((a, c) => a + c, 0)));
+  if (bln.length < 2) return '';
+  return `<div class="mr-kartu qt-rg-kartu"><h3 class="qt-kpi-h">Tren per bulan <small class="mr-sub">menurut bulan terbit</small></h3><div class="qt-rg-bars">${bln.map(b => { const v = per[b], tot = Object.values(v).reduce((a, c) => a + c, 0);
+    return `<div class="qt-rg-b" title="${esc(blnSingkat(b))}: ${tot} terbit · ${v.disetujui} disetujui · ${v.ditolak} ditolak · ${v.menunggu} menunggu · ${v.diabaikan} diabaikan"><div class="qt-rg-b__t">${['disetujui', 'ditolak', 'menunggu', 'diabaikan'].map(k => v[k] ? `<span class="qt-rg-s qt-rg-s--${RG_WARNA[k]}" style="height:${v[k] / maks * 100}%"></span>` : '').join('')}</div><em>${blnSingkat(b)}</em></div>`; }).join('')}</div>
+    <div class="qt-rg-lg">${['disetujui', 'ditolak', 'menunggu', 'diabaikan'].map(k => `<span><s class="qt-rg-s--${RG_WARNA[k]}"></s>${RG_KAT[k]}</span>`).join('')}</div></div>`;
+}
+function rgGrup(dasar) {
+  const g = Q.rg.grup, m = new Map();
+  dasar.forEach(i => (g === 'sales' ? [i.sales] : i.lini.length ? i.lini : ['']).forEach(k => { const e = m.get(k) || { n: 0, s: 0, t: 0, nilai: 0 }; m.set(k, e); e.n++; if (i.kat === 'disetujui') { e.s++; e.nilai += i.nilai; } if (i.kat === 'ditolak') e.t++; }));
+  const baris = [...m.entries()].sort((a, b) => b[1].n - a[1].n);
+  return `<div class="mr-kartu qt-rg-kartu"><div class="qt-rg-grup"><h3 class="qt-kpi-h">Per ${g === 'sales' ? 'sales' : 'lini bisnis'}</h3><span class="mr-seg">${[['sales', 'Sales'], ['lini', 'Lini']].map(([v, l]) => `<button type="button" class="mr-seg__btn ${g === v ? 'is-aktif' : ''}" data-qt="rg-grup" data-v="${v}">${l}</button>`).join('')}</span></div>
+    ${baris.length ? `<div class="qt-rg-tb"><div class="qt-rg-tb__h"><span>${g === 'sales' ? 'Sales' : 'Lini'}</span><span>Terbit</span><span>Setuju</span><span>Tolak</span><span>Win rate</span><span>Nilai disetujui</span></div>${baris.map(([k, e]) => `<div><span>${esc(k ? (g === 'lini' ? namaLini(k) : k) : 'Tanpa lini')}</span><span>${e.n}</span><span>${e.s}</span><span>${e.t}</span><span>${e.s + e.t ? Math.round(e.s / (e.s + e.t) * 100) + '%' : '—'}</span><span>${rpS(e.nilai)}</span></div>`).join('')}</div>` : '<p class="mr-sub">Belum ada data.</p>'}</div>`;
+}
+function rgBaris(i) {
+  const x = i.x, id = esc(x.id), inf = i.kat === 'menunggu' || i.kat === 'diabaikan' ? `${i.hari} hari tanpa kabar` : i.putus ? `diputuskan ${tgl(i.putus)}` : '';
+  return `<div class="qt-rg-baris" data-qt="${i.rw ? 'rw-status' : 'buka'}" data-id="${id}"><div class="qt-rg-baris__a"><b>${esc(namaQ(x))}</b>${i.rw ? ' <span class="qt-m-tag qt-m-tag--pdf">PDF</span>' : ''}${tagRevisi(x)}<div>${esc(i.cust)}</div><div class="mr-sub">${esc(i.sales)}${i.lini.length ? ' · ' + esc(i.lini.map(k => namaLini(k)).join(', ')) : ''}${i.perihal ? ' · ' + esc(i.perihal) : ''}</div></div>
+    <div class="qt-rg-baris__s"><span class="qt-rg-chip qt-rg-chip--${RG_WARNA[i.kat]}">${RG_KAT[i.kat]}</span>${inf ? `<div class="mr-sub">${inf}</div>` : ''}</div>
+    <div class="qt-rg-baris__n"><b>${i.nilai ? rpS(i.nilai) : '—'}</b><div class="mr-sub">terbit ${tgl(i.t)}</div></div>
+    <div class="qt-rg-baris__x">${i.fu ? waCust(i) : ''}</div></div>`;
+}
+const tabHalaman = () => `<div class="qt-ptabs qt-halaman" role="tablist" aria-label="Halaman quotation">${[['daftar', 'Daftar'], ['ringkasan', 'Ringkasan']].map(([v, l]) => `<button type="button" role="tab" class="qt-ptab ${(Q.sub || 'daftar') === v ? 'is-on' : ''}" aria-selected="${(Q.sub || 'daftar') === v}" data-qt="rg-tab" data-v="${v}">${l}</button>`).join('')}</div>`;
+function viewRingkasan() {
+  const r = Q.rg, D = rgData(), [a, b] = rgPeriode(), sales = [...new Set(D.semua.map(i => i.sales))].sort(), lini = [...new Set(D.semua.flatMap(i => i.lini))];
+  const kat = (v, l, n, extra = '') => `<button type="button" class="qt-rg-kat ${r.kat === v ? 'is-on' : ''} ${extra}" data-qt="rg-kat" data-v="${v}" aria-pressed="${r.kat === v}"><span>${l}</span><b>${n}</b></button>`;
+  const tot = D.n[''] || 1, lebar = k => (D.n[k] / tot * 100).toFixed(1);
+  return `${tabHalaman()}
+  <div class="qt-rg">
+    <div class="qt-rg-bar">${RG_PER.map(([v, l]) => `<button type="button" class="qt-rg-pil ${r.per === v ? 'is-on' : ''}" data-qt="rg-per" data-v="${v}" aria-pressed="${r.per === v}">${l}</button>`).join('')}
+      ${r.per === 'rentang' ? `<input type="date" class="mr-select" id="rg-dari" value="${esc(r.dari)}" aria-label="Dari tanggal"><span class="mr-sub">s/d</span><input type="date" class="mr-select" id="rg-sampai" value="${esc(r.sampai)}" aria-label="Sampai tanggal">` : ''}
+      <span class="mr-ruang"></span>
+      <label class="mr-cari qt-rg-cari">${ik('cari', 16)}<input id="rg-cari" type="search" placeholder="Cari nomor, customer" value="${esc(r.q)}" autocomplete="off"></label>
+      ${sales.length > 1 ? `<select class="mr-select" id="rg-sales" aria-label="Filter sales"><option value="">Semua sales</option>${opt(sales.map(z => [z, z]), r.sales)}</select>` : ''}
+      ${lini.length > 1 ? `<select class="mr-select" id="rg-lini" aria-label="Filter lini bisnis"><option value="">Semua lini</option>${opt(lini.map(z => [z, namaLini(z)]), r.lini)}</select>` : ''}
+      <button type="button" class="mr-btn" data-qt="rg-excel">${ik('download', 16)} Excel</button><button type="button" class="mr-btn" data-qt="rg-pdf">${ik('download', 16)} PDF</button></div>
+    <p class="mr-sub qt-rg-ket">Quotation terbit ${a || b ? `${a ? tgl(a) : 'awal'} s/d ${b ? tgl(b) : 'kini'}` : 'dari awal sampai kini'} · sistem dan riwayat PDF · diabaikan = tanpa kabar ≥ ${HARI_ABAIKAN} hari</p>
+    <div class="qt-rg-grid">
+      <nav class="mr-kartu qt-rg-side" aria-label="Kategori">${kat('fu', 'Perlu follow up', D.n.fu, D.n.fu ? 'is-perhatian' : '')}${kat('', 'Semua terbit', D.n[''])}${['disetujui', 'ditolak', 'menunggu', 'diabaikan', 'lainnya'].map(k => kat(k, RG_KAT[k], D.n[k])).join('')}
+        <div class="qt-rg-angka"><div><span>Win rate</span><b>${D.win === null ? '—' : D.win + '%'}</b></div><div><span>Nilai disetujui</span><b>${rpS(D.nilai.disetujui)}</b></div><div><span>Nilai ditolak</span><b>${rpS(D.nilai.ditolak)}</b></div><div><span>Belum diputuskan</span><b>${rpS(D.nilai.belum)}</b></div></div></nav>
+      <div class="qt-rg-isi">
+        <div class="mr-kartu qt-rg-kartu"><h3 class="qt-kpi-h">Komposisi <small class="mr-sub">${D.n['']} quotation</small></h3><div class="qt-rg-komp">${['disetujui', 'ditolak', 'menunggu', 'diabaikan', 'lainnya'].map(k => D.n[k] ? `<span class="qt-rg-s--${RG_WARNA[k]}" style="width:${lebar(k)}%" title="${RG_KAT[k]}: ${D.n[k]}"></span>` : '').join('')}</div>
+          <div class="qt-rg-lg">${['disetujui', 'ditolak', 'menunggu', 'diabaikan'].map(k => `<span><s class="qt-rg-s--${RG_WARNA[k]}"></s>${RG_KAT[k]} ${D.n[k]}</span>`).join('')}</div></div>
+        ${rgTren(D.dasar)}${rgGrup(D.dasar)}
+        <div class="mr-kartu qt-rg-kartu"><h3 class="qt-kpi-h">${r.kat === 'fu' ? 'Perlu follow up' : r.kat ? RG_KAT[r.kat] : 'Semua terbit'} <small class="mr-sub">${D.list.length} quotation${r.kat === 'fu' ? ' · terlama di atas' : ''}</small></h3>
+          ${D.list.length ? `<div class="qt-rg-daftar">${D.list.slice(0, 300).map(rgBaris).join('')}</div>${D.list.length > 300 ? `<p class="mr-sub">300 teratas ditampilkan. Persempit filter atau unduh Excel untuk semuanya.</p>` : ''}` : `<div class="mr-kosong">${ik('file', 28)}<p>Tidak ada quotation pada filter ini.</p></div>`}</div>
+      </div></div></div>`;
+}
+const RG_KOLOM = ['Nomor', 'Customer', 'Sales', 'Lini', 'Kategori', 'Terbit', 'Diputuskan', 'Nilai (Rp)', 'Sumber'];
+const rgBarisEkspor = () => rgData().list.map(i => [namaQ(i.x), i.cust, i.sales, i.lini.map(k => namaLini(k)).join(', '), RG_KAT[i.kat], i.t, i.putus, i.nilai, i.rw ? 'Riwayat PDF' : 'Sistem']);
+const rgNamaFile = () => { const [a, b] = rgPeriode(); return `ringkasan-quotation_${a || 'awal'}_${b || HARI_INI()}`; };
+function rgEkspor(jenis) {
+  const baris = rgBarisEkspor(); if (!baris.length) return toast('Tidak ada data untuk diekspor.', 'bahaya');
+  if (jenis === 'excel') { if (!window.XLSX) return toast('Library Excel belum termuat.', 'bahaya'); const wb = window.XLSX.utils.book_new(); window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.aoa_to_sheet([RG_KOLOM, ...baris]), 'Ringkasan'); return window.XLSX.writeFile(wb, rgNamaFile() + '.xlsx'); }
+  if (!window.jspdf) return toast('Library PDF belum termuat.', 'bahaya');
+  const d = new window.jspdf.jsPDF({ orientation: 'landscape' }), [a, b] = rgPeriode(); d.setFontSize(14); d.text(`Ringkasan Quotation — ${a || 'awal'} s/d ${b || HARI_INI()}`, 14, 16);
+  d.autoTable({ head: [RG_KOLOM], body: baris.map(r => r.map((v, k) => k === 7 ? rp(v) : v)), startY: 22, styles: { fontSize: 8 } }); d.save(rgNamaFile() + '.pdf');
+}
+document.addEventListener('click', ev => {
+  const e = ev.target.closest('[data-qt^="rg-"]'); if (!e) return; const a = e.dataset.qt, v = e.dataset.v;
+  if (a === 'rg-excel') return rgEkspor('excel'); if (a === 'rg-pdf') return rgEkspor('pdf');
+  if (a === 'rg-tab') Q.sub = v; else if (a === 'rg-per') Q.rg.per = v; else if (a === 'rg-kat') Q.rg.kat = v; else if (a === 'rg-grup') Q.rg.grup = v;
+  gambar();
+});
+document.addEventListener('change', ev => { const t = ev.target, m = { 'rg-dari': 'dari', 'rg-sampai': 'sampai', 'rg-sales': 'sales', 'rg-lini': 'lini' }[t.id]; if (m) { Q.rg[m] = t.value; gambar(); } });
+document.addEventListener('input', ev => { if (ev.target.id === 'rg-cari') { Q.rg.q = ev.target.value; gambar(); } });
 
 /* Pilih massal quotation (master saja): kunci id yang dicentang, untuk quotation sistem dan riwayat PDF. */
 const PILIH_QT = new Set();
@@ -3694,6 +3785,7 @@ function viewDaftar() {
   const nSb = SB.jumlah('quotation', semuaAll) + SB.jumlah('riwayat', rw);
   if (HP()) return viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, cariS, cariR, nSb });
   return `
+  ${tabHalaman()}
   ${gagalRw}
   ${sbBanner('quotation', nSb, 'quotation dan riwayat', 'quotation')}
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Membuat dan mengubah quotation hanya untuk master atau sales.</div></div>`}
@@ -3715,7 +3807,6 @@ function viewDaftar() {
     <button class="mr-ikonbtn qt-ikonbar" data-qt="pengaturan" aria-label="Pengaturan dokumen" title="Pengaturan dokumen: kop, template, kalimat, syarat">${ik('setelan', 18)}</button>
     ${bisaEdit() ? `<span class="qt-menu"><button type="button" class="mr-btn" data-qt="menu-tambah">${ik('file', 16)} Cara lain ▾</button><div class="qt-menu__list" hidden><button type="button" class="qt-menu__t" data-qt="baru-dari-tmpl">${ik('simpan', 14)} Dari template saya<small>Mulai dari quotation tersimpan</small></button><button type="button" class="qt-menu__t" data-qt="manual-word">${ik('file', 14)} Quotation manual (Word)<small>Nomor terbit, tabel disusun di Word</small></button></div></span><button class="mr-btn mr-btn--utama qt-buat-desk" data-qt="baru">${ik('plus', 16)} Buat quotation</button>` : ''}
   </div>
-  ${semua.some(x => Repo.sisaHariHapus(x) !== null) ? `<div class="mr-banner">${ik('info')}<div>Quotation <b>Ditolak</b> dan <b>Tidak dipakai</b> dihapus permanen otomatis ${HARI_SIMPAN_TOLAK} hari setelah diputuskan. Nomor yang sudah terbit tidak dipakai ulang.</div></div>` : ''}
   ${bannerKpi}
 ${bilahPilihQt(list)}
     <div class="mr-kartu mr-tabelkartu">
@@ -3724,7 +3815,7 @@ ${bilahPilihQt(list)}
       <td class="mr-td-nama"><div class="qt-nmrow"><span class="qt-sik qt-sik--${esc(x.status)}" aria-hidden="true">${ik(IKON_STATUS[x.status] || 'file', 17)}</span><div class="qt-nm"><b>${esc(namaQ(x))}</b>${x.dokumenModel && !x.kosong ? ` <button type="button" class="qt-ikonmata" data-qt="lihat-dokumen" data-id="${esc(x.id)}" aria-label="Lihat dokumen ${esc(namaQ(x))}" title="Lihat dokumen PDF">${ik('galeri', 15)}</button>` : ''}${tagRevisi(x)}${x.jalur === 'word' ? ' <span class="qt-chipw">Word</span>' : ''}${x.jalur === 'word' && x.status !== 'draf' && !x.dokFinal ? ' <span class="cu-st cu-st--warn" title="Dokumen Word belum difinalkan. Unggah PDF final di detail quotation.">Belum final</span>' : ''}${x.perhatian ? ' <span class="cu-st cu-st--warn" title="Ditandai oleh pemilik">Perlu perhatian</span>' : ''}<div class="mr-sub">${esc(x.judul)}</div>${catatanTerakhir(x) ? `<div class="mr-sub qt-catatan">Terakhir: ${esc(catatanTerakhir(x))}</div>` : ''}</div></div></td>
       <td data-label="Customer">${esc(namaCust(x))}</td>
       <td data-label="Sales">${esc(pembuatDokumen(x))}</td>
-      <td data-label="Status">${chipStatus(x)}${(() => { const sh = Repo.sisaHariHapus(x); return sh !== null ? `<div class="mr-sub">${sh > 0 ? 'dihapus otomatis ' + sh + ' hari lagi' : 'akan dihapus otomatis'}</div>` : ''; })()}</td>
+      <td data-label="Status">${chipStatus(x)}</td>
       <td data-label="Tanggal">${tgl(x.dikirim || x.dibuat)}<div class="mr-sub">${x.dikirim ? 'dikirim' : 'dibuat'}${x.dikirim ? ' · ' + umurHari(x.dikirim) : ''}</div>${berlakuChip(x)}</td>
       <td class="mr-td-aksi">${aksiBaris(x)}</td></tr>`; }).join('')}
     </tbody></table>` : `<div class="mr-kosong">${ik('file', 28)}<p>Tidak ada quotation yang cocok.</p></div>`}
@@ -3749,7 +3840,6 @@ function infoBarisHP(x) {
   else if (lewatMasa(x)) warn = 'Lewat masa berlaku';
   else if (perluTL(x) !== null) warn = perluTL(x) + ' hari tanpa kabar';
   else if (x.digantikanOleh) info = 'Digantikan revisi';
-  else { const sh = Repo.sisaHariHapus(x); if (sh !== null) info = sh > 0 ? 'dihapus ' + sh + ' hari lagi' : 'akan dihapus'; }
   return { tgl: tgl(x.dikirim || x.dibuat), ket: warn || info || (x.dikirim ? umurHari(x.dikirim) : 'dibuat'), warn: !!warn };
 }
 function barisHP(x, pilih, intip) {
@@ -3805,6 +3895,7 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
   let adaIntip = false;
   const baris = list.map(({ x, rw: r }) => { if (r) return barisRwHP(x, pilih); const i = intip && !adaIntip && !pilih && x.status === 'terkirim' && bisaEdit(); if (i) adaIntip = true; return barisHP(x, pilih, i); }).join('');
   return `
+  ${tabHalaman()}
   ${gagalRw}
   ${ed ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Membuat dan mengubah quotation hanya untuk master atau sales.</div></div>`}
   <div class="qt-m">
@@ -3825,7 +3916,6 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
     ${sbBanner('quotation', nSb, 'quotation dan riwayat', 'quotation')}
     ${bilahPilihQt(list)}
     <div class="qt-m-daftar" ${pilih ? 'data-pilih="1"' : ''}>${list.length ? baris : `<div class="mr-kosong">${ik('file', 28)}<p>Tidak ada quotation yang cocok.</p>${Q.fStatus || Q.fTahun || Q.fSumber || Q.q ? `<button type="button" class="mr-btn" data-qt="reset-filter">Hapus filter</button>` : ''}</div>`}</div>
-    ${semua.some(x => Repo.sisaHariHapus(x) !== null) ? `<p class="qt-m-foot">${ik('info', 14)}<span>Quotation <b>Ditolak</b> dan <b>Tidak dipakai</b> dihapus otomatis ${HARI_SIMPAN_TOLAK} hari setelah diputuskan.</span></p>` : ''}
   </div>
   ${ed ? `<button type="button" class="qt-fab qt-fab--m" data-qt="m-tambah" aria-label="Buat quotation">${ik('plus', 24)}</button>` : ''}`;
 }
@@ -7052,7 +7142,7 @@ function gambar() {
   if (Q.edit && !bisaEdit()) { Q.edit = null; Q.kotor = false; }
   if (Q.view === 'detail' && !Q.edit && Q.id && bisaEdit()) { const x = Repo.baca(Q.id); if (x && x.status === 'draf') Q.edit = x; }
   if (Q.view === 'detail' && !Q.edit && !Q.id) Q.view = 'list';
-  const html = Q.view === 'list' ? viewDaftar() : Q.view === 'pengaturan' ? viewPengaturan() : Q.view === 'belum' ? viewBelum() : viewDetail(); const a = document.activeElement; if (window.ISLMorph && a && (a.id === 'qt-cari' || a.id === 'qt-cari-m' || a.id === 'rw-cari')) window.ISLMorph(r, html); else r.innerHTML = html;
+  const html = Q.view === 'list' ? (Q.sub === 'ringkasan' ? viewRingkasan() : viewDaftar()) : Q.view === 'pengaturan' ? viewPengaturan() : Q.view === 'belum' ? viewBelum() : viewDetail(); const a = document.activeElement; if (window.ISLMorph && a && (a.id === 'qt-cari' || a.id === 'qt-cari-m' || a.id === 'rw-cari' || a.id === 'rg-cari')) window.ISLMorph(r, html); else r.innerHTML = html;
   if (Q.view === 'detail') { if (Q.edit) segarTurunan(); else segarBaca(); }
   window.scrollTo(0, y); if (window.ISLNav) window.ISLNav.selaraskan();
 }
@@ -7981,7 +8071,6 @@ if (window.__islSegar !== false) window.__islSeedJikaPerlu();
 if (window.__islAsetMigrasi && masterSaja()) Repo.simpanPengaturan(PENG).then(() => console.info('TTD dan cap dipindah ke dokumen pengaturan.')).catch(er => console.warn('Pemindahan TTD/cap belum berhasil:', er && er.message));
 
 /* R-02: pembersihan otomatis quotation Ditolak/Tidak dipakai yang sudah lewat 30 hari (hanya akun yang boleh menulis) */
-if (masterSaja()) setTimeout(() => { Repo.bersihkanKedaluwarsa().then(n => { if (n) { toast(`${n} quotation Ditolak/Tidak dipakai lewat ${HARI_SIMPAN_TOLAK} hari dihapus otomatis.`); if (S.halaman === 'quotation') gambar(); } }).catch(er => console.warn('Pembersihan otomatis gagal:', er && er.message)); }, 2500);
 
 /* ---------- HP: saran satuan (ketik bebas, daftar hanya referensi) ---------- */
 (() => {
