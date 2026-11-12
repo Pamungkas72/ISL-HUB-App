@@ -449,3 +449,11 @@ button {
 
 /* ikon isi penuh (dari nav-config): mengikuti warna teks */
 .nav-item svg, .nav-lain__i svg, .module-card__icon svg { fill: currentColor; stroke: none; }
+
+/* Ikon lihat kata sandi */
+.pw { position: relative; }
+.pw input { padding-right: 44px; }
+.pw-mata { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
+.pw-mata svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pw-mata:hover, .pw-mata:focus-visible { background: var(--sky-soft); }
+.pw-mata.on { color: var(--accent); }
