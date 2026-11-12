@@ -27,10 +27,10 @@ export function htmlFasilitas(p, liniId, S, sekarang = "", { kosong = "Pilih…"
   const ada = sekarang && ids.some(([id]) => id === sekarang);
   const extra = sekarang && !ada ? [[sekarang, sekarang]] : [];
   return `<div class="mr-f mr-f--lebar" id="${p}-lokasi-blok" data-w="lokasi"><span>${label}${wajib ? " *" : ""}</span>
-    <select id="${p}-lokasi"><option value="">${e(kosong)}</option>${[...ids, ...extra].map(([id, n]) => `<option value="${e(id)}" ${id === sekarang ? "selected" : ""}>${e(n)}</option>`).join("")}</select>
-    ${ids.length ? "" : `<small class="mr-galat-kecil">Belum ada fasilitas untuk lini ini.</small>`}
-    <button type="button" class="mr-btn mr-btn--kecil" id="${p}-fas-buka" style="margin-top:6px">＋ Daftarkan fasilitas</button>
-    <div id="${p}-fas-form" class="mr-kartu" hidden style="margin-top:8px;padding:10px">
+    <div class="mr-f__awalan"><select id="${p}-lokasi" style="flex:1;min-width:0"><option value="">${e(kosong)}</option>${[...ids, ...extra].map(([id, n]) => `<option value="${e(id)}" ${id === sekarang ? "selected" : ""}>${e(n)}</option>`).join("")}</select>
+    <button type="button" class="mr-btn mr-btn--kecil" id="${p}-fas-buka" title="Daftarkan lokasi atau fasilitas baru" aria-label="Daftarkan lokasi atau fasilitas baru" style="white-space:nowrap">＋ Baru</button></div>
+    ${ids.length ? "" : `<small class="mr-galat-kecil">Belum ada fasilitas untuk lini ini. Daftarkan lewat tombol ＋ Baru.</small>`}
+    <div id="${p}-fas-form" class="mr-kartu" hidden style="margin-top:8px;padding:12px">
       <label class="mr-f mr-f--lebar"><span>Nama fasilitas *</span><input id="${p}-fas-nama" autocomplete="off" placeholder="Mis. Gudang Dry Cikarang 2"></label>
       <label class="mr-f mr-f--lebar"><span>Alamat (opsional)</span><input id="${p}-fas-alamat" autocomplete="off"></label>
       <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="mr-btn" id="${p}-fas-batal">Batal</button><button type="button" class="mr-btn mr-btn--utama" id="${p}-fas-simpan">Simpan fasilitas</button></div>

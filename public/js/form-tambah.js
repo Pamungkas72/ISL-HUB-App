@@ -13,7 +13,7 @@ import { e, $, $$, toast, bukaLayer, tutupLayer, konfirmasi } from "./ui.js";
 import { ikon } from "./ikon.js";
 import { slug, buatKunci, parseAngka, METODE_HARGA, pasangRibuan, formatInputAngka, formatRp } from "./kunci.js";
 import { LINI_ASING, htmlNilaiAsing, pasangNilaiAsing, bacaNilaiAsing } from "./asing.js";
-import { htmlPilihSatuan, pasangPilihSatuan, resolveSatuan } from "./satuan-combo.js";
+import { htmlPilihSatuan, pasangPilihSatuan, htmlCombo, pasangCombo, resolveSatuan } from "./satuan-combo.js";
 import { htmlFasilitas, pasangFasilitas, pilihFasilitasBaru } from "./fasilitas.js";
 import { konfigLini, bangunItem, susunSatuan, VENDOR_INTERNAL, markupLini, saranJual } from "./form-lini.js";
 import { vendorUntukLini } from "./tampilan-data.js";
@@ -83,18 +83,19 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
       return;
     }
     const lokasiField = (id, label, dl, wajib) => `
-      <div class="mr-f" data-w="${id}"><span>${label}${wajib ? " *" : ""}</span><input id="t-${id}" list="dl-rute" autocomplete="off" placeholder="Ketik atau pilih"><small class="mr-hint" id="h-${id}"></small><input id="t-${id}-prov" placeholder="Provinsi (opsional)" hidden></div>`;
+      <div class="mr-f" data-w="${id}"><span>${label}${wajib ? " *" : ""}</span>${htmlCombo(`t-${id}`, { placeholder: "Ketik atau pilih" })}<small class="mr-hint" id="h-${id}"></small><input id="t-${id}-prov" placeholder="Provinsi (opsional)" hidden></div>`;
     const daftarRute = cfg.koleksi === "trucking_trailer_zona" ? S.ref.zona : S.ref.lokasiDistribusi;
     const lokasiHtml = rute
-      ? `${lokasiField("asal", "Asal / pick up (opsional)")}${lokasiField("tujuan", "Tujuan", "", true)}<datalist id="dl-rute">${daftarRute.map((z) => `<option value="${e(z.nama)}">`).join("")}</datalist>`
+      ? `${lokasiField("asal", "Asal / pick up (opsional)")}${lokasiField("tujuan", "Tujuan", "", true)}`
       : htmlFasilitas("t", liniId, S, "", { kosong: cfg.lokasi ? "Pilih…" : "Tidak terikat lokasi", label: cfg.lokasi === "open_yard" ? "Lokasi open yard" : "Lokasi / fasilitas", wajib: !!cfg.lokasi });
     const namaLayanan = [...new Set(S.tarif.filter((t) => t.liniBisnisId === liniId).map((t) => t.layananNama).filter(Boolean))];
     $("#t-layanan", panel).innerHTML = `
-      <label class="mr-f mr-f--lebar" data-w="nama"><span>Nama layanan *</span><input id="t-nama" list="dl-layanan" autocomplete="off" placeholder="${liniId === "open_yard" ? "Mis. Storage per m2 per bulan" : rute ? "Mis. Trucking 20ft Priok ke Cikarang" : "Mis. Storage Dry 20ft"}"><small>Nama yang sama dengan layanan yang sudah ada otomatis memakai kodenya.</small></label>
-      <datalist id="dl-layanan">${namaLayanan.map((n) => `<option value="${e(n)}">`).join("")}</datalist>
+      <div class="mr-f mr-f--lebar" data-w="nama"><span>Nama layanan *</span>${htmlCombo("t-nama", { placeholder: liniId === "open_yard" ? "Mis. Storage per m2 per bulan" : rute ? "Mis. Trucking 20ft Priok ke Cikarang" : "Mis. Storage Dry 20ft", hint: "Nama yang sama dengan layanan yang sudah ada otomatis memakai kodenya." })}</div>
       ${lokasiHtml}
       <p class="mr-galat mr-f--lebar" ${S.ref.gagal && (rute || cfg.lokasi === "open_yard") ? "" : "hidden"}>Daftar zona/lokasi yang sudah ada gagal dimuat. Nama yang diketik dianggap baru; kalau ternyata sudah ada, tidak akan ditimpa.</p>`;
 
+    pasangCombo($("#t-nama-wrap", panel), () => namaLayanan.map((n) => ({ nama: n })));
+    if (rute) ["asal", "tujuan"].forEach((id) => pasangCombo($(`#t-${id}-wrap`, panel), () => daftarRute.map((z) => ({ nama: z.nama }))));
     const lama = { modal: val("modal"), jsaran: val("jsaran"), manual: $("#t-jsaran", panel) ? $("#t-jsaran", panel).dataset.manual : "", metode: val("metode"), catatan: val("catatan"), satuan: val("satuan") };
     const s = susunSatuan(liniId, S.satuan);
     const daftarSatuan = () => { const x = susunSatuan(liniId, S.satuan); return [...x.utama, ...x.lain]; };
@@ -345,7 +346,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
   $("#t-kembali", panel).onclick = () => { $("#t-galat-l", panel).hidden = true; tampilLangkah(langkah - 1); };
   $("#t-simpan", panel).onclick = simpan;
   // HP: footer tersembunyi saat keyboard terbuka, jadi Enter = Lanjut
-  panel.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.tagName === "INPUT" && langkah < 3 && matchMedia("(max-width:760px)").matches) { ev.preventDefault(); $("#t-lanjut", panel).click(); } });
+  panel.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !ev.defaultPrevented && ev.target.tagName === "INPUT" && langkah < 3 && matchMedia("(max-width:760px)").matches) { ev.preventDefault(); $("#t-lanjut", panel).click(); } });
   tampilLangkah(1);
   gambarForm();
 }

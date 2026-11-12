@@ -24,8 +24,20 @@ export function htmlPilihSatuan(id, nilai) {
   </div>`;
 }
 
-// Pasang perilaku daftar saran. `ambilDaftar()` dipanggil setiap kali daftar dibuka.
-export function pasangPilihSatuan(wrap, ambilDaftar) {
+// Markup kolom ketik + daftar saran umum (mis. nama layanan). `hint` = satu baris petunjuk di bawah kolom.
+export function htmlCombo(id, { nilai = "", placeholder = "", hint = "" } = {}) {
+  return `<div class="mr-combo" id="${id}-wrap">
+    <input id="${id}" type="text" role="combobox" aria-expanded="false" aria-autocomplete="list" autocomplete="off" value="${e(nilai)}" placeholder="${e(placeholder)}">
+    <ul class="mr-combo__daftar" role="listbox" hidden></ul>
+    ${hint ? `<small>${e(hint)}</small>` : ""}
+  </div>`;
+}
+
+export const pasangPilihSatuan = (wrap, ambilDaftar) => pasangCombo(wrap, () => ambilDaftar().map((s) => ({ nama: s.nama, kunci: kodeSatuan(s) })), { baruTeks: (t) => `＋ Tambah “${t}” sebagai satuan baru` });
+
+// Pasang perilaku daftar saran. `ambilDaftar()` -> [{nama, kunci?}], dipanggil setiap kali daftar dibuka.
+// `baruTeks(teks)` (opsional) = tulisan baris "tambah baru" bila teks yang diketik belum ada di daftar.
+export function pasangCombo(wrap, ambilDaftar, { baruTeks } = {}) {
   const input = wrap.querySelector("input");
   const ul = wrap.querySelector(".mr-combo__daftar");
   let indeks = -1;
@@ -35,10 +47,10 @@ export function pasangPilihSatuan(wrap, ambilDaftar) {
   const gambar = () => {
     const q = mengetik ? input.value.trim().toLowerCase() : "";
     const daftar = ambilDaftar();
-    const cocok = daftar.filter((s) => !q || String(s.nama).toLowerCase().includes(q) || kodeSatuan(s).includes(slug(q)));
+    const cocok = daftar.filter((s) => !q || String(s.nama).toLowerCase().includes(q) || (s.kunci || "").includes(slug(q)));
     const sudahAda = daftar.some((s) => String(s.nama).trim().toLowerCase() === input.value.trim().toLowerCase());
     const item = cocok.map((s) => `<li role="option" data-nama="${e(s.nama)}">${e(s.nama)}</li>`);
-    if (mengetik && input.value.trim() && !sudahAda) item.push(`<li role="option" class="mr-combo__baru" data-nama="${e(input.value.trim())}">＋ Tambah “${e(input.value.trim())}” sebagai satuan baru</li>`);
+    if (baruTeks && mengetik && input.value.trim() && !sudahAda) item.push(`<li role="option" class="mr-combo__baru" data-nama="${e(input.value.trim())}">${e(baruTeks(input.value.trim()))}</li>`);
     if (!item.length) { tutup(); return; }
     ul.innerHTML = item.join("");
     ul.hidden = false;
