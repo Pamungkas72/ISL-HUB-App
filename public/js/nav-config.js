@@ -55,48 +55,11 @@ export const navItems = [
     status: "active",
   },
   {
-    id: "rekap",
-    label: "Lembar Rekap",
-    href: "app.html#rekap",
-    icon: icons.rekap,
-    status: "active",
-    sub: true,
-  },
-  {
-    id: "laporan",
-    label: "Laporan Order & Laba",
-    href: "app.html#laporan",
-    icon: icons.laporan,
-    status: "active",
-    sub: true,
-  },
-  {
-    id: "uang-jalan",
-    label: "Uang Jalan",
-    href: "app.html#uang-jalan",
-    icon: icons.uangjalan,
-    status: "active",
-  },
-  {
     id: "pengaturan",
     label: "Pengaturan",
     href: "app.html#pengaturan",
     icon: icons.setelan,
     status: "active",
-  },
-  {
-    id: "klaim",
-    label: "Klaim",
-    href: "#",
-    icon: icons.klaim,
-    status: "coming-soon",
-  },
-  {
-    id: "kasus",
-    label: "Kasus & Project",
-    href: "#",
-    icon: icons.kasus,
-    status: "coming-soon",
   },
   {
     id: "performa",
@@ -109,6 +72,5 @@ export const navItems = [
 ];
 
 // Menu yang disembunyikan per peran (aturan sebenarnya ada di firestore.rules; ini hanya merapikan tampilan).
-/* Admin melihat Lembar Rekap, tetapi tidak Laporan Order & Laba (memuat laba). Rute di app-boot.js menjaga hal yang sama. */
-export const SEMBUNYI_PERAN = { sales: ["master-rate", "rekap", "laporan", "pengaturan", "uang-jalan"], lihat: ["rekap", "laporan", "performa", "uang-jalan"], admin: ["laporan"] };
+export const SEMBUNYI_PERAN = { sales: ["master-rate", "pengaturan"], lihat: ["performa"], admin: [] };
 export const logoutIcon = icons.logout;
