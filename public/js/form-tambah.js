@@ -13,7 +13,7 @@ import { e, $, $$, toast, bukaLayer, tutupLayer, konfirmasi } from "./ui.js";
 import { ikon } from "./ikon.js";
 import { slug, buatKunci, parseAngka, METODE_HARGA, pasangRibuan, formatInputAngka, formatRp } from "./kunci.js";
 import { LINI_ASING, htmlNilaiAsing, pasangNilaiAsing, bacaNilaiAsing } from "./asing.js";
-import { htmlPilihSatuan, pasangPilihSatuan, resolveSatuan } from "./satuan-combo.js";
+import { htmlPilihSatuan, pasangPilihSatuan, htmlCombo, pasangCombo, resolveSatuan } from "./satuan-combo.js";
 import { htmlFasilitas, pasangFasilitas, pilihFasilitasBaru } from "./fasilitas.js";
 import { konfigLini, bangunItem, susunSatuan, VENDOR_INTERNAL, markupLini, saranJual } from "./form-lini.js";
 import { vendorUntukLini } from "./tampilan-data.js";
@@ -40,6 +40,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
   // "Belum diatur": tarif boleh disimpan tanpa lini. Lininya dilengkapi nanti lewat Edit tarif.
   let belum = false;
   let sumber = "vendor";
+  let vBaru = false; // true = mengisi nama vendor baru
   let langkah = 1;
 
   const ref = () => ({ zona: S.ref.zona, lokasiDistribusi: S.ref.lokasiDistribusi, openYard: S.ref.openYard, rows: S.tarif, vendorId: vendorTerpilih().id });
@@ -51,8 +52,8 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
       <section class="mr-langkah" data-n="1"><h3>1 · Klasifikasi</h3><div class="mr-form">
         <label class="mr-f mr-f--lebar"><span>Lini bisnis *</span><select id="t-lini"><option value="">Pilih lini bisnis…</option>${liniAktif.map((l) => `<option value="${e(l.id)}" ${l.id === liniId ? "selected" : ""}>${e(namaLini(l.id))}</option>`).join("")}<option value="__belum__">Belum diatur (buat lini nanti)</option></select><small class="mr-hint">${liniAktif.length ? "Lini bisnis bisa dilengkapi nanti lewat Edit tarif." : "Belum ada lini bisnis. Tarif tetap bisa disimpan sekarang, lini dibuat nanti."}</small></label>
         <div class="mr-f mr-f--lebar"><span>Pemilik tarif *</span><div class="mr-seg" id="t-sumber"><button type="button" class="mr-seg__btn is-aktif" data-sumber="vendor">Vendor</button><button type="button" class="mr-seg__btn" data-sumber="internal">Internal</button></div></div>
-        <label class="mr-f mr-f--lebar" data-w="vendor"><span>Vendor *</span><select id="t-vendor"></select></label>
-        <label class="mr-f mr-f--lebar" data-w="vendorBaru" hidden><span>Nama vendor baru *</span><input id="t-vendorBaru" placeholder="Mis. PT Maju Jaya" autocomplete="off"><small>Otomatis didaftarkan ke tab Vendor dan lini ini. Lengkapi identitasnya nanti di tab Vendor.</small></label>
+        <div class="mr-f mr-f--lebar" data-w="vendor"><span>Vendor *</span><div class="mr-f__awalan"><select id="t-vendor" style="flex:1;min-width:0"></select><button type="button" class="mr-btn mr-btn--kecil" id="t-vendor-buka" aria-label="Daftarkan vendor baru" style="white-space:nowrap">＋ Baru</button></div></div>
+        <label class="mr-f mr-f--lebar" data-w="vendorBaru" hidden><span>Nama vendor baru *</span><input id="t-vendorBaru" placeholder="Mis. PT Maju Jaya" autocomplete="off"><small>Cukup nama dulu. Vendor masuk tab Vendor sebagai Draf dan ke daftar "perlu dilengkapi"; lengkapi datanya nanti.</small></label>
         <p class="mr-hint mr-f--lebar" data-w="internal" hidden>Tarif internal memakai vendor tetap <b>${e(VENDOR_INTERNAL.nama)}</b> (dibuat otomatis bila belum ada).</p>
       </div></section>
       <section class="mr-langkah" data-n="2"><h3>2 · Layanan</h3><div class="mr-form" id="t-layanan"><p class="mr-hint mr-f--lebar">Pilih lini bisnis dulu.</p></div></section>
@@ -74,7 +75,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
     // vendor: hanya yang relevan untuk lini ini; ISL Internal dipilih lewat tombol Internal
     const vend = (belum || !liniId ? S.vendor.filter((v) => v.aktif !== false) : vendorUntukLini(S.vendor, S.tarif, liniId)).filter((v) => v.id !== VENDOR_INTERNAL.id);
     const pilihLama = val("vendor");
-    $("#t-vendor", panel).innerHTML = `<option value="">Pilih vendor…</option>${vend.map((v) => `<option value="${e(v.id)}">${e(v.nama || v.id)}</option>`).join("")}<option value="__baru__">＋ Vendor baru…</option>`;
+    $("#t-vendor", panel).innerHTML = `<option value="">Pilih vendor…</option>${vend.map((v) => `<option value="${e(v.id)}">${e(v.nama || v.id)}</option>`).join("")}`;
     if (pilihLama) $("#t-vendor", panel).value = pilihLama;
 
     if (!liniId && !belum) {
@@ -83,18 +84,19 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
       return;
     }
     const lokasiField = (id, label, dl, wajib) => `
-      <div class="mr-f" data-w="${id}"><span>${label}${wajib ? " *" : ""}</span><input id="t-${id}" list="dl-rute" autocomplete="off" placeholder="Ketik atau pilih"><small class="mr-hint" id="h-${id}"></small><input id="t-${id}-prov" placeholder="Provinsi (opsional)" hidden></div>`;
+      <div class="mr-f" data-w="${id}"><span>${label}${wajib ? " *" : ""}</span>${htmlCombo(`t-${id}`, { placeholder: "Ketik atau pilih" })}<small class="mr-hint" id="h-${id}"></small><input id="t-${id}-prov" placeholder="Provinsi (opsional)" hidden></div>`;
     const daftarRute = cfg.koleksi === "trucking_trailer_zona" ? S.ref.zona : S.ref.lokasiDistribusi;
     const lokasiHtml = rute
-      ? `${lokasiField("asal", "Asal / pick up (opsional)")}${lokasiField("tujuan", "Tujuan", "", true)}<datalist id="dl-rute">${daftarRute.map((z) => `<option value="${e(z.nama)}">`).join("")}</datalist>`
+      ? `${lokasiField("asal", "Asal / pick up (opsional)")}${lokasiField("tujuan", "Tujuan", "", true)}`
       : htmlFasilitas("t", liniId, S, "", { kosong: cfg.lokasi ? "Pilih…" : "Tidak terikat lokasi", label: cfg.lokasi === "open_yard" ? "Lokasi open yard" : "Lokasi / fasilitas", wajib: !!cfg.lokasi });
     const namaLayanan = [...new Set(S.tarif.filter((t) => t.liniBisnisId === liniId).map((t) => t.layananNama).filter(Boolean))];
     $("#t-layanan", panel).innerHTML = `
-      <label class="mr-f mr-f--lebar" data-w="nama"><span>Nama layanan *</span><input id="t-nama" list="dl-layanan" autocomplete="off" placeholder="${liniId === "open_yard" ? "Mis. Storage per m2 per bulan" : rute ? "Mis. Trucking 20ft Priok ke Cikarang" : "Mis. Storage Dry 20ft"}"><small>Nama yang sama dengan layanan yang sudah ada otomatis memakai kodenya.</small></label>
-      <datalist id="dl-layanan">${namaLayanan.map((n) => `<option value="${e(n)}">`).join("")}</datalist>
+      <div class="mr-f mr-f--lebar" data-w="nama"><span>Nama layanan *</span>${htmlCombo("t-nama", { placeholder: liniId === "open_yard" ? "Mis. Storage per m2 per bulan" : rute ? "Mis. Trucking 20ft Priok ke Cikarang" : "Mis. Storage Dry 20ft", hint: "Nama yang sama dengan layanan yang sudah ada otomatis memakai kodenya." })}</div>
       ${lokasiHtml}
       <p class="mr-galat mr-f--lebar" ${S.ref.gagal && (rute || cfg.lokasi === "open_yard") ? "" : "hidden"}>Daftar zona/lokasi yang sudah ada gagal dimuat. Nama yang diketik dianggap baru; kalau ternyata sudah ada, tidak akan ditimpa.</p>`;
 
+    pasangCombo($("#t-nama-wrap", panel), () => namaLayanan.map((n) => ({ nama: n })));
+    if (rute) ["asal", "tujuan"].forEach((id) => pasangCombo($(`#t-${id}-wrap`, panel), () => daftarRute.map((z) => ({ nama: z.nama }))));
     const lama = { modal: val("modal"), jsaran: val("jsaran"), manual: $("#t-jsaran", panel) ? $("#t-jsaran", panel).dataset.manual : "", metode: val("metode"), catatan: val("catatan"), satuan: val("satuan") };
     const s = susunSatuan(liniId, S.satuan);
     const daftarSatuan = () => { const x = susunSatuan(liniId, S.satuan); return [...x.utama, ...x.lain]; };
@@ -132,7 +134,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
       return ada ? { id: ada.id, baru: false, nama: ada.nama, tambahLini: tambahLini(ada) } : { id: VENDOR_INTERNAL.id, baru: true, nama: VENDOR_INTERNAL.nama, internal: true };
     }
     const pilih = val("vendor");
-    if (pilih === "__baru__") {
+    if (vBaru) {
       const nama = val("vendorBaru").trim();
       if (!nama) return { id: "", baru: true, nama: "" };
       const ada = S.vendor.find((x) => x.id === slug(nama) || String(x.nama).trim().toLowerCase() === nama.toLowerCase());
@@ -161,7 +163,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
       const s = [];
       if (!liniId && !belum) s.push("pilih lini bisnis");
       const v = vendorTerpilih();
-      if (!v.id) s.push(sumber === "vendor" && val("vendor") === "__baru__" ? "isi nama vendor baru" : "pilih vendor");
+      if (!v.id) s.push(sumber === "vendor" && vBaru ? "isi nama vendor baru" : "pilih vendor");
       return s;
     }
     if (n === 2) return (liniId || belum) ? bangunItem(liniId, ambilV(), ref()).salah || [] : [];
@@ -175,7 +177,8 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
   function segarkan() {
     $$("#t-sumber .mr-seg__btn", panel).forEach((b) => b.classList.toggle("is-aktif", b.dataset.sumber === sumber));
     $('[data-w="vendor"]', panel).hidden = sumber !== "vendor";
-    $('[data-w="vendorBaru"]', panel).hidden = !(sumber === "vendor" && val("vendor") === "__baru__");
+    $('[data-w="vendorBaru"]', panel).hidden = !(sumber === "vendor" && vBaru);
+    $("#t-vendor-buka", panel).textContent = vBaru ? "Batal" : "＋ Baru";
     $('[data-w="internal"]', panel).hidden = sumber !== "internal";
     if (!liniId && !belum) return;
     const cfg = konfigLini(liniId);
@@ -281,7 +284,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
         sudah.push(`satuan ${satPilih.nama}`);
       }
       if (vend.baru) {
-        const data = { nama: vend.nama, namaLengkap: "", liniBisnis: belum ? [] : [liniId], terminBayar: "", kontak: "", aktif: true, catatan: vend.internal ? "Vendor tetap untuk tarif internal." : "Dibuat dari form tambah tarif." };
+        const data = { nama: vend.nama, namaLengkap: "", liniBisnis: belum ? [] : [liniId], terminBayar: "", kontak: "", aktif: true, ...(vend.internal ? {} : { status: "draf" }), catatan: vend.internal ? "Tarif yang disediakan perusahaan sendiri (kendaraan, gudang, biaya internal)." : "Dibuat dari form tambah tarif. Lengkapi identitas, PIC, dan dokumen di tab Vendor." };
         const t = await DB.simpanVendor(vend.id, data, { baru: true, oleh: S.user.email });
         S.vendor.push(t);
         sudah.push(`vendor ${vend.nama}`);
@@ -302,7 +305,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
       const h = await DB.terapkanBanyak([{ jenis: "baru", kunci, baris }], { oleh: S.user.email, sumber: "tambah_baru" });
       if (h.gagal.length) throw new Error(h.gagal[0].alasan);
       S.tarif.push({ ...baris, kunci, id: kunci, diperbaruiPada: new Date().toISOString(), diperbaruiOleh: S.user.email });
-      toast(`<b>Item baru tersimpan dan terverifikasi.</b> ${e(baris.layananNama)}${sudah.length ? `<br>Ikut didaftarkan: ${e(sudah.join(", "))}.` : ""}`, "ok");
+      toast(`<b>Item baru tersimpan dan terverifikasi.</b> ${e(baris.layananNama)}${sudah.length ? `<br>Ikut didaftarkan: ${e(sudah.join(", "))}.` : ""}${vend.baru && !vend.internal ? `<br><b>Vendor ${e(vend.nama)} perlu dilengkapi</b> di tab Vendor.` : ""}`, "ok");
       tutupLayer();
       render();
     } catch (err) {
@@ -321,6 +324,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
     segarkan();
   });
   panel.addEventListener("change", (ev) => {
+    if (ev.target.id === "t-vendor" && vBaru) vBaru = false;
     if (ev.target.id === "t-lini") {
       belum = ev.target.value === "__belum__";
       liniId = belum ? "" : ev.target.value;
@@ -330,6 +334,12 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
     segarkan();
   });
   panel.addEventListener("click", (ev) => {
+    if (ev.target.closest("#t-vendor-buka")) {
+      vBaru = !vBaru;
+      segarkan();
+      if (vBaru) $("#t-vendorBaru", panel).focus();
+      return;
+    }
     const b = ev.target.closest("[data-sumber]");
     if (!b) return;
     sumber = b.dataset.sumber;
@@ -345,7 +355,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
   $("#t-kembali", panel).onclick = () => { $("#t-galat-l", panel).hidden = true; tampilLangkah(langkah - 1); };
   $("#t-simpan", panel).onclick = simpan;
   // HP: footer tersembunyi saat keyboard terbuka, jadi Enter = Lanjut
-  panel.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && ev.target.tagName === "INPUT" && langkah < 3 && matchMedia("(max-width:760px)").matches) { ev.preventDefault(); $("#t-lanjut", panel).click(); } });
+  panel.addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !ev.defaultPrevented && ev.target.tagName === "INPUT" && langkah < 3 && matchMedia("(max-width:760px)").matches) { ev.preventDefault(); $("#t-lanjut", panel).click(); } });
   tampilLangkah(1);
   gambarForm();
 }

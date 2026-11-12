@@ -27,7 +27,7 @@ export function konfigLini(id) {
 }
 
 // Vendor tetap untuk tarif internal (dibuat otomatis saat pertama dipakai).
-export const VENDOR_INTERNAL = { id: "isl_internal", nama: "ISL Internal" };
+export const VENDOR_INTERNAL = { id: "internal", nama: "Internal" }; // sama dengan vendor internal di master-rate.js
 
 // Markup lini (%) untuk saran harga jual; sama dengan batas harga aman di db-firebase.js.
 export const markupLini = (liniId, lini) => {

@@ -2250,3 +2250,6 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qs-fl__t .qs-ok{color:var(--success);font-weight:700}.qs-fl__t .qs-ingat{color:var(--accent)}
 .qs-info{margin:0;font-size:12px;line-height:1.45}
 @media(max-width:640px){.qs-pop{align-items:flex-end;padding:0}.qs-kotak{width:100%;border-radius:18px 18px 0 0;max-height:92dvh}}
+
+/* form daftar fasilitas di dalam form tarif: jarak antarkolom */
+[id$="-fas-form"]:not([hidden]) { display: grid; gap: 10px; }
