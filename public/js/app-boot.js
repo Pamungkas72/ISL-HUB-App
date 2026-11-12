@@ -34,7 +34,7 @@ import "./riwayat.js";
 /* Halaman yang dipulihkan dari riwayat (tombol kembali) bisa tampil dari memori tanpa memeriksa login lagi.
    Karena itu halaman dimuat ulang, supaya gerbang login berjalan lagi dan akun yang sudah keluar diarahkan ke halaman masuk. */
 window.addEventListener("pageshow", (e) => { if (e.persisted) location.reload(); });
-const RUTE = ["customer", "rekap", "laporan", "quotation", "performa"];
+const RUTE = ["customer", "quotation", "performa"];
 const hariIni = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 function tampilGalat(pesan) {
@@ -97,7 +97,7 @@ watchAuthState(
         email: user.email, master, kelola, admin, hariIni, uid: user.uid, sales, peran: (profil && profil.peran) || (master ? "master" : "lihat"), nama: (profil && profil.nama) || user.displayName || "", telepon: (profil && profil.telepon) || "", ttdSales: (profil && profil.ttd) || "", kodeSales: (profil && profil.kodeSales) || "",
         tulis: store.tulis, unggahBlob: store.unggahBlob, diagnosa: store.diagnosa, buatLini: MRDB.buatJikaBelumAda, simpanMarkupLini: MRDB.simpanMarkupLini,
         tarifTambah,
-        navAktif: (id) => renderNav(id === "quotation" || id === "customer" || id === "rekap" || id === "laporan" || id === "performa" ? id : "customer"),
+        navAktif: (id) => renderNav(id === "quotation" || id === "customer" || id === "performa" ? id : "customer"),
       };
       renderNav(RUTE.includes(location.hash.slice(1)) ? location.hash.slice(1) : "customer");
       // Data dibaca dari server (Master Rate dan Fase 2 bersamaan). Kalau ada salinan lokal dari kunjungan sebelumnya,
@@ -131,7 +131,6 @@ watchAuthState(
       const MODUL = {
         beranda: { kontainer: "bd-root", muat: () => import("./dashboard.js"), mulai: "mulaiBeranda", judul: "Beranda" },
         "master-rate": { kontainer: "mr-kontainer", muat: () => import("./master-rate.js"), mulai: "mulaiMR", judul: "Master Rate" },
-        "uang-jalan": { kontainer: "uj-root", muat: () => (window.ISLUJ ? Promise.resolve(window.ISLUJ) : pasangSkrip("js/uang-jalan.js").then(() => window.ISLUJ)), mulai: "mulai", judul: "Uang Jalan" },
         pengaturan: { kontainer: "st-root", muat: () => import("./pengaturan.js"), mulai: "mulaiPengaturan", judul: "Pengaturan" },
       };
       const KONTAINER_CUSTOMER = ["cu-root", "qt-root", "lp-root", "lr-root", "pf-root"];
@@ -149,12 +148,11 @@ watchAuthState(
         const id = location.hash.slice(1);
         if (MODUL[id]) {
           if (sales && id !== "beranda") { location.hash = "#quotation"; return; } // akun sales tidak punya menu ini
-          if (id === "uang-jalan" && !kelola) { location.hash = "#customer"; return; } // biaya internal: hanya master dan admin
           return tampilModul(id);
         }
         Object.values(MODUL).forEach((x) => document.getElementById(x.kontainer)?.classList.add("hidden"));
-        /* Rekap untuk pemilik dan admin. Laporan Order & Laba hanya pemilik (memuat laba). Dashboard Performa untuk pemilik, admin, dan sales. */
-        const ok = RUTE.includes(id) && !(!kelola && (id === "rekap" || id === "laporan")) && !(!master && id === "laporan") && !(!kelola && !sales && id === "performa");
+        /* Dashboard Performa untuk pemilik, admin, dan sales. */
+        const ok = RUTE.includes(id) && !(!kelola && !sales && id === "performa");
         window.__rute = ok ? id : "customer";
         window.__pindahHalaman(ok ? id : "customer");
       };

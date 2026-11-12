@@ -251,7 +251,7 @@ const isiBaris = r => !!(String(r.tujuan || '').trim() || String(r.ket || '').tr
 const KALK = { rute: '', jarak: '', kmPerLiter: '', solar: '', tol: '', lain: '' };
 function htmlKalkulator() {
   if (!lihatInt()) return '';
-  return `<div class="fl-baris-tombol" style="margin-top:10px"><button type="button" class="fl-chipbtn" data-fla="kalk-buka">Kalkulator biaya rute (internal)</button><span class="fl-mut">Alat bantu menimbang harga jual. Tidak masuk PDF. Slip uang jalan driver: menu <a href="app.html#uang-jalan">Uang Jalan</a>.</span></div>`;
+  return `<div class="fl-baris-tombol" style="margin-top:10px"><button type="button" class="fl-chipbtn" data-fla="kalk-buka">Kalkulator biaya rute (internal)</button><span class="fl-mut">Alat bantu menimbang harga jual. Tidak masuk PDF.</span></div>`;
 }
 function hasilKalk() { const jarak = num(KALK.jarak) || 0, km = num(KALK.kmPerLiter) || 0, solar = num(KALK.solar) || 0, tol = num(KALK.tol) || 0, lain = num(KALK.lain) || 0, bbm = km > 0 ? jarak / km * solar : 0; return { bbm, tol, lain, total: bbm + tol + lain }; }
 function bukaKalkulator() {

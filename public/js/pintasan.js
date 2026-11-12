@@ -7,7 +7,7 @@
 // Catatan: browser tidak bisa memblokir screenshot sistem operasi sepenuhnya.
 // ===========================================================
 
-const HALAMAN_RAHASIA = ["master-rate", "quotation", "laporan", "customer"];
+const HALAMAN_RAHASIA = ["master-rate", "quotation", "customer"];
 
 const ruteSekarang = () => (location.hash.replace(/^#/, "") || "beranda").split("/")[0];
 const dilindungi = () => HALAMAN_RAHASIA.includes(ruteSekarang()) && window.__ISL_MASTER !== true;
