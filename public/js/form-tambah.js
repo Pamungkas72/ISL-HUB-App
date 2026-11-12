@@ -187,7 +187,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
     if (js && !js.dataset.manual) { const sj = saranJual(modal, pct); js.value = sj ? formatInputAngka(sj) : ""; }
     const jual = angka("jsaran", "jual", true).val;
     const m = $("#t-margin", panel);
-    if (m) m.textContent = modal > 0 && jual ? `Margin ${formatRp(jual - modal)} · ${(((jual - modal) / jual) * 100).toFixed(1).replace(".", ",")}% dari harga jual (markup lini ${pct}% → saran ${formatRp(saranJual(modal, pct))}).` : "Isi modal untuk melihat margin; harga jual rekomendasi terisi otomatis dan bisa diubah.";
+    if (m) m.textContent = modal > 0 && jual ? `Margin ${formatRp(jual - modal)} · ${(((jual - modal) / jual) * 100).toFixed(1).replace(".", ",")}% dari harga jual (markup lini ${pct}% → saran ${formatRp(saranJual(modal, pct))}). ${js && js.dataset.manual ? "Harga manual ini dipakai di quotation." : "Otomatis mengikuti markup lini di quotation."}` : "Isi modal untuk melihat margin; harga jual rekomendasi terisi otomatis dan bisa diubah.";
 
     // petunjuk lokasi/zona: terdaftar atau baru
     const daftarRef = cfg.jenis === "rute" ? (cfg.koleksi === "trucking_trailer_zona" ? S.ref.zona : S.ref.lokasiDistribusi) : S.ref.openYard;
@@ -241,7 +241,8 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
     const vend = vendorTerpilih();
     const satPilih = satuanTerpilih(), sat = satPilih.kode;
     const modal = angka("modal", "modal").val;
-    const jualSaran = angka("jsaran", "jual", true).val;
+    // hanya angka yang diketik user yang disimpan; kalau otomatis, quotation menghitung modal + markup lini saat dipakai
+    const jualSaran = $("#t-jsaran", panel).dataset.manual ? angka("jsaran", "jual", true).val : null;
     const kunci = buatKunci(liniId, vend.id, hasil.lokasiId, hasil.layanan, hasil.dimensi, sat, null);
     if (peta().has(kunci)) return segarkan();
     const mirip = cariMirip(S.tarif, { kunci, liniBisnisId: liniId, vendorId: vend.id, satuanKode: sat, lokasiId: hasil.lokasiId, layanan: hasil.layanan, layananNama: hasil.layananNama, dimensi: hasil.dimensi });
