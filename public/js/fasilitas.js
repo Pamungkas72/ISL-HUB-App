@@ -14,7 +14,7 @@ const JENIS_BARU = { depo: "depo", warehouse_dry: "gudang_dry", warehouse_frozen
 export function opsiFasilitas(S, liniId) {
   const hasil = new Map();
   const tambah = (id, nama) => id && !hasil.has(id) && hasil.set(id, nama || id);
-  (S.ref.profil || []).filter((p) => (JENIS_FASILITAS[liniId] || []).includes(p.jenis) && p.status !== "nonaktif").forEach((p) => tambah(p.lokasiRefId || p.id, p.namaTampil || p.nama));
+  (S.ref.profil || []).filter((p) => (!JENIS_FASILITAS[liniId] || JENIS_FASILITAS[liniId].includes(p.jenis)) && p.status !== "nonaktif").forEach((p) => tambah(p.lokasiRefId || p.id, p.namaTampil || p.nama));
   if (liniId === "depo") (S.ref.depo || []).forEach((d) => tambah(d.id, d.nama));
   else if (liniId === "open_yard") (S.ref.openYard || []).forEach((l) => tambah(l.id, l.nama));
   else (S.ref.warehouse || []).filter((w) => w.liniBisnisId === liniId).forEach((w) => tambah(w.id, w.nama));
