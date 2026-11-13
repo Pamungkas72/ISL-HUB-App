@@ -117,7 +117,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
     pasangPilihSatuan($("#t-satuan-wrap", panel), daftarSatuan);
     if (liniId === LINI_ASING) pasangNilaiAsing(panel, "t");
     if (!rute) pasangFasilitas(panel, "t", liniId, { S, DB, pemilik: () => (sumber === "internal" ? { isl: true } : { vendorId: vendorTerpilih().id }), onBaru: (id, nama) => { pilihFasilitasBaru(panel, "t", id, nama); segarkan(); } });
-    segarkan();
+    segarkan(true);
   }
 
   // ---------- baca isian ----------
@@ -174,7 +174,8 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
   }
 
   // ---------- segarkan tampilan sesuai isian ----------
-  function segarkan() {
+  // isiOtomatis: hanya saat modal berubah (atau form dibangun) harga jual diisi otomatis; mengetik di kolom harga jual tidak pernah ditimpa
+  function segarkan(isiOtomatis = false) {
     $$("#t-sumber .mr-seg__btn", panel).forEach((b) => b.classList.toggle("is-aktif", b.dataset.sumber === sumber));
     $('[data-w="vendor"]', panel).hidden = sumber !== "vendor";
     $('[data-w="vendorBaru"]', panel).hidden = !(sumber === "vendor" && vBaru);
@@ -187,7 +188,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
     const modal = angka("modal", "modal").val;
     const pct = markupLini(liniId, S.lini);
     const js = $("#t-jsaran", panel);
-    if (js && !js.dataset.manual) { const sj = saranJual(modal, pct); js.value = sj ? formatInputAngka(sj) : ""; }
+    if (isiOtomatis && js && !js.dataset.manual) { const sj = saranJual(modal, pct); js.value = sj ? formatInputAngka(sj) : ""; }
     const jual = angka("jsaran", "jual", true).val;
     const m = $("#t-margin", panel);
     if (m) m.textContent = modal > 0 && jual ? `Margin ${formatRp(jual - modal)} · ${(((jual - modal) / jual) * 100).toFixed(1).replace(".", ",")}% dari harga jual (markup lini ${pct}% → saran ${formatRp(saranJual(modal, pct))}). ${js && js.dataset.manual ? "Harga manual ini dipakai di quotation." : "Otomatis mengikuti markup lini di quotation."}` : "Isi modal untuk melihat margin; harga jual rekomendasi terisi otomatis dan bisa diubah.";
@@ -321,7 +322,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
   panel.addEventListener("focusin", (ev) => { if (ev.target.id === "t-modal" || ev.target.id === "t-jsaran") pasangRibuan(ev.target); });
   panel.addEventListener("input", (ev) => {
     if (ev.target.id === "t-jsaran") ev.target.dataset.manual = ev.target.value.trim() ? "1" : "";
-    segarkan();
+    segarkan(ev.target.id === "t-modal");
   });
   panel.addEventListener("change", (ev) => {
     if (ev.target.id === "t-vendor" && vBaru) vBaru = false;

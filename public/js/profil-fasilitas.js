@@ -269,7 +269,7 @@ function kartuHP(p, S, namaVendor, pilih) {
       ${pilih && bisaPilih ? `<span class="mr-m-cek ${sel ? "is-on" : ""}" aria-hidden="true">${sel ? ikon("cek", 16) : ""}</span>` : ""}
       <div class="mr-m-th">${f.length ? `<img src="${e(f[0].url)}" alt="" loading="lazy">` : ikon("foto", 24)}</div>
       <div class="mr-m-lok__t">
-        <span class="mr-pf-jenis" style="background:${j.warna}">${e(j.nama)}</span>
+        <span class="mr-pf-jenis" style="background:${j.warna}">${e(p.jenisLain || j.nama)}</span>
         <b>${e(p.nama)}</b>
         <div class="mr-m-lok__s">${ikon("pin", 13)}<span>${e(p.kawasan || p.alamat || "Kawasan belum diisi")}</span></div>
         ${mitra ? `<div class="mr-m-lok__s">${ikon("vendor", 13)}<span>${e(mitra)}</span></div>` : ""}
@@ -321,11 +321,11 @@ function kartu(p, S, namaVendor) {
     ${cek ? `<label class="mr-lok__cek" title="Pilih lokasi ini"><input type="checkbox" data-pilih-lok="${e(p.id)}" aria-label="Pilih ${e(p.nama)}" ${S.pilihLok.has(p.id) ? "checked" : ""}><span aria-hidden="true"></span></label>` : ""}
     <div class="mr-lok__foto" data-aksi="pf-detail" data-k="${e(p.id)}" role="button" tabindex="0" aria-label="Lihat profil ${e(p.nama)}">
       ${f.length ? `<img src="${e(f[0].url)}" alt="Foto ${e(p.nama)}" loading="lazy">${f.length > 1 ? `<span class="mr-lok__jml">${f.length} foto</span>` : ""}` : `<div class="mr-lok__kosong">${ikon("foto", 26)}<span>Belum ada foto</span></div>`}
-      <span class="mr-pf-jenis" style="background:${j.warna}">${e(j.nama)}</span>
+      <span class="mr-pf-jenis" style="background:${j.warna}">${e(p.jenisLain || j.nama)}</span>
     </div>
     <div class="mr-lok__isi">
       <div class="mr-lok__judul"><h3>${e(p.nama)}</h3><span class="mr-status mr-status--${st[0]}">${st[1]}</span></div>
-      <span class="mr-pf-jenis mr-pf-jenis--hp" style="background:${j.warna}">${e(j.nama)}</span>
+      <span class="mr-pf-jenis mr-pf-jenis--hp" style="background:${j.warna}">${e(p.jenisLain || j.nama)}</span>
       <p class="mr-sub">${e(p.kawasan || p.alamat || "Kawasan belum diisi")}${p.pemilik === "isl" ? " · milik ISL" : namaVendor && p.vendorId ? ` · ${e(namaVendor(p.vendorId))}` : ""}</p>
       <div class="mr-lok__angka"><span><b>${angkaOrStrip(p.luasLahanM2)}</b> m² lahan</span>${Number(p.luasBangunanM2) > 0 ? `<span><b>${angka(p.luasBangunanM2)}</b> m² bangunan</span>` : ""}${kapas ? `<span><b>${angka(kapas)}</b> ${kapSatuan}</span>` : ""}</div>
       <div class="mr-lok__fas">${aktif.slice(0, 4).map((t) => `<span class="mr-tag">${e(t)}</span>`).join("")}${aktif.length > 4 ? `<span class="mr-tag">+${aktif.length - 4}</span>` : ""}${aktif.length ? "" : '<span class="mr-sub">Fasilitas belum diisi</span>'}</div>
@@ -356,7 +356,7 @@ export function bukaDetailProfil({ S, DB, id, namaVendor, render }) {
   const permukaan = (p.fasilitas || {}).permukaan;
   const wa = waLink(pic.telp);
   const panel = bukaLayer(
-    `<header class="mr-panel__kepala"><div><h2>${e(p.nama)}</h2><p class="mr-sub"><span class="mr-pf-jenis mr-pf-jenis--ln" style="background:${j.warna}">${e(j.nama)}</span> ${p.pemilik === "isl" ? "Milik ISL" : namaVendor && p.vendorId ? "Mitra: " + e(namaVendor(p.vendorId)) : "Milik mitra"}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
+    `<header class="mr-panel__kepala"><div><h2>${e(p.nama)}</h2><p class="mr-sub"><span class="mr-pf-jenis mr-pf-jenis--ln" style="background:${j.warna}">${e(p.jenisLain || j.nama)}</span> ${p.pemilik === "isl" ? "Milik ISL" : namaVendor && p.vendorId ? "Mitra: " + e(namaVendor(p.vendorId)) : "Milik mitra"}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
     <div class="mr-panel__isi mr-pf-detail">
       <div class="mr-pf-hero">${f.length ? `<img id="pf-besar" src="${e(f[0].url)}" alt="Foto utama"><span class="mr-pf-hero__kat" id="pf-kat">${e(labelDari(KAT_FOTO, f[0].kategori))}</span>` : `<div class="mr-lok__kosong">${ikon("foto", 30)}<span>Belum ada foto</span></div>`}</div>
       ${f.length > 1 ? `<div class="mr-pf-thumb">${f.map((x, i) => `<button type="button" data-pf-thumb="${i}" class="${i === 0 ? "is-aktif" : ""}" aria-label="Foto ${i + 1}"><img src="${e(x.url)}" alt="" loading="lazy"></button>`).join("")}</div>` : ""}
