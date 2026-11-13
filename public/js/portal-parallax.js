@@ -116,7 +116,7 @@ void main(){
     // truk: empat truk bergantian di lajur tengah, yang lebih dekat digambar di atas
     vec4 lap = vec4(0.0); float sAtas = 0.0, gelap = 0.0;
     for (int i = 0; i < 4; i++) {
-      float s, b; float fase = fract(uTime / 52.0 + float(i) / 4.0);
+      float s, b; float fase = fract(uTime / 65.0 + float(i) / 4.0);
       vec3 cat = i == 0 ? vec3(1.0) : i == 1 ? vec3(0.30, 0.47, 0.80) : i == 2 ? vec3(0.78, 0.36, 0.30) : vec3(0.36, 0.62, 0.50);
       vec4 c = truk(px, fase, cat, s, b); gelap = max(gelap, b);
       lap = s > sAtas ? c + lap * (1.0 - c.a) : lap + c * (1.0 - lap.a);
