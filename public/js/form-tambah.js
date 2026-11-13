@@ -116,7 +116,7 @@ export function bukaTambahItem({ S, DB, peta, namaLini, render }) {
       <div class="mr-kunci"><small>Kunci item</small><code id="t-kunci">—</code><p class="mr-galat" id="t-galat" hidden></p></div>`;
     pasangPilihSatuan($("#t-satuan-wrap", panel), daftarSatuan);
     if (liniId === LINI_ASING) pasangNilaiAsing(panel, "t");
-    if (!rute) pasangFasilitas(panel, "t", liniId, { S, DB, onBaru: (id, nama) => { pilihFasilitasBaru(panel, "t", id, nama); segarkan(); } });
+    if (!rute) pasangFasilitas(panel, "t", liniId, { S, DB, pemilik: () => (sumber === "internal" ? { isl: true } : { vendorId: vendorTerpilih().id }), onBaru: (id, nama) => { pilihFasilitasBaru(panel, "t", id, nama); segarkan(); } });
     segarkan();
   }
 
