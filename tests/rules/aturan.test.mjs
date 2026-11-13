@@ -56,6 +56,7 @@ before(async () => {
     await isi("cu_customers/c2", { nama: "PT Hapus", status: "aktif" });
     await isi("cu_rates/r1", { cid: "c1", quotationId: "q-sales", jual: 1000, pemilikUid: "uid-sales" });
     await isi("cu_rates/r-admin", { cid: "c1", quotationId: "q-admin", jual: 900, pemilikUid: "uid-admin" });
+    await isi("cu_customers/c-prospek", { nama: "PT Prospek", status: "prospek", persetujuan: "disetujui" });
     await isi("cu_customers/c-draf-sales", { nama: "PT Baru", status: "prospek", persetujuan: "menunggu", diajukanUid: "uid-sales" });
     await isi("cu_customers/c-draf-lain", { nama: "PT Lain", status: "prospek", persetujuan: "menunggu", diajukanUid: "uid-admin" });
     await isi("qt_kegiatan/k-admin", kegiatan("q-sales", "uid-sales", "admin@isl.test"));
@@ -82,6 +83,12 @@ describe("Sales: draf customer sendiri boleh dihapus; rate hanya miliknya", () =
   it("sales membaca rate miliknya", () => assertSucceeds(getDoc(doc(sales(), "cu_rates/r1"))));
   it("sales tidak membaca rate milik admin", () => assertFails(getDoc(doc(sales(), "cu_rates/r-admin"))));
   it("admin membaca semua rate", () => assertSucceeds(getDoc(doc(admin(), "cu_rates/r1"))));
+});
+
+describe("Sales: customer disetujui hanya boleh naik prospek ke aktif", () => {
+  it("sales menaikkan prospek menjadi aktif", () => assertSucceeds(updateDoc(doc(sales(), "cu_customers/c-prospek"), { status: "aktif" })));
+  it("sales tidak menonaktifkan customer aktif", () => assertFails(updateDoc(doc(sales(), "cu_customers/c1"), { status: "nonaktif" })));
+  it("sales tidak mengubah nama customer disetujui", () => assertFails(updateDoc(doc(sales(), "cu_customers/c1"), { nama: "PT Lain" })));
 });
 
 describe("Koreksi rate: sales tidak bisa mengubah isi rate", () => {
