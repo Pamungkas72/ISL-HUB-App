@@ -55,9 +55,22 @@ label.dj-org select { max-width: 55%; }
 .mr-btn--bahaya { color: var(--danger); border-color: var(--danger-border); }
 .dj-ingat { position: fixed; z-index: 90; right: 16px; top: 72px; width: min(360px, calc(100vw - 32px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-left: 5px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px; }
 .dj-ingat p { margin: 6px 0 10px; font-size: 13px; color: var(--muted); } .dj-ingat div { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Desain A: toolbar ringkas. Tombol aksi ikon persegi; di desktop "Import" dan "Notifikasi" juga ikon, PDF berlabel. */
+.dj-ib { width: 38px; padding: 0; justify-content: center; } .dj-aksi .dj-pdf:not(.dj-ib) { padding: 0 12px; }
+.dj-filter { flex: 1; justify-content: flex-start; height: 38px; display: inline-flex; align-items: center; gap: 8px; }
+.dj-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--sky-soft); color: var(--head); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.dj-baris2 { display: flex; gap: 8px; width: 100%; } .dj-baris2 .dj-aksi { margin-left: 0; width: auto; }
+.dj-kpi .dj-h { display: none; } .dj-kpi i, .dj-alert i { font-style: normal; }
+@media (max-width: 760px) {
+  #dj-root { gap: 8px; }
+  .dj-bar2 { gap: 8px; } .dj-seg { display: flex; width: 100%; gap: 2px; } .dj-seg .mr-chip { flex: 1; justify-content: center; padding: 6px 0; min-height: 36px; }
+  .dj-kpis { grid-template-columns: repeat(4, 1fr); gap: 6px; } .dj-kpi { padding: 8px 9px; min-height: 0; }
+  .dj-kpi small, .dj-kpi .dj-p, .dj-alert .dj-p { display: none; } .dj-kpi .dj-h { display: inline; } .dj-kpi span { font-size: 11px; } .dj-kpi b { font-size: 20px; line-height: 1.15; }
+  .dj-alert { padding: 7px 11px; font-size: 13px; } .dj-tabs { margin-bottom: 0; }
+}
 @media (max-width: 760px) {
   .dj-kpis { grid-template-columns: 1fr 1fr; } .dj-grid2 { grid-template-columns: 1fr; }
-  .dj-bar2 select { flex: 1 1 130px; } #dj-root .dj-bar2 .tg-w { flex: 1 1 130px; width: auto; } .dj-aksi { margin-left: 0; width: 100%; } .dj-aksi .mr-btn { flex: 1; justify-content: center; }
+  .dj-bar2 select { flex: 1 1 130px; } #dj-root .dj-bar2 .tg-w { flex: 1 1 130px; width: auto; } .dj-aksi { margin-left: 0; }
   .dj-form { grid-template-columns: 1fr; }
   .dj-ingat { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 }
