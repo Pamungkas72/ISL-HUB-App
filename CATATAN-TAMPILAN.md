@@ -4,7 +4,7 @@ Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, d
 
 ## 2026-11-13 (modul baru: Daily Job)
 
-- **Menu Daily Job** (desktop: sidebar; HP: lembar Lainnya) untuk mencatat job harian tim marketing dan BD. Desain C dipilih dari 3 opsi (HP dan desktop): halaman utama = dashboard performa; tab **Daftar job** dan **Kelompok** (khusus master/admin).
+- **Menu Daily Job** (desktop: sidebar; HP: bilah bawah; Dashboard Performa pindah ke lembar Lainnya) untuk mencatat job harian tim marketing dan BD. Desain C dipilih dari 3 opsi (HP dan desktop): halaman utama = dashboard performa; tab **Daftar job** dan **Kelompok** (khusus master/admin).
 - **Catat job** lewat tombol **+** oranye (pola sama dengan Tambah item di Master Rate), panel dari samping/bawah: judul, kategori, customer, PIC, tanggal masuk/mulai/target/selesai, status, prioritas, bobot, deskripsi, file project (unggah maks 4 MB atau tautan), catatan progres berriwayat. Ketuk baris job = ubah; ikon centang = tandai selesai.
 - **Pengingat**: pop-up "catat daily job" pukul 09.00, 14.00, 17.00 WIB (muncul sekali per jam pengingat, saat aplikasi terbuka; notifikasi browser bila diizinkan dan tab di latar), banner terlambat / jatuh tempo hari ini / mulai minggu ini.
 - **Dashboard**: periode Minggu/Bulan/Tahun/Rentang; filter kelompok, PIC, kategori; kartu Job selesai, Tepat waktu, Rata-rata selesai, Terlambat (bisa diklik menyaring daftar); grafik masuk vs selesai, komposisi kategori (klik = filter), beban kerja per orang (klik = filter), daftar perlu perhatian. **PDF**: halaman dashboard + tabel job selesai (dengan tautan file project) + tabel job belum selesai.

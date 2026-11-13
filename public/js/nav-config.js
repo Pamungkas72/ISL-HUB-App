@@ -57,6 +57,7 @@ export const navItems = [
   },
   {
     id: "dailyjob",
+    utama: true,
     label: "Daily Job",
     href: "app.html#dailyjob",
     icon: icons.dailyjob,
@@ -71,7 +72,6 @@ export const navItems = [
   },
   {
     id: "performa",
-    utama: true,
     label: "Dashboard Performa",
     href: "app.html#performa",
     icon: icons.dashboard,
