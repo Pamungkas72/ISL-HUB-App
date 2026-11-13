@@ -10,6 +10,7 @@ import C from "./cadangan.js";
 import { app, db } from "./firebase-config.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun } from "./akses.js";
 import * as MRDB from "./db.js";
@@ -75,7 +76,7 @@ function htmlCekFirebase() {
 
 /* ---------- kelola akun (master) ---------- */
 const warna = { menunggu: "st-badge", aktif: "st-badge st-badge--ok", nonaktif: "st-badge" };
-const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual" };
+const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
 const waktuLog = (v) => { const t = v && typeof v.toDate === "function" ? v.toDate() : v; return t ? wkt(t) : "-"; };
 /* Hanya bagian yang berubah yang ditampilkan: peran, status, kode sales, dan target. */
 const ringkasLog = (dari, ke) => {
@@ -98,7 +99,7 @@ function htmlAkun() {
     <td><input data-akun="target" inputmode="numeric" value="${a.targetBulanan ? Number(a.targetBulanan).toLocaleString("id-ID") : ""}" placeholder="${S.perf.targetDefault ? Number(S.perf.targetDefault).toLocaleString("id-ID") : "Target Rp/bln"}" style="width:130px" ${S.master ? "" : "disabled"}></td>
     <td><span class="${warna[a.status] || "st-badge"}">${e(STATUS_AKUN[a.status] || a.status)}</span></td>
     <td class="st-aksi">${dikunci(a) ? `<span class="mr-sub">Dikelola pemilik</span>` : a.status === "menunggu" ? `<button class="mr-btn mr-btn--kecil mr-btn--utama" data-st="akun-setujui" ${S.modal && S.modal.siap ? "" : "aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\""}>Setujui</button><button class="mr-btn mr-btn--kecil" data-st="akun-tolak">Tolak</button>`
-      : a.status === "aktif" ? `<button class="mr-btn mr-btn--kecil" data-st="akun-simpan">Simpan</button><button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-nonaktif">Nonaktifkan</button>${hapusAkun}`
+      : a.status === "aktif" ? `<button class="mr-btn mr-btn--kecil" data-st="akun-simpan">Simpan</button>${S.master ? `<button class="mr-btn mr-btn--kecil" data-st="akun-sandi">Kata sandi</button>` : ""}<button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-nonaktif">Nonaktifkan</button>${hapusAkun}`
       : `<button class="mr-btn mr-btn--kecil" data-st="akun-aktif" ${S.modal && S.modal.siap ? "" : "aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\""}>Aktifkan lagi</button>${hapusAkun}`}</td></tr>`;
   const m = S.modal;
   /* Admin hanya bisa memisahkan modal Master Rate. Modal quotation dan rate dipisah pemilik, jadi admin diberi tahu, bukan diarahkan ke tombol yang tidak menuntaskan. */
@@ -171,6 +172,41 @@ async function muatAkun() {
   render();
 }
 const angkaIn = (v) => { const n = Number(String(v || "").replace(/[^\d]/g, "")); return n > 0 ? n : null; };
+/* Kata sandi akun lain (master): kirim email reset, atau ketik kata sandi baru (lewat Cloud Function; butuh paket Blaze). */
+function dialogSandi(ak, uid) {
+  return new Promise((selesai) => {
+    const lapis = document.createElement("div"); lapis.className = "mr-konfirm";
+    lapis.innerHTML = `<div class="mr-konfirm__kotak"><h3>Kata sandi ${e(ak.email)}</h3><div class="mr-konfirm__isi">
+      <p style="margin:0 0 6px"><b>1. Kirim email reset</b><br><span class="mr-sub">Tautan atur kata sandi dikirim ke emailnya. Master tidak tahu kata sandinya.</span></p>
+      <button class="mr-btn" data-x="email">Kirim email reset</button>
+      <hr style="margin:14px 0;border:0;border-top:1px solid var(--border,#DCE5EF)">
+      <p style="margin:0 0 6px"><b>2. Atur kata sandi baru langsung</b><br><span class="mr-sub">Minimal 8 karakter. Sesi login lamanya berakhir. Sampaikan kata sandinya lewat jalur aman.</span></p>
+      <input type="password" id="ds-sandi" autocomplete="new-password" placeholder="Kata sandi baru" style="width:100%;box-sizing:border-box" maxlength="128">
+      <label style="display:flex;gap:6px;align-items:center;margin:6px 0 10px"><input type="checkbox" id="ds-lihat"> Tampilkan</label>
+      <button class="mr-btn mr-btn--utama" data-x="atur">Simpan kata sandi baru</button></div>
+      <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="tutup">Tutup</button></div></div>`;
+    document.body.appendChild(lapis);
+    const tutup = () => { lapis.remove(); selesai(); }, q = (x) => lapis.querySelector(x);
+    q('[data-x="tutup"]').onclick = tutup;
+    q("#ds-lihat").onchange = (ev) => { q("#ds-sandi").type = ev.target.checked ? "text" : "password"; };
+    q('[data-x="email"]').onclick = async (ev) => {
+      ev.target.disabled = true;
+      try { await sendPasswordResetEmail(await authTambahAkun(), ak.email); await catatLogAkun({ uid, email: ak.email }, "kirim-reset-sandi", null, null); toast(`Email reset terkirim ke <b>${e(ak.email)}</b>.`); tutup(); }
+      catch (er) { ev.target.disabled = false; toast(`Email reset gagal (${e(er.code || er.message)}).`, "bahaya"); }
+    };
+    q('[data-x="atur"]').onclick = async (ev) => {
+      const sandi = q("#ds-sandi").value;
+      if (sandi.length < 8) return toast("Kata sandi minimal 8 karakter.", "bahaya");
+      ev.target.disabled = true; ev.target.textContent = "Menyimpan…";
+      try { await httpsCallable(getFunctions(app, "asia-southeast2"), "aturKataSandi")({ uid, sandi }); toast(`Kata sandi <b>${e(ak.email)}</b> diubah.`); tutup(); }
+      catch (er) {
+        ev.target.disabled = false; ev.target.textContent = "Simpan kata sandi baru";
+        const k = String(er.code || "");
+        toast(k.includes("not-found") || k.includes("unavailable") || k.includes("internal") ? "Fitur ubah langsung belum aktif di server (Cloud Function belum ter-deploy; butuh paket Blaze). Pakai email reset dulu." : `Gagal: ${e(er.message || k)}`, "bahaya");
+      }
+    };
+  });
+}
 async function aksiAkun(a, tr) {
   const uid = tr && tr.dataset.uid, ak = S.akun.find((x) => x.id === uid); if (a !== "target-simpan" && !ak) return;
   if (a === "akun-hapus" && !S.master) return; // hanya pemilik
@@ -193,6 +229,8 @@ async function aksiAkun(a, tr) {
       else await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
       await catatLogAkun({ uid, email: ak.email }, a === "akun-setujui" ? "setujui" : a === "akun-aktif" ? "aktifkan" : "ubah", { peran: ak.peran ?? null, status: ak.status, kode: ak.kodeSales || null, target: ak.targetBulanan ?? null }, { peran: b.peran, status: "aktif", kode: b.kodeSales || null, target: target ?? null });
       toast(`Akun <b>${e(ak.email)}</b> ${a === "akun-simpan" ? "diperbarui" : "aktif"} sebagai ${e(PERAN[b.peran])}.`);
+    } else if (a === "akun-sandi") {
+      if (S.master) await dialogSandi(ak, uid);
     } else if (a === "akun-nonaktif") {
       if (!(await konfirmasi("Nonaktifkan akun?", `<b>${e(ak.email)}</b> tidak bisa masuk lagi. Quotation dan riwayatnya tetap tersimpan atas namanya.`, "Nonaktifkan"))) return;
       await updateDoc(doc(db, "pengguna", uid), { status: "nonaktif" }); await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
