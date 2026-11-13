@@ -3590,19 +3590,6 @@ const berlakuChip = x => {
 /* blok ini hanya bisa dilipat di HP (lihat CSS); di desktop selalu terbuka */
 const LIPAT = { kpi: true, sales: true }; // awal tertutup di HP; desktop tidak terpengaruh
 const tombolLipat = (k, judul, ket) => `<button type="button" class="qt-lipat-tombol" data-qt="lipat" data-k="${k}" aria-expanded="${!LIPAT[k]}">${judul} <small class="mr-sub">${ket}</small><span class="qt-lipat-chev" aria-hidden="true">▾</span></button>`;
-/* ringkasan per sales untuk quotation yang terbit bulan ini */
-function salesBulan() {
-  const per = {};
-  kpiTerbitBulanIni().item.forEach(({ x, kat }) => {
-    const b = per[pembuatDokumen(x)] = per[pembuatDokumen(x)] || { terbit: 0, disetujui: 0, ditolak: 0 };
-    b.terbit++; if (kat === 'disetujui') b.disetujui++; if (kat === 'ditolak') b.ditolak++;
-  });
-  return Object.entries(per).sort((a, b) => b[1].terbit - a[1].terbit).slice(0, 3);
-}
-function blokSalesBulan() {
-  const baris = salesBulan();
-  return baris.length ? `<div class="qt-sales-bulan qt-lipat ${LIPAT.sales ? 'is-tutup' : ''}"><h3 class="qt-kpi-h">${tombolLipat('sales', 'Per sales bulan ini', '3 teratas · bar = porsi disetujui')}</h3><div class="qt-lipat-isi"><div class="qt-sales-grid">${baris.map(([n, b]) => `<div class="qt-sales-kartu"><div class="qt-sales-kartu__atas"><span class="qt-sales-kartu__nama" title="${esc(n)}">${esc(n)}</span><b>${b.terbit}</b></div><div class="qt-sales-bar"><span style="width:${Math.round(b.disetujui / b.terbit * 100)}%"></span></div><small>${b.disetujui} disetujui · ${b.ditolak} ditolak</small></div>`).join('')}</div></div></div>` : '';
-}
 function blokKpiBulan() {
   const { k } = kpiTerbitBulanIni(), draf = Repo.semua().filter(q => q.status === 'draf').length, belum = k.menunggu + k.diabaikan + k.ditolak;
   const nama = new Date(HARI_INI() + 'T00:00:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -3799,7 +3786,6 @@ function viewDaftar() {
   ${sbBanner('quotation', nSb, 'quotation dan riwayat', 'quotation')}
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Membuat dan mengubah quotation hanya untuk master atau sales.</div></div>`}
   ${blokKpiBulan()}
-  ${blokSalesBulan()}
   ${(() => {
     const daftar = kumpulTL(semuaAll, semua);
     return daftar.length && !(sembunyi.ada('banner:tindaklanjut') || layarSisa() <= 0) ? `<div class="mr-banner mr-banner--peringatan qt-tl">${ik('peringatan')}${tombolX('banner:tindaklanjut')}<div><b>${daftar.length} perlu tindak lanjut</b> (menggantung tanpa pembaruan ≥ 7 hari; tanpa kabar ≥ ${PENG.tindakLanjutHari || 3} hari; riwayat PDF ≥ ${RW_HARI} hari)<div class="qt-tl__l">${daftar.slice(0, 6).map(i => `<span class="qt-tl__i"><b>${esc(i.nama)}</b> · ${esc(i.cust)} · ${i.ket} ${i.aksi}</span>`).join('')}</div></div></div>` : '';
@@ -3896,7 +3882,6 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
     + (Q.fSumber === 'sistem' ? 0 : rw.filter(x => (!v || RW_KELOMPOK[x.status] === v) && (!Q.fTahun || rwPutus(x).startsWith(Q.fTahun)) && cariR(x)).length);
   const filterLuar = !!(Q.fSumber || Q.fTahun || (Q.fStatus && !TAB_STATUS.some(t => t[0] === Q.fStatus)));
   const kartu = (st, ikon, n, label, extra = '') => `<button type="button" class="mr-stat__kartu qt-kpiklik ${Q.kpi === st ? 'is-aktif' : ''} ${extra}" data-qt="kpi" data-st="${st}" aria-pressed="${Q.kpi === st}"><span class="mr-stat__ikon">${ik(ikon)}</span><div><b>${n}</b><small>${label}</small></div></button>`;
-  const sales = salesBulan();
   let intip = false;
   if (!QM.intipSelesai) { try { intip = !localStorage.getItem('islqt-geser'); } catch { intip = false; } if (intip) setTimeout(() => { QM.intipSelesai = true; try { localStorage.setItem('islqt-geser', '1'); } catch { } }, 3500); }
   let adaIntip = false;
@@ -3911,7 +3896,7 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
       <button type="button" class="qt-m-chev ${QM.ringkas ? 'is-buka' : ''}" data-qt="m-ringkas" aria-label="${QM.ringkas ? 'Tutup' : 'Buka'} ringkasan bulan ini">${ik('turun', 17)}</button>
     </div>
     ${QM.ringkas ? `<div class="qt-m-ringisi"><div class="mr-stat">${kartu('terbit', 'file', k.terbit, `Quotation terbit${k.lainnya ? ` · ${k.lainnya} digantikan atau tidak dipakai` : ''}`)}${kartu('belum', 'kirim', belum, `Belum disetujui${k.diabaikan ? ` · ${k.diabaikan} diabaikan` : ''}`, belum ? 'is-perhatian' : '')}${kartu('draf', 'edit', draf, 'Draf (belum terbit)')}${kartu('disetujui', 'setuju', k.disetujui, 'Disetujui')}</div>
-      ${sales.length ? `<h3 class="qt-kpi-h">Per sales bulan ini <small class="mr-sub">3 teratas · bar = porsi disetujui</small></h3><div class="qt-sales-grid">${sales.map(([n, b]) => `<div class="qt-sales-kartu"><div class="qt-sales-kartu__atas"><span class="qt-sales-kartu__nama" title="${esc(n)}">${esc(n)}</span><b>${b.terbit}</b></div><div class="qt-sales-bar"><span style="width:${Math.round(b.disetujui / b.terbit * 100)}%"></span></div><small>${b.disetujui} disetujui · ${b.ditolak} ditolak</small></div>`).join('')}</div>` : ''}</div>` : ''}
+</div>` : ''}
     <div class="qt-m-cariBaris">
       <label class="mr-cari qt-m-cari">${ik('cari', 16)}<input id="qt-cari-m" type="search" placeholder="Cari nomor, perihal, customer" value="${esc(Q.q)}" autocomplete="off" enterkeyhint="search"></label>
       <button type="button" class="qt-m-ib ${filterLuar ? 'is-aktif' : ''}" data-qt="m-filter" aria-label="Filter${filterLuar ? ' (ada filter aktif)' : ''}">${ik('filter', 19)}${filterLuar ? '<i class="qt-m-dot"></i>' : ''}</button>
