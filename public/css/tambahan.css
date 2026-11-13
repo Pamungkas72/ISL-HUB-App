@@ -1208,7 +1208,7 @@ input, textarea, select, [contenteditable="true"] { -webkit-user-select: text; u
   .qt-bar-list > .mr-cari { grid-column: 1 / -1; width: 100%; }
   .qt-bar-list > #qt-fstatus, .qt-bar-list > #qt-fsumber { grid-column: span 3; width: 100%; max-width: none; min-width: 0; height: 40px; }
   .qt-bar-list > [data-qt="reset-filter"] { grid-column: 1 / -1; justify-self: start; }
-  .qt-bar-list > [data-qt="belum-buka"], .qt-bar-list > [data-qt="rw-unggah"] { grid-column: span 3; justify-content: center; min-width: 0; height: 40px; }
+  .qt-bar-list > [data-qt="rw-unggah"] { grid-column: span 3; justify-content: center; min-width: 0; height: 40px; }
   .qt-bar-list > .qt-ikonbar { grid-column: span 1; width: 100%; }
   .qt-bar-list > .qt-menu { grid-column: span 4; display: flex; }
   .qt-bar-list > .qt-menu > .mr-btn { width: 100%; justify-content: center; }

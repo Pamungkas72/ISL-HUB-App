@@ -3810,7 +3810,6 @@ function viewDaftar() {
     ${rw.length ? `<select class="mr-select" id="qt-fsumber" aria-label="Filter sumber"><option value="">Semua sumber</option>${opt([['sistem', 'Dibuat di sistem'], ['pdf', 'Riwayat PDF']], Q.fSumber)}</select>` : ''}
     ${Q.fStatus || Q.fTahun || Q.fSumber ? `<button type="button" class="mr-btn mr-btn--kecil" data-qt="reset-filter">${ik('tutup', 14)} Hapus filter${Q.fTahun ? ' (tahun ' + Q.fTahun + ')' : ''}</button>` : ''}
     <span class="mr-ruang"></span>
-    <button class="mr-btn" data-qt="belum-buka" title="Customer yang quotationnya ditolak atau diabaikan dan belum punya penawaran aktif">${ik('telp', 16)} Follow up${nBelum ? ` <span class="qt-rwbadge">${nBelum}</span>` : ''}</button>
     ${bisaEdit() ? `<button class="mr-btn" data-qt="rw-unggah" title="Quotation yang dibuat di luar sistem: unggah PDF yang sudah dikirim, lalu pantau statusnya di daftar ini">${ik('upload', 16)} Unggah PDF</button>` : ''}
     <button class="mr-ikonbtn qt-ikonbar" data-qt="ekspor" aria-label="Ekspor Excel" title="Ekspor semua quotation ke Excel (cadangan dan laporan)">${ik('download', 18)}</button>
     <button class="mr-ikonbtn qt-ikonbar" data-qt="pengaturan" aria-label="Pengaturan dokumen" title="Pengaturan dokumen: kop, template, kalimat, syarat">${ik('setelan', 18)}</button>
