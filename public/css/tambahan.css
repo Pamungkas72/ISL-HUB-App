@@ -2315,3 +2315,9 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .nfp-petunjuk { margin: 0 0 12px; font-size: 12px; color: var(--mr-muted); }
 @media (max-width: 760px) { .nfp-row { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } }
 @media (max-width: 760px) { .nfp-bar__semua { flex: 1 0 100%; } .nfp-bar .mr-btn { flex: 1; } }
+
+/* Perlu perhatian (desktop): tombol berlencana + daftar di popover Alat lain */
+.mr-prh .mr-btn.is-perhatian { border-color: var(--mr-warn-garis); color: var(--mr-warn); }
+.mr-prh__n { min-width: 20px; height: 20px; padding: 0 6px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--mr-warn-bg); border: 1px solid var(--mr-warn-garis); font-size: 11.5px; }
+.mr-prh .mr-alat__isi .mr-btn { justify-content: space-between; gap: 14px; width: 100%; }
+.mr-prh .mr-alat__isi .mr-btn.is-aktif { border-color: var(--mr-accent); font-weight: 700; }
