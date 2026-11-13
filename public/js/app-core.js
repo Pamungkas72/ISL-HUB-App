@@ -3810,7 +3810,7 @@ ${bilahPilihQt(list)}
     <div class="mr-kartu mr-tabelkartu">
     ${list.length ? `<table class="mr-table qt-zebra"><thead><tr>${masterSaja() ? `<th class="qt-cek"><input type="checkbox" data-qt-pilih-semua aria-label="Pilih semua quotation" ${list.length && list.every(({ x }) => PILIH_QT.has(x.id)) ? 'checked' : ''}></th>` : ''}<th>Quotation</th><th>Customer</th><th>Sales</th><th>Status</th><th>Tanggal</th><th></th></tr></thead><tbody>
     ${list.map(({ x, rw: r }) => { if (r) return barisRw(x); return `<tr class="cu-baris${SB.ada('quotation', x.id) ? ' qt-sembunyi' : ''}" data-qt="buka" data-id="${x.id}">${cekQt(x.id)}
-      <td class="mr-td-nama"><div class="qt-nmrow"><span class="qt-sik qt-sik--${esc(x.status)}" aria-hidden="true">${ik(IKON_STATUS[x.status] || 'file', 17)}</span><div class="qt-nm"><b>${esc(namaQ(x))}</b>${x.dokumenModel && !x.kosong ? ` <button type="button" class="qt-ikonmata" data-qt="lihat-dokumen" data-id="${esc(x.id)}" aria-label="Lihat dokumen ${esc(namaQ(x))}" title="Lihat dokumen PDF">${ik('galeri', 15)}</button>` : ''}${tagRevisi(x)}${x.jalur === 'word' ? ' <span class="qt-chipw">Word</span>' : ''}${x.jalur === 'word' && x.status !== 'draf' && !x.dokFinal ? ' <span class="cu-st cu-st--warn" title="Dokumen Word belum difinalkan. Unggah PDF final di detail quotation.">Belum final</span>' : ''}${x.perhatian ? ' <span class="cu-st cu-st--warn" title="Ditandai oleh pemilik">Perlu perhatian</span>' : ''}<div class="mr-sub">${esc(x.judul)}</div>${catatanTerakhir(x) ? `<div class="mr-sub qt-catatan">Terakhir: ${esc(catatanTerakhir(x))}</div>` : ''}</div></div></td>
+      <td class="mr-td-nama"><div class="qt-nmrow"><span class="qt-sik qt-sik--${esc(x.status)}" aria-hidden="true">${ik(IKON_STATUS[x.status] || 'file', 17)}</span><div class="qt-nm"><b>${esc(namaQ(x))}</b>${x.dokumenModel && !x.kosong ? ` <button type="button" class="qt-ikonmata" data-qt="lihat-dokumen" data-id="${esc(x.id)}" aria-label="Lihat dokumen ${esc(namaQ(x))}" title="Lihat dokumen PDF">${ik('galeri', 15)}</button>` : ''}${tagRevisi(x)}${x.status === 'disetujui' && x.dok ? ' <span class="qt-ttd-tag" title="Sudah ada dokumen bertanda tangan">TTD</span>' : ''}${x.jalur === 'word' ? ' <span class="qt-chipw">Word</span>' : ''}${x.jalur === 'word' && x.status !== 'draf' && !x.dokFinal ? ' <span class="cu-st cu-st--warn" title="Dokumen Word belum difinalkan. Unggah PDF final di detail quotation.">Belum final</span>' : ''}${x.perhatian ? ' <span class="cu-st cu-st--warn" title="Ditandai oleh pemilik">Perlu perhatian</span>' : ''}<div class="mr-sub">${esc(x.judul)}</div>${catatanTerakhir(x) ? `<div class="mr-sub qt-catatan">Terakhir: ${esc(catatanTerakhir(x))}</div>` : ''}</div></div></td>
       <td data-label="Customer">${esc(namaCust(x))}</td>
       <td data-label="Sales">${esc(pembuatDokumen(x))}</td>
       <td data-label="Status">${chipStatus(x)}</td>
@@ -3842,8 +3842,8 @@ function infoBarisHP(x) {
 }
 function barisHP(x, pilih, intip) {
   const sel = PILIH_QT.has(x.id), inf = infoBarisHP(x), cepat = x.status === 'terkirim' && !x.digantikanOleh && bisaEdit(), id = esc(x.id);
-  const act = cepat ? `<button type="button" class="qt-m-ab qt-m-ab--ok" data-qt="setujui-cepat" data-id="${id}">${ik('setuju', 19)}<span>Setujui</span></button><button type="button" class="qt-m-ab qt-m-ab--no" data-qt="tolak-cepat" data-id="${id}">${ik('tolak', 19)}<span>Tolak</span></button>` : '';
-  const n = (cepat ? 2 : 0) + 1;
+  const act = (x.status === 'disetujui' && x.dok ? `<button type="button" class="qt-m-ab" data-qt="ttd-bagikan" data-id="${id}">${ik('kirim', 19)}<span>Bagikan TTD</span></button>` : '') + (cepat ? `<button type="button" class="qt-m-ab qt-m-ab--ok" data-qt="setujui-cepat" data-id="${id}">${ik('setuju', 19)}<span>Setujui</span></button><button type="button" class="qt-m-ab qt-m-ab--no" data-qt="tolak-cepat" data-id="${id}">${ik('tolak', 19)}<span>Tolak</span></button>` : '');
+  const ttd = x.status === 'disetujui' && !!x.dok, n = (cepat ? 2 : 0) + (ttd ? 1 : 0) + 1;
   return `<div class="qt-m-baris ${sel ? 'is-pilih' : ''} ${intip ? 'is-intip' : ''} ${x.perhatian ? 'is-perhatian' : ''} ${SB.ada('quotation', x.id) ? 'qt-sembunyi' : ''}" data-mid="${id}" style="--aw:${n * WIDTH_AKSI}px"${x.perhatian ? ' title="Ditandai perlu perhatian"' : ''}>
     ${pilih ? '' : `<div class="qt-m-act">${act}<button type="button" class="qt-m-ab" data-qt="m-aksi" data-id="${id}">${ik('titik', 19)}<span>Lainnya</span></button></div>`}
     <div class="qt-m-isi" data-qt="${pilih ? 'm-pilih' : 'buka'}" data-id="${id}">
@@ -3851,7 +3851,7 @@ function barisHP(x, pilih, intip) {
       <div class="qt-m-tengah">
         <div class="qt-m-a"><b>${esc(namaQ(x))}</b></div>
         <div class="qt-m-b">${esc(namaCust(x))}</div>
-        <div class="qt-m-c">${x.jalur === 'word' ? tagHP('Word', 'qt-m-tag--w') : ''}${tagRevisi(x)}<span>${x.judul ? esc(x.judul) : '<i>Perihal belum diisi</i>'} · ${esc(pembuatDokumen(x))}</span></div>
+        <div class="qt-m-c">${x.jalur === 'word' ? tagHP('Word', 'qt-m-tag--w') : ''}${ttd ? tagHP('TTD', 'qt-m-tag--ttd') : ''}${tagRevisi(x)}<span>${x.judul ? esc(x.judul) : '<i>Perihal belum diisi</i>'} · ${esc(pembuatDokumen(x))}</span></div>
       </div>
       <div class="qt-m-kanan"><b>${inf.tgl}</b><span class="${inf.warn ? 'is-warn' : ''}">${esc(inf.ket)}</span></div>
     </div></div>`;
@@ -4480,8 +4480,39 @@ function formTnc(e) {
   return topBlok + (adaParam ? formTopPilih(e) : '') + skvHtml + `<div class="qt-sec" style="margin-top:8px"><p class="mr-sub qt-ket" style="margin:0">Periksa daftar ini sebelum quotation diterbitkan. Isinya otomatis dari template lini bisnis dan bisa kamu sesuaikan khusus untuk quotation ini.</p><span class="mr-ruang"></span>${tombolPusat}</div>
     <div id="qt-tnc">${formTncCc(e)}</div>`;
 }
+/* ----- dokumen bertanda tangan (q.dok): lihat, unduh, kirim lewat WA/email, bagikan; tiap aksi dicatat di riwayat (cara "ttd-...") ----- */
+const dataTTD = q => { const dd = Repo.dokData(q.id), r = (q.rateIds || []).length ? S.rates.find(x => x.id === q.rateIds[0]) : (q.paketId ? S.paket.find(x => x.id === q.paketId) : null); return dd || (r && r.dokData) || null; };
+const CARA_TTD = { 'ttd-unduh': 'Diunduh (bertanda tangan)', 'ttd-wa': 'Dikirim lewat WhatsApp', 'ttd-email': 'Dikirim lewat email', 'ttd-bagikan': 'Dibagikan' };
+async function berkasTTD(q) {
+  const d = dataTTD(q); if (!q.dok || !d) { toast('File bertanda tangan belum tersedia di perangkat ini.', 'bahaya'); return null; }
+  try { const blob = await (await fetch(d)).blob(); return { blob, nama: q.dok }; } catch (er) { toast(`<b>File gagal disiapkan.</b> ${esc(er.message)}`, 'bahaya'); return null; }
+}
+async function aksiTTD(id, jenis) {
+  const q = Repo.baca(id); if (!q) return; if (jenis === 'lihat') return panelDok(q);
+  const f = await berkasTTD(q); if (!f) return; const cara = 'ttd-' + jenis, catat = async () => { try { await Repo.catatKeluaran(id, cara, f.nama); } catch (er) { toast(`File terkirim, tetapi <b>catatan riwayat gagal tersimpan</b>.<br>${esc(er.message)}`, 'bahaya'); } segarSemua(); };
+  if (jenis === 'bagikan') {
+    const file = new File([f.blob], f.nama, { type: f.blob.type || 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: f.nama }); return catat(); } catch (er) { if (er && er.name === 'AbortError') return; } }
+    simpanBlob(f.blob, f.nama); toast('Perangkat ini belum bisa membagikan file langsung, jadi file diunduh. Lampirkan secara manual.'); return catat();
+  }
+  simpanBlob(f.blob, f.nama);
+  const c = cust(q.customerId), k = (c && (c.kontak.find(z => norm(z.nama) === norm(q.picNama)) || c.kontak[0])) || {}, sapa = q.picNama || 'Bapak/Ibu';
+  const teks = `Yth. ${sapa},\n\nBersama ini kami lampirkan penawaran No. ${q.nomor} perihal ${q.judul} yang telah disetujui dan ditandatangani.\nTerima kasih atas kepercayaan Anda.\n\nHormat kami,\nPT Indo Sukses Logistik`;
+  if (jenis === 'wa') { window.open(`https://wa.me/${nomorWa(q.picTelp || k.telp)}?text=${encodeURIComponent(teks)}`, '_blank'); toast('WhatsApp dibuka. <b>Lampirkan file yang baru diunduh</b> sebelum mengirim.'); }
+  else if (jenis === 'email') { window.open(`mailto:${encodeURIComponent(k.email || '')}?subject=${encodeURIComponent(`Penawaran No. ${q.nomor} (ditandatangani) - ${q.judul}`)}&body=${encodeURIComponent(teks)}`, '_blank'); toast(`Email dibuka. <b>Lampirkan file yang baru diunduh</b>${k.email ? '' : ' dan isi alamat penerima (PIC belum punya email)'}.`); }
+  return catat();
+}
+const sisaRate = q => { if (!q.masaRateSampai) return ''; const h = selisihHari(HARI_INI(), q.masaRateSampai); return h < 0 ? `<span class="qt-sisa is-habis">Rate berakhir ${-h} hari lalu</span>` : `<span class="qt-sisa ${h <= 30 ? 'is-dekat' : ''}">${h === 0 ? 'Berakhir hari ini' : h + ' hari lagi'}</span>`; };
+function kartuTTD(q) {
+  const ada = !!dataTTD(q), r = (q.keluaran || []).filter(x => CARA_TTD[x.cara]).slice().reverse(), b = (a, ik2, l, p) => `<button type="button" class="qt-ttd-b ${p ? 'is-utama' : ''}" data-qt="ttd-${a}" data-id="${q.id}">${ik(ik2, 20)}<span>${l}</span></button>`;
+  return `<section class="mr-kartu cu-kartu qt-ttd"><div class="qt-sec"><h3>Dokumen ditandatangani</h3><span class="mr-ruang"></span><span class="qt-ttd-tag">${ik('cek', 13)} TTD</span></div>
+    <div class="qt-ttd-file"><span class="qt-ttd-ik">${ik('file', 22)}</span><div><b>${esc(q.dok)}</b><small>Disetujui ${tgl(q.diputuskan)}${q.masaRateSampai ? ' · rate s/d ' + tgl(q.masaRateSampai) : ''}</small></div></div>
+    ${ada ? `<div class="qt-ttd-grid">${b('lihat', 'mata', 'Lihat', 1)}${b('unduh', 'download', 'Unduh')}${b('wa', 'kirim', 'WhatsApp')}${b('email', 'surat', 'Email')}</div>${navigator.share ? `<div class="qt-aksi-baris">${b2(q)}</div>` : ''}` : `<p class="mr-sub" style="display:block;margin:6px 0 0">File belum tersedia di perangkat ini (tarif lama tanpa dokumen atau belum tersinkron).</p>`}
+    ${r.length ? `<h4 class="qt-ttd-h">Riwayat kirim dan unduh</h4><ul class="qt-kel">${r.slice(0, 8).map(x => `<li>${ik('file', 13)}<span><b>${CARA_TTD[x.cara]}</b> · ${esc(waktuTampil(x.waktu))} · ${esc(x.oleh)}</span></li>`).join('')}</ul>` : ''}</section>`;
+}
+const b2 = q => `<button type="button" class="mr-btn mr-btn--kecil" data-qt="ttd-bagikan" data-id="${q.id}">${ik('kirim', 14)} Bagikan file</button>`;
 function kartuDokumen(q, ed) {
-  const terbit = !!q.dokumenModel, k = (q.keluaran || []).slice().reverse(), caraT = { unduh: 'Diunduh (PDF)', email: 'Diunduh untuk email', cetak: 'Dicetak', word: 'Diunduh (Word)' };
+  const terbit = !!q.dokumenModel, k = (q.keluaran || []).filter(x => !CARA_TTD[x.cara]).slice().reverse(), caraT = { unduh: 'Diunduh (PDF)', email: 'Diunduh untuk email', cetak: 'Dicetak', word: 'Diunduh (Word)' };
   return `<section class="mr-kartu cu-kartu"><div class="qt-sec"><h3>Dokumen penawaran</h3><span class="mr-ruang"></span>
       <button type="button" class="mr-btn mr-btn--kecil" data-qt="${terbit ? 'lihat-dokumen' : 'pratinjau'}" data-id="${q.id || ''}">${ik('file', 14)} ${terbit ? 'Lihat dokumen' : 'Pratinjau dokumen'}</button>
       ${terbit ? `${q.kosong ? '' : `<button type="button" class="mr-btn mr-btn--kecil" data-qt="unduh" data-id="${q.id}">${ik('download', 14)} Unduh PDF</button>`}<button type="button" class="mr-btn mr-btn--kecil" data-qt="unduh-word" data-id="${q.id}">${ik('download', 14)} Unduh Word</button>${q.kosong ? '' : `<button type="button" class="mr-btn mr-btn--kecil" data-qt="email" data-id="${q.id}">${ik('surat', 14)} Unduh dan buka email</button><button type="button" class="mr-btn mr-btn--kecil" data-qt="wa" data-id="${q.id}">${ik('kirim', 14)} Unduh dan buka WhatsApp</button>${navigator.share ? `<button type="button" class="mr-btn mr-btn--kecil" data-qt="bagikan" data-fmt="pdf" data-id="${q.id}">${ik('kirim', 14)} Bagikan PDF</button><button type="button" class="mr-btn mr-btn--kecil" data-qt="bagikan" data-fmt="word" data-id="${q.id}">${ik('kirim', 14)} Bagikan Word</button>` : ''}`}` : ''}</div>
@@ -4511,14 +4542,15 @@ function tampilBaca(q) {
   ${tamb.length ? `<section class="mr-kartu cu-kartu"><h3>Biaya tambahan <span class="mr-tag">${q.modeTambahan === 'rinci' ? 'Tampil rinci' : 'Digabung ke harga'}</span></h3><div class="qt-scroll"><table class="cu-mini">${head}<tbody>${tamb.map((b, i) => tr(b, i + 1)).join('')}</tbody></table></div></section>` : ''}
   ${q.status === 'ditolak' ? `<section class="mr-kartu cu-kartu qt-tolak"><h3>${ik('tolak', 16)} Ditolak customer</h3>${q.kategoriTolak ? `<p style="margin:0 0 4px"><span class="cu-st cu-st--warn">${esc(AQ.alasanTolak[q.kategoriTolak] || '')}</span></p>` : ''}<p style="margin:0">${esc(q.alasanDitolak)}</p><p class="mr-sub" style="display:block;margin:6px 0 0">Tanggal ${tgl(q.diputuskan)}. Pakai “Buat revisi” untuk menawar ulang dengan nomor baru.</p></section>` : ''}
   ${q.status === 'disetujui' ? `<section class="mr-kartu cu-kartu qt-setuju"><h3>${ik('setuju', 16)} Disetujui customer</h3>
-      <p style="margin:0">Disetujui ${tgl(q.diputuskan)}. Rate berlaku ${q.masaRateSampai ? 's/d ' + tgl(q.masaRateSampai) : 'tanpa batas'}.</p>
+      <p style="margin:0">Disetujui ${tgl(q.diputuskan)}. Rate berlaku ${q.masaRateSampai ? 's/d ' + tgl(q.masaRateSampai) : 'tanpa batas'}. ${sisaRate(q)}</p>
       <p class="mr-sub" style="display:block;margin:6px 0 10px">${q.paketId ? 'Terbentuk <b>1 Paket Project</b> di Rate Disetujui customer.' : rateHasil ? `Terbentuk <b>${(q.rateIds || []).length} rate</b> di Rate Disetujui customer.` : 'Tercatat sebelum sistem ini; rate sudah ada di Rate Disetujui customer.'}</p>
-      <div class="qt-aksi-baris">${q.dok ? `<button class="cu-doc" data-qt="lihat-dok" data-id="${q.id}">${ik('file', 14)}<span>${esc(q.dok)}</span></button>` : ''}
+      <div class="qt-aksi-baris">
         <button class="mr-btn mr-btn--kecil" data-qt="buka-customer" data-id="${q.id}">${ik('panah', 14)} Lihat di Rate Disetujui customer</button></div></section>` : ''}
+  ${q.status === 'disetujui' && q.dok ? kartuTTD(q) : ''}
   ${q.catatanInternal ? `<section class="mr-kartu cu-kartu"><h3>Catatan internal</h3><p style="margin:0">${esc(q.catatanInternal)}</p></section>` : ''}
   ${realisasiHtml(q)}
   ${q.status === 'tidak_dipakai' ? `<section class="mr-kartu cu-kartu qt-tolak"><h3>${ik('blok', 16)} Ditandai tidak dipakai</h3><p style="margin:0">${esc(q.alasanTidakDipakai)}</p><p class="mr-sub" style="display:block;margin:6px 0 0">Tanggal ${tgl(q.diputuskan)}. Dokumen tetap tersimpan sebagai arsip dan bisa diunduh ulang.</p></section>` : ''}
-  ${kartuDokumen(q, false)}`;
+  ${q.status === 'disetujui' && q.dok ? `<details class="qt-arsip"><summary>Dokumen buatan sistem (arsip)</summary>${kartuDokumen(q, false)}</details>` : kartuDokumen(q, false)}`;
 }
 
 /* ----- ringkasan (kartu samping) ----- */
@@ -7561,6 +7593,7 @@ document.addEventListener('click', ev => {
   else if (a === 'setujui-ok') aksiSetujuOk(e);
   else if (a === 'tolak') { const q = Repo.baca(Q.id); if (q) dialogTolak(q); }
   else if (a === 'lihat-dok') { const q = Repo.baca(e.dataset.id); if (q) panelDok(q); }
+  else if (a.indexOf('ttd-') === 0) aksiTTD(e.dataset.id || Q.id, a.slice(4));
   else if (a === 'buka-customer') { const q = Repo.baca(e.dataset.id); if (q) { S.view = 'detail'; S.id = q.customerId; S.tab = 'rate'; S.rLini = ''; S.rSemua = true; if (q.paketId) S.bukaPaket.add(q.paketId); window.__pindahHalaman('customer'); } }
   else if (a === 'tambah-mr') panelMR();
   else if (a === 'pilih-tarif') {
