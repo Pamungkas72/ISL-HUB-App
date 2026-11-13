@@ -335,6 +335,11 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Pemberitahuan yang ditunda atau ditandai selesai: milik sendiri, hanya akun pengelola.
+    match /pemberitahuan_tunda/{uid} {
+      allow read, write: if isKelola() && request.auth.uid == uid;
+    }
+
     // Selain daftar di atas: ditutup. (Aturan umum lama dihapus supaya tidak membuka celah lewat "ATAU".)
   }
 }

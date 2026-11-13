@@ -2300,3 +2300,14 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .nfp-lain { width: 100%; font: inherit; font-size: 13px; font-weight: 600; padding: 10px; border: 1px dashed var(--mr-border); border-radius: var(--mr-r); background: none; color: var(--mr-navy); cursor: pointer; }
 @media (max-width: 1100px) { .nfp-grid { grid-template-columns: 190px minmax(0, 1fr); } .nfp-detail { grid-column: 1 / -1; position: static; } }
 @media (max-width: 760px) { .nfp-kepala .mr-btn { padding: 8px 12px; } .nfp-i { padding: 12px; } }
+.nfp-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 6px; }
+.nfp-row .nfp-i { margin-bottom: 0; flex: 1; min-width: 0; }
+.nfp-cek { display: flex; align-items: center; padding: 0 2px; cursor: pointer; }
+.nfp-cek input, .nfp-bar input { width: 18px; height: 18px; accent-color: var(--mr-navy); cursor: pointer; }
+.nfp-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 36px; margin-bottom: 8px; font-size: 13px; }
+.nfp-bar__semua { display: flex; align-items: center; gap: 8px; margin-right: auto; color: var(--mr-muted); cursor: pointer; }
+.nfp-bar__semua b { color: var(--mr-ink); }
+.nfp-aksi { display: flex; gap: 8px; flex-wrap: wrap; }
+.nfp-detail .nfp-aksi .mr-btn { margin-top: 6px; }
+.nfp-bantu { color: var(--mr-muted); font-size: 12px; line-height: 1.45; }
+@media (max-width: 760px) { .nfp-cek { padding: 0 6px 0 2px; } .nfp-cek input, .nfp-bar input { width: 22px; height: 22px; } .nfp-bar .mr-btn { padding: 8px 12px; } }
