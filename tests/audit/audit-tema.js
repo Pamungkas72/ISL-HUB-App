@@ -78,6 +78,7 @@ const ADEGAN = [
   }],
   ['quotation: mode baca (Terkirim) dan dokumen terbit', async (p, periksa) => {
     await pindah(p, 'quotation'); const id = await buatTerkirim(p); await p.evaluate(i => { window.__qt._Q.view = 'list'; window.__qt.gambar(); window.__qt.buka(i); }, id); await tunggu(p, 700); await periksa('quotation: mode baca (Terkirim)');
+    await klikSel(p, '.qt-kepala-menu'); await tunggu(p, 500); await periksa('quotation: menu tindakan detail'); await tutupLapisan(p); await p.evaluate(i => { window.__qt.buka(i); }, id); await tunggu(p, 400);
     await klikSel(p, '[data-qt="lihat-dokumen"]'); await tunggu(p, 2500); await periksa('quotation: dokumen terbit (panel)'); await tutupLapisan(p);
     await p.evaluate(i => { window.__qt.buka(i); }, id); await tunggu(p, 500);
     for (const t of ['setuju', 'tolak', 'tidak dipakai', 'revisi', 'duplikat']) { if (await klikTeks(p, t, '[data-qt]')) { await tunggu(p, 500); await periksa('quotation: aksi ' + t); await tutupLapisan(p); await p.evaluate(i => { window.__qt.buka(i); }, id); await tunggu(p, 400); } }

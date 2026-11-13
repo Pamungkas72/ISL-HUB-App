@@ -2361,3 +2361,9 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-rg-an { display: grid; gap: 12px; }
 .qt-rg-anbtn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 16px; font: inherit; color: var(--mr-ink); text-align: left; cursor: pointer; } .qt-rg-anbtn small { flex: 1; } .qt-rg-anbtn[aria-expanded="true"] .qt-lipat-chev { transform: rotate(180deg); }
 @media (max-width: 760px) { .qt-rg-filter .qt-rg-cari { flex: 1 1 100%; } .qt-rg-filter .mr-btn { flex: 1; } .qt-rg-filter .mr-select { flex: 1 1 45%; } }
+
+/* ---------- header detail quotation (desain M3) ---------- */
+.cu-kepala { flex-wrap: nowrap; }
+.qt-menu__list .qt-menu__g { padding: 8px 10px 2px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--mr-muted); }
+.qt-menu__list .qt-menu__t.is-bahaya, .qt-menu__list .qt-menu__t.is-bahaya svg { color: var(--mr-bahaya); }
+.qt-kepala-menu { flex: none; }
