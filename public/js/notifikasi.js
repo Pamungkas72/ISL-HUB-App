@@ -4,8 +4,8 @@
 // sementara (sessionStorage: kembali muncul saat login ulang / tab baru), dan mengarahkan ke sumber masalah.
 // Untuk menambah jenis peringatan baru: tambahkan satu fungsi di KUMPULKAN.
 // ===========================================================
-import { quotationGantung, tarifPerluVerifikasi, riwayatPerluTindak, labelUmur } from "./pengingat.js";
-import { muatSemua as muatMaster } from "./db.js";
+import { quotationGantung, tarifPerluVerifikasi, riwayatPerluTindak, labelUmur, pembaruanTerakhir, hariIni } from "./pengingat.js";
+import { muatSemua as muatMaster, muatReferensi } from "./db.js";
 import { muatSemua as muatApp } from "./app-store.js";
 import { adalahMaster } from "./config-akses.js";
 import { auth, db } from "./firebase-config.js";
@@ -63,6 +63,37 @@ function dariTarif(tarif, vendor, lini = []) {
     judul: `${v.n} tarif ${v.nama} · ${v.lini} perlu verifikasi ulang`, ket: `Terakhir dicek ${labelUmur(v.umur)} lalu · hubungi vendor, lalu tandai valid atau tidak valid`,
     tujuan: { jenis: "tarif", verifikasi: id } }));
 }
+// ---------- kelengkapan Master Rate dan quotation (hanya master/admin) ----------
+const kelola = () => { const u = auth.currentUser; return !!u && !!(window.__ISL_KELOLA ?? adalahMaster(u.email)); };
+// Tarif lengkap tidak dihitung; harga jual saran kosong = otomatis (modal + markup lini), jadi bukan masalah.
+async function dariMaster(m, ref) {
+  if (!kelola()) return [];
+  const out = [], aktif = (m.tarif || []).filter((t) => t.aktif !== false);
+  const tarif = (id, level, n, teks, ket) => n && out.push({ id: "mr:" + id, jenis: "tarif", grup: "tarif", level, judul: `${n} tarif ${teks}`, ket, tujuan: { jenis: "tarif", filter: id } });
+  tarif("tanpalini", "warn", aktif.filter((t) => !t.liniBisnisId).length, "belum punya lini bisnis", "Tarif tetap bisa dipakai · buat lini bisnis lalu lengkapi lewat Edit tarif");
+  tarif("tanpavendor", "warn", aktif.filter((t) => !t.vendorId).length, "belum ditentukan vendornya", "Pilih vendor atau Internal lewat Edit tarif");
+  tarif("kosong", "warn", aktif.filter((t) => t.modal === null || t.modal === undefined).length, "belum ada modal", "Isi modal agar margin dan harga jual saran bisa dihitung");
+  const { kurangVendor } = await import("./form-vendor.js");
+  (m.vendor || []).forEach((v) => {
+    const k = kurangVendor(v); if (!k.length) return;
+    out.push({ id: "vd:" + v.id, jenis: "vendor", grup: "vendor", level: k.some((x) => x === "Legalitas berakhir") ? "bahaya" : k.includes("Draf") ? "warn" : "info", judul: `${v.nama || v.id} belum lengkap`, ket: `Kurang: ${k.join(", ")}`, kurang: k, tujuan: { jenis: "vendor", id: v.id } });
+  });
+  const { skor, butirKelengkapan } = await import("./profil-fasilitas.js");
+  ((ref && ref.profil) || []).filter((p) => p.status !== "tersedia" && p.status !== "tidak_tersedia" && p.status !== "nonaktif").forEach((p) => {
+    const k = butirKelengkapan(p).filter(([, ok]) => !ok).map(([n]) => n);
+    out.push({ id: "lk:" + p.id, jenis: "lokasi", grup: "lokasi", level: "warn", judul: `${p.nama || p.id} masih Draf · ${skor(p)}% lengkap`, ket: `Kurang: ${k.slice(0, 4).join(", ")}${k.length > 4 ? ` dan ${k.length - 4} lainnya` : ""}`, kurang: k, tujuan: { jenis: "lokasi", id: p.id } });
+  });
+  return out;
+}
+// Draf quotation yang sudah lewat sehari tapi belum punya customer atau perihal
+function dariQuotationLengkap(quotations) {
+  if (!kelola()) return [];
+  return (quotations || []).filter((q) => q.status === "draf" && !q.arsip && !q.digantikanOleh).flatMap((q) => {
+    const k = [!q.customerId && !q.customerNama && "Customer", !String(q.judul || "").trim() && "Perihal"].filter(Boolean), p = pembaruanTerakhir(q);
+    if (!k.length || !p || hariDari(p) < 1) return [];
+    return [{ id: "ql:" + q.id, jenis: "quotation", grup: "quotation", level: "info", judul: `${q.nomor || q.labelDraf || "Draf"} belum lengkap`, ket: `Kurang: ${k.join(", ")} · lengkapi lalu terbitkan atau hapus`, kurang: k, tujuan: { jenis: "quotation", id: q.id } }];
+  });
+}
 function dariCadangan() {
   try {
     const u = window.ISLCadangan ? window.ISLCadangan.umurUnduhHari() : undefined;
@@ -102,8 +133,8 @@ export async function kumpulkan({ paksa = false } = {}) {
   let semua = c && !paksa && Date.now() - c.t < UMUR_CACHE_MS ? c.items : null;
   if (!semua) {
     semua = [];
-    try { const pr = window.__ISL_PROFIL || {}; const a = await muatApp({ master: false, hanyaBaca: true, sales: pr.peran === "sales", uid: pr.uid }); semua.push(...dariQuotation(a.quotations), ...dariRiwayat(a.riwayat, a.quotations)); } catch (e) { console.warn("Pemberitahuan quotation tidak termuat:", e); }
-    try { const m = await muatMaster(); semua.push(...dariTarif(m.tarif, m.vendor, m.lini)); } catch (e) { console.warn("Pemberitahuan tarif tidak termuat:", e); }
+    try { const pr = window.__ISL_PROFIL || {}; const a = await muatApp({ master: false, hanyaBaca: true, sales: pr.peran === "sales", uid: pr.uid }); semua.push(...dariQuotation(a.quotations), ...dariRiwayat(a.riwayat, a.quotations), ...dariQuotationLengkap(a.quotations)); } catch (e) { console.warn("Pemberitahuan quotation tidak termuat:", e); }
+    try { const m = await muatMaster(); semua.push(...dariTarif(m.tarif, m.vendor, m.lini)); semua.push(...(await dariMaster(m, await muatReferensi().catch(() => ({ profil: [] }))))); } catch (e) { console.warn("Pemberitahuan tarif tidak termuat:", e); }
     tulis(K_CACHE, { t: Date.now(), items: semua });
   }
   const urut = { bahaya: 0, warn: 1, info: 2 }, t = ditutup();
@@ -112,11 +143,11 @@ export async function kumpulkan({ paksa = false } = {}) {
 }
 
 // ---------- tujuan: buka sumber masalahnya ----------
-const HALAMAN = { riwayat: "app.html#quotation", quotation: "app.html#quotation", tarif: "app.html#master-rate", cadangan: "app.html#pengaturan", pendaftar: "pengaturan.html" };
+const HALAMAN = { riwayat: "app.html#quotation", quotation: "app.html#quotation", tarif: "app.html#master-rate", vendor: "app.html#master-rate", lokasi: "app.html#master-rate", cadangan: "app.html#pengaturan", pendaftar: "pengaturan.html" };
 export function bukaTujuan(tujuan) {
   const hal = location.pathname.split("/").pop() || "index.html";
   if ((tujuan.jenis === "quotation" || tujuan.jenis === "riwayat") && hal === "app.html" && window.__islBuka) { window.__islBuka(tujuan); return; }
-  if (tujuan.jenis === "tarif" && hal === "app.html" && location.hash === "#master-rate" && window.__islBukaMR) { window.__islBukaMR(tujuan); return; }
+  if (["tarif", "vendor", "lokasi"].includes(tujuan.jenis) && hal === "app.html" && location.hash === "#master-rate" && window.__islBukaMR) { window.__islBukaMR(tujuan); return; }
   if (tujuan.jenis === "halaman") { const dasar = hal === "app.html" ? "" : "app.html"; if (dasar) location.href = dasar + (tujuan.hash || ""); else location.hash = tujuan.hash || ""; return; }
   if (tujuan.jenis === "pendaftar") { bukaPendaftarAksi({ onSelesai: () => muat(true) }); return; } // setujui atau tolak langsung di sini
   tulis(K_BUKA, tujuan);
@@ -129,6 +160,13 @@ const IKON = { bahaya: '<path d="M12 9v4M12 17h.01M10.3 3.9 2.4 17.5A2 2 0 0 0 4
 const svg = (d, n = 18) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const baris = (i, bisaTutup) => `<div class="nf-i nf-i--${i.level}" data-nf-id="${esc(i.id)}"><button type="button" class="nf-i__b" data-nf-buka="${esc(i.id)}">${svg(IKON[i.level])}<span><b>${esc(i.judul)}</b><small>${esc(i.ket)}</small></span></button>${!bisaTutup ? "" : `<button type="button" class="nf-i__x" data-nf-tutup="${esc(i.id)}" aria-label="Tutup, tetap tersimpan di lonceng" title="Tutup (tetap tersimpan di lonceng)">${svg('<path d="M6 6l12 12M18 6 6 18"/>', 16)}</button>`}</div>`;
 let terakhir = { semua: [], t: new Set() };
+// Kategori tampilan (halaman Pemberitahuan). Item boleh membawa `grup` sendiri.
+export const GRUP = [["tarif", "Master Rate · Tarif"], ["vendor", "Master Rate · Vendor"], ["lokasi", "Master Rate · Lokasi"], ["quotation", "Quotation"], ["sistem", "Sistem"]];
+const GRUP_JENIS = { quotation: "quotation", riwayat: "quotation", tarif: "tarif", vendor: "vendor", lokasi: "lokasi" };
+export const grupDari = (i) => i.grup || GRUP_JENIS[i.jenis] || "sistem";
+export const semuaItem = () => terakhir.semua;
+export const muatUlang = (paksa) => muat(paksa);
+export const bisaKelola = kelola;
 const terlihat = () => terakhir.semua;                       // lonceng: semua yang masih perlu perhatian
 const dilayar = () => (sisaLayarMs() > 0 ? terakhir.semua.filter((i) => !ditutup().has(i.id)) : []);  // di layar: 10 detik pertama, belum ditutup
 
@@ -156,7 +194,7 @@ function gambarPanel() {
   const lihat = terlihat();
   p.innerHTML = `<div class="nf-h"><b>Pemberitahuan${lihat.length ? ` (${lihat.length})` : ""}</b><button type="button" class="nf-link" data-nf-segar>Segarkan</button><button type="button" class="nf-tutup" data-nf-panel-tutup aria-label="Tutup">${svg('<path d="M6 6l12 12M18 6 6 18"/>', 18)}</button></div>
     <div class="nf-daftar">${htmlDaftar(lihat)}</div>
-    <div class="nf-f"><small>Semua yang masih perlu ditangani. Hilang otomatis setelah masalahnya selesai.</small></div>`;
+    <div class="nf-f">${kelola() ? '<button type="button" class="nf-semua" data-nf-semua>Lihat semua pemberitahuan</button>' : ""}<small>Semua yang masih perlu ditangani. Hilang otomatis setelah masalahnya selesai.</small></div>`;
 }
 const K_POPUP_PENDAFTAR = "islhub-popup-pendaftar";
 /* Pop-up untuk master: ada sales baru yang harus segera ditindaklanjuti. Muncul sekali per sesi; muncul lagi kalau jumlahnya bertambah. */
@@ -187,7 +225,7 @@ function popupPendaftar() {
   kotak.querySelector("#pp-nanti").addEventListener("click", () => kotak.remove());
   kotak.querySelector("#pp-buka").addEventListener("click", () => { kotak.remove(); bukaPendaftarAksi({ onSelesai: () => muat(true) }); });
 }
-async function muat(paksa) { try { terakhir = await kumpulkan({ paksa }); } catch (e) { console.warn(e); } perbaruiLencana(); gambarPanel(); document.dispatchEvent(new CustomEvent("islhub:notif")); popupPendaftar(); }
+async function muat(paksa) { const sebelum = terakhir.semua.length; try { terakhir = await kumpulkan({ paksa }); if (terakhir.semua.length > sebelum) goyang(); } catch (e) { console.warn(e); } perbaruiLencana(); gambarPanel(); document.dispatchEvent(new CustomEvent("islhub:notif")); popupPendaftar(); }
 
 // lonceng bergoyang sebentar saat peringatan di layar pindah ke lonceng
 export function goyang() { const b = document.getElementById("btn-lonceng"); if (!b) return; b.classList.remove("nf-goyang"); void b.offsetWidth; b.classList.add("nf-goyang"); }
@@ -256,6 +294,7 @@ export function pasangLonceng(kanan) {
     const x = t.closest("[data-nf-tutup]"), b = t.closest("[data-nf-buka]");
     if (x) { tutupSementara(x.dataset.nfTutup); goyang(); document.dispatchEvent(new CustomEvent("islhub:notif")); }
     else if (b) { const it = terakhir.semua.find((i) => i.id === b.dataset.nfBuka); if (it) { tutupPanel(); bukaTujuan(it.tujuan); } }
+    else if (t.closest("[data-nf-semua]")) { tutupPanel(); if ((location.pathname.split("/").pop() || "index.html") === "app.html") location.hash = "#pemberitahuan"; else location.href = "app.html#pemberitahuan"; }
     else if (t.closest("[data-nf-panel-tutup]")) tutupPanel();
     else if (t.closest("[data-nf-segar]")) muat(true);
   });

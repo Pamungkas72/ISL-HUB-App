@@ -2253,3 +2253,50 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 
 /* form daftar fasilitas di dalam form tarif: jarak antarkolom */
 [id$="-fas-form"]:not([hidden]) { display: grid; gap: 10px; }
+
+/* ---------- Halaman Pemberitahuan penuh (desktop: kotak masuk; HP: kartu kategori) ---------- */
+.nf-semua { width: 100%; margin-bottom: 8px; font: inherit; font-weight: 600; font-size: 13px; padding: 9px 12px; border-radius: var(--mr-r); border: 1px solid var(--mr-navy); background: var(--mr-navy); color: #fff; cursor: pointer; }
+.nfp-kepala { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.nfp-kepala h2 { margin: 0; font-size: 20px; font-family: var(--font-head, inherit); }
+.nfp-kepala .mr-sub { margin: 2px 0 0; }
+.nfp-grid { display: grid; grid-template-columns: 210px minmax(0, 1fr) 320px; gap: 14px; align-items: start; }
+.nfp-kat, .nfp-daftar, .nfp-detail { background: var(--mr-surface); border: 1px solid var(--mr-border); border-radius: var(--mr-r); }
+.nfp-kat { padding: 8px; display: grid; gap: 2px; }
+.nfp-kat__b { display: flex; justify-content: space-between; align-items: center; gap: 8px; font: inherit; font-size: 13px; text-align: left; padding: 9px 10px; border: 0; border-radius: 6px; background: none; color: var(--mr-ink); cursor: pointer; }
+.nfp-kat__b em { font-style: normal; font-size: 12px; color: var(--mr-muted); }
+.nfp-kat__b:hover { background: var(--mr-bg); }
+.nfp-kat__b.is-aktif { background: var(--mr-navy); color: #fff; font-weight: 600; }
+.nfp-kat__b.is-aktif em { color: inherit; opacity: 0.85; }
+.nfp-daftar { padding: 12px; min-height: 280px; }
+.nfp-lv { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.nfp-i { display: flex; width: 100%; gap: 10px; align-items: stretch; text-align: left; font: inherit; padding: 10px 12px; margin-bottom: 6px; border: 1px solid var(--mr-border); border-radius: var(--mr-r); background: var(--mr-surface); color: var(--mr-ink); cursor: pointer; }
+.nfp-i:hover { border-color: var(--mr-navy); }
+.nfp-i.is-aktif { border-color: var(--mr-navy); background: var(--mr-bg); }
+.nfp-i__lv { flex: none; width: 4px; border-radius: 4px; background: var(--mr-info); }
+.nfp-i--warn .nfp-i__lv { background: var(--mr-warn); }
+.nfp-i--bahaya .nfp-i__lv { background: var(--mr-bahaya); }
+.nfp-i span { min-width: 0; }
+.nfp-i b { display: block; font-size: 13.5px; font-weight: 600; }
+.nfp-i small { display: block; margin-top: 2px; font-size: 12px; color: var(--mr-muted); }
+.nfp-detail { position: sticky; top: 76px; padding: 16px; display: grid; gap: 8px; }
+.nfp-detail h3 { margin: 0; font-size: 16px; line-height: 1.35; }
+.nfp-detail .mr-sub { margin: 0; }
+.nfp-kat-nama { color: var(--mr-muted); }
+.nfp-lencana { justify-self: start; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--mr-info-bg); color: var(--mr-info); }
+.nfp-lencana--warn { background: var(--mr-warn-bg); color: var(--mr-warn); }
+.nfp-lencana--bahaya { background: var(--mr-bahaya-bg); color: var(--mr-bahaya); }
+.nfp-kurang { margin: 0; padding-left: 18px; font-size: 13px; color: var(--mr-ink); display: grid; gap: 2px; }
+.nfp-detail .mr-btn { justify-self: start; margin-top: 6px; }
+.nfp-kosong { color: var(--mr-muted); font-size: 13.5px; text-align: center; padding: 28px 12px; margin: 0; }
+.nfp-kartu-baris { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.nfp-kartu { display: grid; gap: 2px; text-align: left; font: inherit; padding: 12px 14px; border: 1px solid var(--mr-border); border-radius: var(--mr-r); background: var(--mr-surface); color: var(--mr-ink); cursor: pointer; }
+.nfp-kartu big { font-size: 24px; font-weight: 700; line-height: 1.1; }
+.nfp-kartu span { font-size: 12.5px; color: var(--mr-muted); }
+.nfp-kartu.is-bahaya big { color: var(--mr-bahaya); }
+.nfp-kartu.is-aktif { border-color: var(--mr-navy); box-shadow: 0 0 0 1px var(--mr-navy) inset; }
+.nfp-bag { margin-bottom: 16px; }
+.nfp-bag h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--mr-muted); }
+.nfp-bag h3 em { font-style: normal; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: var(--mr-bg); }
+.nfp-lain { width: 100%; font: inherit; font-size: 13px; font-weight: 600; padding: 10px; border: 1px dashed var(--mr-border); border-radius: var(--mr-r); background: none; color: var(--mr-navy); cursor: pointer; }
+@media (max-width: 1100px) { .nfp-grid { grid-template-columns: 190px minmax(0, 1fr); } .nfp-detail { grid-column: 1 / -1; position: static; } }
+@media (max-width: 760px) { .nfp-kepala .mr-btn { padding: 8px 12px; } .nfp-i { padding: 12px; } }
