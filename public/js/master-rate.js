@@ -1696,27 +1696,11 @@ const pilihAktif = () => S.kelola && ((MH.pilih && MH.pilihTab === S.tab) || pil
 const ikonTab = { tarif: "tarif", vendor: "vendor", lini: "lini", lokasi: "pin" };
 const WIDTH_AKSI_MR = 68, WIDTH_AKSI_MR_ = 68;
 
-const atasHP = (h) => {
-  const kartu = [
-    kartuStat({ v: "total", ikonNama: "tarif", n: h.total, label: "Total tarif", aktif: false, judul: "Tampilkan semua tarif" }),
-    kartuStat({ v: "kosong", ikonNama: "peringatan", n: h.kosong, label: "Belum ada modal", perhatian: h.kosong > 0, aktif: S.tab === "tarif" && S.f.kosong, judul: "Tampilkan tarif yang modalnya belum diisi" }),
-    kartuStat({ v: "jualkosong", ikonNama: "tarif", n: h.jualKosong, label: "Belum ada harga jual saran", perhatian: h.jualKosong > 0, aktif: S.tab === "tarif" && S.f.jualKosong, judul: "Tampilkan tarif aktif yang belum punya harga jual saran" }),
-    S.kelola ? kartuStat({ v: "verifikasi", ikonNama: "riwayat", n: h.verifikasi, label: "Perlu verifikasi", perhatian: h.verifikasi > 0, aktif: false, judul: "Buka panel verifikasi ulang tarif ke vendor" }) : "",
-    `<button type="button" class="mr-stat__kartu ${h.lengkapi > 0 ? "is-perhatian" : ""} ${S.tab === "vendor" && S.fv.status === "lengkapi" ? "is-aktif" : ""}" data-aksi="stat" data-v="lengkapi" title="Tampilkan vendor yang datanya belum lengkap"><span class="mr-stat__ikon">${ikon("vendor")}</span><div><b>${h.kelengkapanVendor}%</b><small>Kelengkapan vendor rata-rata</small>${bilahVendor(h.kelengkapanVendor)}</div></button>`,
-    kartuStat({ v: "baru", ikonNama: "edit", n: h.baru, label: `Baru diubah (${HARI_BARU} hari)`, aktif: S.tab === "tarif" && !!S.f.baru, judul: `Tampilkan tarif yang diperbarui ${HARI_BARU} hari terakhir` }),
-  ].join("");
-  return `<div class="mr-m-top">
-      <button type="button" class="mr-m-ring" data-aksi="m-ringkas" aria-expanded="${MH.ringkas}"><b>${angka(h.total)} tarif</b><span>${h.kosong ? `<em>${angka(h.kosong)} belum ada modal</em>` : "Semua tarif sudah punya modal"}</span></button>
-      ${S.kelola && h.verifikasi ? `<button type="button" class="mr-m-vf" data-aksi="verifikasi">${ikon("tameng", 15)}<span>Verifikasi ${angka(h.verifikasi)}</span></button>` : ""}
-      <button type="button" class="mr-m-chev ${MH.ringkas ? "is-buka" : ""}" data-aksi="m-ringkas" aria-label="${MH.ringkas ? "Tutup" : "Buka"} ringkasan">${ikon("turun", 17)}</button>
-    </div>
-    ${MH.ringkas ? `<div class="mr-m-ringisi"><div class="mr-stat is-ringkas">${kartu}</div></div>` : ""}`;
-};
 const tabsHP = () => `<div class="mr-m-tabs" role="tablist">${[["tarif", "Tarif"], ["vendor", "Vendor"], ["lini", "Lini Bisnis"], ["lokasi", "Lokasi"]]
   .map(([id, l]) => `<button type="button" role="tab" aria-selected="${S.tab === id}" class="mr-m-tab ${S.tab === id ? "is-aktif" : ""}" data-aksi="tab" data-v="${id}">${ikon(ikonTab[id], 19)}<span>${l}</span></button>`).join("")}</div>`;
-const cariHP = ({ id, ph, nilai, filterAktif = null, menu = false }) => `<div class="mr-m-cari">
+const cariHP = ({ id, ph, nilai, filterAktif = null, menu = false, badge = 0 }) => `<div class="mr-m-cari">
   <label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="${id}" type="search" placeholder="${e(ph)}" value="${e(nilai)}" autocomplete="off" enterkeyhint="search"></label>
-  ${filterAktif === null ? "" : `<button type="button" class="mr-m-ib ${filterAktif ? "is-aktif" : ""}" data-aksi="m-filter" aria-label="Filter${filterAktif ? " (ada filter aktif)" : ""}">${ikon("filter", 19)}${filterAktif ? '<i class="mr-m-dot"></i>' : ""}</button>`}
+  ${filterAktif === null ? "" : `<button type="button" class="mr-m-ib ${filterAktif || badge ? "is-aktif" : ""}" data-aksi="m-filter" aria-label="Filter${badge ? `, ${badge} perlu perhatian` : filterAktif ? " (ada filter aktif)" : ""}">${ikon("filter", 19)}${badge ? `<i class="mr-m-bdg">${angka(badge)}</i>` : filterAktif ? '<i class="mr-m-dot"></i>' : ""}</button>`}
   ${menu ? `<button type="button" class="mr-m-ib" data-aksi="m-menu" aria-label="Menu lain">${ikon("titik", 19)}</button>` : ""}</div>`;
 const chipHP = (aktif, teks, n, aksi, v = "", warn = false) => `<button type="button" class="mr-m-chip ${aktif ? "is-on" : ""} ${warn ? "is-warn" : ""}" data-aksi="${aksi}" ${v ? `data-v="${v}"` : ""} aria-pressed="${aktif}">${warn ? ikon("peringatan", 14) : ""}${teks} <em>${angka(n)}</em></button>`;
 const pilihBarHP = (n, total, tipe) => {
@@ -1787,9 +1771,8 @@ function htmlTarifHP(h) {
     infoHal = `Menampilkan ${angka(awal + 1)}-${angka(awal + potong.length)} dari ${angka(daftar.length)}`;
   }
   const semuaTutup = view === "kelompok" && nGrup > 0 && kelompokkan(daftar, labelDim, namaLini).every((g) => S.tutup.has(g.kunci));
-  return `${window.ISLNotif ? window.ISLNotif.htmlPerModul(["tarif"], "Perlu verifikasi") : ""}
-    ${cariHP({ id: "mr-cari-bar", ph: "Cari layanan, vendor, lokasi…", nilai: S.f.cari, filterAktif: filterLuar, menu: true })}
-    <div class="mr-m-chips" role="group" aria-label="Filter cepat">${chipHP(qfSemua, "Semua", h.total, "kpi-hapus")}${chipHP(!!S.f.kosong, "Belum ada modal", h.kosong, "m-qf", "kosong", h.kosong > 0)}${chipHP(!!S.f.jualKosong, "Belum jual saran", h.jualKosong, "m-qf", "jualKosong")}${chipHP(!!S.f.baru, "Baru diubah", h.baru, "m-qf", "baru")}</div>
+  const aktifQf = [["kosong", "Belum ada modal", h.kosong, true], ["jualKosong", "Belum jual saran", h.jualKosong], ["baru", "Baru diubah", h.baru]].filter(([k]) => S.f[k]);
+  return `${aktifQf.length ? `<div class="mr-m-chips" role="group" aria-label="Filter aktif">${aktifQf.map(([k, t, n, w]) => chipHP(true, t, n, "m-qf", k, w)).join("")}</div>` : ""}
     <div class="mr-m-meta"><span>${angka(daftar.length)} tarif${nGrup ? ` · ${angka(nGrup)} kelompok` : ""}</span><span class="mr-ruang"></span>
       ${S.kelola && daftar.length ? `<button type="button" class="mr-m-link" data-aksi="m-pilih-mode">${ikon("cek", 15)}${pilih ? "Selesai memilih" : "Pilih"}</button>` : ""}
       ${view === "kelompok" && nGrup ? `<button type="button" class="mr-m-link" data-aksi="grup-semua" data-v="${semuaTutup ? "buka" : "tutup"}">${ikon("lipat", 15)}${semuaTutup ? "Buka semua" : "Lipat semua"}</button>` : ""}</div>
@@ -1824,8 +1807,7 @@ function htmlVendorHP() {
   const nSt = (st) => S.vendor.filter((v) => statusVendor(v) === st).length, pilih = pilihAktif();
   const lengkapi = S.vendor.filter((v) => kurangVendor(v).length).length;
   const chip = (v, t, n, warn) => chipHP(S.fv.status === v, t, n, "m-vstatus", v, warn);
-  return `${cariHP({ id: "mr-v-cari", ph: "Cari vendor, PIC, telepon…", nilai: S.fv.cari, filterAktif: S.fv.lini !== "semua", menu: S.kelola })}
-    <div class="mr-m-chips" role="group" aria-label="Status vendor">${chip("semua", "Semua", S.vendor.length)}${chip("aktif", "Aktif", nSt("aktif"))}${chip("mitra", "Mitra", nSt("mitra"))}${chip("draf", "Draf", nSt("draf"))}${chip("nonaktif", "Nonaktif", nSt("nonaktif"))}${chip("lengkapi", "Perlu dilengkapi", lengkapi, lengkapi > 0)}</div>
+  return `<div class="mr-m-chips" role="group" aria-label="Status vendor">${chip("semua", "Semua", S.vendor.length)}${chip("aktif", "Aktif", nSt("aktif"))}${chip("mitra", "Mitra", nSt("mitra"))}${chip("draf", "Draf", nSt("draf"))}${chip("nonaktif", "Nonaktif", nSt("nonaktif"))}${chip("lengkapi", "Perlu dilengkapi", lengkapi, lengkapi > 0)}</div>
     <div class="mr-m-meta"><span>${angka(urut.length)} dari ${angka(S.vendor.length)} vendor</span><span class="mr-ruang"></span>${S.kelola && urut.length ? `<button type="button" class="mr-m-link" data-aksi="m-pilih-mode">${ikon("cek", 15)}${pilih ? "Selesai memilih" : "Pilih"}</button>` : ""}</div>
     ${pilihBarHP(S.pilihV.size, urut.length, "vendor")}
     ${urut.length ? `<section class="mr-m-box">${urut.map((v) => barisVendorHP(v, cacah, pilih)).join("")}</section>` : `<div class="mr-kosong">${ikon("cari", 28)}<p>Tidak ada vendor yang cocok dengan filter ini.</p><button type="button" class="mr-btn mr-btn--kecil" data-aksi="reset-vendor">Reset filter</button></div>`}`;
@@ -1851,8 +1833,7 @@ function htmlLiniHP() {
   S.tarif.forEach((t) => { cacah[t.liniBisnisId] = (cacah[t.liniBisnisId] || 0) + 1; (vend[t.liniBisnisId] = vend[t.liniBisnisId] || new Set()).add(t.vendorId); });
   const q = MH.cariLini.trim().toLowerCase(), tampil = liniTampilHP();
   const grup = daftarKelompok().map((g) => ({ ...g, isi: g.isi.filter((l) => !q || `${namaLini(l.id)} ${l.id}`.toLowerCase().includes(q)) })).filter((g) => g.isi.length);
-  return `<div class="mr-m-cari"><label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="mr-l-cari" type="search" placeholder="Cari lini bisnis…" value="${e(MH.cariLini)}" autocomplete="off" enterkeyhint="search"></label></div>
-    <div class="mr-m-meta"><span>${angka(tampil.length)} dari ${angka(S.lini.length)} lini bisnis</span><span class="mr-ruang"></span>${S.kelola && tampil.length ? `<button type="button" class="mr-m-link" data-aksi="m-pilih-mode">${ikon("cek", 15)}${pilih ? "Selesai memilih" : "Pilih"}</button>` : ""}</div>
+  return `<div class="mr-m-meta"><span>${angka(tampil.length)} dari ${angka(S.lini.length)} lini bisnis</span><span class="mr-ruang"></span>${S.kelola && tampil.length ? `<button type="button" class="mr-m-link" data-aksi="m-pilih-mode">${ikon("cek", 15)}${pilih ? "Selesai memilih" : "Pilih"}</button>` : ""}</div>
     ${pilihBarHP(S.pilihLini.size, tampil.length, "lini")}
     ${grup.length ? grup.map((g) => `<div class="mr-m-gh3">${e(g.judul)}<em>${g.isi.length}</em></div><section class="mr-m-box">${g.isi.map((l) => barisLiniHP(l, cacah, vend, pilih)).join("")}</section>`).join("") : `<div class="mr-kosong">${ikon("cari", 28)}<p>Tidak ada lini bisnis yang cocok.</p></div>`}`;
 }
@@ -1867,7 +1848,11 @@ function htmlHP(h, banners) {
     const tampilLok = profilTampil(S, namaVendor).filter((p) => !p.lama);
     isi = pilihBarHP(S.pilihLok.size, tampilLok.length, "lokasi") + htmlTabProfilHP(S, namaVendor, { pilih });
   }
-  return `<div class="mr-m">${banners.join("")}${atasHP(h)}${tabsHP()}<div id="mr-isi">${isi}</div></div>${fabHP()}`;
+  const perlu = h.kosong + h.tanpaLini + (S.kelola ? h.verifikasi : 0);
+  const cari = S.tab === "tarif" ? cariHP({ id: "mr-cari-bar", ph: "Cari layanan, vendor, lokasi…", nilai: S.f.cari, filterAktif: S.f.lini !== "semua" || S.f.vendor !== "semua", menu: true, badge: perlu })
+    : S.tab === "vendor" ? cariHP({ id: "mr-v-cari", ph: "Cari vendor, PIC, telepon…", nilai: S.fv.cari, filterAktif: S.fv.lini !== "semua", menu: S.kelola })
+    : S.tab === "lini" ? `<div class="mr-m-cari"><label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="mr-l-cari" type="search" placeholder="Cari lini bisnis…" value="${e(MH.cariLini)}" autocomplete="off" enterkeyhint="search"></label></div>` : "";
+  return `<div class="mr-m">${banners.join("")}${cari}${tabsHP()}<div id="mr-isi">${isi}</div></div>${fabHP()}`;
 }
 
 // ---------- sheet dari bawah ----------
@@ -1890,8 +1875,11 @@ function sheetFilter() {
   if (S.tab === "tarif") {
     const n = tarifTampil().length, linio = S.f.lini !== "semua";
     const lini = S.f.lini === "__belum__" ? "Belum diatur" : linio ? namaLini(S.f.lini) : "Semua lini bisnis", vend = S.f.vendor === "__belum__" ? "Belum ditentukan" : S.f.vendor !== "semua" ? namaVendor(S.f.vendor) : "Semua vendor";
-    const view = S.view === "perbandingan" ? "kelompok" : S.view;
+    const view = S.view === "perbandingan" ? "kelompok" : S.view, h = hitung();
+    const prh = [["kosong", "Belum ada modal", h.kosong, !!S.f.kosong], ["jualKosong", "Belum ada harga jual saran", h.jualKosong, !!S.f.jualKosong], ["tanpaLini", "Belum punya lini bisnis", h.tanpaLini, S.f.lini === "__belum__"], ["baru", `Baru diubah (${HARI_BARU} hari)`, h.baru, !!S.f.baru]]
+      .filter(([, , c, on]) => c > 0 || on).map(([v, t, c, on]) => barisPilih("m-qfs", v, t, c, on)).join("") + (S.kelola && h.verifikasi ? itemMR("m-verif", "tameng", "Perlu verifikasi", "Cek ulang tarif ke vendor", "", "").replace("</span></button>", `</span><em class="mr-sheet__bdg">${angka(h.verifikasi)}</em></button>`) : "");
     bukaSheetMR({ judul: "Filter tarif", sub: `Menampilkan ${angka(n)} dari ${angka(S.tarif.length)} tarif`, isi: `
+      ${prh ? `<div class="mr-m-fs"><h4>Perlu perhatian</h4>${prh}</div>` : ""}
       <div class="mr-m-fs"><h4>Lini bisnis</h4><button type="button" class="mr-m-sel" data-aksi="m-pick" data-v="lini"><span>${e(lini)}</span>${ikon("maju", 16)}</button></div>
       <div class="mr-m-fs"><h4>Vendor</h4><button type="button" class="mr-m-sel" data-aksi="m-pick" data-v="vendor"><span>${e(vend)}</span>${ikon("maju", 16)}</button></div>
       <div class="mr-m-fs"><h4>Tampilan daftar</h4><div class="mr-m-seg">${[["kelompok", "Kelompok", "lini"], ["daftar", "Daftar", "file"]].map(([v, t, ic]) => `<button type="button" class="${view === v ? "is-on" : ""}" data-aksi="m-view" data-v="${v}">${ikon(ic, 16)}${t}</button>`).join("")}</div></div>
@@ -2056,6 +2044,8 @@ function pasangEventHP() {
       else if (a === "m-noop") return;
       else if (a === "m-ringkas") { MH.ringkas = !MH.ringkas; render(); }
       else if (a === "m-qf") { const on = !S.f[d.v]; S.f = { ...S.f, [d.v]: on }; if (on && d.v !== "kosong") S.view = "daftar"; ganti(); render(); }
+      else if (a === "m-qfs") { if (d.v === "tanpaLini") { S.f.lini = S.f.lini === "__belum__" ? "semua" : "__belum__"; S.f.vendor = "semua"; } else { const on = !S.f[d.v]; S.f = { ...S.f, [d.v]: on }; if (on && d.v !== "kosong") S.view = "daftar"; } ganti(); render(); sheetFilter(); }
+      else if (a === "m-verif") { tutupSheetMR(); S.kelola && bukaVerifikasi(); }
       else if (a === "m-vstatus") { S.fv.status = d.v; render(); }
       else if (a === "m-batal") { S.pilih.clear(); S.pilihV.clear(); S.pilihLok.clear(); S.pilihLini.clear(); MH.pilih = false; render(); }
       else if (a === "m-pilih-mode") { const aktif = pilihAktif(); if (aktif) { pilihTabAktif().clear(); MH.pilih = false; } else { MH.pilih = true; MH.pilihTab = S.tab; } render(); }

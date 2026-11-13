@@ -1622,6 +1622,7 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
   .mr-m-cari__in input { min-width: 0; }
   .mr-m-ib { position: relative; width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; border: 1px solid var(--mr-border); border-radius: 12px; background: var(--mr-surface); color: var(--mr-ink); cursor: pointer; }
   .mr-m-ib.is-aktif { border-color: var(--mr-accent); }
+  .mr-m-bdg { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 999px; background: var(--mr-warn-bg); border: 1px solid var(--mr-warn-garis); color: var(--mr-warn); font-style: normal; font-size: 11px; font-weight: 800; }
   .mr-m-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--mr-accent); }
   .mr-m-chips { display: flex; gap: 8px; margin: 10px -16px 0; padding: 0 16px 2px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
   .mr-m-chips::-webkit-scrollbar { display: none; }
