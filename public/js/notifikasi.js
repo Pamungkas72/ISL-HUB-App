@@ -224,9 +224,9 @@ function perbaruiLencana() {
 function gambarPanel() {
   const p = document.getElementById("nf-panel"); if (!p) return;
   const lihat = terlihat();
-  p.innerHTML = `<div class="nf-h"><b>Pemberitahuan${lihat.length ? ` (${lihat.length})` : ""}</b><button type="button" class="nf-link" data-nf-segar>Segarkan</button><button type="button" class="nf-tutup" data-nf-panel-tutup aria-label="Tutup">${svg('<path d="M6 6l12 12M18 6 6 18"/>', 18)}</button></div>
+  p.innerHTML = `<div class="nf-h"><b>Pemberitahuan${lihat.length ? ` (${lihat.length})` : ""}</b><button type="button" class="nf-link" data-nf-segar>Segarkan</button>${kelola() ? `<button type="button" class="nf-tutup" data-nf-semua aria-label="Lihat semua pemberitahuan" title="Lihat semua pemberitahuan">${svg('<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>', 18)}</button>` : ""}<button type="button" class="nf-tutup" data-nf-panel-tutup aria-label="Tutup">${svg('<path d="M6 6l12 12M18 6 6 18"/>', 18)}</button></div>
     <div class="nf-daftar">${htmlDaftar(lihat)}</div>
-    <div class="nf-f">${kelola() ? '<button type="button" class="nf-semua" data-nf-semua>Lihat semua pemberitahuan</button>' : ""}<small>Semua yang masih perlu ditangani. Hilang otomatis setelah masalahnya selesai.</small></div>`;
+    <div class="nf-f"><small>Semua yang masih perlu ditangani. Hilang otomatis setelah masalahnya selesai.</small></div>`;
 }
 const K_POPUP_PENDAFTAR = "islhub-popup-pendaftar";
 /* Pop-up untuk master: ada sales baru yang harus segera ditindaklanjuti. Muncul sekali per sesi; muncul lagi kalau jumlahnya bertambah. */
