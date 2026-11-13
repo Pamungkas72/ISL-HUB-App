@@ -3684,7 +3684,7 @@ function viewFollow() {
   <div class="qt-fu">
     <div class="mr-kartu qt-fu-ring"><b>${daftar.length + nBelum ? `${daftar.length} perlu tindak lanjut` : 'Semua sudah ditindaklanjuti'}</b>${daftar.length ? `<small>${lama ? `<em>${lama} sudah ≥ 7 hari</em> · ` : ''}menggantung ≥ 7 hari, tanpa kabar ≥ ${PENG.tindakLanjutHari || 3} hari, riwayat PDF ≥ ${RW_HARI} hari</small>` : ''}</div>
     <button type="button" class="mr-kartu qt-fu-belum" data-qt="belum-buka">${ik('telp', 20)}<span><b>Customer tanpa penawaran aktif</b><small>${nBelum ? `${nBelum} customer · quotation ditolak atau diabaikan` : 'Tidak ada saat ini'}</small></span></button>
-    ${daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}</div></div>`).join('')}
+    ${!HP() ? `<div class="mr-kartu mr-tabelkartu"><table class="mr-tabel qt-fu-tabel"><thead><tr><th>Nomor</th><th>Customer</th><th>Lama</th><th>Aksi</th></tr></thead><tbody>${daftar.slice(0, 50).map(i => `<tr><td><b>${esc(i.nama)}</b></td><td>${esc(i.cust)}</td><td class="${i.h >= 7 ? 'qt-fu-warn' : ''}">${i.h} hari · ${i.ket.replace(/ \d+ hari/, '')}</td><td>${i.aksi}</td></tr>`).join('')}</tbody></table></div>` : daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}</div></div>`).join('')}
     ${daftar.length > 50 ? `<p class="mr-sub">50 teratas ditampilkan, terlama di atas.</p>` : ''}
   </div>`;
 }
