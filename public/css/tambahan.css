@@ -778,7 +778,7 @@ button.app-nav__brand:focus-visible { outline: 2px solid var(--accent); outline-
 .ke-atas:hover { background: rgba(47, 143, 219, 0.12); color: #0A3D66; }
 .ke-atas:focus-visible { outline: 3px solid #2F8FDB; outline-offset: 3px; }
 /* Tombol Tambah item (Master Rate) ada di pojok yang sama: ke atas naik di atasnya */
-body:has(.mr-fab) .ke-atas { bottom: 80px; }
+body:has(.mr-fab, .qt-fab) .ke-atas { bottom: 80px; }
 @media (max-width: 760px) {
   .ke-atas { right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   body:has(.mr-fab) .ke-atas { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
@@ -1198,12 +1198,11 @@ input, textarea, select, [contenteditable="true"] { -webkit-user-select: text; u
 
 /* ---------- daftar quotation di HP ----------
    Tombol Buat quotation mengambang di kanan bawah (seperti Master Rate), dan toolbar disusun dalam kisi rapi. */
-.qt-fab { display: none; position: fixed; right: 20px; bottom: 20px; z-index: 60; align-items: center; gap: 8px; height: 48px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--mr-navy); color: #fff; font: 700 14px Inter, system-ui, sans-serif; box-shadow: 0 10px 28px rgba(10, 61, 102, 0.35); cursor: pointer; }
+.qt-fab { display: inline-flex; position: fixed; right: 20px; bottom: 20px; z-index: 60; align-items: center; gap: 8px; height: 48px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--mr-navy); color: #fff; font: 700 14px Inter, system-ui, sans-serif; box-shadow: 0 10px 28px rgba(10, 61, 102, 0.35); cursor: pointer; }
 .qt-fab:hover { filter: brightness(1.12); }
 .qt-fab:focus-visible { outline: 3px solid var(--mr-accent, #2F8FDB); outline-offset: 3px; }
 @media (max-width: 760px) {
   .qt-fab { display: inline-flex; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
-  .qt-buat-desk { display: none !important; }
   body:has(.qt-fab) .ke-atas { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
   .qt-bar-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; align-items: center; }
   .qt-bar-list > .mr-cari { grid-column: 1 / -1; width: 100%; }

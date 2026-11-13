@@ -3686,7 +3686,7 @@ function viewFollow() {
     <button type="button" class="mr-kartu qt-fu-belum" data-qt="belum-buka">${ik('telp', 20)}<span><b>Customer tanpa penawaran aktif</b><small>${nBelum ? `${nBelum} customer · quotation ditolak atau diabaikan` : 'Tidak ada saat ini'}</small></span></button>
     ${!HP() ? `<div class="mr-kartu mr-tabelkartu"><table class="mr-tabel qt-fu-tabel"><thead><tr><th>Nomor</th><th>Customer</th><th>Lama</th><th>Aksi</th></tr></thead><tbody>${daftar.slice(0, 50).map(i => `<tr><td><b>${esc(i.nama)}</b></td><td>${esc(i.cust)}</td><td class="${i.h >= 7 ? 'qt-fu-warn' : ''}">${i.h} hari · ${i.ket.replace(/ \d+ hari/, '')}</td><td>${i.aksi}</td></tr>`).join('')}</tbody></table></div>` : daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}</div></div>`).join('')}
     ${daftar.length > 50 ? `<p class="mr-sub">50 teratas ditampilkan, terlama di atas.</p>` : ''}
-  </div>`;
+  </div>${bisaEdit() ? `<button type="button" class="qt-fab" data-qt="${HP() ? 'm-tambah' : 'baru'}" aria-label="Buat quotation">${ik('plus', 20)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
 }
 function viewRingkasan() {
   const r = Q.rg, D = rgData(), [a, b] = rgPeriode(), sales = [...new Set(D.semua.map(i => i.sales))].sort(), lini = [...new Set(D.semua.flatMap(i => i.lini))];
@@ -3711,7 +3711,7 @@ function viewRingkasan() {
         ${rgTren(D.dasar)}${rgGrup(D.dasar)}
         <div class="mr-kartu qt-rg-kartu"><h3 class="qt-kpi-h">${r.kat === 'fu' ? 'Perlu follow up' : r.kat ? RG_KAT[r.kat] : 'Semua terbit'} <small class="mr-sub">${D.list.length} quotation${r.kat === 'fu' ? ' · terlama di atas' : ''}</small></h3>
           ${D.list.length ? `<div class="qt-rg-daftar">${D.list.slice(0, 300).map(rgBaris).join('')}</div>${D.list.length > 300 ? `<p class="mr-sub">300 teratas ditampilkan. Persempit filter atau unduh Excel untuk semuanya.</p>` : ''}` : `<div class="mr-kosong">${ik('file', 28)}<p>Tidak ada quotation pada filter ini.</p></div>`}</div>
-      </div></div></div>`;
+      </div></div></div>${bisaEdit() ? `<button type="button" class="qt-fab" data-qt="${HP() ? 'm-tambah' : 'baru'}" aria-label="Buat quotation">${ik('plus', 20)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
 }
 const RG_KOLOM = ['Nomor', 'Customer', 'Sales', 'Lini', 'Kategori', 'Terbit', 'Diputuskan', 'Nilai (Rp)', 'Sumber'];
 const rgBarisEkspor = () => rgData().list.map(i => [namaQ(i.x), i.cust, i.sales, i.lini.map(k => namaLini(k)).join(', '), RG_KAT[i.kat], i.t, i.putus, i.nilai, i.rw ? 'Riwayat PDF' : 'Sistem']);
@@ -3814,7 +3814,7 @@ function viewDaftar() {
     ${bisaEdit() ? `<button class="mr-btn" data-qt="rw-unggah" title="Quotation yang dibuat di luar sistem: unggah PDF yang sudah dikirim, lalu pantau statusnya di daftar ini">${ik('upload', 16)} Unggah PDF</button>` : ''}
     <button class="mr-ikonbtn qt-ikonbar" data-qt="ekspor" aria-label="Ekspor Excel" title="Ekspor semua quotation ke Excel (cadangan dan laporan)">${ik('download', 18)}</button>
     <button class="mr-ikonbtn qt-ikonbar" data-qt="pengaturan" aria-label="Pengaturan dokumen" title="Pengaturan dokumen: kop, template, kalimat, syarat">${ik('setelan', 18)}</button>
-    ${bisaEdit() ? `<span class="qt-menu"><button type="button" class="mr-btn" data-qt="menu-tambah">${ik('file', 16)} Cara lain ▾</button><div class="qt-menu__list" hidden><button type="button" class="qt-menu__t" data-qt="baru-dari-tmpl">${ik('simpan', 14)} Dari template saya<small>Mulai dari quotation tersimpan</small></button><button type="button" class="qt-menu__t" data-qt="manual-word">${ik('file', 14)} Quotation manual (Word)<small>Nomor terbit, tabel disusun di Word</small></button></div></span><button class="mr-btn mr-btn--utama qt-buat-desk" data-qt="baru">${ik('plus', 16)} Buat quotation</button>` : ''}
+    ${bisaEdit() ? `<span class="qt-menu"><button type="button" class="mr-btn" data-qt="menu-tambah">${ik('file', 16)} Cara lain ▾</button><div class="qt-menu__list" hidden><button type="button" class="qt-menu__t" data-qt="baru-dari-tmpl">${ik('simpan', 14)} Dari template saya<small>Mulai dari quotation tersimpan</small></button><button type="button" class="qt-menu__t" data-qt="manual-word">${ik('file', 14)} Quotation manual (Word)<small>Nomor terbit, tabel disusun di Word</small></button></div></span>` : ''}
   </div>
   ${bannerKpi}
 ${bilahPilihQt(list)}
