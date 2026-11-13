@@ -3590,19 +3590,6 @@ const berlakuChip = x => {
 /* blok ini hanya bisa dilipat di HP (lihat CSS); di desktop selalu terbuka */
 const LIPAT = { kpi: true, sales: true }; // awal tertutup di HP; desktop tidak terpengaruh
 const tombolLipat = (k, judul, ket) => `<button type="button" class="qt-lipat-tombol" data-qt="lipat" data-k="${k}" aria-expanded="${!LIPAT[k]}">${judul} <small class="mr-sub">${ket}</small><span class="qt-lipat-chev" aria-hidden="true">▾</span></button>`;
-/* ringkasan per sales untuk quotation yang terbit bulan ini */
-function salesBulan() {
-  const per = {};
-  kpiTerbitBulanIni().item.forEach(({ x, kat }) => {
-    const b = per[pembuatDokumen(x)] = per[pembuatDokumen(x)] || { terbit: 0, disetujui: 0, ditolak: 0 };
-    b.terbit++; if (kat === 'disetujui') b.disetujui++; if (kat === 'ditolak') b.ditolak++;
-  });
-  return Object.entries(per).sort((a, b) => b[1].terbit - a[1].terbit).slice(0, 3);
-}
-function blokSalesBulan() {
-  const baris = salesBulan();
-  return baris.length ? `<div class="qt-sales-bulan qt-lipat ${LIPAT.sales ? 'is-tutup' : ''}"><h3 class="qt-kpi-h">${tombolLipat('sales', 'Per sales bulan ini', '3 teratas · bar = porsi disetujui')}</h3><div class="qt-lipat-isi"><div class="qt-sales-grid">${baris.map(([n, b]) => `<div class="qt-sales-kartu"><div class="qt-sales-kartu__atas"><span class="qt-sales-kartu__nama" title="${esc(n)}">${esc(n)}</span><b>${b.terbit}</b></div><div class="qt-sales-bar"><span style="width:${Math.round(b.disetujui / b.terbit * 100)}%"></span></div><small>${b.disetujui} disetujui · ${b.ditolak} ditolak</small></div>`).join('')}</div></div></div>` : '';
-}
 function blokKpiBulan() {
   const { k } = kpiTerbitBulanIni(), draf = Repo.semua().filter(q => q.status === 'draf').length, belum = k.menunggu + k.diabaikan + k.ditolak;
   const nama = new Date(HARI_INI() + 'T00:00:00').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -3686,7 +3673,7 @@ function viewFollow() {
     <button type="button" class="mr-kartu qt-fu-belum" data-qt="belum-buka">${ik('telp', 20)}<span><b>Customer tanpa penawaran aktif</b><small>${nBelum ? `${nBelum} customer · quotation ditolak atau diabaikan` : 'Tidak ada saat ini'}</small></span></button>
     ${!HP() ? `<div class="mr-kartu mr-tabelkartu"><table class="mr-tabel qt-fu-tabel"><thead><tr><th>Nomor</th><th>Customer</th><th>Lama</th><th>Aksi</th></tr></thead><tbody>${daftar.slice(0, 50).map(i => `<tr><td><b>${esc(i.nama)}</b></td><td>${esc(i.cust)}</td><td class="${i.h >= 7 ? 'qt-fu-warn' : ''}">${i.h} hari · ${i.ket.replace(/ \d+ hari/, '')}</td><td>${i.aksi}</td></tr>`).join('')}</tbody></table></div>` : daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}</div></div>`).join('')}
     ${daftar.length > 50 ? `<p class="mr-sub">50 teratas ditampilkan, terlama di atas.</p>` : ''}
-  </div>`;
+  </div>${bisaEdit() ? `<button type="button" class="qt-fab" data-qt="${HP() ? 'm-tambah' : 'baru'}" aria-label="Buat quotation">${ik('plus', 20)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
 }
 function viewRingkasan() {
   const r = Q.rg, D = rgData(), [a, b] = rgPeriode(), sales = [...new Set(D.semua.map(i => i.sales))].sort(), lini = [...new Set(D.semua.flatMap(i => i.lini))];
@@ -3711,7 +3698,7 @@ function viewRingkasan() {
         ${rgTren(D.dasar)}${rgGrup(D.dasar)}
         <div class="mr-kartu qt-rg-kartu"><h3 class="qt-kpi-h">${r.kat === 'fu' ? 'Perlu follow up' : r.kat ? RG_KAT[r.kat] : 'Semua terbit'} <small class="mr-sub">${D.list.length} quotation${r.kat === 'fu' ? ' · terlama di atas' : ''}</small></h3>
           ${D.list.length ? `<div class="qt-rg-daftar">${D.list.slice(0, 300).map(rgBaris).join('')}</div>${D.list.length > 300 ? `<p class="mr-sub">300 teratas ditampilkan. Persempit filter atau unduh Excel untuk semuanya.</p>` : ''}` : `<div class="mr-kosong">${ik('file', 28)}<p>Tidak ada quotation pada filter ini.</p></div>`}</div>
-      </div></div></div>`;
+      </div></div></div>${bisaEdit() ? `<button type="button" class="qt-fab" data-qt="${HP() ? 'm-tambah' : 'baru'}" aria-label="Buat quotation">${ik('plus', 20)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
 }
 const RG_KOLOM = ['Nomor', 'Customer', 'Sales', 'Lini', 'Kategori', 'Terbit', 'Diputuskan', 'Nilai (Rp)', 'Sumber'];
 const rgBarisEkspor = () => rgData().list.map(i => [namaQ(i.x), i.cust, i.sales, i.lini.map(k => namaLini(k)).join(', '), RG_KAT[i.kat], i.t, i.putus, i.nilai, i.rw ? 'Riwayat PDF' : 'Sistem']);
@@ -3799,7 +3786,6 @@ function viewDaftar() {
   ${sbBanner('quotation', nSb, 'quotation dan riwayat', 'quotation')}
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Membuat dan mengubah quotation hanya untuk master atau sales.</div></div>`}
   ${blokKpiBulan()}
-  ${blokSalesBulan()}
   ${(() => {
     const daftar = kumpulTL(semuaAll, semua);
     return daftar.length && !(sembunyi.ada('banner:tindaklanjut') || layarSisa() <= 0) ? `<div class="mr-banner mr-banner--peringatan qt-tl">${ik('peringatan')}${tombolX('banner:tindaklanjut')}<div><b>${daftar.length} perlu tindak lanjut</b> (menggantung tanpa pembaruan ≥ 7 hari; tanpa kabar ≥ ${PENG.tindakLanjutHari || 3} hari; riwayat PDF ≥ ${RW_HARI} hari)<div class="qt-tl__l">${daftar.slice(0, 6).map(i => `<span class="qt-tl__i"><b>${esc(i.nama)}</b> · ${esc(i.cust)} · ${i.ket} ${i.aksi}</span>`).join('')}</div></div></div>` : '';
@@ -3810,11 +3796,10 @@ function viewDaftar() {
     ${rw.length ? `<select class="mr-select" id="qt-fsumber" aria-label="Filter sumber"><option value="">Semua sumber</option>${opt([['sistem', 'Dibuat di sistem'], ['pdf', 'Riwayat PDF']], Q.fSumber)}</select>` : ''}
     ${Q.fStatus || Q.fTahun || Q.fSumber ? `<button type="button" class="mr-btn mr-btn--kecil" data-qt="reset-filter">${ik('tutup', 14)} Hapus filter${Q.fTahun ? ' (tahun ' + Q.fTahun + ')' : ''}</button>` : ''}
     <span class="mr-ruang"></span>
-    <button class="mr-btn" data-qt="belum-buka" title="Customer yang quotationnya ditolak atau diabaikan dan belum punya penawaran aktif">${ik('telp', 16)} Follow up${nBelum ? ` <span class="qt-rwbadge">${nBelum}</span>` : ''}</button>
     ${bisaEdit() ? `<button class="mr-btn" data-qt="rw-unggah" title="Quotation yang dibuat di luar sistem: unggah PDF yang sudah dikirim, lalu pantau statusnya di daftar ini">${ik('upload', 16)} Unggah PDF</button>` : ''}
     <button class="mr-ikonbtn qt-ikonbar" data-qt="ekspor" aria-label="Ekspor Excel" title="Ekspor semua quotation ke Excel (cadangan dan laporan)">${ik('download', 18)}</button>
     <button class="mr-ikonbtn qt-ikonbar" data-qt="pengaturan" aria-label="Pengaturan dokumen" title="Pengaturan dokumen: kop, template, kalimat, syarat">${ik('setelan', 18)}</button>
-    ${bisaEdit() ? `<span class="qt-menu"><button type="button" class="mr-btn" data-qt="menu-tambah">${ik('file', 16)} Cara lain ▾</button><div class="qt-menu__list" hidden><button type="button" class="qt-menu__t" data-qt="baru-dari-tmpl">${ik('simpan', 14)} Dari template saya<small>Mulai dari quotation tersimpan</small></button><button type="button" class="qt-menu__t" data-qt="manual-word">${ik('file', 14)} Quotation manual (Word)<small>Nomor terbit, tabel disusun di Word</small></button></div></span><button class="mr-btn mr-btn--utama qt-buat-desk" data-qt="baru">${ik('plus', 16)} Buat quotation</button>` : ''}
+    ${bisaEdit() ? `<span class="qt-menu"><button type="button" class="mr-btn" data-qt="menu-tambah">${ik('file', 16)} Cara lain ▾</button><div class="qt-menu__list" hidden><button type="button" class="qt-menu__t" data-qt="baru-dari-tmpl">${ik('simpan', 14)} Dari template saya<small>Mulai dari quotation tersimpan</small></button><button type="button" class="qt-menu__t" data-qt="manual-word">${ik('file', 14)} Quotation manual (Word)<small>Nomor terbit, tabel disusun di Word</small></button></div></span>` : ''}
   </div>
   ${bannerKpi}
 ${bilahPilihQt(list)}
@@ -3897,7 +3882,6 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
     + (Q.fSumber === 'sistem' ? 0 : rw.filter(x => (!v || RW_KELOMPOK[x.status] === v) && (!Q.fTahun || rwPutus(x).startsWith(Q.fTahun)) && cariR(x)).length);
   const filterLuar = !!(Q.fSumber || Q.fTahun || (Q.fStatus && !TAB_STATUS.some(t => t[0] === Q.fStatus)));
   const kartu = (st, ikon, n, label, extra = '') => `<button type="button" class="mr-stat__kartu qt-kpiklik ${Q.kpi === st ? 'is-aktif' : ''} ${extra}" data-qt="kpi" data-st="${st}" aria-pressed="${Q.kpi === st}"><span class="mr-stat__ikon">${ik(ikon)}</span><div><b>${n}</b><small>${label}</small></div></button>`;
-  const sales = salesBulan();
   let intip = false;
   if (!QM.intipSelesai) { try { intip = !localStorage.getItem('islqt-geser'); } catch { intip = false; } if (intip) setTimeout(() => { QM.intipSelesai = true; try { localStorage.setItem('islqt-geser', '1'); } catch { } }, 3500); }
   let adaIntip = false;
@@ -3912,7 +3896,7 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
       <button type="button" class="qt-m-chev ${QM.ringkas ? 'is-buka' : ''}" data-qt="m-ringkas" aria-label="${QM.ringkas ? 'Tutup' : 'Buka'} ringkasan bulan ini">${ik('turun', 17)}</button>
     </div>
     ${QM.ringkas ? `<div class="qt-m-ringisi"><div class="mr-stat">${kartu('terbit', 'file', k.terbit, `Quotation terbit${k.lainnya ? ` · ${k.lainnya} digantikan atau tidak dipakai` : ''}`)}${kartu('belum', 'kirim', belum, `Belum disetujui${k.diabaikan ? ` · ${k.diabaikan} diabaikan` : ''}`, belum ? 'is-perhatian' : '')}${kartu('draf', 'edit', draf, 'Draf (belum terbit)')}${kartu('disetujui', 'setuju', k.disetujui, 'Disetujui')}</div>
-      ${sales.length ? `<h3 class="qt-kpi-h">Per sales bulan ini <small class="mr-sub">3 teratas · bar = porsi disetujui</small></h3><div class="qt-sales-grid">${sales.map(([n, b]) => `<div class="qt-sales-kartu"><div class="qt-sales-kartu__atas"><span class="qt-sales-kartu__nama" title="${esc(n)}">${esc(n)}</span><b>${b.terbit}</b></div><div class="qt-sales-bar"><span style="width:${Math.round(b.disetujui / b.terbit * 100)}%"></span></div><small>${b.disetujui} disetujui · ${b.ditolak} ditolak</small></div>`).join('')}</div>` : ''}</div>` : ''}
+</div>` : ''}
     <div class="qt-m-cariBaris">
       <label class="mr-cari qt-m-cari">${ik('cari', 16)}<input id="qt-cari-m" type="search" placeholder="Cari nomor, perihal, customer" value="${esc(Q.q)}" autocomplete="off" enterkeyhint="search"></label>
       <button type="button" class="qt-m-ib ${filterLuar ? 'is-aktif' : ''}" data-qt="m-filter" aria-label="Filter${filterLuar ? ' (ada filter aktif)' : ''}">${ik('filter', 19)}${filterLuar ? '<i class="qt-m-dot"></i>' : ''}</button>
