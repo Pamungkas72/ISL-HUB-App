@@ -87,7 +87,17 @@ const ADEGAN = [
   ['quotation: isi modal (disetujui)', async (p, periksa) => {
     await pindah(p, 'quotation'); const id = await buatTerkirim(p);
     await p.evaluate(async i => { const Q = window.__qt._Q; await window.__qt._Repo.setujui(i, { appr: window.__ISL.hariIni(), sampai: null, bentuk: 'terpisah', dokNama: 'ttd.pdf', dokData: 'data:application/pdf;base64,JVBERi0xLjQK', koreksi: null }); Q.view = 'list'; window.__qt.gambar(); window.__qt.buka(i); }, id); await tunggu(p, 700); await periksa('quotation: disetujui (modal kosong)');
-    await klikSel(p, '[data-qt="isi-modal"]'); await tunggu(p, 600); await periksa('quotation: formulir isi modal');
+    /* tombol file TTD (unduh, WA, email, bagikan) harus jalan untuk data URL dan untuk URL Storage yang gagal di-fetch (tanpa CORS) */
+    for (const mode of ['data', 'https']) {
+      if (mode === 'https') await p.evaluate(() => { const R = window.__qt._Repo; window.__dokAsli = R.dokData; R.dokData = () => 'https://storage.invalid/ttd.pdf'; });
+      for (const j of ['unduh', 'wa', 'email', 'bagikan']) {
+        await p.evaluate(() => document.querySelectorAll('.mr-toast').forEach(t => t.remove())); if (!(await klikSel(p, `[data-qt="ttd-${j}"]`))) { if (j === 'bagikan') continue; throw new Error(`tombol ttd-${j} tidak ada`); } // Bagikan hanya ada bila perangkat mendukung navigator.share await tunggu(p, 900);
+        const gagal = await p.evaluate(() => [...document.querySelectorAll('.mr-toast--bahaya')].map(t => t.textContent).join(' | '));
+        if (gagal) throw new Error(`ttd-${j} (${mode}): ${gagal}`.slice(0, 90));
+      }
+      if (mode === 'https') await p.evaluate(() => { window.__qt._Repo.dokData = window.__dokAsli; });
+    }
+    await tunggu(p, 1200); await p.evaluate(i => { window.__qt.buka(i); }, id); await tunggu(p, 500); await klikSel(p, '[data-qt="isi-modal"]'); await p.waitForSelector('#im-vendor', { timeout: 8000 }); await tunggu(p, 300); await periksa('quotation: formulir isi modal');
     await p.evaluate(() => { const v = document.querySelector('#im-vendor'); v.value = '__baru'; v.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#im-vb').value = 'CV Uji Vendor'; document.querySelector('[data-qt="im-simpan"]:not([data-lanjut])').click(); }); await tunggu(p, 1500); await periksa('quotation: setelah modal disimpan');
     await p.evaluate(() => { const q = window.__qt._Q; q.view = 'list'; q.sub = 'daftar'; window.__qt.gambar(); }); await tunggu(p, 500); await periksa('quotation: daftar dengan lencana modal'); return 'sudah';
   }],
