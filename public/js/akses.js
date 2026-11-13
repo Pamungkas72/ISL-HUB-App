@@ -9,8 +9,21 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, ge
 import { adalahMaster } from "./config-akses.js";
 import { WA_ADMIN_TAMPILAN, linkWaAdmin, pesanDaftarSales } from "./kontak-admin.js";
 
-export const PERAN = { master: "Master", admin: "Admin", sales: "Sales", lihat: "Lihat saja", cs: "CS" };
-export const PERAN_DIMINTA = { admin: "Admin", cs: "CS", sales: "Sales" };
+export const PERAN = { master: "Master", admin: "Admin", sales: "Sales", lihat: "Lihat saja" };
+/* Pendaftaran mandiri hanya untuk sales. Admin dibuat master (Pengaturan > Akun). */
+export const PERAN_DIMINTA = { sales: "Sales" };
+
+/* Kode sales otomatis: 3 huruf pertama nama depan (BUD). Bentrok → tambah huruf berikutnya dari nama (BUDI, BUDID, …, maks 6). */
+export function kodeSalesOtomatis(nama, terpakai = []) {
+  const pakai = new Set(terpakai.map((k) => String(k || "").toUpperCase()));
+  const kata = String(nama || "").normalize("NFD").toUpperCase().split(/\s+/).map((w) => w.replace(/[^A-Z]/g, "")).filter(Boolean);
+  const semua = kata.join(""), dasar = (kata[0] || "").length >= 3 ? kata[0].slice(0, 3) : semua.slice(0, 3);
+  if (dasar.length < 2) return "";
+  const sisa = semua.slice(dasar.length);
+  for (let k = 0; k <= 3 && k <= sisa.length; k++) { const c = dasar + sisa.slice(0, k); if (!pakai.has(c)) return c; }
+  for (const h of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") if (!pakai.has(dasar + h)) return dasar + h;
+  return "";
+}
 export const STATUS_AKUN = { menunggu: "Menunggu persetujuan", aktif: "Aktif", nonaktif: "Nonaktif" };
 
 export async function muatProfil(user) {
@@ -18,9 +31,9 @@ export async function muatProfil(user) {
   const ref = doc(db, "pengguna", user.uid);
   const s = await getDoc(ref);
   if (s.exists()) return { uid: user.uid, ...s.data() };
-  let diminta = "sales";
-  try { const t = sessionStorage.getItem("islhub-peran-diminta"); if (t in PERAN_DIMINTA) diminta = t; sessionStorage.removeItem("islhub-peran-diminta"); } catch (_) {}
-  const p = { email: String(user.email || "").toLowerCase(), nama: user.displayName || "", peranDiminta: diminta, peran: null, status: "menunggu", dibuat: serverTimestamp() };
+  let telepon = "";
+  try { telepon = sessionStorage.getItem("islhub-telepon-daftar") || ""; sessionStorage.removeItem("islhub-telepon-daftar"); } catch (_) {}
+  const p = { email: String(user.email || "").toLowerCase(), nama: user.displayName || "", peranDiminta: "sales", peran: null, status: "menunggu", dibuat: serverTimestamp(), ...(telepon ? { telepon } : {}) };
   await setDoc(ref, p);
   return { uid: user.uid, ...p, dibuat: null };
 }

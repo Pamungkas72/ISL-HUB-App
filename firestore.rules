@@ -292,12 +292,14 @@ service cloud.firestore {
       allow read: if isKelola() || (sesiBerlaku() && request.auth.uid == uid);
       allow create: if (sesiBerlaku() && request.auth.uid == uid
           && request.resource.data.status == 'menunggu' && request.resource.data.peran == null
-          && request.resource.data.keys().hasOnly(['email', 'nama', 'peranDiminta', 'peran', 'status', 'dibuat'])
-          && request.resource.data.peranDiminta in ['sales', 'cs', 'admin'])
+          && request.resource.data.keys().hasOnly(['email', 'nama', 'peranDiminta', 'peran', 'status', 'dibuat', 'telepon'])
+          && request.resource.data.get('telepon', '') is string && request.resource.data.get('telepon', '').size() <= 15
+          && request.resource.data.peranDiminta == 'sales')
         // Tambah akun manual oleh master (Pengaturan > Akun): profil langsung aktif untuk akun login yang dibuat master.
         || ((isMaster() || (isAdmin() && request.resource.data.peran in ['sales', 'lihat'])) && uid != request.auth.uid
           && request.resource.data.status == 'aktif' && request.resource.data.peran in ['sales', 'admin', 'lihat']
-          && request.resource.data.keys().hasOnly(['email', 'nama', 'peranDiminta', 'peran', 'status', 'dibuat', 'disetujuiPada', 'kodeSales', 'targetBulanan', 'dibuatOleh']));
+          && request.resource.data.keys().hasOnly(['email', 'nama', 'peranDiminta', 'peran', 'status', 'dibuat', 'disetujuiPada', 'kodeSales', 'targetBulanan', 'dibuatOleh', 'telepon'])
+          && request.resource.data.get('telepon', '') is string && request.resource.data.get('telepon', '').size() <= 15);
       allow update: if isMaster()
         || (isAdmin() && uid != request.auth.uid
             && resource.data.peran in ['sales', 'lihat', null] && request.resource.data.peran in ['sales', 'lihat', null]

@@ -12,7 +12,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun } from "./akses.js";
+import { PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeSalesOtomatis } from "./akses.js";
+import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
 import { pasangPembersihan } from "./pembersihan-qt.js";
@@ -92,15 +93,16 @@ function htmlAkun() {
   const hapusAkun = S.master ? `<button class="st-hapus" data-st="akun-hapus" aria-label="Hapus akun" title="Hapus akun"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : "";
   const dikunci = (a) => !S.master && (a.peran === "admin" || a.peran === "master");
   /* Peran yang terpilih di daftar. Pendaftar mengikuti permintaannya; admin tidak bisa mengangkat admin, jadi permintaan admin jatuh ke Lihat saja. */
-  const peranPilih = (a) => a.peran || (a.peranDiminta === "sales" ? "sales" : a.peranDiminta === "admin" && S.master ? "admin" : "lihat");
-  const baris = (a) => `<tr data-uid="${e(a.id)}"><td><b>${e(a.nama || "-")}</b><div class="mr-sub">${e(a.email)}${a.status === "menunggu" ? ` · diminta: <b>${e({ admin: "Admin", cs: "CS", sales: "Sales" }[a.peranDiminta] || "Sales")}</b>` : ""}</div></td>
+  const peranPilih = (a) => a.peran || (a.peranDiminta === "admin" ? (S.master ? "admin" : "lihat") : "sales");
+  const terpakai = S.akun.map((a) => a.kodeSales).filter(Boolean);
+  const baris = (a) => { const kodeIsi = a.kodeSales || (a.status === "menunggu" && peranPilih(a) === "sales" ? kodeSalesOtomatis(a.nama, terpakai) : ""); if (!a.kodeSales && kodeIsi) terpakai.push(kodeIsi); return `<tr data-uid="${e(a.id)}"><td><b>${e(a.nama || "-")}</b><div class="mr-sub">${e(a.email)}${a.telepon ? ` · ${e(a.telepon)}` : ""}${a.status === "menunggu" && a.peranDiminta === "admin" ? ` · diminta: <b>Admin</b>` : ""}</div></td>
     <td><select data-akun="peran"><option value="sales" ${peranPilih(a) === "sales" ? "selected" : ""}>Sales</option><option value="lihat" ${peranPilih(a) === "lihat" ? "selected" : ""}>Lihat saja</option>${S.master ? `<option value="admin" ${peranPilih(a) === "admin" ? "selected" : ""}>Admin</option>` : ""}</select></td>
-    <td><input data-akun="kode" value="${e(a.kodeSales || "")}" placeholder="Kode" style="width:70px" maxlength="6"></td>
+    <td><input data-akun="kode" value="${e(kodeIsi)}" placeholder="Kode" style="width:70px" maxlength="6"></td>
     <td><input data-akun="target" inputmode="numeric" value="${a.targetBulanan ? Number(a.targetBulanan).toLocaleString("id-ID") : ""}" placeholder="${S.perf.targetDefault ? Number(S.perf.targetDefault).toLocaleString("id-ID") : "Target Rp/bln"}" style="width:130px" ${S.master ? "" : "disabled"}></td>
     <td><span class="${warna[a.status] || "st-badge"}">${e(STATUS_AKUN[a.status] || a.status)}</span></td>
     <td class="st-aksi">${dikunci(a) ? `<span class="mr-sub">Dikelola pemilik</span>` : a.status === "menunggu" ? `<button class="mr-btn mr-btn--kecil mr-btn--utama" data-st="akun-setujui" ${S.modal && S.modal.siap ? "" : "aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\""}>Setujui</button><button class="mr-btn mr-btn--kecil" data-st="akun-tolak">Tolak</button>`
       : a.status === "aktif" ? `<button class="mr-btn mr-btn--kecil" data-st="akun-simpan">Simpan</button>${S.master ? `<button class="mr-btn mr-btn--kecil" data-st="akun-sandi">Kata sandi</button>` : ""}<button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-nonaktif">Nonaktifkan</button>${hapusAkun}`
-      : `<button class="mr-btn mr-btn--kecil" data-st="akun-aktif" ${S.modal && S.modal.siap ? "" : "aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\""}>Aktifkan lagi</button>${hapusAkun}`}</td></tr>`;
+      : `<button class="mr-btn mr-btn--kecil" data-st="akun-aktif" ${S.modal && S.modal.siap ? "" : "aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\""}>Aktifkan lagi</button>${hapusAkun}`}</td></tr>`; };
   const m = S.modal;
   /* Admin hanya bisa memisahkan modal Master Rate. Modal quotation dan rate dipisah pemilik, jadi admin diberi tahu, bukan diarahkan ke tombol yang tidak menuntaskan. */
   const modalPeringatan = (x) => S.master ? `<b>Modal belum dipisah.</b> ${x.tarif} tarif dan ${x.fase2} dokumen quotation/rate masih menyimpan modal di dokumen biasa. Pisahkan dulu sebelum menyetujui akun sales. Prosesnya sekali jalan, otomatis, dan bisa diulang.`
@@ -114,10 +116,10 @@ function htmlAkun() {
     ${menunggu.length ? `<h4 style="margin:12px 0 6px">Menunggu persetujuan (${menunggu.length})</h4><table class="st-tabel"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Target</th><th>Status</th><th></th></tr></thead><tbody>${menunggu.map(baris).join("")}</tbody></table>` : ""}
     <details class="st-laci" open><summary><span>Pembersihan quotation</span><span class="st-laci-jml">Diabaikan atau lewat masa</span></summary><div class="st-laci-isi" id="st-bersih"></div></details>
     ${S.master || S.admin ? `<details class="st-laci"><summary><span>Tambah akun manual</span><span class="st-laci-jml">buat login dan profil</span></summary><div class="st-laci-isi">
-      <p class="mr-sub">Akun login dibuat di sini dan langsung aktif sesuai peran yang dipilih. Orangnya menerima email untuk mengatur kata sandinya sendiri.</p>
-      <div class="st-baris"><input id="ta-email" type="email" placeholder="Email" autocomplete="off" style="min-width:220px"><input id="ta-nama" placeholder="Nama lengkap" autocomplete="off" style="min-width:220px"></div>
+      <p class="mr-sub">Isi nama dan email saja. Kode sales terisi otomatis dan bisa diubah. Akun langsung aktif dengan kata sandi sementara yang tampil sekali untuk disalin atau dikirim lewat WhatsApp.</p>
+      <div class="st-baris"><input id="ta-nama" placeholder="Nama lengkap" autocomplete="off" style="min-width:220px"><input id="ta-email" type="email" placeholder="Email" autocomplete="off" style="min-width:220px"><input id="ta-wa" type="tel" inputmode="tel" placeholder="WhatsApp (opsional)" autocomplete="off" style="width:180px"></div>
       <div class="st-baris"><select id="ta-peran" aria-label="Peran"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option></select><input id="ta-kode" placeholder="Kode sales (2 sampai 6 huruf)" maxlength="6" autocomplete="off" style="width:200px">${S.master ? `<input id="ta-target" inputmode="numeric" placeholder="Target bulanan (opsional)" autocomplete="off" style="width:200px">` : ""}</div>
-      <div class="st-baris"><button class="mr-btn mr-btn--utama" data-st="akun-tambah">Buat akun dan kirim tautan</button></div>
+      <div class="st-baris"><button class="mr-btn mr-btn--utama" data-st="akun-tambah">Buat akun</button></div>
     </div></details>` : ""}
     <details class="st-laci"><summary><span>Riwayat perubahan akun</span><span class="st-laci-jml">${S.log.length} catatan terakhir</span></summary><div class="st-laci-isi">${htmlLog()}</div></details>
     <details class="st-laci"><summary><span>Akun terdaftar</span><span class="st-laci-jml">${lain.length} akun</span></summary><div class="st-laci-isi">${lain.length ? `<table class="st-tabel"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Target</th><th>Status</th><th></th></tr></thead><tbody>${lain.map(baris).join("")}</tbody></table>` : `<div class="st-stat">Belum ada akun lain.</div>`}</div></details>
@@ -127,42 +129,62 @@ function htmlAkun() {
 let authTambah = null;
 const authTambahAkun = async () => { if (!authTambah) { authTambah = getAuth(initializeApp(app.options, "tambah-akun")); authTambah.languageCode = "id"; await setPersistence(authTambah, inMemoryPersistence); } return authTambah; };
 const HURUF_SANDI = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const sandiAcak = () => { const b = new Uint8Array(24); crypto.getRandomValues(b); return Array.from(b, (x) => HURUF_SANDI[x % HURUF_SANDI.length]).join(""); };
+const sandiAcak = (n = 24) => { const b = new Uint8Array(n); crypto.getRandomValues(b); return Array.from(b, (x) => HURUF_SANDI[x % HURUF_SANDI.length]).join(""); };
 /* kode sales: hanya huruf A-Z (spasi, angka, tanda baca, dan aksen dibuang); dipakai di nomor quotation */
 const bersihKode = (v) => String(v || "").normalize("NFD").replace(/[^A-Za-z]/g, "").toUpperCase();
-document.addEventListener("input", (ev) => { const t = ev.target; if (t && (t.id === "ta-kode" || (t.dataset && t.dataset.akun === "kode"))) { const b = bersihKode(t.value); if (b !== t.value) t.value = b; } });
+document.addEventListener("input", (ev) => {
+  const t = ev.target; if (!t) return;
+  if (t.id === "ta-kode" || (t.dataset && t.dataset.akun === "kode")) { const b = bersihKode(t.value); if (b !== t.value) t.value = b; if (t.id === "ta-kode") t.dataset.manual = "1"; }
+  // kode sales ikut nama selama belum diubah tangan
+  if (t.id === "ta-nama" || t.id === "ta-peran") { const k = $("#ta-kode"); if (k && k.dataset.manual !== "1") k.value = $("#ta-peran").value === "sales" ? kodeSalesOtomatis($("#ta-nama").value, S.akun.map((a) => a.kodeSales)) : ""; }
+});
+document.addEventListener("change", (ev) => { if (ev.target && ev.target.id === "ta-peran") ev.target.dispatchEvent(new Event("input", { bubbles: true })); });
+/* Sandi sementara tampil sekali: salin atau kirim lewat WhatsApp. */
+function dialogAkunBaru(d) {
+  return new Promise((selesai) => {
+    const pesan = pesanAkunBaru(d), lapis = document.createElement("div"); lapis.className = "mr-konfirm";
+    lapis.innerHTML = `<div class="mr-konfirm__kotak"><h3>Akun ${e(d.nama)} dibuat</h3><div class="mr-konfirm__isi">
+      <p style="margin:0 0 6px"><b>${e(d.email)}</b>${d.kode ? ` · kode <b>${e(d.kode)}</b>` : ""}</p>
+      <p style="margin:0 0 4px" class="mr-sub">Kata sandi sementara (tampil sekali, tidak bisa dilihat lagi):</p>
+      <input readonly id="db-sandi" value="${e(d.sandi)}" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:18px" aria-label="Kata sandi sementara"></div>
+      <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="salin">Salin pesan</button>${d.telepon ? `<a class="mr-btn mr-btn--utama" href="${e(linkWa(d.telepon, pesan))}" target="_blank" rel="noopener">Kirim via WhatsApp</a>` : ""}<button class="mr-btn" data-x="tutup">Tutup</button></div></div>`;
+    document.body.appendChild(lapis);
+    const q = (x) => lapis.querySelector(x);
+    q('[data-x="salin"]').onclick = async (ev) => { try { await navigator.clipboard.writeText(pesan); ev.target.textContent = "Tersalin"; } catch (_) { q("#db-sandi").select(); ev.target.textContent = "Salin manual"; } };
+    q('[data-x="tutup"]').onclick = () => { lapis.remove(); selesai(); };
+  });
+}
 async function tambahAkunManual() {
   if (!S.master && !S.admin) return;
-  const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), peran = $("#ta-peran").value, kode = bersihKode($("#ta-kode").value), target = S.master ? angkaIn($("#ta-target").value) : null;
+  const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), peran = $("#ta-peran").value, kode = bersihKode($("#ta-kode").value), target = S.master ? angkaIn($("#ta-target").value) : null, telepon = normalisasiWa($("#ta-wa").value);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi email yang valid.", "bahaya");
   if (!nama) return toast("Isi nama lengkap.", "bahaya");
   if (peran === "sales" && !/^[A-Z]{2,6}$/.test(kode)) return toast(`Kode sales "${e(kode)}" belum valid: wajib 2 sampai 6 huruf A-Z, tanpa angka atau spasi.`, "bahaya");
   if (S.akun.some((a) => String(a.email || "").toLowerCase() === email)) return toast("Email ini sudah ada di daftar akun.", "bahaya");
-  if (!(await konfirmasi("Buat akun ini?", `Akun login untuk <b>${e(email)}</b> dibuat sebagai <b>${e(PERAN[peran])}</b> dan langsung aktif. Email atur kata sandi dikirim ke alamat itu.`, "Buat akun"))) return;
+  if (!(await konfirmasi("Buat akun ini?", `Akun login untuk <b>${e(email)}</b> dibuat sebagai <b>${e(PERAN[peran])}</b> dan langsung aktif. Kata sandi sementara akan ditampilkan sekali.`, "Buat akun"))) return;
   const tombol = document.querySelector('[data-st="akun-tambah"]'); if (tombol) { tombol.disabled = true; tombol.textContent = "Membuat akun…"; }
-  const pulih = () => { if (tombol) { tombol.disabled = false; tombol.textContent = "Buat akun dan kirim tautan"; } };
+  const pulih = () => { if (tombol) { tombol.disabled = false; tombol.textContent = "Buat akun"; } };
   let uid = null;
+  const sandi = sandiAcak(10);
   try {
     const a = await authTambahAkun();
-    uid = (await createUserWithEmailAndPassword(a, email, sandiAcak())).user.uid;
+    uid = (await createUserWithEmailAndPassword(a, email, sandi)).user.uid;
   } catch (er) {
     pulih();
     const pesan = er && er.code === "auth/email-already-in-use" ? "Email ini sudah punya akun login, tetapi belum ada di daftar aplikasi. Minta orangnya masuk sekali agar muncul di Menunggu persetujuan." : `Akun login belum dibuat: ${e(er && (er.code || er.message))}`;
     return toast(pesan, "bahaya");
   }
   try {
-    await setDoc(doc(db, "pengguna", uid), { email, nama, peranDiminta: peran, peran, status: "aktif", dibuat: serverTimestamp(), disetujuiPada: serverTimestamp(), dibuatOleh: "manual", kodeSales: peran === "sales" ? kode : null, targetBulanan: peran === "sales" ? target : null });
+    await setDoc(doc(db, "pengguna", uid), { email, nama, peranDiminta: peran, peran, status: "aktif", dibuat: serverTimestamp(), disetujuiPada: serverTimestamp(), dibuatOleh: "manual", kodeSales: peran === "sales" ? kode : null, targetBulanan: peran === "sales" ? target : null, ...(telepon ? { telepon } : {}) });
     if (peran === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama, kode, targetBulanan: target || null });
   } catch (er) {
     pulih();
     return toast(`Akun login sudah dibuat, tetapi profilnya gagal disimpan (${e(er.code || er.message)}). Minta orangnya masuk sekali; akunnya akan muncul di Menunggu persetujuan.`, "bahaya");
   }
   await catatLogAkun({ uid, email }, "tambah", null, { peran, status: "aktif", kode: kode || null, target: target ?? null });
-  let tautan = "Email atur kata sandi terkirim.";
-  try { await sendPasswordResetEmail(await authTambahAkun(), email); } catch (er) { tautan = `Email atur kata sandi belum terkirim (${e(er.code || er.message)}). Orangnya bisa memakai Lupa kata sandi di halaman login.`; }
   try { await signOut(await authTambahAkun()); } catch (_) {}
   await muatAkun(); render();
-  toast(`Akun <b>${e(email)}</b> dibuat sebagai ${e(PERAN[peran])}. ${tautan}`);
+  await dialogAkunBaru({ nama, email, sandi, kode: peran === "sales" ? kode : "", telepon });
 }
 async function muatAkun() {
   try { const snap = await getDocs(collection(db, "pengguna")); S.akun = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.email).localeCompare(String(b.email))); } catch (er) { S.akun = []; toast(`<b>Daftar akun gagal dimuat.</b> ${e(er.code || er.message)}. Pasang aturan Firestore terbaru.`, "bahaya"); }

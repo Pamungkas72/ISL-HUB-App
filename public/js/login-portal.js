@@ -11,14 +11,6 @@ const sisi = document.querySelector(".login-form-side");
 const tutupBtn = document.getElementById("login-tutup");
 
 if (portal && sisi) {
-  // Pilihan status akun untuk pendaftaran (Sales / CS / Admin).
-  const formDaftar = document.getElementById("daftar-form"), tombolDaftar = document.getElementById("df-submit");
-  if (formDaftar && tombolDaftar && !document.getElementById("df-peran")) {
-    const kolom = document.createElement("div");
-    kolom.className = "field";
-    kolom.innerHTML = '<label for="df-peran">Status akun</label><select id="df-peran"><option value="sales">Sales</option><option value="cs">CS</option><option value="admin">Admin</option></select>';
-    formDaftar.insertBefore(kolom, tombolDaftar);
-  }
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let pemicu = null, tierAktif = null, parallax = null;
   const info = document.getElementById("modul-info");
