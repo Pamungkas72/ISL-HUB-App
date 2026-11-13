@@ -37,6 +37,9 @@ jobs:
       - name: Periksa nama yang tidak terdefinisi
         run: npx --yes eslint@8.57.0 --no-eslintrc -c tests/asap/eslint.json public/js/app-core.js public/js/formulir-lini.js public/js/pembuat-format.js public/js/sales.js public/js/logo.js
 
+      - name: Uji unit Daily Job
+        run: node tests/unit/daily-job.test.mjs
+
       - name: Pasang Playwright dan Chromium
         run: |
           mkdir -p "$RUNNER_TEMP/tes"

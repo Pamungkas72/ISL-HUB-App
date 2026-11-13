@@ -1,0 +1,64 @@
+/* Daily Job. Warna memakai variabel tema (terang dan gelap); hanya kertas laporan PDF (.dj-cetak) putih. */
+#dj-root { display: flex; flex-direction: column; gap: 12px; }
+.dj-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); }
+.dj-tabs button { border: 0; background: none; padding: 10px 14px; font: 600 14px var(--font-body); color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; min-height: 44px; }
+.dj-tabs button.is-aktif { color: var(--head); border-color: var(--accent); }
+.dj-bar2 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dj-bar2 select, .dj-bar2 input[type="date"], .dj-cari { height: 38px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0 10px; font: 13px var(--font-body); max-width: 100%; }
+.dj-seg { gap: 6px; flex-wrap: wrap; }
+.dj-pdf { margin-left: auto; height: 38px; }
+.dj-cari { width: 100%; }
+.dj-alert { display: flex; justify-content: space-between; gap: 10px; align-items: center; width: 100%; text-align: left; border: 1px solid var(--warn-border, #f5cf9c); background: var(--accent-soft); color: var(--text); border-radius: 10px; padding: 10px 12px; font: 13.5px var(--font-body); cursor: pointer; }
+.dj-alert--bahaya { background: var(--danger-soft); border-color: var(--danger-border); cursor: default; }
+.dj-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.dj-kpi { text-align: left; border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-lg); padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; color: var(--text); font-family: var(--font-body); min-height: 44px; }
+.dj-kpi:hover { border-color: var(--sky); }
+.dj-kpi span { color: var(--muted); font-size: 12.5px; }
+.dj-kpi b { font: 700 24px var(--font-head); color: var(--head); }
+.dj-kpi small { color: var(--muted); font-size: 12px; }
+#dj-dash { display: flex; flex-direction: column; gap: 12px; }
+.dj-grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+.dj-kartu { padding: 14px; }
+.dj-kartu h3 { margin: 0 0 10px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.dj-svg { max-width: 100%; height: auto; display: block; }
+.dj-lg { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.dj-lg i, .dj-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+.dj-donat { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.dj-legenda { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dj-legenda button, .dj-org { border: 0; background: none; color: var(--text); font: 13px var(--font-body); text-align: left; cursor: pointer; padding: 5px 6px; border-radius: 6px; display: flex; align-items: center; gap: 6px; min-height: 36px; }
+.dj-legenda button.is-aktif, .dj-org.is-aktif { background: var(--sky-soft); }
+.dj-legenda button:hover, button.dj-org:hover { background: var(--sky-soft); }
+.dj-org { width: 100%; gap: 10px; }
+.dj-org > span:first-child { width: 90px; flex: none; overflow: hidden; text-overflow: ellipsis; }
+.dj-org small { color: var(--muted); }
+label.dj-org > span:first-child, div.dj-org > span:first-child { width: auto; flex: 1; }
+label.dj-org select { max-width: 55%; }
+.dj-bar { flex: 1; height: 8px; border-radius: 8px; background: var(--border); display: flex; overflow: hidden; }
+.dj-bar i { display: block; height: 100%; }
+.dj-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.dj-chips .mr-chip { flex: none; min-height: 36px; }
+.dj-daftar { padding: 0 12px; }
+.dj-job { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 0 10px 10px; border-top: 1px solid var(--border); border-left: 4px solid var(--sky); margin-left: -2px; cursor: pointer; border-radius: 2px; }
+.dj-kartu > .dj-job:first-of-type, .dj-daftar > .dj-job:first-child { border-top-color: transparent; }
+.dj-job--telat { border-left-color: var(--danger); } .dj-job--ok { border-left-color: var(--success); }
+.dj-job:focus-visible { outline: 2px solid var(--sky); }
+.dj-job__isi { min-width: 0; display: flex; flex-direction: column; gap: 2px; } .dj-job__isi b { font-size: 14px; } .dj-job__isi small { color: var(--muted); font-size: 12px; }
+.dj-job__aksi { display: flex; align-items: center; gap: 6px; flex: none; }
+.dj-chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: var(--sky-soft); color: var(--head); }
+.dj-chip--bahaya { background: var(--danger-soft); color: var(--danger); } .dj-chip--warn { background: var(--accent-soft); color: var(--accent-hover); } .dj-chip--ok { background: var(--success-soft); color: var(--success); } .dj-chip--mu { background: var(--bg); color: var(--muted); }
+.dj-form .dj-lebar { grid-column: 1 / -1; }
+.dj-fl { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 13px; } .dj-fl a { color: var(--sky); word-break: break-all; }
+.dj-tautan { display: flex; gap: 8px; } .dj-tautan input { flex: 1; }
+.dj-cat { border-left: 3px solid var(--border); padding: 4px 10px; margin-top: 6px; font-size: 13px; } .dj-cat small { display: block; color: var(--muted); }
+.mr-btn--bahaya { color: var(--danger); border-color: var(--danger-border); }
+.dj-ingat { position: fixed; z-index: 90; right: 16px; top: 72px; width: min(360px, calc(100vw - 32px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-left: 5px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px; }
+.dj-ingat p { margin: 6px 0 10px; font-size: 13px; color: var(--muted); } .dj-ingat div { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 760px) {
+  .dj-kpis { grid-template-columns: 1fr 1fr; } .dj-grid2 { grid-template-columns: 1fr; }
+  .dj-bar2 select, .dj-bar2 input[type="date"] { flex: 1 1 130px; } .dj-pdf { margin-left: 0; }
+  .dj-form { grid-template-columns: 1fr; }
+  .dj-ingat { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+}
+/* Kertas laporan PDF: putih, apa pun tema aplikasi. */
+.dj-cetak #dj-dash { --surface: #fff; --bg: #fff; --text: #13283D; --head: #0A3D66; --muted: #5D7085; --border: #DCE5EF; --sky-soft: #E8F4FD; --accent-soft: #FFF1E0; --danger-soft: #FCEAEA; --success-soft: #E4F5EE; background: #fff; padding: 8px; }
+.dj-cetak .dj-kpi, .dj-cetak .dj-kartu { background: #fff; }

@@ -22,6 +22,7 @@ const descriptions = {
   quotation: "Buat penawaran harga per lini bisnis: PDF, Word, template, dan status persetujuan.",
   klaim: "Input & rekap klaim reimbursement tim.",
   kasus: "Catat & pantau penanganan kasus BD.",
+  dailyjob: "Catat job harian tim, pengingat target, dashboard performa, dan laporan PDF.",
   performa: "Pantau revenue, aktivitas, dan target bulanan.",
 };
 
