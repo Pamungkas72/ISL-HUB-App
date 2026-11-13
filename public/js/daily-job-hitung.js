@@ -58,7 +58,7 @@ export function per(jobs, kunci, r) {
 
 /** Deret per minggu (periode bulan/minggu) atau per bulan (tahun): masuk vs selesai. */
 export function deret(jobs, r, periode) {
-  const bin = periode === "tahun" ? (s) => s.slice(0, 7) : (s) => awalMinggu(s);
+  const bin = periode === "tahun" ? (s) => s.slice(0, 7) : periode === "hari" ? (s) => s : (s) => awalMinggu(s);
   const kunci = new Set();
   for (let t = r[0]; t <= r[1]; t = tambahHari(t, periode === "tahun" ? 28 : 1)) kunci.add(bin(t));
   const d = new Map([...kunci].sort().map((k) => [k, { k, masuk: 0, selesai: 0 }]));
@@ -131,3 +131,65 @@ export function petaExcel(baris) {
 export const daftarKategori = (jobs) => [...new Set([...KATEGORI, ...(jobs || []).map((j) => j.kategori).filter(Boolean)])];
 /** Kategori ketikan pengguna: spasi dirapikan; bila sama (tanpa beda huruf besar) dengan yang ada, pakai yang ada supaya tidak ganda. */
 export const rapikanKategori = (t, ada) => { const k = String(t || "").replace(/\s+/g, " ").trim().slice(0, 40); return (ada || []).find((x) => x.toLowerCase() === k.toLowerCase()) || k; };
+
+/* ---------- Dashboard performa (desain C) ---------- */
+/** Periode pembanding: bulan/tahun kalender sebelumnya; selain itu rentang sama panjang tepat sebelumnya. */
+export function rentangSebelum(periode, r) {
+  if (periode === "bulan" || periode === "tahun") return rentang(periode, tambahHari(r[0], -1));
+  const n = selisihHari(r[1], r[0]) + 1; return [tambahHari(r[0], -n), tambahHari(r[0], -1)];
+}
+/** Satuan sumbu grafik: harian untuk rentang pendek, mingguan untuk sampai ~4 bulan, bulanan di atasnya. */
+export const modeBin = (r) => { const n = selisihHari(r[1], r[0]) + 1; return n <= 14 ? "hari" : n <= 125 ? "minggu" : "tahun"; };
+
+/** Deret nilai per satuan sumbu untuk sparkline KPI: selesai, % tepat waktu, rata-rata hari, terlambat (menurut tanggal target). */
+export function seriKpi(jobs, r, now = hariIni()) {
+  const mode = modeBin(r), bin = mode === "tahun" ? (s) => s.slice(0, 7) : mode === "hari" ? (s) => s : awalMinggu;
+  const kunci = deret([], r, mode).map((x) => x.k), per = new Map(kunci.map((k) => [k, { sel: 0, tepat: 0, hari: [], telat: 0 }]));
+  jobs.forEach((j) => {
+    if (j.status === "selesai" && dalam(j.tglSelesai, r)) { const o = per.get(bin(j.tglSelesai)); if (o) { o.sel++; if (tepatWaktu(j)) o.tepat++; if (j.tglMasuk) o.hari.push(Math.max(0, selisihHari(j.tglSelesai, j.tglMasuk))); } }
+    if (j.tglTarget && dalam(j.tglTarget, r) && ((j.status === "selesai" && !tepatWaktu(j)) || terlambat(j, now))) { const o = per.get(bin(j.tglTarget)); if (o) o.telat++; }
+  });
+  let pt = 0, rt = 0; const out = { k: kunci, selesai: [], tepat: [], rata: [], telat: [] };
+  kunci.forEach((k) => { const o = per.get(k); if (o.sel) pt = Math.round((o.tepat / o.sel) * 100); if (o.hari.length) rt = o.hari.reduce((a, b) => a + b, 0) / o.hari.length;
+    out.selesai.push(o.sel); out.tepat.push(pt); out.rata.push(Math.round(rt * 10) / 10); out.telat.push(o.telat); });
+  return out;
+}
+
+/** Jumlah kumulatif per hari dalam periode (sampai hari ini): masuk dan selesai. */
+export function deretHarian(jobs, r, now = hariIni()) {
+  const akhir = r[1] < now ? r[1] : now, hasil = []; let m = 0, s = 0;
+  for (let t = r[0]; t <= akhir; t = tambahHari(t, 1)) {
+    m += jobs.filter((j) => String(j.tglMasuk || "").slice(0, 10) === t).length;
+    s += jobs.filter((j) => j.status === "selesai" && String(j.tglSelesai || "").slice(0, 10) === t).length;
+    hasil.push({ k: t, masuk: m, selesai: s });
+  }
+  return hasil;
+}
+
+/** Usia job aktif sejak tanggal masuk: 0-3, 4-7, 8-14, lebih dari 14 hari. */
+export function usiaBacklog(jobs, now = hariIni()) {
+  const b = [["0–3 hr", 0], ["4–7 hr", 0], ["8–14 hr", 0], ["> 14 hr", 0]];
+  jobs.filter(aktif).forEach((j) => { const u = j.tglMasuk ? Math.max(0, selisihHari(now, j.tglMasuk)) : 0; b[u <= 3 ? 0 : u <= 7 ? 1 : u <= 14 ? 2 : 3][1]++; });
+  return b.map(([l, n]) => ({ l, n }));
+}
+
+/** Komposisi status: selesai di periode; job aktif dibagi terlambat, menunggu, dikerjakan. */
+export function hitungStatus(jobs, r, now = hariIni()) {
+  const a = jobs.filter(aktif);
+  return { selesai: jobs.filter((j) => j.status === "selesai" && dalam(j.tglSelesai, r)).length, terlambat: a.filter((j) => terlambat(j, now)).length,
+    tunggu: a.filter((j) => !terlambat(j, now) && j.status === "tunggu").length, proses: a.filter((j) => !terlambat(j, now) && j.status !== "tunggu").length };
+}
+
+/** Tabel performa per kunci (pic, kategori): KPI lengkap tiap baris. */
+export function perDetail(jobs, kunci, r, now = hariIni()) {
+  const m = new Map(); jobs.forEach((j) => { const k = j[kunci] || "-"; (m.get(k) || m.set(k, []).get(k)).push(j); });
+  return [...m].map(([nama, l]) => ({ nama, ...hitungKpi(l, r, now) })).filter((o) => o.masuk || o.selesai || o.backlog).sort((a, b) => b.selesai + b.backlog - (a.selesai + a.backlog));
+}
+
+/** Pengelompokan Daftar job: kunci 'kategori' | 'pic' | 'status'. */
+export function kelompokkan(jobs, mode, now = hariIni()) {
+  const kunci = (j) => (mode === "status" ? STATUS[j.status] || "-" : j[mode === "pic" ? "pic" : "kategori"] || "-");
+  const m = new Map(); jobs.forEach((j) => { const k = kunci(j); (m.get(k) || m.set(k, []).get(k)).push(j); });
+  return [...m].map(([nama, l]) => ({ nama, jobs: l, telat: l.filter((j) => terlambat(j, now)).length, selesai: l.filter((j) => j.status === "selesai").length }))
+    .sort((a, b) => b.telat - a.telat || b.jobs.length - a.jobs.length || a.nama.localeCompare(b.nama, "id"));
+}
