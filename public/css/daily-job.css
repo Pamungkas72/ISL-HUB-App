@@ -6,7 +6,9 @@
 .dj-bar2 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .dj-bar2 select, .dj-bar2 input[type="date"], .dj-cari { height: 38px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0 10px; font: 13px var(--font-body); max-width: 100%; }
 .dj-seg { gap: 6px; flex-wrap: wrap; }
-.dj-pdf { margin-left: auto; height: 38px; }
+#dj-root .dj-bar2 .tg-w { width: 170px; flex: 0 0 auto; }
+#dj-root .dj-bar2 .tg-in, #dj-root .dj-bar2 input[type="date"] { background: var(--surface); color: var(--text); color-scheme: light dark; }
+.dj-aksi { margin-left: auto; display: flex; gap: 8px; } .dj-aksi .mr-btn { height: 38px; display: inline-flex; align-items: center; gap: 6px; } .dj-push-aktif { border-color: var(--success); color: var(--success); }
 .dj-cari { width: 100%; }
 .dj-alert { display: flex; justify-content: space-between; gap: 10px; align-items: center; width: 100%; text-align: left; border: 1px solid var(--warn-border, #f5cf9c); background: var(--accent-soft); color: var(--text); border-radius: 10px; padding: 10px 12px; font: 13.5px var(--font-body); cursor: pointer; }
 .dj-alert--bahaya { background: var(--danger-soft); border-color: var(--danger-border); cursor: default; }
@@ -55,10 +57,16 @@ label.dj-org select { max-width: 55%; }
 .dj-ingat p { margin: 6px 0 10px; font-size: 13px; color: var(--muted); } .dj-ingat div { display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 760px) {
   .dj-kpis { grid-template-columns: 1fr 1fr; } .dj-grid2 { grid-template-columns: 1fr; }
-  .dj-bar2 select, .dj-bar2 input[type="date"] { flex: 1 1 130px; } .dj-pdf { margin-left: 0; }
+  .dj-bar2 select { flex: 1 1 130px; } #dj-root .dj-bar2 .tg-w { flex: 1 1 130px; width: auto; } .dj-aksi { margin-left: 0; width: 100%; } .dj-aksi .mr-btn { flex: 1; justify-content: center; }
   .dj-form { grid-template-columns: 1fr; }
   .dj-ingat { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 }
 /* Kertas laporan PDF: putih, apa pun tema aplikasi. */
 .dj-cetak #dj-dash { --surface: #fff; --bg: #fff; --text: #13283D; --head: #0A3D66; --muted: #5D7085; --border: #DCE5EF; --sky-soft: #E8F4FD; --accent-soft: #FFF1E0; --danger-soft: #FCEAEA; --success-soft: #E4F5EE; background: #fff; padding: 8px; }
 .dj-cetak .dj-kpi, .dj-cetak .dj-kartu { background: #fff; }
+/* Tombol + sama dengan Master Rate dan Quotation: oranye (--mr-accent), ikon gelap. */
+#dj-root .mr-fab { background: var(--mr-accent); color: #1b1307; }
+@media (max-width: 760px) {
+  #dj-root .mr-fab { width: 56px; height: 56px; box-shadow: 0 10px 24px rgba(0, 0, 0, .35); }
+  body.mr-kunci-scroll #dj-root .mr-fab { display: none; } /* tidak menutupi formulir atau panel yang terbuka */
+}

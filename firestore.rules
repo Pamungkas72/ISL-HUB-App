@@ -347,6 +347,15 @@ service cloud.firestore {
       allow read, write: if isKelola() && request.auth.uid == uid;
     }
 
+    // Token notifikasi push Daily Job: tiap perangkat mendaftarkan tokennya sendiri; hanya server (Cloud Function) yang membaca semuanya.
+    match /dj_token/{id} {
+      allow read, delete: if isKelola() || (sesiBerlaku() && resource.data.uid == request.auth.uid);
+      allow create: if aktif() && request.resource.data.uid == request.auth.uid && id.matches(request.auth.uid + '_.*')
+        && request.resource.data.keys().hasOnly(['uid', 'token', 'agen', 'diubah']) && request.resource.data.token is string && request.resource.data.token.size() <= 400;
+      allow update: if aktif() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'token', 'agen', 'diubah']) && request.resource.data.token is string && request.resource.data.token.size() <= 400;
+    }
+
     // ---------------- Daily Job (13 Nov 2026) ----------------
     // Tiap akun punya satu kelompok (pengguna.kelompokDJ, diatur master/admin). Anggota hanya membaca dan mengubah job kelompoknya; master dan admin semua kelompok.
     function kelompokDJ() { return profilAda() && profil().status == 'aktif' ? profil().get('kelompokDJ', null) : null; }

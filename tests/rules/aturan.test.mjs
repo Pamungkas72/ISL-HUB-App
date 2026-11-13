@@ -212,3 +212,14 @@ describe("Daily Job: akses per kelompok", () => {
   it("admin menetapkan kelompok akun sales", () => assertSucceeds(updateDoc(doc(admin(), "pengguna/uid-sales"), { kelompokDJ: "k1" })));
   it("anggota tidak mengganti kelompoknya sendiri", () => assertFails(updateDoc(doc(dj1(), "pengguna/uid-dj1"), { kelompokDJ: "k2" })));
 });
+
+describe("Daily Job: token notifikasi push", () => {
+  const dj1 = () => ctx("uid-dj1", "dj1@isl.test"), tok = (uid, t = "tok-123") => ({ uid, token: t, agen: "uji", diubah: serverTimestamp() });
+  it("akun mendaftarkan token perangkatnya", () => assertSucceeds(setDoc(doc(dj1(), "dj_token/uid-dj1_abc"), tok("uid-dj1"))));
+  it("akun tidak mendaftarkan token atas nama akun lain", () => assertFails(setDoc(doc(dj1(), "dj_token/uid-dj2_abc"), tok("uid-dj2"))));
+  it("id token harus berawalan uid sendiri", () => assertFails(setDoc(doc(dj1(), "dj_token/xyz"), tok("uid-dj1"))));
+  it("token terlalu panjang ditolak", () => assertFails(setDoc(doc(dj1(), "dj_token/uid-dj1_long"), tok("uid-dj1", "x".repeat(401)))));
+  it("akun membaca dan menghapus tokennya sendiri", async () => { await assertSucceeds(getDoc(doc(dj1(), "dj_token/uid-dj1_abc"))); await assertSucceeds(deleteDoc(doc(dj1(), "dj_token/uid-dj1_abc"))); });
+  it("akun lain tidak membaca token orang", async () => { await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "dj_token/uid-dj1_x"), tok("uid-dj1"))); await assertFails(getDoc(doc(sales(), "dj_token/uid-dj1_x"))); });
+  it("akun yang menunggu persetujuan tidak mendaftarkan token", async () => { await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "pengguna/uid-tunggu-dj"), { email: "t@isl.test", nama: "T", peranDiminta: "sales", peran: null, status: "menunggu" })); await assertFails(setDoc(doc(ctx("uid-tunggu-dj", "t@isl.test"), "dj_token/uid-tunggu-dj_a"), tok("uid-tunggu-dj"))); });
+});

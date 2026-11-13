@@ -1,5 +1,5 @@
 // Daily Job: aturan murni (tanpa tampilan/Firebase). Diuji di tests/unit/daily-job.test.js.
-export const KATEGORI = ["Penawaran", "Skema alur bisnis", "Perhitungan dan kajian tarif", "Monitoring kasus", "Follow-up customer", "Survei dan visit", "Dokumen dan administrasi", "Lain-lain"];
+export const KATEGORI = ["Quotation", "RFQ", "Dokumen Kontrak", "DSR Projek", "Setup Project", "Monitoring Kasus", "Produk Administrasi", "Laporan", "Lainnya"]; // dari Excel Daily Report tim
 export const STATUS = { baru: "Baru", proses: "Dikerjakan", tunggu: "Menunggu pihak lain", selesai: "Selesai", batal: "Batal" };
 export const PRIORITAS = { tinggi: "Tinggi", sedang: "Sedang", rendah: "Rendah" };
 export const BOBOT = { 1: "Ringan", 2: "Sedang", 3: "Berat" };
@@ -96,3 +96,38 @@ export function labelTarget(j, now = hariIni()) {
   const s = selisihHari(j.tglTarget, now);
   return s < 0 ? { t: `Terlambat ${-s} hr`, k: "bahaya" } : s === 0 ? { t: "Hari ini", k: "warn" } : { t: `Sisa ${s} hr`, k: "" };
 }
+
+/* ---------- Import Excel (format "Input Tugas Harian": No, Tanggal Diberikan, PIC, Kategori Tugas, Customer / Project, Deskripsi Tugas, Deadline, Tanggal Selesai, Status Waktu, Bulan, Keterangan) ---------- */
+export const isoTanggal = (v) => {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return v > 20000 ? new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10) : null;
+  const t = String(v).trim(), a = /^(\d{4})-(\d{2})-(\d{2})/.exec(t), b = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/.exec(t);
+  return a ? a[0] : b ? `${b[3]}-${b[2].padStart(2, "0")}-${b[1].padStart(2, "0")}` : null;
+};
+export const normKategori = (k) => { const t = String(k || "").trim(); if (!t) return "Lainnya"; if (/^setup project/i.test(t)) return "Setup Project"; if (/^lainnya/i.test(t)) return "Lainnya"; if (/^daily job/i.test(t)) return "Produk Administrasi"; return KATEGORI.find((x) => x.toLowerCase() === t.toLowerCase()) || t; };
+const BUTUH_TUNGGU = /menunggu|menungu|approval|pending|pendding|\bacc\b|jadwal|respon/i;
+
+/** baris: larik-larik sel lembar Excel (header:1). Mengembalikan {jobs, peringatan, dilewati}. id = x + nomor baris, jadi impor ulang menimpa, bukan menggandakan. */
+export function petaExcel(baris) {
+  const h = baris.findIndex((r) => (r || []).some((c) => /^tanggal diberikan$/i.test(String(c || "").trim())));
+  if (h < 0) return { galat: 'Lembar tidak punya kolom "Tanggal Diberikan". Pakai lembar "Input Tugas Harian".' };
+  const kol = {}; baris[h].forEach((c, i) => { const t = String(c || "").trim().toLowerCase(); [["masuk", "tanggal diberikan"], ["pic", "pic"], ["kategori", "kategori"], ["customer", "customer"], ["desk", "deskripsi"], ["target", "deadline"], ["selesai", "tanggal selesai"], ["ket", "keterangan"]].forEach(([k, n]) => { if (t.startsWith(n) && kol[k] == null) kol[k] = i; }); });
+  const jobs = [], peringatan = []; let dilewati = 0;
+  baris.slice(h + 1).forEach((r, i) => {
+    const n = h + i + 2, v = (k) => (r[kol[k]] == null ? "" : String(r[kol[k]]).trim());
+    if (!v("desk") && !v("customer") && !v("kategori")) { dilewati++; return; }
+    const kategori = normKategori(v("kategori")), customer = v("customer"), judul = v("desk") || [kategori, customer].filter(Boolean).join(" – ");
+    let masuk = isoTanggal(r[kol.masuk]); const target = isoTanggal(r[kol.target]), selesai = isoTanggal(r[kol.selesai]), ket = v("ket");
+    if (!v("desk")) peringatan.push(`Baris ${n}: deskripsi kosong, judul memakai "${judul}".`);
+    if (!masuk) { masuk = selesai || target; peringatan.push(`Baris ${n} (${judul.slice(0, 40)}): tanggal diberikan kosong, memakai ${masuk || "hari impor"}.`); }
+    const status = selesai ? "selesai" : BUTUH_TUNGGU.test(ket) ? "tunggu" : "proses";
+    const catatan = ket && !/^done$/i.test(ket) ? [{ tgl: masuk || "", oleh: "Import Excel", teks: ket }] : [];
+    jobs.push({ id: "x" + n, judul, kategori, customer, pic: v("pic"), deskripsi: "", tglMasuk: masuk, tglMulai: null, tglTarget: target, tglSelesai: selesai, status, prioritas: "sedang", bobot: 2, file: [], tautan: [], catatan });
+  });
+  return { jobs, peringatan, dilewati };
+}
+
+/** Kategori yang tersedia: bawaan + semua kategori yang pernah dipakai job (termasuk kategori baru). */
+export const daftarKategori = (jobs) => [...new Set([...KATEGORI, ...(jobs || []).map((j) => j.kategori).filter(Boolean)])];
+/** Kategori ketikan pengguna: spasi dirapikan; bila sama (tanpa beda huruf besar) dengan yang ada, pakai yang ada supaya tidak ganda. */
+export const rapikanKategori = (t, ada) => { const k = String(t || "").replace(/\s+/g, " ").trim().slice(0, 40); return (ada || []).find((x) => x.toLowerCase() === k.toLowerCase()) || k; };
