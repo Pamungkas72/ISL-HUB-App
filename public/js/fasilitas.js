@@ -5,6 +5,7 @@
 // ===========================================================
 import { slug } from "./kunci.js";
 import { e, $, toast } from "./ui.js";
+import { htmlCombo, pasangCombo } from "./satuan-combo.js";
 
 // jenis di halaman Lokasi yang dipakai tiap lini
 export const JENIS_FASILITAS = { depo: ["depo"], warehouse_dry: ["gudang_dry"], warehouse_frozen: ["chiller", "cold_room", "frozen"], open_yard: ["open_yard"] };
@@ -38,7 +39,7 @@ export function htmlFasilitas(p, liniId, S, sekarang = "", { kosong = "Pilih…"
     ${ids.length ? "" : `<small class="mr-galat-kecil">Belum ada fasilitas untuk lini ini. Tambahkan sekarang, lengkapi nanti di tab Lokasi.</small>`}
     <div id="${p}-fas-form" class="mr-kartu" hidden style="margin-top:8px;padding:12px">
       <label class="mr-f mr-f--lebar"><span>Nama fasilitas *</span><input id="${p}-fas-nama" autocomplete="off" placeholder="Mis. Gudang Dry Cikarang 2"></label>
-      ${jenis.length > 1 ? `<label class="mr-f mr-f--lebar"><span>Jenis fasilitas *</span><select id="${p}-fas-jenis">${jenis.map((j) => `<option value="${j}">${e(NAMA_JENIS[j])}</option>`).join("")}</select></label>` : ""}
+      <div class="mr-f mr-f--lebar"><span>Jenis fasilitas *</span>${htmlCombo(`${p}-fas-jenis`, { nilai: NAMA_JENIS[jenis[0]], placeholder: "Pilih atau ketik jenis lain", hint: "Tidak ada yang sesuai? Ketik jenisnya sendiri." })}</div>
       <label class="mr-f mr-f--lebar"><span>Alamat atau kawasan (opsional)</span><input id="${p}-fas-alamat" autocomplete="off"></label>
       <small>Tersimpan sebagai <b>Draf</b>. Foto, luas, PIC, dan spesifikasi dilengkapi di tab Lokasi.</small>
       <div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="mr-btn" id="${p}-fas-batal">Batal</button><button type="button" class="mr-btn mr-btn--utama" id="${p}-fas-simpan">Simpan fasilitas</button></div>
@@ -66,6 +67,7 @@ export function pasangFasilitas(panel, p, liniId, { S, DB, onBaru, pemilik }) {
   sel.addEventListener("change", () => { if (sel.value === "__baru__") { sel.value = terakhir; tampil(true); } else terakhir = sel.value; });
   // tidak ada fasilitas sama sekali pada lokasi wajib: langsung buka form
   if (sel.options.length === 2 && sel.closest("[data-w=lokasi]").querySelector("span").textContent.includes("*")) tampil(true);
+  pasangCombo($(`#${p}-fas-jenis-wrap`, panel), () => jenisLini(lini()).map((j) => ({ nama: NAMA_JENIS[j] })), { baruTeks: (t) => `＋ Pakai jenis “${t}”` });
   $(`#${p}-fas-batal`, panel).onclick = () => tampil(false);
   $(`#${p}-fas-simpan`, panel).onclick = async () => {
     const g = $(`#${p}-fas-galat`, panel), tombol = $(`#${p}-fas-simpan`, panel);
@@ -76,8 +78,12 @@ export function pasangFasilitas(panel, p, liniId, { S, DB, onBaru, pemilik }) {
     if (sama) { sel.value = terakhir = sama.value; tampil(false); sel.dispatchEvent(new Event("change", { bubbles: true })); toast(`<b>${e(nama)}</b> sudah terdaftar, langsung dipilih.`, "ok"); return; }
     const id = slug(nama) + "_" + Date.now().toString(36);
     const alamat = $(`#${p}-fas-alamat`, panel).value.trim();
-    const jenisEl = $(`#${p}-fas-jenis`, panel);
-    const jenis = jenisEl ? jenisEl.value : jenisLini(lini())[0] || "gudang_dry";
+    // jenis diketik: yang cocok dengan daftar dipakai; yang lain disimpan apa adanya di jenisLain (jenis dasar = jenis pertama lini ini, agar tetap muncul di pilihan)
+    const ketik = $(`#${p}-fas-jenis`, panel).value.trim().replace(/\s+/g, " ");
+    if (!ketik) { g.textContent = "Isi jenis fasilitas dulu."; g.hidden = false; return; }
+    const cocok = Object.entries(NAMA_JENIS).find(([, n]) => n.toLowerCase() === ketik.toLowerCase());
+    const jenis = cocok ? cocok[0] : jenisLini(lini())[0];
+    const jenisLain = cocok ? "" : ketik;
     const own = (pemilik && pemilik()) || {};
     tombol.disabled = true; tombol.textContent = "Menyimpan…";
     try {
@@ -88,7 +94,7 @@ export function pasangFasilitas(panel, p, liniId, { S, DB, onBaru, pemilik }) {
         await DB.simpanLokasiOpenYard(id, data, { baru: true, oleh });
         S.ref.openYard = [...(S.ref.openYard || []), { ...data, id, nama, provinsi: "" }];
       }
-      const data = { nama, namaTampil: "", jenis, pemilik: own.isl ? "isl" : "mitra", vendorId: own.isl ? "" : own.vendorId || "", kawasan: "", alamat, maps: "", luasLahanM2: null, luasBangunanM2: null, luasTersediaM2: null, spek: {}, fasilitas: {}, fasilitasLain: "", jamOperasional: "", pic: { nama: "", jabatan: "", telp: "", email: "" }, aksesJalan: "", deskripsi: "", catatan: "Dibuat dari form tarif. Lengkapi di tab Lokasi.", status: "draf", fotos: [], lampiran: [], lokasiRefId: jenis === "open_yard" ? id : "" };
+      const data = { nama, namaTampil: "", jenis, ...(jenisLain ? { jenisLain } : {}), pemilik: own.isl ? "isl" : "mitra", vendorId: own.isl ? "" : own.vendorId || "", kawasan: "", alamat, maps: "", luasLahanM2: null, luasBangunanM2: null, luasTersediaM2: null, spek: {}, fasilitas: {}, fasilitasLain: "", jamOperasional: "", pic: { nama: "", jabatan: "", telp: "", email: "" }, aksesJalan: "", deskripsi: "", catatan: "Dibuat dari form tarif. Lengkapi di tab Lokasi.", status: "draf", fotos: [], lampiran: [], lokasiRefId: jenis === "open_yard" ? id : "" };
       await DB.simpanProfilFasilitas(id, data, { baru: true, oleh });
       S.ref.profil = [...(S.ref.profil || []), { id, ...data }];
       tampil(false);
