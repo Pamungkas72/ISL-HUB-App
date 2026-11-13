@@ -3957,6 +3957,7 @@ document.addEventListener('click', ev => {
     else if (a === 'm-menu') sheetMenu();
     else if (a === 'm-tambah') sheetTambah();
     else if (a === 'm-aksi') { const x = Repo.baca(d.id); if (x) sheetAksi(x); }
+    else if (a === 'm-kepala') { const q = Repo.baca(Q.id); if (q) sheetKepala(q); }
     else if (a === 'm-aksi-rw') { const x = (DB.riwayat || []).find(z => z.id === d.id); if (x) sheetAksiRw(x); }
     else if (a === 'm-pilih') { if (PILIH_QT.has(d.id)) PILIH_QT.delete(d.id); else PILIH_QT.add(d.id); gambar(); }
     return;
@@ -4107,24 +4108,25 @@ const dlSatuanHtml = () => `<datalist id="qt-dl-satuan">${SB.saring('satuan', da
 const dlCustHtml = q => { const c = cariCustomer({ customerId: q.customerId, customerNama: q.customerNama, npwp: q.npwp }); return `<datalist id="qt-dl-cust">${S.customers.filter(x => x.status !== 'nonaktif').map(x => `<option value="${esc(x.nama)}">${esc(x.alias || '')}</option>`).join('')}</datalist><datalist id="qt-dl-pic">${(c ? c.kontak : []).map(k => `<option value="${esc(k.nama)}">${esc(k.jabatan || '')}</option>`).join('')}</datalist>`; };
 const dlVendorHtml = () => `<datalist id="qt-dl-vendor">${mrVendors().map(v => `<option value="${esc(v.nama || v.id)}"></option>`).join('')}</datalist>`;
 
-function aksiKepala(q, ed) {
-  if (!bisaEdit()) return '';
-  const k = (a, ikn, lbl, cls = '') => `<button class="mr-btn ${cls}" data-qt="${a}" data-id="${esc(q.id)}">${ik(ikn, 16)} ${lbl}</button>`;
-  if (ed) return '';
-  const hapusSales = (akunSales() && q.status !== 'draf' ? k('ajukan-hapus', 'tong', 'Ajukan hapus') : '') + (masterAtauAdmin() && q.status !== 'draf' && q.nomor ? k('ganti-nomor', 'edit', 'Ganti nomor') : '')
-    + (q.status !== 'draf' && q.nomor ? k('tandai', 'peringatan', q.perhatian ? 'Hapus tanda perhatian' : 'Tandai perlu perhatian') : '')
-    + (masterSaja() && q.status !== 'draf' && !alasanHapusPermanen(q) ? k('hapus-permanen', 'tong', 'Hapus permanen', 'mr-btn--bahaya') : '');
-  if (hapusSales) return hapusSales + aksiKepalaInti(q, k);
-  return aksiKepalaInti(q, k);
+/* header detail (desain M3): satu tombol utama + menu titik tiga berkelompok; sheet di HP, dropdown di desktop */
+function itemKepala(q) {
+  const nd = q.status !== 'draf', kirim = q.status === 'terkirim' && !q.digantikanOleh;
+  const cta = q.status === 'draf' ? ['buka-edit', 'edit', 'Ubah draf'] : kirim ? ['setujui', 'setuju', 'Setujui'] : q.status === 'ditolak' ? ['revisi', 'revisi', 'Buat revisi'] : null;
+  const quot = [nd ? ['duplikat', 'salin', 'Duplikat sebagai quotation baru'] : null, kirim ? ['revisi', 'revisi', 'Buat revisi'] : null, kirim ? ['tidak-dipakai', 'blok', 'Tidak dipakai'] : null, kirim ? ['tolak', 'tolak', 'Ditolak customer', 'is-bahaya'] : null].filter(Boolean);
+  const adm = [nd && q.nomor ? ['tandai', 'peringatan', q.perhatian ? 'Hapus tanda perhatian' : 'Tandai perlu perhatian'] : null, masterAtauAdmin() && nd && q.nomor ? ['ganti-nomor', 'edit', 'Ganti nomor'] : null,
+    akunSales() && nd ? ['ajukan-hapus', 'tong', 'Ajukan hapus', 'is-bahaya'] : null, masterSaja() && nd && !alasanHapusPermanen(q) ? ['hapus-permanen', 'tong', 'Hapus permanen', 'is-bahaya'] : null].filter(Boolean);
+  return { cta, grup: [['Quotation', quot], ['Admin', adm]].filter(g => g[1].length) };
 }
-function aksiKepalaInti(q, k) {
-  if (q.status === 'draf') return k('buka-edit', 'edit', 'Ubah draf', 'mr-btn--utama');
-  if (q.status === 'terkirim') {
-    if (q.digantikanOleh) return k('duplikat', 'salin', 'Duplikat');
-    return k('duplikat', 'salin', 'Duplikat') + k('revisi', 'revisi', 'Buat revisi') + k('tidak-dipakai', 'blok', 'Tidak dipakai') + k('tolak', 'tolak', 'Ditolak customer', 'mr-btn--bahaya') + k('setujui', 'setuju', 'Setujui', 'mr-btn--utama');
-  }
-  if (q.status === 'ditolak') return k('duplikat', 'salin', 'Duplikat') + k('revisi', 'revisi', 'Buat revisi', 'mr-btn--utama');
-  return k('duplikat', 'salin', 'Duplikat sebagai quotation baru');
+function aksiKepala(q, ed) {
+  if (!bisaEdit() || ed) return '';
+  const { cta, grup } = itemKepala(q), id = esc(q.id || '');
+  const tombol = cta ? `<button class="mr-btn mr-btn--utama" data-qt="${cta[0]}" data-id="${id}">${ik(cta[1], 16)} ${cta[2]}</button>` : '';
+  const dd = grup.map(([g, it]) => `<div class="qt-menu__g">${g}</div>${it.map(([a, ic, l, c]) => `<button type="button" class="qt-menu__t ${c || ''}" data-qt="${a}" data-id="${id}">${ik(ic, 14)} ${l}</button>`).join('')}`).join('');
+  return tombol + (grup.length ? `<span class="qt-menu"><button type="button" class="mr-ikonbtn qt-kepala-menu" data-qt="${HP() ? 'm-kepala' : 'menu-lain'}" aria-label="Menu tindakan" title="Menu tindakan">${ik('titik', 19)}</button><div class="qt-menu__list" hidden>${dd}</div></span>` : '');
+}
+function sheetKepala(q) {
+  const { grup } = itemKepala(q), id = `data-id="${esc(q.id)}"`;
+  bukaSheet({ judul: q.nomor || q.labelDraf || 'Quotation', sub: namaCust(q), isi: grup.map(([g, it]) => `<h4 class="qt-sheet__g">${g}</h4>${it.map(([a, ic, l, c]) => itemSheet(a, ic, l, '', id, c === 'is-bahaya' ? 'is-bahaya' : '')).join('')}`).join('') });
 }
 
 function viewDetail() {
@@ -4132,7 +4134,7 @@ function viewDetail() {
   const ed = !!Q.edit && bisaEdit(), c = cust(q.customerId), induk = q.indukId ? Repo.baca(q.indukId) : null;
   return `
   <datalist-host>${ed ? dlLiniHtml() + dlSatuanHtml() + dlVendorHtml() + dlCustHtml(q) : ''}</datalist-host>
-  <div class="cu-kepala"><button class="mr-btn mr-btn--kecil" data-qt="kembali">${ik('kembali', 14)} Semua quotation</button><span class="mr-ruang"></span>${aksiKepala(q, ed)}</div>
+  <div class="cu-kepala"><button type="button" class="mr-ikonbtn" data-qt="kembali" aria-label="Semua quotation" title="Semua quotation">${ik('kembali', 18)}</button><span class="mr-ruang"></span>${aksiKepala(q, ed)}</div>
   <div class="cu-judul"><h2>${esc(q.nomor || q.labelDraf || 'Quotation baru')}${tagRevisi(q)}</h2>
     <div class="cu-judul__tag">${q.id ? chipStatus(q) : '<span class="qt-st qt-st--draf">Belum disimpan</span>'}<span class="mr-sub">${esc(q.judul || 'Belum ada perihal')}${(q.customerNama || c) ? ' · ' + esc(q.customerNama || c.nama) : ''}${(q.nomorLama || []).length ? ' · nomor sebelumnya ' + q.nomorLama.map(x => esc(x.nomor)).join(', ') : ''}</span></div></div>
   <div class="mr-galat" id="qt-galat" hidden></div>
