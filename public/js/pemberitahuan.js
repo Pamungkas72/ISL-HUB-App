@@ -10,18 +10,18 @@ import { toast } from "./ui.js";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const NAMA_LEVEL = { bahaya: "Mendesak", warn: "Perlu aksi", info: "Info" };
 const AKSI = { tarif: "Lihat tarif", vendor: "Lengkapi vendor", lokasi: "Lengkapi fasilitas", quotation: "Buka quotation", riwayat: "Buka riwayat", cadangan: "Unduh cadangan", pendaftar: "Tinjau akun", halaman: "Buka halaman" };
-const St = { grup: "semua", level: "semua", pilih: null, buka: new Set(), cek: new Set() };
+const St = { grup: "semua", level: "semua", pilih: null, buka: new Set(), cek: new Set(), mode: false }; // mode: pilih-banyak di HP, aktif lewat tekan lama
 let root = null;
 const hp = () => window.matchMedia("(max-width: 760px)").matches;
 
 const urutan = (a, b) => ({ bahaya: 0, warn: 1, info: 2 }[a.level] - { bahaya: 0, warn: 1, info: 2 }[b.level]);
 const hitung = (items) => Object.fromEntries(GRUP.map(([k]) => [k, items.filter((i) => grupDari(i) === k)]));
-const barisCek = (i, html) => `<div class="nfp-row"><label class="nfp-cek" aria-label="Pilih"><input type="checkbox" data-nfp-cek="${esc(i.id)}" ${St.cek.has(i.id) ? "checked" : ""}></label>${html}</div>`;
+const barisCek = (i, html) => `<div class="nfp-row">${hp() && !St.mode ? "" : `<label class="nfp-cek" aria-label="Pilih"><input type="checkbox" data-nfp-cek="${esc(i.id)}" ${St.cek.has(i.id) ? "checked" : ""}></label>`}${html}</div>`;
 // tombol aksi massal; di tampilan "Disembunyikan" aksinya Kembalikan
 const bar = (ids) => {
   const n = ids.filter((id) => St.cek.has(id)).length, sembunyi = St.level === "sembunyi";
   return `<div class="nfp-bar"><label class="nfp-bar__semua"><input type="checkbox" data-nfp-semua ${ids.length && n === ids.length ? "checked" : ""} ${ids.length ? "" : "disabled"}> ${n ? `<b>${n} dipilih</b>` : "Pilih semua"}</label>
-    ${n ? (sembunyi ? `<button type="button" class="mr-btn mr-btn--kecil" data-nfp-aksi="kembali">Kembalikan</button>` : `<button type="button" class="mr-btn mr-btn--kecil" data-nfp-aksi="tunda">Tunda 7 hari</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--utama" data-nfp-aksi="selesai">Tandai selesai</button>`) : ""}</div>`;
+    ${hp() ? `<button type="button" class="mr-btn mr-btn--kecil" data-nfp-batal>Batal</button>` : ""}${n ? (sembunyi ? `<button type="button" class="mr-btn mr-btn--kecil" data-nfp-aksi="kembali">Kembalikan</button>` : `<button type="button" class="mr-btn mr-btn--kecil" data-nfp-aksi="tunda">Tunda 7 hari</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--utama" data-nfp-aksi="selesai">Tandai selesai</button>`) : ""}</div>`;
 };
 const baris = (i, aktif) => `<button type="button" class="nfp-i nfp-i--${i.level} ${aktif ? "is-aktif" : ""}" data-nfp-pilih="${esc(i.id)}"><i class="nfp-i__lv" aria-hidden="true"></i><span><b>${esc(i.judul)}</b><small>${esc(i.ket)}</small></span></button>`;
 
@@ -59,7 +59,7 @@ function gambarHP(semua) {
     return `<section class="nfp-bag"><h3>${esc(n)} <em>${items.length}</em></h3>${tampil.map((i) => { idTampil.push(i.id); return barisCek(i, baris(i, false).replace("data-nfp-pilih", "data-nfp-buka")); }).join("")}${items.length > 3 && !semuaDibuka ? `<button type="button" class="nfp-lain" data-nfp-lain="${k}">＋ ${items.length - 3} lainnya</button>` : ""}</section>`;
   }).join("");
   const pindah = sembunyiSemua.length || lihatSembunyi ? `<button type="button" class="nfp-lain" data-nfp-level="${lihatSembunyi ? "semua" : "sembunyi"}">${lihatSembunyi ? "‹ Kembali ke pemberitahuan aktif" : `Disembunyikan (${sembunyiSemua.length})`}</button>` : "";
-  return `<div class="nfp-kartu-baris">${kartu || ""}</div>${bagian ? bar(idTampil) : ""}${bagian || `<p class="nfp-kosong">${lihatSembunyi ? "Tidak ada yang disembunyikan." : "Tidak ada pemberitahuan. Semua beres."}</p>`}${pindah}`;
+  return `<div class="nfp-kartu-baris">${kartu || ""}</div>${bagian ? (St.mode ? bar(idTampil) : `<p class="nfp-petunjuk">Tekan lama pada item untuk memilih beberapa sekaligus.</p>`) : ""}${bagian || `<p class="nfp-kosong">${lihatSembunyi ? "Tidak ada yang disembunyikan." : "Tidak ada pemberitahuan. Semua beres."}</p>`}${pindah}`;
 }
 
 function gambar() {
@@ -72,8 +72,25 @@ async function aksi(mode, ids) {
   if (!ids.length) return;
   const sampai = await aturItem(ids, mode, 7);
   ids.forEach((id) => St.cek.delete(id));
+  St.mode = false;
   toast(mode === "tunda" ? `<b>${ids.length} pemberitahuan ditunda.</b> Muncul lagi ${sampai}.` : mode === "selesai" ? `<b>${ids.length} pemberitahuan ditandai selesai.</b> Muncul lagi bila ada perubahan.` : `<b>${ids.length} pemberitahuan dikembalikan.</b>`, "ok");
   gambar();
+}
+
+// Tekan lama (HP) pada satu item = mulai memilih banyak
+let abaikanKlik = 0, pewaktu = null, awal = null;
+function pasangTekanLama() {
+  const batal = () => { clearTimeout(pewaktu); pewaktu = null; };
+  document.addEventListener("pointerdown", (ev) => {
+    if (location.hash !== "#pemberitahuan" || !hp() || St.mode) return;
+    const row = ev.target.closest(".nfp-row"), tombol = row && row.querySelector("[data-nfp-buka]");
+    if (!tombol) return;
+    awal = { x: ev.clientX, y: ev.clientY };
+    pewaktu = setTimeout(() => { pewaktu = null; St.mode = true; St.cek.add(tombol.dataset.nfpBuka); abaikanKlik = Date.now() + 600; try { navigator.vibrate && navigator.vibrate(15); } catch (e) {} gambar(); }, 500);
+  });
+  document.addEventListener("pointermove", (ev) => { if (pewaktu && awal && Math.hypot(ev.clientX - awal.x, ev.clientY - awal.y) > 10) batal(); });
+  ["pointerup", "pointercancel", "scroll"].forEach((n) => document.addEventListener(n, batal, true));
+  document.addEventListener("contextmenu", (ev) => { if (hp() && ev.target.closest && ev.target.closest(".nfp-row")) ev.preventDefault(); });
 }
 
 let terpasang = false;
@@ -81,17 +98,21 @@ export function mulaiPemberitahuan() {
   root = document.getElementById("nf-halaman");
   if (!terpasang) {
     terpasang = true;
+    pasangTekanLama();
     document.addEventListener("islhub:notif", () => { if (location.hash === "#pemberitahuan") gambar(); });
     window.matchMedia("(max-width: 760px)").addEventListener("change", () => { if (location.hash === "#pemberitahuan") gambar(); });
     document.addEventListener("click", (ev) => {
       if (location.hash !== "#pemberitahuan") return;
+      if (Date.now() < abaikanKlik) return; // klik susulan setelah tekan lama
       const t = ev.target, ambil = (a) => t.closest(`[${a}]`);
       let b;
       if ((b = ambil("data-nfp-grup"))) { St.grup = b.dataset.nfpGrup; St.pilih = null; }
       else if ((b = ambil("data-nfp-level"))) { St.level = b.dataset.nfpLevel; St.pilih = null; }
       else if ((b = ambil("data-nfp-pilih"))) St.pilih = b.dataset.nfpPilih;
       else if ((b = ambil("data-nfp-lain"))) St.buka.add(b.dataset.nfpLain);
-      else if ((b = ambil("data-nfp-cek"))) { St.cek.has(b.dataset.nfpCek) ? St.cek.delete(b.dataset.nfpCek) : St.cek.add(b.dataset.nfpCek); }
+      else if ((b = ambil("data-nfp-cek"))) { St.cek.has(b.dataset.nfpCek) ? St.cek.delete(b.dataset.nfpCek) : St.cek.add(b.dataset.nfpCek); if (hp() && !St.cek.size) St.mode = false; }
+      else if (ambil("data-nfp-batal")) { St.mode = false; St.cek.clear(); }
+      else if (hp() && St.mode && (b = ambil("data-nfp-buka"))) { St.cek.has(b.dataset.nfpBuka) ? St.cek.delete(b.dataset.nfpBuka) : St.cek.add(b.dataset.nfpBuka); if (!St.cek.size) St.mode = false; }
       else if (ambil("data-nfp-semua")) { const ids = [...root.querySelectorAll("[data-nfp-cek]")].map((x) => x.dataset.nfpCek); const semuaDipilih = ids.every((id) => St.cek.has(id)); ids.forEach((id) => (semuaDipilih ? St.cek.delete(id) : St.cek.add(id))); }
       else if ((b = ambil("data-nfp-aksi") || ambil("data-nfp-satu"))) { aksi(b.dataset.nfpAksi || b.dataset.nfpSatu, b.dataset.id ? [b.dataset.id] : [...St.cek]); return; }
       else if ((b = ambil("data-nfp-buka"))) { const it = semuaItem().find((i) => i.id === b.dataset.nfpBuka); if (it) bukaTujuan(it.tujuan); return; }
