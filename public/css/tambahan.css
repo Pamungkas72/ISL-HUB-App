@@ -2367,3 +2367,8 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-menu__list .qt-menu__g { padding: 8px 10px 2px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--mr-muted); }
 .qt-menu__list .qt-menu__t.is-bahaya, .qt-menu__list .qt-menu__t.is-bahaya svg { color: var(--mr-bahaya); }
 .qt-kepala-menu { flex: none; }
+/* nomor dan status sejajar dengan tombol kembali dan menu (satu baris, hemat ruang) */
+.qt-kepala { align-items: center; gap: 8px; margin-bottom: 6px; }
+.qt-kepala__j { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.qt-kepala__j h2 { margin: 0; max-width: 100%; font-size: 18px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 761px) { .qt-kepala__j { flex-direction: row; align-items: center; gap: 10px; } .qt-kepala__j h2 { font-size: 22px; } }

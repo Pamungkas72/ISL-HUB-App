@@ -4134,9 +4134,9 @@ function viewDetail() {
   const ed = !!Q.edit && bisaEdit(), c = cust(q.customerId), induk = q.indukId ? Repo.baca(q.indukId) : null;
   return `
   <datalist-host>${ed ? dlLiniHtml() + dlSatuanHtml() + dlVendorHtml() + dlCustHtml(q) : ''}</datalist-host>
-  <div class="cu-kepala"><button type="button" class="mr-ikonbtn" data-qt="kembali" aria-label="Semua quotation" title="Semua quotation">${ik('kembali', 18)}</button><span class="mr-ruang"></span>${aksiKepala(q, ed)}</div>
-  <div class="cu-judul"><h2>${esc(q.nomor || q.labelDraf || 'Quotation baru')}${tagRevisi(q)}</h2>
-    <div class="cu-judul__tag">${q.id ? chipStatus(q) : '<span class="qt-st qt-st--draf">Belum disimpan</span>'}<span class="mr-sub">${esc(q.judul || 'Belum ada perihal')}${(q.customerNama || c) ? ' · ' + esc(q.customerNama || c.nama) : ''}${(q.nomorLama || []).length ? ' · nomor sebelumnya ' + q.nomorLama.map(x => esc(x.nomor)).join(', ') : ''}</span></div></div>
+  <div class="cu-kepala qt-kepala"><button type="button" class="mr-ikonbtn" data-qt="kembali" aria-label="Semua quotation" title="Semua quotation">${ik('kembali', 18)}</button>
+    <div class="qt-kepala__j"><h2>${esc(q.nomor || q.labelDraf || 'Quotation baru')}${tagRevisi(q)}</h2>${q.id ? chipStatus(q) : '<span class="qt-st qt-st--draf">Belum disimpan</span>'}</div>${aksiKepala(q, ed)}</div>
+  <div class="cu-judul"><span class="mr-sub">${esc(q.judul || 'Belum ada perihal')}${(q.customerNama || c) ? ' · ' + esc(q.customerNama || c.nama) : ''}${(q.nomorLama || []).length ? ' · nomor sebelumnya ' + q.nomorLama.map(x => esc(x.nomor)).join(', ') : ''}</span></div>
   <div class="mr-galat" id="qt-galat" hidden></div>
   ${q.jalur === 'word' && q.status !== 'draf' ? `<div class="mr-banner">${ik('file')}<div><b>Jalur Word.</b> ${q.kosong ? 'Isi tabel dan syarat disusun di file Word, jadi sistem hanya mencatat nomor, status, dan dokumen yang diunggah. Saat disetujui, Rate Disetujui tidak terbentuk otomatis.' : 'Perubahan yang dibuat di file Word tidak otomatis masuk sistem. Saat disetujui, harga bisa dikoreksi sesuai dokumen akhir.'}</div></div>` : ''}
   ${!bisaEdit() ? `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Hanya master atau sales yang bisa mengubah.</div></div>` : ''}
