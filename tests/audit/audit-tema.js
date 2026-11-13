@@ -97,7 +97,7 @@ const ADEGAN = [
       }
       if (mode === 'https') await p.evaluate(() => { window.__qt._Repo.dokData = window.__dokAsli; });
     }
-    await klikSel(p, '[data-qt="isi-modal"]'); await tunggu(p, 600); await periksa('quotation: formulir isi modal');
+    await tunggu(p, 1200); await p.evaluate(i => { window.__qt.buka(i); }, id); await tunggu(p, 500); await klikSel(p, '[data-qt="isi-modal"]'); await p.waitForSelector('#im-vendor', { timeout: 8000 }); await tunggu(p, 300); await periksa('quotation: formulir isi modal');
     await p.evaluate(() => { const v = document.querySelector('#im-vendor'); v.value = '__baru'; v.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#im-vb').value = 'CV Uji Vendor'; document.querySelector('[data-qt="im-simpan"]:not([data-lanjut])').click(); }); await tunggu(p, 1500); await periksa('quotation: setelah modal disimpan');
     await p.evaluate(() => { const q = window.__qt._Q; q.view = 'list'; q.sub = 'daftar'; window.__qt.gambar(); }); await tunggu(p, 500); await periksa('quotation: daftar dengan lencana modal'); return 'sudah';
   }],
