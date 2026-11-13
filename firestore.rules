@@ -124,7 +124,10 @@ service cloud.firestore {
         || (isSales() && (
               (resource.data.diajukanUid == request.auth.uid && resource.data.persetujuan == 'menunggu'
                  && request.resource.data.persetujuan == 'menunggu' && request.resource.data.diajukanUid == request.auth.uid)
-              || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'belumMaksimal', 'diubahPada'])));
+              // customer yang sudah disetujui: sales hanya boleh menaikkan status prospek menjadi aktif (saat quotation disetujui)
+              || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'belumMaksimal', 'diubahPada'])
+                  && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+                      || (resource.data.status == 'prospek' && request.resource.data.status == 'aktif')))));
       // Sales boleh menghapus draf customer yang diajukannya sendiri dan belum disetujui; selebihnya master.
       allow delete: if isMaster() || (isSales() && resource.data.persetujuan == 'menunggu' && resource.data.diajukanUid == request.auth.uid);
     }

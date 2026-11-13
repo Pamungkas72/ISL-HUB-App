@@ -1142,6 +1142,7 @@ async function setujuiCustomer() {
 async function hapusCustomer() {
   const c = cust(S.id), nr = rateCust(c.id).length, np = paketCust(c.id).length, tk = window.__qt && window.__qt.terkaitCustomer ? window.__qt.terkaitCustomer(c.id) : { q: 0, o: 0 };
   if (akunSales() && (nr || np)) return toast('Customer ini sudah punya rate disetujui. Minta master menghapusnya, atau ubah statusnya menjadi Nonaktif.', 'bahaya');
+  if (akunSales() && c.persetujuan !== 'menunggu') return toast('Customer yang sudah disetujui hanya bisa dinonaktifkan atau dihapus oleh master/admin.', 'bahaya');
   if (tk.q || tk.o) { const yakin = await konfirmasi({ judul: 'Customer ini tidak bisa dihapus', aksi: 'Jadikan Nonaktif', isi: `<b>${esc(c.nama)}</b> punya <b>${tk.q} quotation</b> dan <b>${tk.o} order</b>. Kalau dihapus, riwayat itu kehilangan induknya dan laporan laba berubah. Ubah statusnya menjadi <b>Nonaktif</b> saja: semua data tetap tersimpan dan customer tidak muncul di pilihan baru.` }); if (!yakin) return;
     try { await tulisDB(() => { c.status = 'nonaktif'; }, () => cust(c.id).status === 'nonaktif'); } catch (e) { return toast(`<b>GAGAL.</b> ${esc(e.message)}`, 'bahaya'); }
     toast(`<b>${esc(c.nama)}</b> dijadikan Nonaktif dan terverifikasi.`); return gambar(); }
