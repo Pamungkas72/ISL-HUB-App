@@ -1,6 +1,6 @@
 import { loginUser, daftarUser, mapAuthError, watchAuthState, kirimResetSandi } from "./auth.js";
 import { catatAktif } from "./sesi.js";
-import { WA_ADMIN_TAMPILAN, linkWaAdmin, pesanDaftarSales } from "./kontak-admin.js";
+import { WA_ADMIN_TAMPILAN, linkWaAdmin, pesanDaftarSales, normalisasiWa } from "./kontak-admin.js";
 
 const form = document.getElementById("login-form");
 const errorBox = document.getElementById("login-error");
@@ -29,13 +29,14 @@ tog.addEventListener("click", (e) => {
 });
 fd.addEventListener("submit", async (e) => {
   e.preventDefault(); errorBox.classList.add("hidden");
-  const elPeran = document.getElementById("df-peran"), peran = elPeran ? (elPeran.value || "sales") : null, nama = document.getElementById("df-nama").value.trim(), email = document.getElementById("df-email").value.trim(), pass = document.getElementById("df-pass").value;
+  const nama = document.getElementById("df-nama").value.trim(), email = document.getElementById("df-email").value.trim(), pass = document.getElementById("df-pass").value, telepon = normalisasiWa(document.getElementById("df-wa").value);
   const galat = (t) => { errorBox.textContent = t; errorBox.classList.remove("hidden"); };
   if (nama.length < 2) return galat("Isi nama lengkap.");
   if (!email) return galat("Isi email.");
+  if (telepon.length < 10 || telepon.length > 15) return galat("Isi nomor WhatsApp yang valid (contoh: 081234567890).");
   if (pass.length < 6) return galat("Kata sandi minimal 6 karakter.");
   const b = document.getElementById("df-submit"); b.disabled = true; b.textContent = "Mendaftar..."; sedangDaftar = true;
-  try { if (peran) { try { sessionStorage.setItem("islhub-peran-diminta", ["admin", "cs", "sales"].includes(peran) ? peran : "sales"); } catch (_) {} } await daftarUser(nama, email, pass); popupSetelahDaftar({ nama, email, peran }); }
+  try { try { sessionStorage.setItem("islhub-telepon-daftar", telepon); } catch (_) {} await daftarUser(nama, email, pass); popupSetelahDaftar({ nama, email }); }
   catch (err) { sedangDaftar = false; galat(mapAuthError(err.code, "daftar")); b.disabled = false; b.textContent = "Daftar"; }
 });
 
