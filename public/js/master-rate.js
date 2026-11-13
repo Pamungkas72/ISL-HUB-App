@@ -514,10 +514,11 @@ function htmlVendor() {
       <div class="mr-vbar__filter">
   <select id="mr-v-lini" class="mr-select" aria-label="Filter lini bisnis"><option value="semua">Semua lini</option>${S.lini.map((l) => `<option value="${e(l.id)}" ${S.fv.lini === l.id ? "selected" : ""}>${e(namaLini(l.id))}</option>`).join("")}</select>
       </div>
+      ${(() => { const lg = S.vendor.filter((v) => kurangVendor(v).length).length, st = [["semua", "Semua", S.vendor.length], ["aktif", "Aktif", nStatus("aktif")], ["mitra", "Mitra", nStatus("mitra")], ["draf", "Draf", nStatus("draf")], ["nonaktif", "Nonaktif", nStatus("nonaktif")]], row = (v, t, n) => `<button type="button" class="mr-btn ${S.fv.status === v ? "is-aktif" : ""}" data-aksi="m-vstatus" data-v="${v}" aria-pressed="${S.fv.status === v}"><span>${t}</span><b>${angka(n)}</b></button>`;
+        return `<details class="mr-alat mr-prh"><summary class="mr-btn ${lg ? "is-perhatian" : ""}">${ikon(lg ? "peringatan" : "filter", 14)}Status${lg ? ` <b class="mr-prh__n">${angka(lg)}</b>` : ""}</summary><div class="mr-alat__isi">${lg ? `${row("lengkapi", "Perlu dilengkapi", lg)}<hr>` : ""}${st.map(([v, t, n]) => row(v, t, n)).join("")}</div></details>`; })()}
       <span class="mr-vbar__info">${angka(urut.length)} dari ${angka(S.vendor.length)} vendor</span>
       ${S.kelola ? `<button class="mr-btn mr-btn--utama mr-vbar__tambah" data-aksi="vendor-tambah">${ikon("plus", 16)}Tambah vendor</button>` : ""}
     </div>
-    <div class="mr-pc-chips" role="group" aria-label="Status vendor">${[["semua", "Semua", S.vendor.length], ["aktif", "Aktif", nStatus("aktif")], ["mitra", "Mitra", nStatus("mitra")], ["draf", "Draf", nStatus("draf")], ["nonaktif", "Nonaktif", nStatus("nonaktif")]].map(([v, t, n]) => chipHP(S.fv.status === v, t, n, "m-vstatus", v)).join("")}${chipHP(S.fv.status === "lengkapi", "Perlu dilengkapi", S.vendor.filter((v) => kurangVendor(v).length).length, "m-vstatus", "lengkapi", S.vendor.some((v) => kurangVendor(v).length))}</div>
     ${barPilihTab(S.pilihV.size, urut.length)}
     ${urut.length ? `<div class="mr-kartu mr-tabelkartu"><table class="mr-table mr-table--sederhana"><thead><tr>${S.kelola ? `<th class="mr-th-cek"><input type="checkbox" data-pilih-v-semua aria-label="Pilih semua vendor di daftar ini"></th>` : ""}<th>Vendor</th><th>Lini bisnis</th><th>Kontak PIC</th><th>Legalitas</th><th>Termin dan tarif</th><th></th></tr></thead><tbody>
     ${urut
@@ -1783,9 +1784,7 @@ function htmlVendorHP() {
   const urut = vendorTampil().sort((a, b) => (b.aktif !== false) - (a.aktif !== false) || String(a.nama).localeCompare(String(b.nama)));
   const nSt = (st) => S.vendor.filter((v) => statusVendor(v) === st).length, pilih = pilihAktif();
   const lengkapi = S.vendor.filter((v) => kurangVendor(v).length).length;
-  const chip = (v, t, n, warn) => chipHP(S.fv.status === v, t, n, "m-vstatus", v, warn);
-  return `<div class="mr-m-chips" role="group" aria-label="Status vendor">${chip("semua", "Semua", S.vendor.length)}${chip("aktif", "Aktif", nSt("aktif"))}${chip("mitra", "Mitra", nSt("mitra"))}${chip("draf", "Draf", nSt("draf"))}${chip("nonaktif", "Nonaktif", nSt("nonaktif"))}${chip("lengkapi", "Perlu dilengkapi", lengkapi, lengkapi > 0)}</div>
-    <div class="mr-m-meta"><span>${angka(urut.length)} dari ${angka(S.vendor.length)} vendor</span><span class="mr-ruang"></span>${S.kelola && urut.length ? `<button type="button" class="mr-m-link" data-aksi="m-pilih-mode">${ikon("cek", 15)}${pilih ? "Selesai memilih" : "Pilih"}</button>` : ""}</div>
+  return `<div class="mr-m-meta"><span>${angka(urut.length)} dari ${angka(S.vendor.length)} vendor</span><span class="mr-ruang"></span>${S.kelola && urut.length ? `<button type="button" class="mr-m-link" data-aksi="m-pilih-mode">${ikon("cek", 15)}${pilih ? "Selesai memilih" : "Pilih"}</button>` : ""}</div>
     ${pilihBarHP(S.pilihV.size, urut.length, "vendor")}
     ${urut.length ? `<section class="mr-m-box">${urut.map((v) => barisVendorHP(v, cacah, pilih)).join("")}</section>` : `<div class="mr-kosong">${ikon("cari", 28)}<p>Tidak ada vendor yang cocok dengan filter ini.</p><button type="button" class="mr-btn mr-btn--kecil" data-aksi="reset-vendor">Reset filter</button></div>`}`;
 }
@@ -1827,7 +1826,7 @@ function htmlHP(h, banners) {
   }
   const perlu = h.kosong + h.tanpaLini + (S.kelola ? h.verifikasi : 0);
   const cari = S.tab === "tarif" ? cariHP({ id: "mr-cari-bar", ph: "Cari layanan, vendor, lokasi…", nilai: S.f.cari, filterAktif: S.f.lini !== "semua" || S.f.vendor !== "semua", menu: true, badge: perlu })
-    : S.tab === "vendor" ? cariHP({ id: "mr-v-cari", ph: "Cari vendor, PIC, telepon…", nilai: S.fv.cari, filterAktif: S.fv.lini !== "semua", menu: S.kelola })
+    : S.tab === "vendor" ? cariHP({ id: "mr-v-cari", ph: "Cari vendor, PIC, telepon…", nilai: S.fv.cari, filterAktif: S.fv.lini !== "semua" || S.fv.status !== "semua", menu: S.kelola, badge: S.vendor.filter((v) => kurangVendor(v).length).length })
     : S.tab === "lini" ? `<div class="mr-m-cari"><label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="mr-l-cari" type="search" placeholder="Cari lini bisnis…" value="${e(MH.cariLini)}" autocomplete="off" enterkeyhint="search"></label></div>` : "";
   return `<div class="mr-m">${banners.join("")}${cari}${tabsHP()}<div id="mr-isi">${isi}</div></div>${fabHP()}`;
 }
@@ -1864,6 +1863,7 @@ function sheetFilter() {
   } else if (S.tab === "vendor") {
     const n = vendorTampil().length;
     bukaSheetMR({ judul: "Filter vendor", sub: `Menampilkan ${angka(n)} dari ${angka(S.vendor.length)} vendor`, isi: `
+      <div class="mr-m-fs"><h4>Status</h4><div class="mr-m-pils">${[["semua", "Semua"], ["aktif", "Aktif"], ["mitra", "Mitra"], ["draf", "Draf"], ["nonaktif", "Nonaktif"], ["lengkapi", "Perlu dilengkapi"]].map(([v, t]) => pilMR("m-vstatus", v, t, S.fv.status === v)).join("")}</div></div>
       <div class="mr-m-fs"><h4>Lini bisnis</h4><button type="button" class="mr-m-sel" data-aksi="m-pick" data-v="vlini"><span>${S.fv.lini === "semua" ? "Semua lini" : e(namaLini(S.fv.lini))}</span>${ikon("maju", 16)}</button></div>
       <div class="mr-m-fs__aksi"><button type="button" class="mr-btn" data-aksi="m-freset">Hapus filter</button><button type="button" class="mr-btn mr-btn--utama" data-aksi="m-tutup">Tampilkan ${angka(n)} vendor</button></div>` });
   } else if (S.tab === "lokasi") {
@@ -2023,7 +2023,7 @@ function pasangEventHP() {
       else if (a === "m-qf") { const on = !S.f[d.v]; S.f = { ...S.f, [d.v]: on }; if (on && d.v !== "kosong") S.view = "daftar"; ganti(); render(); }
       else if (a === "m-qfs") { if (d.v === "tanpaLini") { S.f.lini = S.f.lini === "__belum__" ? "semua" : "__belum__"; S.f.vendor = "semua"; } else { const on = !S.f[d.v]; S.f = { ...S.f, [d.v]: on }; if (on && d.v !== "kosong") S.view = "daftar"; } ganti(); render(); sheetFilter(); }
       else if (a === "m-verif") { tutupSheetMR(); S.kelola && bukaVerifikasi(); }
-      else if (a === "m-vstatus") { S.fv.status = d.v; render(); }
+      else if (a === "m-vstatus") { S.fv.status = d.v; render(); if ($("#mr-sheet")) sheetFilter(); }
       else if (a === "m-batal") { S.pilih.clear(); S.pilihV.clear(); S.pilihLok.clear(); S.pilihLini.clear(); MH.pilih = false; render(); }
       else if (a === "m-pilih-mode") { const aktif = pilihAktif(); if (aktif) { pilihTabAktif().clear(); MH.pilih = false; } else { MH.pilih = true; MH.pilihTab = S.tab; } render(); }
       else if (a === "m-pilih") { const set = d.tipe === "v" ? S.pilihV : d.tipe === "l" ? S.pilihLok : d.tipe === "n" ? S.pilihLini : S.pilih; if (set.has(d.k)) set.delete(d.k); else set.add(d.k); render(); }
