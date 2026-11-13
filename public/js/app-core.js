@@ -4473,23 +4473,37 @@ function formTnc(e) {
 /* ----- dokumen bertanda tangan (q.dok): lihat, unduh, kirim lewat WA/email, bagikan; tiap aksi dicatat di riwayat (cara "ttd-...") ----- */
 const dataTTD = q => { const dd = Repo.dokData(q.id), r = (q.rateIds || []).length ? S.rates.find(x => x.id === q.rateIds[0]) : (q.paketId ? S.paket.find(x => x.id === q.paketId) : null); return dd || (r && r.dokData) || null; };
 const CARA_TTD = { 'ttd-unduh': 'Diunduh (bertanda tangan)', 'ttd-wa': 'Dikirim lewat WhatsApp', 'ttd-email': 'Dikirim lewat email', 'ttd-bagikan': 'Dibagikan' };
+/* file TTD bisa berupa data URL (diubah ke Blob tanpa fetch, karena CSP melarang fetch data:) atau URL Storage (fetch butuh CORS bucket; bila gagal, pakai tautannya) */
+const blobDariData = d => { const m = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(d); if (!m) return null; const bin = m[2] ? atob(m[3]) : decodeURIComponent(m[3]), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: m[1] || 'application/pdf' }); };
 async function berkasTTD(q) {
   const d = dataTTD(q); if (!q.dok || !d) { toast('File bertanda tangan belum tersedia di perangkat ini.', 'bahaya'); return null; }
-  try { const blob = await (await fetch(d)).blob(); return { blob, nama: q.dok }; } catch (er) { toast(`<b>File gagal disiapkan.</b> ${esc(er.message)}`, 'bahaya'); return null; }
+  if (/^data:/.test(d)) { const blob = blobDariData(d); if (blob) return { blob, nama: q.dok }; }
+  const url = /^https?:/.test(d) ? d : '';
+  if (url) { try { const rs = await fetch(url); if (rs.ok) return { blob: await rs.blob(), url, nama: q.dok }; } catch (er) { /* bucket belum izinkan fetch: pakai tautan */ } return { url, nama: q.dok }; }
+  toast('File bertanda tangan tidak bisa dibaca.', 'bahaya'); return null;
+}
+function unduhTTD(f) {
+  if (f.blob) return simpanBlob(f.blob, f.nama);
+  const a = document.createElement('a'); a.href = f.url; a.download = f.nama; a.target = '_blank'; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
+  toast('File dibuka di tab baru. Simpan dari sana bila belum terunduh.');
 }
 async function aksiTTD(id, jenis) {
   const q = Repo.baca(id); if (!q) return; if (jenis === 'lihat') return panelDok(q);
   const f = await berkasTTD(q); if (!f) return; const cara = 'ttd-' + jenis, catat = async () => { try { await Repo.catatKeluaran(id, cara, f.nama); } catch (er) { toast(`File terkirim, tetapi <b>catatan riwayat gagal tersimpan</b>.<br>${esc(er.message)}`, 'bahaya'); } segarSemua(); };
-  if (jenis === 'bagikan') {
-    const file = new File([f.blob], f.nama, { type: f.blob.type || 'application/pdf' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: f.nama }); return catat(); } catch (er) { if (er && er.name === 'AbortError') return; } }
-    simpanBlob(f.blob, f.nama); toast('Perangkat ini belum bisa membagikan file langsung, jadi file diunduh. Lampirkan secara manual.'); return catat();
-  }
-  simpanBlob(f.blob, f.nama);
   const c = cust(q.customerId), k = (c && (c.kontak.find(z => norm(z.nama) === norm(q.picNama)) || c.kontak[0])) || {}, sapa = q.picNama || 'Bapak/Ibu';
-  const teks = `Yth. ${sapa},\n\nBersama ini kami lampirkan penawaran No. ${q.nomor} perihal ${q.judul} yang telah disetujui dan ditandatangani.\nTerima kasih atas kepercayaan Anda.\n\nHormat kami,\nPT Indo Sukses Logistik`;
-  if (jenis === 'wa') { window.open(`https://wa.me/${nomorWa(q.picTelp || k.telp)}?text=${encodeURIComponent(teks)}`, '_blank'); toast('WhatsApp dibuka. <b>Lampirkan file yang baru diunduh</b> sebelum mengirim.'); }
-  else if (jenis === 'email') { window.open(`mailto:${encodeURIComponent(k.email || '')}?subject=${encodeURIComponent(`Penawaran No. ${q.nomor} (ditandatangani) - ${q.judul}`)}&body=${encodeURIComponent(teks)}`, '_blank'); toast(`Email dibuka. <b>Lampirkan file yang baru diunduh</b>${k.email ? '' : ' dan isi alamat penerima (PIC belum punya email)'}.`); }
+  const tautan = f.blob ? '' : `\nDokumen: ${f.url}`;
+  const teks = `Yth. ${sapa},\n\nBersama ini kami lampirkan penawaran No. ${q.nomor} perihal ${q.judul} yang telah disetujui dan ditandatangani.${tautan}\nTerima kasih atas kepercayaan Anda.\n\nHormat kami,\nPT Indo Sukses Logistik`;
+  if (jenis === 'bagikan') {
+    if (f.blob) {
+      const file = new File([f.blob], f.nama, { type: f.blob.type || 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: f.nama }); return catat(); } catch (er) { if (er && er.name === 'AbortError') return; } }
+    } else if (navigator.share) { try { await navigator.share({ title: f.nama, text: `Penawaran No. ${q.nomor} (ditandatangani)`, url: f.url }); return catat(); } catch (er) { if (er && er.name === 'AbortError') return; } }
+    else { try { await navigator.clipboard.writeText(f.url); toast('Tautan dokumen disalin. Tempel di aplikasi tujuan.'); return catat(); } catch (er) { /* lanjut unduh */ } }
+    unduhTTD(f); toast('Perangkat ini belum bisa membagikan file langsung, jadi file diunduh. Lampirkan secara manual.'); return catat();
+  }
+  unduhTTD(f);
+  if (jenis === 'wa') { window.open(`https://wa.me/${nomorWa(q.picTelp || k.telp)}?text=${encodeURIComponent(teks)}`, '_blank'); toast(f.blob ? 'WhatsApp dibuka. <b>Lampirkan file yang baru diunduh</b> sebelum mengirim.' : 'WhatsApp dibuka dengan tautan dokumen di pesan.'); }
+  else if (jenis === 'email') { window.open(`mailto:${encodeURIComponent(k.email || '')}?subject=${encodeURIComponent(`Penawaran No. ${q.nomor} (ditandatangani) - ${q.judul}`)}&body=${encodeURIComponent(teks)}`, '_blank'); toast(`Email dibuka. ${f.blob ? '<b>Lampirkan file yang baru diunduh</b>' : 'Tautan dokumen ada di isi email'}${k.email ? '' : ' dan isi alamat penerima (PIC belum punya email)'}.`); }
   return catat();
 }
 const sisaRate = q => { if (!q.masaRateSampai) return ''; const h = selisihHari(HARI_INI(), q.masaRateSampai); return h < 0 ? `<span class="qt-sisa is-habis">Rate berakhir ${-h} hari lalu</span>` : `<span class="qt-sisa ${h <= 30 ? 'is-dekat' : ''}">${h === 0 ? 'Berakhir hari ini' : h + ' hari lagi'}</span>`; };
@@ -4838,8 +4852,10 @@ async function aksiBagikan(id, fmt) {
   toast('Menyiapkan file…');
   try {
     if (word) blob = await buatDocx(q.dokumenModel, Repo.aset(id));
-    else if (q.pdfUrl) { const rs = await fetch(q.pdfUrl); if (!rs.ok) throw new Error('HTTP ' + rs.status); blob = await rs.blob(); }
-    else { const h = await buatPdf(q.dokumenModel, Repo.aset(id)); blob = h.pdf.output('blob'); }
+    else {
+      if (q.pdfUrl) { try { const rs = await fetch(q.pdfUrl); if (rs.ok) blob = await rs.blob(); } catch (er) { /* CORS bucket: buat ulang */ } }
+      if (!blob) { const h = await buatPdf(q.dokumenModel, Repo.aset(id)); blob = h.pdf.output('blob'); }
+    }
   } catch (er) { return toast(`<b>File gagal disiapkan.</b> ${esc(er.message)}`, 'bahaya'); }
   const f = new File([blob], nama, { type: word ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/pdf' });
   if (navigator.canShare && navigator.canShare({ files: [f] })) {
