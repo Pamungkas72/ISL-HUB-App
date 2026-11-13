@@ -1495,9 +1495,6 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
   .qt-m-ring b { font-size: 14px; font-weight: 700; }
   .qt-m-ring span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; color: var(--mr-muted); }
   .qt-m-ring em { font-style: normal; font-weight: 700; color: var(--mr-warn); }
-  .qt-m-fu { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; height: 32px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--mr-border); background: var(--qt-n); color: var(--mr-muted); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
-  .qt-m-fu.is-ada { background: var(--mr-warn-bg); border-color: var(--mr-warn-garis); color: var(--mr-warn); }
-  .qt-m-fu i { font-style: normal; font-weight: 700; }
   .qt-m-chev { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border: 0; background: none; color: var(--mr-muted); cursor: pointer; }
   .qt-m-chev svg { transition: transform .2s; }
   .qt-m-chev.is-buka svg { transform: rotate(180deg); }
@@ -1593,7 +1590,7 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
   .qt-m-tl small { display: block; margin-top: 1px; font-size: 12.5px; color: var(--mr-muted); }
   .qt-m-tl .qt-link { flex-shrink: 0; white-space: nowrap; }
 }
-@media (max-width: 380px) { .qt-m-fu__t { display: none; } .qt-m-fu { padding: 0 9px; } .qt-m-isi { gap: 10px; padding: 12px 12px; } .qt-m-ik { width: 34px; height: 34px; border-radius: 10px; } .qt-m-a b { font-size: 13.5px; } .qt-m-kanan { max-width: 96px; } }
+@media (max-width: 380px) { .qt-m-isi { gap: 10px; padding: 12px 12px; } .qt-m-ik { width: 34px; height: 34px; border-radius: 10px; } .qt-m-a b { font-size: 13.5px; } .qt-m-kanan { max-width: 96px; } }
 
 /* ---------- Master Rate di HP, desain A ----------
    Ringkasan satu baris, tab berikon, cari + filter + menu, chip filter cepat, daftar padat bergaris warna vendor.
@@ -2179,9 +2176,17 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 @media(min-width:760px){.qt-mk-kisi{grid-template-columns:repeat(3,1fr)}}
 
 /* ---------- Ringkasan quotation (desain B): kategori di kiri, hasil di kanan; HP: kategori jadi baris geser ---------- */
-.qt-halaman { display: flex; gap: 4px; margin: 0 0 14px; border-bottom: 1px solid var(--mr-border); }
-.qt-halaman .qt-ptab { padding: 10px 16px 9px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: 14px; color: var(--mr-muted); cursor: pointer; }
-.qt-halaman .qt-ptab.is-on { color: var(--mr-ink); font-weight: 700; border-bottom-color: var(--mr-accent); }
+.qt-halaman { display: flex; gap: 4px; margin: 0 0 14px; padding: 4px; background: var(--qt-n); border: 1px solid var(--mr-border); border-radius: 12px; }
+.qt-halaman .qt-ptab { flex: 1; justify-content: center; gap: 6px; min-width: 0; margin: 0; padding: 9px 6px; border: 0; border-radius: 9px; background: none; font: inherit; font-size: 13.5px; color: var(--mr-muted); cursor: pointer; white-space: nowrap; }
+.qt-halaman .qt-ptab.is-on { background: var(--mr-accent); color: #1b1307; font-weight: 700; }
+.qt-halaman .qt-ptab i { font-style: normal; font-size: 11.5px; font-weight: 700; line-height: 18px; padding: 0 7px; border-radius: 999px; background: var(--mr-warn-bg); color: var(--mr-warn); }
+.qt-halaman .qt-ptab.is-on i { background: rgba(27, 19, 7, .18); color: #1b1307; }
+.qt-fu { display: grid; gap: 10px; max-width: 720px; }
+.qt-fu-ring { display: grid; gap: 2px; padding: 12px 14px; } .qt-fu-ring small { color: var(--mr-muted); } .qt-fu-ring em { font-style: normal; color: var(--mr-warn); font-weight: 600; }
+.qt-fu-belum { display: flex; align-items: center; gap: 12px; padding: 12px 14px; font: inherit; color: var(--mr-ink); text-align: left; cursor: pointer; } .qt-fu-belum small { display: block; color: var(--mr-muted); }
+.qt-fu-item { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 12px 14px; } .qt-fu-item small { display: block; color: var(--mr-muted); }
+.qt-fu-item > span { font-size: 12.5px; color: var(--mr-muted); text-align: right; } .qt-fu-item > span.is-warn { color: var(--mr-warn); font-weight: 600; }
+.qt-fu-aksi { grid-column: 1 / -1; display: flex; gap: 8px; }
 .qt-rg-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
 .qt-rg-pil { padding: 6px 13px; border: 1px solid var(--mr-border); border-radius: 999px; background: var(--mr-surface); color: var(--mr-muted); font: inherit; font-size: 13.5px; cursor: pointer; }
 .qt-rg-pil.is-on { background: var(--mr-accent); border-color: var(--mr-accent); color: #fff; font-weight: 600; }

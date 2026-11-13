@@ -3675,7 +3675,19 @@ function rgBaris(i) {
     <div class="qt-rg-baris__n"><b>${i.nilai ? rpS(i.nilai) : '—'}</b><div class="mr-sub">terbit ${tgl(i.t)}</div></div>
     <div class="qt-rg-baris__x">${i.fu ? waCust(i) : ''}</div></div>`;
 }
-const tabHalaman = () => `<div class="qt-ptabs qt-halaman" role="tablist" aria-label="Halaman quotation">${[['daftar', 'Daftar'], ['ringkasan', 'Ringkasan']].map(([v, l]) => `<button type="button" role="tab" class="qt-ptab ${(Q.sub || 'daftar') === v ? 'is-on' : ''}" aria-selected="${(Q.sub || 'daftar') === v}" data-qt="rg-tab" data-v="${v}">${l}</button>`).join('')}</div>`;
+const nFollow = () => { const sm = Repo.semua(); return kumpulTL(sm, sm).length + Repo.belumMaksimal().length; };
+const tabHalaman = () => { const n = nFollow(); return `<div class="qt-halaman" role="tablist" aria-label="Halaman quotation">${[['daftar', 'file', 'Daftar'], ['ringkasan', 'target', 'Ringkasan'], ['follow', 'telp', 'Follow up']].map(([v, ic, l]) => `<button type="button" role="tab" class="qt-ptab ${(Q.sub || 'daftar') === v ? 'is-on' : ''} ${v === 'follow' && n ? 'is-ada' : ''}" aria-selected="${(Q.sub || 'daftar') === v}" data-qt="rg-tab" data-v="${v}">${ik(ic, 16)}<span>${l}</span>${v === 'follow' && n ? `<i>${n}</i>` : ''}</button>`).join('')}</div>`; };
+/* tab Follow up: ringkasan hitungan + kartu aksi (menggantikan chip dan sheet Follow up di HP) */
+function viewFollow() {
+  const sm = Repo.semua(), daftar = kumpulTL(sm, sm), nBelum = Repo.belumMaksimal().length, lama = daftar.filter(i => i.h >= 7).length;
+  return `${tabHalaman()}
+  <div class="qt-fu">
+    <div class="mr-kartu qt-fu-ring"><b>${daftar.length + nBelum ? `${daftar.length} perlu tindak lanjut` : 'Semua sudah ditindaklanjuti'}</b>${daftar.length ? `<small>${lama ? `<em>${lama} sudah ≥ 7 hari</em> · ` : ''}menggantung ≥ 7 hari, tanpa kabar ≥ ${PENG.tindakLanjutHari || 3} hari, riwayat PDF ≥ ${RW_HARI} hari</small>` : ''}</div>
+    <button type="button" class="mr-kartu qt-fu-belum" data-qt="belum-buka">${ik('telp', 20)}<span><b>Customer tanpa penawaran aktif</b><small>${nBelum ? `${nBelum} customer · quotation ditolak atau diabaikan` : 'Tidak ada saat ini'}</small></span></button>
+    ${daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}</div></div>`).join('')}
+    ${daftar.length > 50 ? `<p class="mr-sub">50 teratas ditampilkan, terlama di atas.</p>` : ''}
+  </div>`;
+}
 function viewRingkasan() {
   const r = Q.rg, D = rgData(), [a, b] = rgPeriode(), sales = [...new Set(D.semua.map(i => i.sales))].sort(), lini = [...new Set(D.semua.flatMap(i => i.lini))];
   const kat = (v, l, n, extra = '') => `<button type="button" class="qt-rg-kat ${r.kat === v ? 'is-on' : ''} ${extra}" data-qt="rg-kat" data-v="${v}" aria-pressed="${r.kat === v}"><span>${l}</span><b>${n}</b></button>`;
@@ -3881,7 +3893,6 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
   const ed = bisaEdit(), pilih = masterSaja() && PILIH_QT.size > 0;
   const { k } = kpiTerbitBulanIni(), draf = semuaAll.filter(q => q.status === 'draf').length, belum = k.menunggu + k.diabaikan + k.ditolak;
   const nama = new Date(HARI_INI() + 'T00:00:00').toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
-  const nTL = kumpulTL(semuaAll, semua).length + nBelum;
   const cnt = v => (Q.fSumber === 'pdf' ? 0 : semua.filter(x => (!v || x.status === v) && (!Q.fTahun || (x.diputuskan || '').startsWith(Q.fTahun)) && cariS(x)).length)
     + (Q.fSumber === 'sistem' ? 0 : rw.filter(x => (!v || RW_KELOMPOK[x.status] === v) && (!Q.fTahun || rwPutus(x).startsWith(Q.fTahun)) && cariR(x)).length);
   const filterLuar = !!(Q.fSumber || Q.fTahun || (Q.fStatus && !TAB_STATUS.some(t => t[0] === Q.fStatus)));
@@ -3898,7 +3909,6 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
   <div class="qt-m">
     <div class="qt-m-top">
       <button type="button" class="qt-m-ring" data-qt="m-ringkas" aria-expanded="${QM.ringkas}"><b>${esc(nama)}</b><span>${k.terbit} terbit · <em>${belum} belum disetujui</em></span></button>
-      <button type="button" class="qt-m-fu ${nTL ? 'is-ada' : ''}" data-qt="m-follow" aria-label="Follow up${nTL ? ', ' + nTL + ' perlu tindak lanjut' : ''}">${ik('telp', 15)}<span class="qt-m-fu__t">Follow up</span>${nTL ? `<i>${nTL}</i>` : ''}</button>
       <button type="button" class="qt-m-chev ${QM.ringkas ? 'is-buka' : ''}" data-qt="m-ringkas" aria-label="${QM.ringkas ? 'Tutup' : 'Buka'} ringkasan bulan ini">${ik('turun', 17)}</button>
     </div>
     ${QM.ringkas ? `<div class="qt-m-ringisi"><div class="mr-stat">${kartu('terbit', 'file', k.terbit, `Quotation terbit${k.lainnya ? ` · ${k.lainnya} digantikan atau tidak dipakai` : ''}`)}${kartu('belum', 'kirim', belum, `Belum disetujui${k.diabaikan ? ` · ${k.diabaikan} diabaikan` : ''}`, belum ? 'is-perhatian' : '')}${kartu('draf', 'edit', draf, 'Draf (belum terbit)')}${kartu('disetujui', 'setuju', k.disetujui, 'Disetujui')}</div>
@@ -3939,11 +3949,6 @@ function sheetFilter() {
     ${Q.fTahun ? `<div class="qt-m-fs"><h4>Tahun</h4><div class="qt-m-pils"><span class="qt-m-pil is-on">${esc(Q.fTahun)}</span></div></div>` : ''}
     <div class="qt-m-fs__aksi"><button type="button" class="mr-btn" data-qt="m-freset">Hapus semua filter</button><button type="button" class="mr-btn mr-btn--utama" data-qt="m-tutup">Selesai</button></div>` });
 }
-function sheetFollow() {
-  const semua = Repo.semua(), daftar = kumpulTL(semua, semua), nBelum = Repo.belumMaksimal().length;
-  bukaSheet({ judul: 'Follow up', sub: daftar.length + nBelum ? '' : 'Semua sudah ditindaklanjuti', isi: `${itemSheet('belum-buka', 'telp', 'Customer tanpa penawaran aktif', nBelum ? `${nBelum} customer · quotation ditolak atau diabaikan` : 'Tidak ada saat ini')}
-    ${daftar.length ? `<h4 class="qt-m-sh">Perlu tindak lanjut (${daftar.length})</h4><p class="qt-m-sm">Menggantung tanpa pembaruan ≥ 7 hari, tanpa kabar ≥ ${PENG.tindakLanjutHari || 3} hari, atau riwayat PDF ≥ ${RW_HARI} hari.</p>${daftar.slice(0, 20).map(i => `<div class="qt-m-tl"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)} · ${i.ket}</small></div>${i.aksi}</div>`).join('')}` : ''}` });
-}
 function sheetAksi(x) {
   const id = `data-id="${esc(x.id)}"`, it = itemAksi(x), ada = a => it.find(i => i[0] === a);
   const KEP = [['setujui-cepat', 'setuju', 'Disetujui', 'is-ok'], ['tolak-cepat', 'tolak', 'Ditolak', 'is-bahaya'], ['tidak-dipakai-cepat', 'blok', 'Tidak dipakai', '']].filter(k => ada(k[0]));
@@ -3975,7 +3980,6 @@ document.addEventListener('click', ev => {
     else if (a === 'm-freset') { Q.kpi = ''; Q.fStatus = ''; Q.fTahun = ''; Q.fSumber = ''; gambar(); sheetFilter(); }
     else if (a === 'm-menu') sheetMenu();
     else if (a === 'm-tambah') sheetTambah();
-    else if (a === 'm-follow') sheetFollow();
     else if (a === 'm-aksi') { const x = Repo.baca(d.id); if (x) sheetAksi(x); }
     else if (a === 'm-aksi-rw') { const x = (DB.riwayat || []).find(z => z.id === d.id); if (x) sheetAksiRw(x); }
     else if (a === 'm-pilih') { if (PILIH_QT.has(d.id)) PILIH_QT.delete(d.id); else PILIH_QT.add(d.id); gambar(); }
@@ -7148,7 +7152,7 @@ function gambar() {
   if (Q.edit && !bisaEdit()) { Q.edit = null; Q.kotor = false; }
   if (Q.view === 'detail' && !Q.edit && Q.id && bisaEdit()) { const x = Repo.baca(Q.id); if (x && x.status === 'draf') Q.edit = x; }
   if (Q.view === 'detail' && !Q.edit && !Q.id) Q.view = 'list';
-  const html = Q.view === 'list' ? (Q.sub === 'ringkasan' ? viewRingkasan() : viewDaftar()) : Q.view === 'pengaturan' ? viewPengaturan() : Q.view === 'belum' ? viewBelum() : viewDetail(); const a = document.activeElement; if (window.ISLMorph && a && (a.id === 'qt-cari' || a.id === 'qt-cari-m' || a.id === 'rw-cari' || a.id === 'rg-cari')) window.ISLMorph(r, html); else r.innerHTML = html;
+  const html = Q.view === 'list' ? (Q.sub === 'ringkasan' ? viewRingkasan() : Q.sub === 'follow' ? viewFollow() : viewDaftar()) : Q.view === 'pengaturan' ? viewPengaturan() : Q.view === 'belum' ? viewBelum() : viewDetail(); const a = document.activeElement; if (window.ISLMorph && a && (a.id === 'qt-cari' || a.id === 'qt-cari-m' || a.id === 'rw-cari' || a.id === 'rg-cari')) window.ISLMorph(r, html); else r.innerHTML = html;
   if (Q.view === 'detail') { if (Q.edit) segarTurunan(); else segarBaca(); }
   window.scrollTo(0, y); if (window.ISLNav) window.ISLNav.selaraskan();
 }
