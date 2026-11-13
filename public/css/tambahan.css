@@ -2379,3 +2379,5 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-im-b.is-kosong { border-style: dashed; border-color: var(--mr-warn-garis); background: var(--mr-warn-bg); color: var(--mr-warn); font-weight: 600; }
 .qt-im__aksi { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .qt-im .cu-cek { margin-top: 10px; }
+/* tombol tambah Quotation: aksen oranye seperti Master Rate (di #qt-root aturan #mr-kontainer tidak berlaku) */
+.qt-fab { background: var(--mr-accent); color: #1b1307; }

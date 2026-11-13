@@ -3807,7 +3807,7 @@ ${bilahPilihQt(list)}
     <div class="mr-kartu mr-tabelkartu">
     ${list.length ? `<table class="mr-table qt-zebra"><thead><tr>${masterSaja() ? `<th class="qt-cek"><input type="checkbox" data-qt-pilih-semua aria-label="Pilih semua quotation" ${list.length && list.every(({ x }) => PILIH_QT.has(x.id)) ? 'checked' : ''}></th>` : ''}<th>Quotation</th><th>Customer</th><th>Sales</th><th>Status</th><th>Tanggal</th><th></th></tr></thead><tbody>
     ${list.map(({ x, rw: r }) => { if (r) return barisRw(x); return `<tr class="cu-baris${SB.ada('quotation', x.id) ? ' qt-sembunyi' : ''}" data-qt="buka" data-id="${x.id}">${cekQt(x.id)}
-      <td class="mr-td-nama"><div class="qt-nmrow"><span class="qt-sik qt-sik--${esc(x.status)}" aria-hidden="true">${ik(IKON_STATUS[x.status] || 'file', 17)}</span><div class="qt-nm"><b>${esc(namaQ(x))}</b>${x.dokumenModel && !x.kosong ? ` <button type="button" class="qt-ikonmata" data-qt="lihat-dokumen" data-id="${esc(x.id)}" aria-label="Lihat dokumen ${esc(namaQ(x))}" title="Lihat dokumen PDF">${ik('galeri', 15)}</button>` : ''}${tagRevisi(x)}${x.status === 'disetujui' && x.dok ? ' <span class="qt-ttd-tag" title="Sudah ada dokumen bertanda tangan">TTD</span>' : ''}${x.jalur === 'word' ? ' <span class="qt-chipw">Word</span>' : ''}${x.jalur === 'word' && x.status !== 'draf' && !x.dokFinal ? ' <span class="cu-st cu-st--warn" title="Dokumen Word belum difinalkan. Unggah PDF final di detail quotation.">Belum final</span>' : ''}${x.perhatian ? ' <span class="cu-st cu-st--warn" title="Ditandai oleh pemilik">Perlu perhatian</span>' : ''}<div class="mr-sub">${esc(x.judul)}</div>${catatanTerakhir(x) ? `<div class="mr-sub qt-catatan">Terakhir: ${esc(catatanTerakhir(x))}</div>` : ''}</div></div></td>
+      <td class="mr-td-nama"><div class="qt-nmrow"><span class="qt-sik qt-sik--${esc(x.status)}" aria-hidden="true">${ik(IKON_STATUS[x.status] || 'file', 17)}</span><div class="qt-nm"><b>${esc(namaQ(x))}</b>${x.dokumenModel && !x.kosong ? ` <button type="button" class="qt-ikonmata" data-qt="lihat-dokumen" data-id="${esc(x.id)}" aria-label="Lihat dokumen ${esc(namaQ(x))}" title="Lihat dokumen PDF">${ik('galeri', 15)}</button>` : ''}${tagRevisi(x)}${x.status === 'disetujui' && x.dok ? ' <span class="qt-ttd-tag" title="Sudah ada dokumen bertanda tangan">TTD</span>' : ''}${modalKurang(x) ? ` <span class="cu-st cu-st--warn" title="${modalKurang(x)} tarif belum punya modal">Modal ${modalKurang(x)}</span>` : ''}${x.jalur === 'word' ? ' <span class="qt-chipw">Word</span>' : ''}${x.jalur === 'word' && x.status !== 'draf' && !x.dokFinal ? ' <span class="cu-st cu-st--warn" title="Dokumen Word belum difinalkan. Unggah PDF final di detail quotation.">Belum final</span>' : ''}${x.perhatian ? ' <span class="cu-st cu-st--warn" title="Ditandai oleh pemilik">Perlu perhatian</span>' : ''}<div class="mr-sub">${esc(x.judul)}</div>${catatanTerakhir(x) ? `<div class="mr-sub qt-catatan">Terakhir: ${esc(catatanTerakhir(x))}</div>` : ''}</div></div></td>
       <td data-label="Customer">${esc(namaCust(x))}</td>
       <td data-label="Sales">${esc(pembuatDokumen(x))}</td>
       <td data-label="Status">${chipStatus(x)}</td>
@@ -3848,7 +3848,7 @@ function barisHP(x, pilih, intip) {
       <div class="qt-m-tengah">
         <div class="qt-m-a"><b>${esc(namaQ(x))}</b></div>
         <div class="qt-m-b">${esc(namaCust(x))}</div>
-        <div class="qt-m-c">${x.jalur === 'word' ? tagHP('Word', 'qt-m-tag--w') : ''}${ttd ? tagHP('TTD', 'qt-m-tag--ttd') : ''}${tagRevisi(x)}<span>${x.judul ? esc(x.judul) : '<i>Perihal belum diisi</i>'} · ${esc(pembuatDokumen(x))}</span></div>
+        <div class="qt-m-c">${x.jalur === 'word' ? tagHP('Word', 'qt-m-tag--w') : ''}${ttd ? tagHP('TTD', 'qt-m-tag--ttd') : ''}${modalKurang(x) ? tagHP('Modal ' + modalKurang(x), 'qt-m-tag--warn') : ''}${tagRevisi(x)}<span>${x.judul ? esc(x.judul) : '<i>Perihal belum diisi</i>'} · ${esc(pembuatDokumen(x))}</span></div>
       </div>
       <div class="qt-m-kanan"><b>${inf.tgl}</b><span class="${inf.warn ? 'is-warn' : ''}">${esc(inf.ket)}</span></div>
     </div></div>`;
@@ -4513,6 +4513,8 @@ function kartuDokumen(q, ed) {
 
 /* ----- mode baca (Terkirim, Disetujui, Ditolak, dan Draf untuk Fathur) ----- */
 /* ----- isi modal setelah quotation disetujui (desain C): ketuk baris, isi modal dan vendor; ikut ke Master Rate dan Rate Disetujui ----- */
+const modalKurang = x => x.status === 'disetujui' && !x.kosong && kelolaSaja() ? (x.baris || []).filter(b => !R.adaModal(b)).length : 0;
+const vendorDraf = b => !!b.vendorId && kelolaSaja() && ((MR() || {}).vendor || []).some(v => v.id === b.vendorId && v.status === 'draf');
 const slugQ = t => norm(t).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 const bisaIsiModal = q => kelolaSaja() && q.status === 'disetujui' && !q.kosong && (q.baris || []).length > 0;
 const barisTanpaModal = q => (q.baris || []).filter(b => !R.adaModal(b));
@@ -4571,6 +4573,7 @@ async function aksiIsiModal(btn) {
   if (lanjut) { const n = barisTanpaModal(Repo.baca(q.id))[0]; if (n) setTimeout(() => bukaIsiModal(q.id, n.id), 200); }
 }
 document.addEventListener('click', ev => {
+  const v = ev.target.closest('[data-qt="lengkapi-vendor"]'); if (v) { try { sessionStorage.setItem('islhub-buka', JSON.stringify({ jenis: 'vendor', id: v.dataset.vid })); } catch (er) { } location.hash = '#master-rate'; return; }
   const e = ev.target.closest('[data-qt="isi-modal"],[data-qt="im-simpan"],[data-qt="im-batal"]'); if (!e) return;
   if (e.dataset.qt === 'isi-modal') bukaIsiModal(Q.id, e.dataset.bid); else if (e.dataset.qt === 'im-batal') tutupIsiModal(); else aksiIsiModal(e);
 });
@@ -4578,7 +4581,7 @@ function tampilBaca(q) {
   const c = cust(q.customerId), utama = q.baris.filter(b => b.jenis === 'rate'), tamb = q.baris.filter(b => b.jenis === 'tambahan');
   const tr = (b, no) => { const m = mg(Number(b.jual), R.adaModal(b) ? Number(b.modal) : null); const v = vendorTampil(b);
     const induk = b.jenis === 'tambahan' ? utama.findIndex(x => x.id === b.untukBarisId) : -1;
-    return `<tr class="${m.rp !== null && m.rp < 0 ? 'is-rugi' : ''}"><td data-label="Uraian"><b>${esc(b.item)}</b>${b.jenis === 'rate' ? `<div class="mr-sub"><span class="mr-tag mr-tag--jenis">${esc(namaLini(b.liniKey, b.liniNama))}</span>${v ? ' Vendor: ' + esc(v) : ''}</div>` : `<div class="mr-sub">${induk >= 0 ? 'Masuk ke harga baris ' + (induk + 1) : 'Baris sendiri'}</div>`}${b.deskripsi ? `<div class="mr-sub">${esc(b.deskripsi)}</div>` : ''}</td>
+    return `<tr class="${m.rp !== null && m.rp < 0 ? 'is-rugi' : ''}"><td data-label="Uraian"><b>${esc(b.item)}</b>${b.jenis === 'rate' ? `<div class="mr-sub"><span class="mr-tag mr-tag--jenis">${esc(namaLini(b.liniKey, b.liniNama))}</span>${v ? ' Vendor: ' + esc(v) : ''}${vendorDraf(b) ? ` <button type="button" class="qt-link" data-qt="lengkapi-vendor" data-vid="${esc(b.vendorId)}">Daftarkan vendor ›</button>` : ''}</div>` : `<div class="mr-sub">${induk >= 0 ? 'Masuk ke harga baris ' + (induk + 1) : 'Baris sendiri'}</div>`}${b.deskripsi ? `<div class="mr-sub">${esc(b.deskripsi)}</div>` : ''}</td>
       <td data-label="Jumlah">${esc(b.qty)} <span class="mr-sub qt-inl">${esc(b.satuan)}</span></td>
       ${kelolaSaja() ? `<td data-label="Modal" class="cu-r">${bisaIsiModal(q) ? `<button type="button" class="qt-im-b ${R.adaModal(b) ? '' : 'is-kosong'}" data-qt="isi-modal" data-bid="${esc(b.id)}">${R.adaModal(b) ? rp(b.modal) + ' ' + ik('edit', 12) : 'Isi modal'}</button>` : (R.adaModal(b) ? rp(b.modal) : '—')}${b.modalDariMR ? '<div class="mr-sub cu-rsub">dari Master Rate</div>' : ''}</td>` : ''}
       <td data-label="Harga jual" class="cu-r">${rp(b.jual)}</td><td data-label="Subtotal" class="cu-r"><b>${rp(R.sub(b))}</b></td>
