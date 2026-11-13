@@ -10,6 +10,7 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 ## Konsistensi tampilan
 - Setiap perubahan tampilan harus berlaku dan diperiksa di **HP dan desktop**, tema **gelap dan terang**. Audit `tests/audit/audit-tema.js` (4 kombinasi) dan `audit-halaman-lain.js` **tidak dijalankan tiap perubahan**; jalankan hanya di akhir sesi saat pemilik meminta.
 - Warna komponen memakai variabel tema; jangan menulis latar terang langsung. Kertas dokumen (pratinjau PDF) boleh tetap putih.
+- **Setiap usulan desain tampilan wajib disajikan dua versi sekaligus: HP dan desktop** (aturan pemilik, 13 Nov 2026). Tiap opsi desain = gambar HP + gambar desktop; revisi dan keputusan berlaku untuk keduanya. Pemilik tidak perlu memintanya lagi.
 - Pertanyaan dan pilihan kepada pemilik lewat pop-up pilihan, dengan jawaban yang direkomendasikan di urutan pertama. Untuk perubahan visual besar, tunjukkan 3 desain dalam bentuk gambar dulu.
 
 ## Bertanya bila ragu (aturan pemilik, 4 Nov 2026)
