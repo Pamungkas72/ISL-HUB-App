@@ -113,8 +113,8 @@ function render() {
   const ctl = `<div class="dj-bar2"><div class="mr-seg dj-seg" role="group" aria-label="Periode">${[["minggu", "Minggu"], ["bulan", "Bulan"], ["tahun", "Tahun"], ["rentang", "Rentang"]].map(([k, t]) => `<button type="button" class="mr-chip${S.periode === k ? " is-aktif" : ""}" data-dj="periode" data-v="${k}">${t}</button>`).join("")}</div>
     ${S.periode === "rentang" ? `<input type="date" id="dj-dari" value="${e(S.dari)}" aria-label="Dari"><input type="date" id="dj-sampai" value="${e(S.sampai)}" aria-label="Sampai">` : ""}
     ${S.kelola ? `<select data-dj="f-kel" aria-label="Kelompok">${opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel, "Semua kelompok")}</select>` : ""}
-    <select data-dj="f-pic" aria-label="PIC">${opsi(daftarPic(), S.fPic, "Semua PIC")}</select><select data-dj="f-kat" aria-label="Kategori">${opsi(H.KATEGORI, S.fKat, "Semua kategori")}</select>
-    <button type="button" class="mr-btn dj-pdf" data-dj="pdf" title="Unduh laporan PDF">${ikon("download", 15)} PDF</button></div>`;
+    <select data-dj="f-pic" aria-label="PIC">${opsi(daftarPic(), S.fPic, "Semua PIC")}</select><select data-dj="f-kat" aria-label="Kategori">${opsi([...new Set([...H.KATEGORI, ...S.jobs.map((j) => j.kategori).filter(Boolean)])], S.fKat, "Semua kategori")}</select>
+    ${S.kelola ? `<button type="button" class="mr-btn dj-pdf" data-dj="impor" title="Import dari Excel" style="margin-left:auto">${ikon("upload", 15)} Import</button>` : ""}<button type="button" class="mr-btn dj-pdf" data-dj="pdf" title="Unduh laporan PDF">${ikon("download", 15)} PDF</button></div>`;
   let isi;
   if (S.muat) isi = `<p class="mr-sub">Memuat…</p>`;
   else if (S.galat) isi = `<div class="dj-alert dj-alert--bahaya">${e(S.galat)}</div>`;
@@ -134,7 +134,7 @@ function formJob(j) {
   bukaLayer(`<header class="mr-panel__kepala"><div><h2>${baru ? "Catat job baru" : "Ubah job"}</h2><p class="mr-sub">${baru ? "Job yang masuk hari ini, baru dikerjakan, atau masih pending." : e(namaKel(d.kelompokId))}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
   <div class="mr-panel__isi"><div class="mr-form dj-form" id="dj-form" data-id="${e(d.id || "")}">
     ${f("Judul job *", `<input id="djf-judul" maxlength="200" value="${e(d.judul || "")}" placeholder="mis. Penawaran trucking Jakarta–Surabaya">`, "dj-lebar")}
-    ${f("Kategori *", `<select id="djf-kat">${opsi(H.KATEGORI, d.kategori || "")}</select>`)}
+    ${f("Kategori *", `<select id="djf-kat">${opsi([...new Set([...H.KATEGORI, ...(d.kategori ? [d.kategori] : [])])], d.kategori || "")}</select>`)}
     ${f("Customer", `<input id="djf-cust" value="${e(d.customer || "")}" placeholder="Nama customer">`)}
     ${f("PIC", `<input id="djf-pic" list="djf-piclist" value="${e(d.pic || "")}"><datalist id="djf-piclist">${daftarPic().map((p) => `<option value="${e(p)}">`).join("")}</datalist>`)}
     ${S.kelola ? f("Kelompok", `<select id="djf-kel">${opsi(kelompokPilihan().map((k) => [k.id, k.nama]), d.kelompokId)}</select>`) : ""}
@@ -222,6 +222,46 @@ async function unduhPdf() {
   finally { $("#dj-root")?.classList.remove("dj-cetak"); if (tombol) tombol.disabled = false; }
 }
 
+
+/* ---------- import Excel (master/admin) ---------- */
+let rencana = null;
+function panelImpor() {
+  rencana = null;
+  bukaLayer(`<header class="mr-panel__kepala"><div><h2>Import dari Excel</h2><p class="mr-sub">Lembar "Input Tugas Harian": Tanggal Diberikan, PIC, Kategori, Customer, Deskripsi, Deadline, Tanggal Selesai, Keterangan. Impor ulang file yang sama menimpa job impor sebelumnya, bukan menggandakan.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
+  <div class="mr-panel__isi"><div class="mr-form"><label class="mr-f dj-lebar"><span>File Excel (.xlsx)</span><input type="file" id="dji-file" accept=".xlsx,.xls"></label>
+  <label class="mr-f dj-lebar"><span>Masuk ke kelompok</span><select id="dji-kel">${opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel || (S.kelompok[0] || {}).id)}</select></label>
+  <div id="dji-hasil" class="dj-lebar mr-sub">${S.kelompok.length ? "Pilih file untuk melihat pratinjau." : "Buat kelompok dulu di tab Kelompok."}</div></div></div>
+  <footer class="mr-panel__kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="impor-jalan" id="dji-ok" disabled>Impor</button></footer>`);
+  $("#dji-file").onchange = async (ev) => {
+    const f = ev.target.files[0], out = $("#dji-hasil"); if (!f) return;
+    try {
+      for (let i = 0; i < 40 && !window.XLSX; i++) await new Promise((r) => setTimeout(r, 250));
+      if (!window.XLSX) throw new Error("Pustaka Excel belum siap. Coba lagi sebentar lagi.");
+      const wb = window.XLSX.read(await f.arrayBuffer(), { type: "array" });
+      const nama = wb.SheetNames.find((n) => /input tugas/i.test(n)) || wb.SheetNames[0];
+      const r = H.petaExcel(window.XLSX.utils.sheet_to_json(wb.Sheets[nama], { header: 1, raw: true, defval: "" }));
+      if (r.galat) throw new Error(r.galat);
+      const ada = r.jobs.filter((j) => S.jobs.some((x) => x.id === j.id)).length, sel = r.jobs.filter((j) => j.status === "selesai").length;
+      rencana = r.jobs; out.innerHTML = `<b>${r.jobs.length} job</b> siap diimpor dari lembar "${e(nama)}": ${sel} selesai, ${r.jobs.length - sel} belum selesai.${ada ? `<br><b>${ada}</b> job impor sebelumnya akan ditimpa.` : ""}
+        ${r.peringatan.length ? `<details><summary>${r.peringatan.length} catatan perlu dicek</summary>${r.peringatan.map((x) => `<div>${e(x)}</div>`).join("")}</details>` : ""}`;
+      $("#dji-ok").disabled = !r.jobs.length;
+    } catch (err) { rencana = null; $("#dji-ok").disabled = true; out.textContent = "File belum bisa dibaca: " + (err.message || err); }
+  };
+}
+async function jalankanImpor() {
+  const kel = $("#dji-kel").value, tombol = $("#dji-ok"); if (!rencana || !kel) return;
+  tombol.disabled = true; tombol.textContent = "Mengimpor…"; let n = 0;
+  try {
+    const sekarang = H.hariIni();
+    for (let i = 0; i < rencana.length; i += 15) await Promise.all(rencana.slice(i, i + 15).map(async (j) => {
+      const id = `imp-${kel}-${j.id}`, data = { ...j, kelompokId: kel, tglMasuk: j.tglMasuk || sekarang, dibuatOleh: S.u.uid, dibuatNama: "Import Excel", dibuatPada: sekarang, diimpor: true, diubah: serverTimestamp() };
+      await setDoc(doc(db, "dj_job", id), data); n++;
+      const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...data, id, diubah: null }; if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru);
+    }));
+    tutupLayer(); S.fKel = kel; S.periode = "rentang"; const t = S.jobs.filter((x) => x.diimpor).map((x) => x.tglMasuk).sort(); S.dari = t[0]; S.sampai = H.hariIni(); render(); toast(`${n} job diimpor.`);
+  } catch (err) { console.error(err); toast(`Impor berhenti setelah ${n} job: ` + e(err.message || err), "bahaya"); tombol.disabled = false; tombol.textContent = "Impor"; }
+}
+
 /* ---------- aksi ---------- */
 const periksa = (ev) => window.__rute === "dailyjob" || ev.target.closest("#mr-layer");
 document.addEventListener("click", async (ev) => {
@@ -240,6 +280,8 @@ document.addEventListener("click", async (ev) => {
   if (a === "kat") { S.fKat = S.fKat === v ? "" : v; return render(); }
   if (a === "pic") { S.fPic = S.fPic === v ? "" : v; return render(); }
   if (a === "pdf") return unduhPdf();
+  if (a === "impor") return panelImpor();
+  if (a === "impor-jalan") return jalankanImpor();
   if (a === "simpan") return simpanJob();
   const d = $("#dj-form") && $("#dj-form")._d;
   if (a === "file-lepas") { d.file.splice(+t.dataset.i, 1); return t.closest(".dj-fl").remove(); }

@@ -26,4 +26,13 @@ eq("slot 09:05 sudah ditandai", H.slotJatuhTempo(["2026-11-13#9"], slotDi(10)), 
 eq("slot 15:05", H.slotJatuhTempo(["2026-11-13#9"], slotDi(15)), "2026-11-13#14");
 eq("slot 18:05", H.slotJatuhTempo([], slotDi(18)), "2026-11-13#17");
 eq("label terlambat", H.labelTarget(J[2], now).t, "Terlambat 2 hr");
+const kepala = ["No", "Tanggal Diberikan", "PIC", "Kategori Tugas", "Customer / Project", "Deskripsi Tugas", "Deadline", "Tanggal Selesai", "Status Waktu", "Bulan", "Keterangan"];
+const ex = H.petaExcel([["Judul"], kepala, [1, 46266, "Rina", "Setup Project PLB", " PT Uji ", "Bisnis model", "2026-09-10", "2026-09-07", "Tepat Waktu", "", "Done"], [2, "2026-09-01", "Dede", "Lainnya 5", "", "Rapat", "", "", "Belum Selesai", "", "Menunggu acc"], [3, "", "", "", "", "", "", "", "", "", ""]]);
+eq("impor: 2 job, 1 baris kosong dilewati", [ex.jobs.length, ex.dilewati], [2, 1]);
+eq("impor: serial Excel jadi tanggal", ex.jobs[0].tglMasuk, "2026-09-01");
+eq("impor: kategori dinormalkan", [ex.jobs[0].kategori, ex.jobs[1].kategori], ["Setup Project", "Lainnya"]);
+eq("impor: status dari tanggal selesai dan keterangan", [ex.jobs[0].status, ex.jobs[1].status], ["selesai", "tunggu"]);
+eq("impor: Done tidak jadi catatan, keterangan lain jadi catatan", [ex.jobs[0].catatan.length, ex.jobs[1].catatan.length], [0, 1]);
+eq("impor: id memakai nomor baris", ex.jobs.map((j) => j.id), ["x3", "x4"]);
+eq("impor: tanpa kolom wajib ditolak", !!H.petaExcel([["a"]]).galat, true);
 process.exit(gagal ? 1 : 0);
