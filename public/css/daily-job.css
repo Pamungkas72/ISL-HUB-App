@@ -64,3 +64,9 @@ label.dj-org select { max-width: 55%; }
 /* Kertas laporan PDF: putih, apa pun tema aplikasi. */
 .dj-cetak #dj-dash { --surface: #fff; --bg: #fff; --text: #13283D; --head: #0A3D66; --muted: #5D7085; --border: #DCE5EF; --sky-soft: #E8F4FD; --accent-soft: #FFF1E0; --danger-soft: #FCEAEA; --success-soft: #E4F5EE; background: #fff; padding: 8px; }
 .dj-cetak .dj-kpi, .dj-cetak .dj-kartu { background: #fff; }
+/* Tombol + sama dengan Master Rate dan Quotation: oranye (--mr-accent), ikon gelap. */
+#dj-root .mr-fab { background: var(--mr-accent); color: #1b1307; }
+@media (max-width: 760px) {
+  #dj-root .mr-fab { width: 56px; height: 56px; box-shadow: 0 10px 24px rgba(0, 0, 0, .35); }
+  body.mr-kunci-scroll #dj-root .mr-fab { display: none; } /* tidak menutupi formulir atau panel yang terbuka */
+}

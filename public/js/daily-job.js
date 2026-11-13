@@ -122,7 +122,7 @@ function render() {
   else if (!perlu) isi = `<section class="mr-kartu dj-kartu"><h3>Akun ini belum masuk kelompok</h3><p class="mr-sub">Minta master atau admin menetapkan kelompok Daily Job untuk akun Anda.</p></section>`;
   else isi = (S.tab !== "kelompok" ? ctl + htmlPengingat(now) : "") + (S.tab === "performa" ? htmlPerforma(now) : S.tab === "job" ? htmlDaftar(now) : htmlKelompok());
   el.innerHTML = `<div class="dj-tabs" role="tablist">${tabs.map(([k, t]) => `<button type="button" role="tab" class="${S.tab === k ? "is-aktif" : ""}" data-dj="tab" data-v="${k}">${t}</button>`).join("")}</div>${isi}
-    ${perlu && !S.muat ? `<button type="button" class="mr-fab" data-dj="baru" aria-label="Catat job baru">${ikon("plus", 18)}<span class="fab-teks">Catat job</span></button>` : ""}`;
+    ${perlu && !S.muat ? `<button type="button" class="mr-fab" data-dj="baru" aria-label="Catat job baru">${ikon("plus", 22)}<span class="fab-teks">Catat job</span></button>` : ""}`;
 }
 
 /* ---------- form catat / ubah job ---------- */
