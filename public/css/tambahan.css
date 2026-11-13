@@ -2328,3 +2328,21 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .mr-prh .mr-alat__isi .mr-btn { justify-content: space-between; gap: 14px; width: 100%; }
 .mr-prh .mr-alat__isi .mr-btn.is-aktif { border-color: var(--mr-accent); font-weight: 700; }
 .mr-prh .mr-alat__isi hr { border: 0; border-top: 1px solid var(--mr-border); margin: 2px 0; width: 100%; }
+
+/* ---------- dokumen bertanda tangan (quotation disetujui) ---------- */
+.qt-ttd { border-color: var(--mr-ok-garis, var(--mr-border)); }
+.qt-ttd-tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: 999px; background: var(--mr-ok-bg); color: var(--mr-ok); font-size: 11.5px; font-weight: 700; line-height: 19px; }
+.qt-ttd-file { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; min-width: 0; }
+.qt-ttd-file > div { min-width: 0; } .qt-ttd-file b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .qt-ttd-file small { color: var(--mr-muted); }
+.qt-ttd-ik { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 56px; border-radius: 8px; border: 1px solid var(--mr-border); background: var(--qt-n); color: var(--mr-info); }
+.qt-ttd-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+.qt-ttd-b { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border: 1px solid var(--mr-border); border-radius: 12px; background: var(--qt-n); color: var(--mr-ink); font: inherit; font-size: 12px; cursor: pointer; }
+.qt-ttd-b.is-utama { background: var(--mr-accent); border-color: var(--mr-accent); color: #1b1307; font-weight: 700; }
+.qt-ttd-b:hover { filter: brightness(1.08); }
+.qt-ttd-h { margin: 14px 0 4px; font-size: 13px; }
+.qt-sisa { display: inline-block; margin-left: 4px; padding: 1px 9px; border-radius: 999px; background: var(--qt-n); color: var(--mr-muted); font-size: 11.5px; font-weight: 700; }
+.qt-sisa.is-dekat { background: var(--mr-warn-bg); color: var(--mr-warn); } .qt-sisa.is-habis { background: var(--mr-warn-bg); color: var(--mr-warn); }
+.qt-arsip { margin-top: 12px; } .qt-arsip > summary { cursor: pointer; padding: 12px 14px; border: 1px solid var(--mr-border); border-radius: 12px; background: var(--mr-surface); font-weight: 700; font-size: 14px; list-style: none; }
+.qt-arsip[open] > summary { margin-bottom: 12px; }
+.qt-m-tag--ttd { background: var(--mr-ok-bg); color: var(--mr-ok); }
+@media (max-width: 380px) { .qt-ttd-grid { gap: 6px; } }
