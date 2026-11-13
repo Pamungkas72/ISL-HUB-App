@@ -109,6 +109,13 @@ function labelDim(k, v) {
 const vendorObj = (id) => S.vendor.find((x) => x.id === id) || { id, nama: namaVendor(id) };
 const hueDari = (id) => hueVendor(vendorObj(id));
 const badgeVendor = (id) => `<span class="mr-vbadge" style="--vh:${hueDari(id)}"><i>${e(inisial(namaVendor(id)))}</i>${e(namaVendor(id))}</span>`;
+// Peringatan sementara: tampil LAMA_BANNER_MS sejak pertama muncul (per muat halaman), lalu hilang sendiri
+const LAMA_BANNER_MS = 10000;
+const mulaiBanner = new Map();
+const sisaBanner = (k) => {
+  if (!mulaiBanner.has(k)) { mulaiBanner.set(k, Date.now()); setTimeout(() => render(), LAMA_BANNER_MS + 50); }
+  return Math.max(0, LAMA_BANNER_MS - (Date.now() - mulaiBanner.get(k)));
+};
 const peta = () => new Map(S.tarif.map((t) => [t.kunci || t.id, t]));
 const kosongModal = (t) => t.modal === null || t.modal === undefined;
 
@@ -241,7 +248,7 @@ function render() {
   }
 
   if (h.tanpaVendor > 0) banners.push(`<div class="mr-banner mr-banner--peringatan">${ikon("peringatan")}<div style="flex:1"><strong>${angka(h.tanpaVendor)} tarif belum ditentukan vendornya.</strong> Tarif tetap bisa dipakai. Lengkapi vendornya lewat Edit tarif, atau pakai vendor Internal untuk tarif milik perusahaan.<br><button class="mr-btn mr-btn--kecil" data-aksi="stat" data-v="tanpavendor" style="margin-top:6px">Lihat tarif ini</button></div></div>`);
-  if (h.tanpaLini > 0) banners.push(`<div class="mr-banner mr-banner--peringatan">${ikon("peringatan")}<div style="flex:1"><strong>${angka(h.tanpaLini)} tarif belum punya lini bisnis.</strong> Tarif tetap bisa dipakai. Buat lini bisnisnya, lalu lengkapi lewat Edit tarif.<br><button class="mr-btn mr-btn--kecil" data-aksi="stat" data-v="tanpalini" style="margin-top:6px">Lihat tarif ini</button>${S.kelola ? ` <button class="mr-btn mr-btn--kecil" data-aksi="kategori-baru" style="margin-top:6px">Buat lini bisnis</button>` : ""}</div></div>`);
+  if (h.tanpaLini > 0 && sisaBanner("tanpaLini") > 0) banners.push(`<div class="mr-banner mr-banner--peringatan">${ikon("peringatan")}<div style="flex:1"><strong>${angka(h.tanpaLini)} tarif belum punya lini bisnis.</strong> Tarif tetap bisa dipakai. Buat lini bisnisnya, lalu lengkapi lewat Edit tarif.<br><button class="mr-btn mr-btn--kecil" data-aksi="stat" data-v="tanpalini" style="margin-top:6px">Lihat tarif ini</button>${S.kelola ? ` <button class="mr-btn mr-btn--kecil" data-aksi="kategori-baru" style="margin-top:6px">Buat lini bisnis</button>` : ""}</div></div>`);
 
   if (HP()) { const htmlMobil = htmlHP(h, banners); if (window.ISLMorph) window.ISLMorph(root, htmlMobil); else root.innerHTML = htmlMobil; return; }
   const isiHtml = `
