@@ -165,6 +165,12 @@ export function profilTampil(S, namaVendor) {
   });
 }
 
+// Peringatan fasilitas Draf (mis. dibuat cepat dari form tarif) agar segera dilengkapi
+const bannerDraf = (semua) => {
+  const n = semua.filter((p) => !p.lama && (p.status || "draf") === "draf").length;
+  return n && FILTER.status !== "draf" ? `<div class="mr-banner mr-banner--peringatan">${ikon("peringatan")}<div style="flex:1"><strong>${angka(n)} fasilitas masih Draf.</strong> Lengkapi foto, luas, PIC, dan spesifikasinya sebelum dipakai di penawaran.</div><button type="button" class="mr-btn mr-btn--kecil" data-aksi="pf-status" data-v="draf">Tampilkan</button></div>` : "";
+};
+
 export function htmlTabProfil(S, namaVendor) {
   const semua = daftarProfil(S);
   const tampil = profilTampil(S, namaVendor);
@@ -173,7 +179,7 @@ export function htmlTabProfil(S, namaVendor) {
     .map(([id, t, n]) => `<button type="button" class="mr-chip ${FILTER.jenis === id ? "is-aktif" : ""}" data-aksi="pf-jenis" data-v="${id}">${e(t)} <b>${n}</b></button>`)
     .join("");
   const ada = tampil.length;
-  return `
+  return `${bannerDraf(semua)}
     <div class="mr-pfbar">
       <div class="mr-pfbar__kepala">
         <div class="mr-pfbar__aksi">
@@ -278,7 +284,7 @@ export function htmlTabProfilHP(S, namaVendor, { pilih = false } = {}) {
     .map(([id, t, n]) => `<button type="button" class="mr-m-chip ${FILTER.jenis === id ? "is-on" : ""}" data-aksi="pf-jenis" data-v="${id}" aria-pressed="${FILTER.jenis === id}">${e(t)} <em>${n}</em></button>`).join("");
   const ringkas = FILTER.mode === "ringkas", filterAktif = FILTER.status !== "semua";
   const kosong = `<div class="mr-kosong">${ikon("pin", 28)}<p>${semua.length ? "Tidak ada fasilitas yang cocok dengan filter." : "Belum ada profil fasilitas."}</p></div>`;
-  return `
+  return `${bannerDraf(semua)}
     <div class="mr-m-cari">
       <label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="pf-cari" type="search" placeholder="Cari nama, kawasan, mitra, PIC…" value="${e(FILTER.q)}" autocomplete="off" enterkeyhint="search"></label>
       <button type="button" class="mr-m-ib ${filterAktif ? "is-aktif" : ""}" data-aksi="m-filter" aria-label="Filter${filterAktif ? " (ada filter aktif)" : ""}">${ikon("filter", 19)}${filterAktif ? '<i class="mr-m-dot"></i>' : ""}</button>
