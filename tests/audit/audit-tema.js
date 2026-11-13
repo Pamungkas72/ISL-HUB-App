@@ -88,7 +88,8 @@ const ADEGAN = [
     await pindah(p, 'quotation'); const id = await buatTerkirim(p);
     await p.evaluate(async i => { const Q = window.__qt._Q; await window.__qt._Repo.setujui(i, { appr: window.__ISL.hariIni(), sampai: null, bentuk: 'terpisah', dokNama: 'ttd.pdf', dokData: 'data:application/pdf;base64,JVBERi0xLjQK', koreksi: null }); Q.view = 'list'; window.__qt.gambar(); window.__qt.buka(i); }, id); await tunggu(p, 700); await periksa('quotation: disetujui (modal kosong)');
     await klikSel(p, '[data-qt="isi-modal"]'); await tunggu(p, 600); await periksa('quotation: formulir isi modal');
-    await p.evaluate(() => { const v = document.querySelector('#im-vendor'); v.value = '__baru'; v.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#im-vb').value = 'CV Uji Vendor'; document.querySelector('[data-qt="im-simpan"]:not([data-lanjut])').click(); }); await tunggu(p, 1500); await periksa('quotation: setelah modal disimpan'); return 'sudah';
+    await p.evaluate(() => { const v = document.querySelector('#im-vendor'); v.value = '__baru'; v.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#im-vb').value = 'CV Uji Vendor'; document.querySelector('[data-qt="im-simpan"]:not([data-lanjut])').click(); }); await tunggu(p, 1500); await periksa('quotation: setelah modal disimpan');
+    await p.evaluate(() => { const q = window.__qt._Q; q.view = 'list'; q.sub = 'daftar'; window.__qt.gambar(); }); await tunggu(p, 500); await periksa('quotation: daftar dengan lencana modal'); return 'sudah';
   }],
   ['quotation: daftar dengan data, filter, menu', async (p, periksa) => {
     await pindah(p, 'quotation'); await buatTerkirim(p); await p.evaluate(() => { window.__qt._Q.view = 'list'; window.__qt.gambar(); }); await tunggu(p, 500); await periksa('quotation: daftar berisi');
