@@ -126,3 +126,8 @@ export function petaExcel(baris) {
   });
   return { jobs, peringatan, dilewati };
 }
+
+/** Kategori yang tersedia: bawaan + semua kategori yang pernah dipakai job (termasuk kategori baru). */
+export const daftarKategori = (jobs) => [...new Set([...KATEGORI, ...(jobs || []).map((j) => j.kategori).filter(Boolean)])];
+/** Kategori ketikan pengguna: spasi dirapikan; bila sama (tanpa beda huruf besar) dengan yang ada, pakai yang ada supaya tidak ganda. */
+export const rapikanKategori = (t, ada) => { const k = String(t || "").replace(/\s+/g, " ").trim().slice(0, 40); return (ada || []).find((x) => x.toLowerCase() === k.toLowerCase()) || k; };

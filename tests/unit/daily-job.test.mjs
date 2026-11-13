@@ -35,4 +35,7 @@ eq("impor: status dari tanggal selesai dan keterangan", [ex.jobs[0].status, ex.j
 eq("impor: Done tidak jadi catatan, keterangan lain jadi catatan", [ex.jobs[0].catatan.length, ex.jobs[1].catatan.length], [0, 1]);
 eq("impor: id memakai nomor baris", ex.jobs.map((j) => j.id), ["x3", "x4"]);
 eq("impor: tanpa kolom wajib ditolak", !!H.petaExcel([["a"]]).galat, true);
+eq("kategori baru: sama tanpa beda huruf besar pakai yang ada", H.rapikanKategori("  quotation ", H.KATEGORI), "Quotation");
+eq("kategori baru: nama baru dirapikan", H.rapikanKategori("Visit   Customer ", H.KATEGORI), "Visit Customer");
+eq("kategori baru ikut daftar", H.daftarKategori([{ kategori: "Visit Customer" }, { kategori: "Quotation" }]).slice(-1), ["Visit Customer"]);
 process.exit(gagal ? 1 : 0);

@@ -113,7 +113,7 @@ function render() {
   const ctl = `<div class="dj-bar2"><div class="mr-seg dj-seg" role="group" aria-label="Periode">${[["minggu", "Minggu"], ["bulan", "Bulan"], ["tahun", "Tahun"], ["rentang", "Rentang"]].map(([k, t]) => `<button type="button" class="mr-chip${S.periode === k ? " is-aktif" : ""}" data-dj="periode" data-v="${k}">${t}</button>`).join("")}</div>
     ${S.periode === "rentang" ? `<input type="date" id="dj-dari" value="${e(S.dari)}" aria-label="Dari"><input type="date" id="dj-sampai" value="${e(S.sampai)}" aria-label="Sampai">` : ""}
     ${S.kelola ? `<select data-dj="f-kel" aria-label="Kelompok">${opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel, "Semua kelompok")}</select>` : ""}
-    <select data-dj="f-pic" aria-label="PIC">${opsi(daftarPic(), S.fPic, "Semua PIC")}</select><select data-dj="f-kat" aria-label="Kategori">${opsi([...new Set([...H.KATEGORI, ...S.jobs.map((j) => j.kategori).filter(Boolean)])], S.fKat, "Semua kategori")}</select>
+    <select data-dj="f-pic" aria-label="PIC">${opsi(daftarPic(), S.fPic, "Semua PIC")}</select><select data-dj="f-kat" aria-label="Kategori">${opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori")}</select>
     ${S.kelola ? `<button type="button" class="mr-btn dj-pdf" data-dj="impor" title="Import dari Excel" style="margin-left:auto">${ikon("upload", 15)} Import</button>` : ""}<button type="button" class="mr-btn dj-pdf" data-dj="pdf" title="Unduh laporan PDF">${ikon("download", 15)} PDF</button></div>`;
   let isi;
   if (S.muat) isi = `<p class="mr-sub">Memuat…</p>`;
@@ -134,7 +134,7 @@ function formJob(j) {
   bukaLayer(`<header class="mr-panel__kepala"><div><h2>${baru ? "Catat job baru" : "Ubah job"}</h2><p class="mr-sub">${baru ? "Job yang masuk hari ini, baru dikerjakan, atau masih pending." : e(namaKel(d.kelompokId))}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
   <div class="mr-panel__isi"><div class="mr-form dj-form" id="dj-form" data-id="${e(d.id || "")}">
     ${f("Judul job *", `<input id="djf-judul" maxlength="200" value="${e(d.judul || "")}" placeholder="mis. Penawaran trucking Jakarta–Surabaya">`, "dj-lebar")}
-    ${f("Kategori *", `<select id="djf-kat">${opsi([...new Set([...H.KATEGORI, ...(d.kategori ? [d.kategori] : [])])], d.kategori || "")}</select>`)}
+    ${f("Kategori *", `<select id="djf-kat">${opsi(H.daftarKategori([...S.jobs, d]), d.kategori || "")}<option value="__baru">＋ Kategori baru…</option></select><input id="djf-kat-baru" maxlength="40" placeholder="Nama kategori baru" hidden>`)}
     ${f("Customer", `<input id="djf-cust" value="${e(d.customer || "")}" placeholder="Nama customer">`)}
     ${f("PIC", `<input id="djf-pic" list="djf-piclist" value="${e(d.pic || "")}"><datalist id="djf-piclist">${daftarPic().map((p) => `<option value="${e(p)}">`).join("")}</datalist>`)}
     ${S.kelola ? f("Kelompok", `<select id="djf-kel">${opsi(kelompokPilihan().map((k) => [k.id, k.nama]), d.kelompokId)}</select>`) : ""}
@@ -155,6 +155,7 @@ function formJob(j) {
   </div></div>
   <footer class="mr-panel__kaki">${baru ? "" : `<button class="mr-btn mr-btn--bahaya" data-dj="hapus" data-id="${e(d.id)}">Hapus</button>`}<span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="simpan" id="dj-simpan">Simpan</button></footer>`);
   $("#dj-form")._d = d;
+  $("#djf-kat").onchange = (ev) => { const n = $("#djf-kat-baru"); n.hidden = ev.target.value !== "__baru"; if (!n.hidden) n.focus(); };
   $("#djf-status").onchange = (ev) => { const s = $("#djf-selesai"); if (ev.target.value === "selesai" && !s.value) s.value = H.hariIni(); if (ev.target.value !== "selesai") s.value = ""; };
   $("#djf-berkas").onchange = (ev) => { berkasBaru.push(...ev.target.files); ev.target.value = ""; tampilBaru(); };
 }
@@ -163,7 +164,9 @@ const tampilBaru = () => { const w = $("#djf-file"); w.querySelectorAll(".dj-fl-
 async function simpanJob() {
   const form = $("#dj-form"), d = form._d, v = (id) => ($("#" + id) || {}).value || "";
   const judul = v("djf-judul").trim(), target = v("djf-target"), kel = S.kelola ? v("djf-kel") : S.kelompokSaya;
+  const kat = v("djf-kat") === "__baru" ? H.rapikanKategori(v("djf-kat-baru"), H.daftarKategori(S.jobs)) : v("djf-kat");
   if (!judul) return toast("Isi judul job.", "bahaya");
+  if (!kat) return toast("Isi nama kategori baru.", "bahaya");
   if (!target) return toast("Isi target selesai.", "bahaya");
   if (!kel) return toast("Pilih kelompok. Buat kelompok dulu di tab Kelompok.", "bahaya");
   if (v("djf-masuk") && target < v("djf-masuk")) return toast("Target selesai tidak boleh sebelum tanggal masuk.", "bahaya");
@@ -173,7 +176,7 @@ async function simpanJob() {
     for (const b of berkasBaru) { const path = `dailyjob/${kel}/${id}/${Date.now()}-${b.name.replace(/[^\w.\-]+/g, "_")}`; file.push({ nama: b.name, path, url: await unggahBlob(path, b, b.type || "application/octet-stream") }); }
     const catatan = [...d.catatan]; if (v("djf-cat").trim()) catatan.push({ tgl: H.hariIni(), oleh: S.u.nama || S.u.email, teks: v("djf-cat").trim() });
     const status = v("djf-status"), data = {
-      judul, kategori: v("djf-kat"), customer: v("djf-cust").trim(), pic: v("djf-pic").trim(), kelompokId: kel, deskripsi: v("djf-desk").trim(), tglMasuk: v("djf-masuk") || H.hariIni(), tglMulai: v("djf-mulai") || null, tglTarget: target,
+      judul, kategori: kat, customer: v("djf-cust").trim(), pic: v("djf-pic").trim(), kelompokId: kel, deskripsi: v("djf-desk").trim(), tglMasuk: v("djf-masuk") || H.hariIni(), tglMulai: v("djf-mulai") || null, tglTarget: target,
       status, tglSelesai: status === "selesai" ? v("djf-selesai") || H.hariIni() : null, prioritas: v("djf-prio"), bobot: +v("djf-bobot") || 2, file, tautan: d.tautan, catatan,
       dibuatOleh: d.dibuatOleh || S.u.uid, dibuatNama: d.dibuatNama || S.u.nama || S.u.email, dibuatPada: d.dibuatPada || H.hariIni(), diubah: serverTimestamp(),
     };
@@ -224,13 +227,14 @@ async function unduhPdf() {
 
 
 /* ---------- import Excel (master/admin) ---------- */
+const NAMA_TIM = "Marketing dan BD";
 let rencana = null;
 function panelImpor() {
   rencana = null;
   bukaLayer(`<header class="mr-panel__kepala"><div><h2>Import dari Excel</h2><p class="mr-sub">Lembar "Input Tugas Harian": Tanggal Diberikan, PIC, Kategori, Customer, Deskripsi, Deadline, Tanggal Selesai, Keterangan. Impor ulang file yang sama menimpa job impor sebelumnya, bukan menggandakan.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
   <div class="mr-panel__isi"><div class="mr-form"><label class="mr-f dj-lebar"><span>File Excel (.xlsx)</span><input type="file" id="dji-file" accept=".xlsx,.xls"></label>
-  <label class="mr-f dj-lebar"><span>Masuk ke kelompok</span><select id="dji-kel">${opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel || (S.kelompok[0] || {}).id)}</select></label>
-  <div id="dji-hasil" class="dj-lebar mr-sub">${S.kelompok.length ? "Pilih file untuk melihat pratinjau." : "Buat kelompok dulu di tab Kelompok."}</div></div></div>
+  <label class="mr-f dj-lebar"><span>Masuk ke kelompok</span><select id="dji-kel">${opsi([...S.kelompok.map((k) => [k.id, k.nama]), ...(S.kelompok.some((k) => k.nama === NAMA_TIM) ? [] : [["__baru", `＋ Buat kelompok "${NAMA_TIM}"`]])], (S.kelompok.find((k) => k.nama === NAMA_TIM) || {}).id || S.fKel || "__baru")}</select></label>
+  <div id="dji-hasil" class="dj-lebar mr-sub">${S.kelompok.length ? "Pilih file untuk melihat pratinjau." : "Pilih file untuk melihat pratinjau."}</div></div></div>
   <footer class="mr-panel__kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="impor-jalan" id="dji-ok" disabled>Impor</button></footer>`);
   $("#dji-file").onchange = async (ev) => {
     const f = ev.target.files[0], out = $("#dji-hasil"); if (!f) return;
@@ -249,9 +253,10 @@ function panelImpor() {
   };
 }
 async function jalankanImpor() {
-  const kel = $("#dji-kel").value, tombol = $("#dji-ok"); if (!rencana || !kel) return;
+  let kel = $("#dji-kel").value; const tombol = $("#dji-ok"); if (!rencana || !kel) return;
   tombol.disabled = true; tombol.textContent = "Mengimpor…"; let n = 0;
   try {
+    if (kel === "__baru") { kel = uid(); await setDoc(doc(db, "dj_kelompok", kel), { nama: NAMA_TIM, dibuat: H.hariIni() }); S.kelompok.push({ id: kel, nama: NAMA_TIM, dibuat: H.hariIni() }); }
     const sekarang = H.hariIni();
     for (let i = 0; i < rencana.length; i += 15) await Promise.all(rencana.slice(i, i + 15).map(async (j) => {
       const id = `imp-${kel}-${j.id}`, data = { ...j, kelompokId: kel, tglMasuk: j.tglMasuk || sekarang, dibuatOleh: S.u.uid, dibuatNama: "Import Excel", dibuatPada: sekarang, diimpor: true, diubah: serverTimestamp() };
