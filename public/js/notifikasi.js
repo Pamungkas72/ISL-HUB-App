@@ -85,6 +85,15 @@ async function dariMaster(m, ref) {
   });
   return out;
 }
+// Quotation terbit dari sales dengan harga di bawah hargaMin: admin/master diberi tahu (tidak memblokir terbit)
+function dariHargaMin(quotations) {
+  if (!kelola()) return [];
+  return (quotations || []).filter((q) => q.hargaDiBawahMin && q.status !== "draf" && q.status !== "tidak_dipakai" && !q.digantikanOleh).map((q) => {
+    const h = q.hargaDiBawahMin;
+    return { id: "hm:" + q.id, jenis: "quotation", grup: "quotation", level: h.maksPersen >= 10 ? "bahaya" : "warn", judul: `${q.nomor || "Quotation"} terbit di bawah harga minimum`,
+      ket: `${perihalTeks(q.judul)}${q.customerNama || "Tanpa customer"} · ${h.n} layanan, sampai ${h.maksPersen}% di bawah minimum${q.pemilikNama ? " · " + q.pemilikNama : ""}`, tujuan: { jenis: "quotation", id: q.id } };
+  });
+}
 // Draf quotation yang sudah lewat sehari tapi belum punya customer atau perihal
 function dariQuotationLengkap(quotations) {
   if (!kelola()) return [];
@@ -133,7 +142,7 @@ export async function kumpulkan({ paksa = false } = {}) {
   let semua = c && !paksa && Date.now() - c.t < UMUR_CACHE_MS ? c.items : null;
   if (!semua) {
     semua = [];
-    try { const pr = window.__ISL_PROFIL || {}; const a = await muatApp({ master: false, hanyaBaca: true, sales: pr.peran === "sales", uid: pr.uid }); semua.push(...dariQuotation(a.quotations), ...dariRiwayat(a.riwayat, a.quotations), ...dariQuotationLengkap(a.quotations)); } catch (e) { console.warn("Pemberitahuan quotation tidak termuat:", e); }
+    try { const pr = window.__ISL_PROFIL || {}; const a = await muatApp({ master: false, hanyaBaca: true, sales: pr.peran === "sales", uid: pr.uid }); semua.push(...dariQuotation(a.quotations), ...dariRiwayat(a.riwayat, a.quotations), ...dariQuotationLengkap(a.quotations), ...dariHargaMin(a.quotations)); } catch (e) { console.warn("Pemberitahuan quotation tidak termuat:", e); }
     try { const m = await muatMaster(); semua.push(...dariTarif(m.tarif, m.vendor, m.lini)); semua.push(...(await dariMaster(m, await muatReferensi().catch(() => ({ profil: [] }))))); } catch (e) { console.warn("Pemberitahuan tarif tidak termuat:", e); }
     tulis(K_CACHE, { t: Date.now(), items: semua });
   }

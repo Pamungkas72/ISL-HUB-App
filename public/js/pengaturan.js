@@ -127,12 +127,15 @@ let authTambah = null;
 const authTambahAkun = async () => { if (!authTambah) { authTambah = getAuth(initializeApp(app.options, "tambah-akun")); authTambah.languageCode = "id"; await setPersistence(authTambah, inMemoryPersistence); } return authTambah; };
 const HURUF_SANDI = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const sandiAcak = () => { const b = new Uint8Array(24); crypto.getRandomValues(b); return Array.from(b, (x) => HURUF_SANDI[x % HURUF_SANDI.length]).join(""); };
+/* kode sales: hanya huruf A-Z (spasi, angka, tanda baca, dan aksen dibuang); dipakai di nomor quotation */
+const bersihKode = (v) => String(v || "").normalize("NFD").replace(/[^A-Za-z]/g, "").toUpperCase();
+document.addEventListener("input", (ev) => { const t = ev.target; if (t && (t.id === "ta-kode" || (t.dataset && t.dataset.akun === "kode"))) { const b = bersihKode(t.value); if (b !== t.value) t.value = b; } });
 async function tambahAkunManual() {
   if (!S.master && !S.admin) return;
-  const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), peran = $("#ta-peran").value, kode = $("#ta-kode").value.trim().toUpperCase(), target = S.master ? angkaIn($("#ta-target").value) : null;
+  const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), peran = $("#ta-peran").value, kode = bersihKode($("#ta-kode").value), target = S.master ? angkaIn($("#ta-target").value) : null;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi email yang valid.", "bahaya");
   if (!nama) return toast("Isi nama lengkap.", "bahaya");
-  if (peran === "sales" && !/^[A-Z]{2,6}$/.test(kode)) return toast("Kode sales wajib 2 sampai 6 huruf.", "bahaya");
+  if (peran === "sales" && !/^[A-Z]{2,6}$/.test(kode)) return toast(`Kode sales "${e(kode)}" belum valid: wajib 2 sampai 6 huruf A-Z, tanpa angka atau spasi.`, "bahaya");
   if (S.akun.some((a) => String(a.email || "").toLowerCase() === email)) return toast("Email ini sudah ada di daftar akun.", "bahaya");
   if (!(await konfirmasi("Buat akun ini?", `Akun login untuk <b>${e(email)}</b> dibuat sebagai <b>${e(PERAN[peran])}</b> dan langsung aktif. Email atur kata sandi dikirim ke alamat itu.`, "Buat akun"))) return;
   const tombol = document.querySelector('[data-st="akun-tambah"]'); if (tombol) { tombol.disabled = true; tombol.textContent = "Membuat akun…"; }
@@ -172,7 +175,7 @@ async function aksiAkun(a, tr) {
   const uid = tr && tr.dataset.uid, ak = S.akun.find((x) => x.id === uid); if (a !== "target-simpan" && !ak) return;
   if (a === "akun-hapus" && !S.master) return; // hanya pemilik
   if (a === "target-simpan" && !S.master) return; // target bulanan bawaan hanya pemilik
-  const baca = () => ({ peran: tr.querySelector('[data-akun=peran]').value, kodeSales: tr.querySelector('[data-akun=kode]').value.trim().toUpperCase(), targetBulanan: S.master ? angkaIn(tr.querySelector('[data-akun=target]').value) : null });
+  const baca = () => ({ peran: tr.querySelector('[data-akun=peran]').value, kodeSales: bersihKode(tr.querySelector('[data-akun=kode]').value), targetBulanan: S.master ? angkaIn(tr.querySelector('[data-akun=target]').value) : null });
   if ((a === "akun-setujui" || a === "akun-aktif") && !(S.modal && S.modal.siap)) {
     // Tombol tidak dimatikan supaya terasa alasannya: kunci ini sengaja (modal harus dipisah dulu).
     const kartu = document.querySelector(".mr-banner--peringatan"); if (kartu) kartu.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -184,7 +187,7 @@ async function aksiAkun(a, tr) {
       /* Target hanya diatur pemilik. Admin menyimpan akun tanpa menyentuh target yang sudah ada (aturan Firestore juga menolaknya). */
       const target = S.master ? b.targetBulanan : (ak.targetBulanan ?? null);
       if (!S.master) delete data.targetBulanan;
-      if (b.peran === "sales" && !b.kodeSales) return toast("Isi kode sales (2 sampai 6 huruf) untuk akun sales.", "bahaya");
+      if (b.peran === "sales" && !/^[A-Z]{2,6}$/.test(b.kodeSales)) return toast("Isi kode sales (2 sampai 6 huruf) untuk akun sales.", "bahaya");
       await updateDoc(doc(db, "pengguna", uid), data);
       if (b.peran === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama: ak.nama || ak.email, kode: b.kodeSales, targetBulanan: target || null });
       else await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});

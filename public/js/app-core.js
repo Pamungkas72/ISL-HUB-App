@@ -7223,7 +7223,9 @@ async function periksaTncSebelumTerbit(e) {
 /* Pop-up sebelum terbit: ada layanan yang harga jualnya di bawah tarif minimum (modal + markup lini). Hanya peringatan; "Tetap terbitkan" selalu boleh.
    Tidak ditanya ulang selama daftar dan angkanya sama dengan yang sudah disetujui. */
 async function periksaHargaMinimum(e) {
-  const daftar = R.hargaDiBawahMin(e); if (!daftar.length) { e.hargaMinDisetujui = ''; return true; }
+  const daftar = R.hargaDiBawahMin(e); if (!daftar.length) { e.hargaMinDisetujui = ''; delete e.hargaDiBawahMin; return true; }
+  /* dicatat di quotation (akun sales saja) supaya admin/master diberi tahu lewat lonceng; tidak memblokir terbit */
+  if (akunSales()) e.hargaDiBawahMin = { n: daftar.length, maksPersen: Math.round(Math.max(...daftar.map(x => x.persen))), tanggal: HARI_INI(), item: daftar.slice(0, 5).map(x => x.item) };
   const sig = JSON.stringify(daftar.map(x => [x.item, x.jual, x.min])); if (e.hargaMinDisetujui === sig) return true;
   const jauh = daftar.filter(x => x.persen >= 10).length, tampil = daftar.slice(0, 10).map(x => `<li class="qt-min__i"><b>${esc(x.item)}</b><span>Harga jual <b class="cu-neg">${rp(x.jual)}</b> · minimum <b>${rp(x.min)}</b></span><span class="cu-neg">Kurang ${rp(x.kurang)} (${fmtPct(x.persen)} di bawah minimum)</span></li>`).join('') + (daftar.length > 10 ? `<li class="qt-min__i">dan ${daftar.length - 10} layanan lain</li>` : '');
   const ok = await konfirmasi({ judul: `Harga jual di bawah tarif minimum`, aksi: 'Tetap terbitkan', batal: 'Kembali, periksa harga',
