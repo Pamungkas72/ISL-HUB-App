@@ -32,6 +32,8 @@ const buatTerkirim = p => p.evaluate(async () => {
 const ADEGAN = [
   ['beranda', async p => { await pindah(p, 'beranda'); }],
   ['quotation: daftar', async p => { await pindah(p, 'quotation'); await p.evaluate(() => { window.__qt._Q.view = 'list'; window.__qt.gambar(); }); }],
+  ['quotation: ringkasan', async p => { await pindah(p, 'quotation'); await p.evaluate(() => { const q = window.__qt._Q; q.view = 'list'; q.sub = 'ringkasan'; window.__qt.gambar(); }); }],
+  ['quotation: follow up', async p => { await pindah(p, 'quotation'); await p.evaluate(() => { const q = window.__qt._Q; q.view = 'list'; q.sub = 'follow'; window.__qt.gambar(); }); }],
   ['quotation: pilih format baru', async p => { await pindah(p, 'quotation'); await fab(p); await tunggu(p, 500); }],
   ['quotation: formulir bebas', async p => { await pindah(p, 'quotation'); await bukaDraf(p, ''); }],
   ['quotation: formulir Depo', async p => { await pindah(p, 'quotation'); await bukaDraf(p, 'depo'); }],
