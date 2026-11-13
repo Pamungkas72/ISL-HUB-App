@@ -49,6 +49,12 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
         run: node tests/asap/uji-asap.js
+      - name: Uji alur akun sales (HP dan desktop)
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: |
+          node tests/audit/uji-akun-sales.js desktop
+          node tests/audit/uji-akun-sales.js hp
       - name: Uji skenario quotation Depo
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules

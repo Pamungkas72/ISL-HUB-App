@@ -175,3 +175,13 @@ describe("Sembunyikan dari tampilan akun (admin dan sales), disimpan di profil s
   it("akun lihat saja tidak menyimpan daftar sembunyi", () => assertFails(updateDoc(doc(lihat(), ref("uid-lihat")), { sembunyi: { quotation: ["q1"] } })));
   it("menyembunyikan tidak menghapus quotation (dokumen tetap terbaca master)", () => assertSucceeds(getDoc(doc(master(), "qt_quotations/q-admin"))));
 });
+
+describe("Pendaftaran akun: hanya sales, dengan nomor WhatsApp", () => {
+  const baru = (uid, extra = {}) => ({ email: uid + "@isl.test", nama: "Baru", peranDiminta: "sales", peran: null, status: "menunggu", dibuat: serverTimestamp(), ...extra });
+  it("sales baru mendaftar dengan telepon", () => assertSucceeds(setDoc(doc(ctx("u-d1", "u-d1@isl.test"), "pengguna/u-d1"), baru("u-d1", { telepon: "6281234567890" }))));
+  it("pendaftaran tanpa telepon tetap boleh (akun lama)", () => assertSucceeds(setDoc(doc(ctx("u-d2", "u-d2@isl.test"), "pengguna/u-d2"), baru("u-d2"))));
+  it("meminta peran CS ditolak", () => assertFails(setDoc(doc(ctx("u-d3", "u-d3@isl.test"), "pengguna/u-d3"), baru("u-d3", { peranDiminta: "cs" }))));
+  it("meminta peran admin ditolak", () => assertFails(setDoc(doc(ctx("u-d4", "u-d4@isl.test"), "pengguna/u-d4"), baru("u-d4", { peranDiminta: "admin" }))));
+  it("telepon lebih dari 15 karakter ditolak", () => assertFails(setDoc(doc(ctx("u-d5", "u-d5@isl.test"), "pengguna/u-d5"), baru("u-d5", { telepon: "1".repeat(16) }))));
+  it("master membuat akun manual dengan telepon", () => assertSucceeds(setDoc(doc(master(), "pengguna/u-m1"), { email: "m1@isl.test", nama: "Manual", peranDiminta: "sales", peran: "sales", status: "aktif", dibuat: serverTimestamp(), disetujuiPada: serverTimestamp(), kodeSales: "MAN", targetBulanan: null, dibuatOleh: "manual", telepon: "6281200000000" })));
+});
