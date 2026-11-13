@@ -54,7 +54,10 @@ before(async () => {
     await isi("qt_kegiatan/h-k-sales", kegiatan("q-sales", "uid-sales", "sales@isl.test"));
     await isi("cu_customers/c1", { nama: "PT Uji", status: "aktif" });
     await isi("cu_customers/c2", { nama: "PT Hapus", status: "aktif" });
-    await isi("cu_rates/r1", { cid: "c1", quotationId: "q-sales", jual: 1000 });
+    await isi("cu_rates/r1", { cid: "c1", quotationId: "q-sales", jual: 1000, pemilikUid: "uid-sales" });
+    await isi("cu_rates/r-admin", { cid: "c1", quotationId: "q-admin", jual: 900, pemilikUid: "uid-admin" });
+    await isi("cu_customers/c-draf-sales", { nama: "PT Baru", status: "prospek", persetujuan: "menunggu", diajukanUid: "uid-sales" });
+    await isi("cu_customers/c-draf-lain", { nama: "PT Lain", status: "prospek", persetujuan: "menunggu", diajukanUid: "uid-admin" });
     await isi("qt_kegiatan/k-admin", kegiatan("q-sales", "uid-sales", "admin@isl.test"));
     await isi("qt_kegiatan/k-sales", kegiatan("q-sales", "uid-sales", "sales@isl.test"));
   });
@@ -71,6 +74,14 @@ describe("Hapus customer: hanya master", () => {
   it("admin tidak bisa menghapus customer", () => assertFails(deleteDoc(doc(admin(), "cu_customers/c2"))));
   it("sales tidak bisa menghapus customer", () => assertFails(deleteDoc(doc(sales(), "cu_customers/c2"))));
   it("master bisa menghapus customer", () => assertSucceeds(deleteDoc(doc(master(), "cu_customers/c2"))));
+});
+
+describe("Sales: draf customer sendiri boleh dihapus; rate hanya miliknya", () => {
+  it("sales menghapus draf customer miliknya", () => assertSucceeds(deleteDoc(doc(sales(), "cu_customers/c-draf-sales"))));
+  it("sales tidak menghapus draf customer orang lain", () => assertFails(deleteDoc(doc(sales(), "cu_customers/c-draf-lain"))));
+  it("sales membaca rate miliknya", () => assertSucceeds(getDoc(doc(sales(), "cu_rates/r1"))));
+  it("sales tidak membaca rate milik admin", () => assertFails(getDoc(doc(sales(), "cu_rates/r-admin"))));
+  it("admin membaca semua rate", () => assertSucceeds(getDoc(doc(admin(), "cu_rates/r1"))));
 });
 
 describe("Koreksi rate: sales tidak bisa mengubah isi rate", () => {
