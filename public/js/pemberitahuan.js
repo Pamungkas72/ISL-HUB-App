@@ -4,17 +4,25 @@
 // HP: ringkasan kartu per kategori, daftar per kategori dengan "lainnya".
 // Sumber data: notifikasi.js (satu daftar yang sama dengan lonceng).
 // ===========================================================
-import { semuaItem, muatUlang, grupDari, GRUP, bukaTujuan, bisaKelola } from "./notifikasi.js";
+import { semuaItem, tersembunyi, aturItem, muatUlang, grupDari, GRUP, bukaTujuan, bisaKelola } from "./notifikasi.js";
+import { toast } from "./ui.js";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const NAMA_LEVEL = { bahaya: "Mendesak", warn: "Perlu aksi", info: "Info" };
 const AKSI = { tarif: "Lihat tarif", vendor: "Lengkapi vendor", lokasi: "Lengkapi fasilitas", quotation: "Buka quotation", riwayat: "Buka riwayat", cadangan: "Unduh cadangan", pendaftar: "Tinjau akun", halaman: "Buka halaman" };
-const St = { grup: "semua", level: "semua", pilih: null, buka: new Set() };
+const St = { grup: "semua", level: "semua", pilih: null, buka: new Set(), cek: new Set() };
 let root = null;
 const hp = () => window.matchMedia("(max-width: 760px)").matches;
 
 const urutan = (a, b) => ({ bahaya: 0, warn: 1, info: 2 }[a.level] - { bahaya: 0, warn: 1, info: 2 }[b.level]);
 const hitung = (items) => Object.fromEntries(GRUP.map(([k]) => [k, items.filter((i) => grupDari(i) === k)]));
+const barisCek = (i, html) => `<div class="nfp-row"><label class="nfp-cek" aria-label="Pilih"><input type="checkbox" data-nfp-cek="${esc(i.id)}" ${St.cek.has(i.id) ? "checked" : ""}></label>${html}</div>`;
+// tombol aksi massal; di tampilan "Disembunyikan" aksinya Kembalikan
+const bar = (ids) => {
+  const n = ids.filter((id) => St.cek.has(id)).length, sembunyi = St.level === "sembunyi";
+  return `<div class="nfp-bar"><label class="nfp-bar__semua"><input type="checkbox" data-nfp-semua ${ids.length && n === ids.length ? "checked" : ""} ${ids.length ? "" : "disabled"}> ${n ? `<b>${n} dipilih</b>` : "Pilih semua"}</label>
+    ${n ? (sembunyi ? `<button type="button" class="mr-btn mr-btn--kecil" data-nfp-aksi="kembali">Kembalikan</button>` : `<button type="button" class="mr-btn mr-btn--kecil" data-nfp-aksi="tunda">Tunda 7 hari</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--utama" data-nfp-aksi="selesai">Tandai selesai</button>`) : ""}</div>`;
+};
 const baris = (i, aktif) => `<button type="button" class="nfp-i nfp-i--${i.level} ${aktif ? "is-aktif" : ""}" data-nfp-pilih="${esc(i.id)}"><i class="nfp-i__lv" aria-hidden="true"></i><span><b>${esc(i.judul)}</b><small>${esc(i.ket)}</small></span></button>`;
 
 function detail(i) {
@@ -23,36 +31,49 @@ function detail(i) {
   return `<span class="nfp-lencana nfp-lencana--${i.level}">${NAMA_LEVEL[i.level]}</span><small class="nfp-kat-nama">${esc(g ? g[1] : "")}</small>
     <h3>${esc(i.judul)}</h3><p class="mr-sub">${esc(i.ket)}</p>
     ${i.kurang && i.kurang.length ? `<ul class="nfp-kurang">${i.kurang.map((k) => `<li>${esc(k)}</li>`).join("")}</ul>` : ""}
-    <button type="button" class="mr-btn mr-btn--utama" data-nfp-buka="${esc(i.id)}">${esc(AKSI[i.jenis] || "Buka")}</button>`;
+    <div class="nfp-aksi"><button type="button" class="mr-btn mr-btn--utama" data-nfp-buka="${esc(i.id)}">${esc(AKSI[i.jenis] || "Buka")}</button>
+    ${St.level === "sembunyi" ? `<button type="button" class="mr-btn" data-nfp-satu="kembali" data-id="${esc(i.id)}">Kembalikan</button>` : `<button type="button" class="mr-btn" data-nfp-satu="tunda" data-id="${esc(i.id)}">Tunda 7 hari</button><button type="button" class="mr-btn" data-nfp-satu="selesai" data-id="${esc(i.id)}">Tandai selesai</button>`}</div>
+    <small class="nfp-bantu">Tunda: muncul lagi setelah 7 hari. Selesai: tersembunyi sampai ada perubahan, misalnya jumlahnya bertambah.</small>`;
 }
 
 function gambarDesktop(semua) {
-  const per = hitung(semua);
-  const aktifGrup = St.grup === "semua" ? semua : per[St.grup] || [];
-  const daftar = aktifGrup.filter((i) => St.level === "semua" || (St.level === "aksi" ? i.level !== "info" : i.level === "info")).sort(urutan);
+  const per = hitung(semua), sembunyiSemua = tersembunyi(), lihatSembunyi = St.level === "sembunyi";
+  const aktifGrup = lihatSembunyi ? sembunyiSemua.filter((i) => St.grup === "semua" || grupDari(i) === St.grup) : St.grup === "semua" ? semua : per[St.grup] || [];
+  const daftar = aktifGrup.filter((i) => lihatSembunyi || St.level === "semua" || (St.level === "aksi" ? i.level !== "info" : i.level === "info")).sort(urutan);
   const pilih = daftar.find((i) => i.id === St.pilih) || daftar[0] || null;
   const kat = [["semua", "Semua", semua.length], ...GRUP.map(([k, n]) => [k, n, per[k].length])].filter(([k, , n]) => k === "semua" || n)
     .map(([k, n, c]) => `<button type="button" class="nfp-kat__b ${St.grup === k ? "is-aktif" : ""}" data-nfp-grup="${k}">${esc(n)}<em>${c}</em></button>`).join("");
-  const lv = [["semua", "Semua"], ["aksi", "Perlu aksi"], ["info", "Info"]].map(([k, n]) => `<button type="button" class="mr-chip ${St.level === k ? "is-aktif" : ""}" data-nfp-level="${k}">${n}</button>`).join("");
+  const lv = [["semua", "Semua"], ["aksi", "Perlu aksi"], ["info", "Info"], ...(sembunyiSemua.length || lihatSembunyi ? [["sembunyi", `Disembunyikan ${sembunyiSemua.length}`]] : [])].map(([k, n]) => `<button type="button" class="mr-chip ${St.level === k ? "is-aktif" : ""}" data-nfp-level="${k}">${n}</button>`).join("");
   return `<div class="nfp-grid"><nav class="nfp-kat" aria-label="Kategori">${kat}</nav>
-    <section class="nfp-daftar"><div class="nfp-lv">${lv}</div>${daftar.length ? daftar.map((i) => baris(i, pilih && i.id === pilih.id)).join("") : `<p class="nfp-kosong">Tidak ada pemberitahuan di sini. Semua beres.</p>`}</section>
+    <section class="nfp-daftar"><div class="nfp-lv">${lv}</div>${bar(daftar.map((i) => i.id))}${daftar.length ? daftar.map((i) => barisCek(i, baris(i, pilih && i.id === pilih.id))).join("") : `<p class="nfp-kosong">Tidak ada pemberitahuan di sini. Semua beres.</p>`}</section>
     <aside class="nfp-detail">${detail(pilih)}</aside></div>`;
 }
 
 function gambarHP(semua) {
-  const per = hitung(semua);
+  const per = hitung(semua), sembunyiSemua = tersembunyi(), lihatSembunyi = St.level === "sembunyi";
   const kartu = GRUP.filter(([k]) => per[k].length).map(([k, n]) => `<button type="button" class="nfp-kartu ${per[k].some((i) => i.level === "bahaya") ? "is-bahaya" : ""} ${St.grup === k ? "is-aktif" : ""}" data-nfp-grup="${St.grup === k ? "semua" : k}"><big>${per[k].length}</big><span>${esc(n.replace("Master Rate · ", ""))}</span></button>`).join("");
-  const bagian = GRUP.filter(([k]) => per[k].length && (St.grup === "semua" || St.grup === k)).map(([k, n]) => {
-    const items = per[k].slice().sort(urutan), semuaDibuka = St.buka.has(k) || St.grup === k, tampil = semuaDibuka ? items : items.slice(0, 3);
-    return `<section class="nfp-bag"><h3>${esc(n)} <em>${items.length}</em></h3>${tampil.map((i) => `<div class="nfp-hp-i">${baris(i, false).replace("data-nfp-pilih", "data-nfp-buka")}</div>`).join("")}${items.length > 3 && !semuaDibuka ? `<button type="button" class="nfp-lain" data-nfp-lain="${k}">＋ ${items.length - 3} lainnya</button>` : ""}</section>`;
+  const sumber = lihatSembunyi ? hitung(sembunyiSemua) : per;
+  const idTampil = [];
+  const bagian = GRUP.filter(([k]) => sumber[k].length && (St.grup === "semua" || St.grup === k)).map(([k, n]) => {
+    const items = sumber[k].slice().sort(urutan), semuaDibuka = St.buka.has(k) || St.grup === k, tampil = semuaDibuka ? items : items.slice(0, 3);
+    return `<section class="nfp-bag"><h3>${esc(n)} <em>${items.length}</em></h3>${tampil.map((i) => { idTampil.push(i.id); return barisCek(i, baris(i, false).replace("data-nfp-pilih", "data-nfp-buka")); }).join("")}${items.length > 3 && !semuaDibuka ? `<button type="button" class="nfp-lain" data-nfp-lain="${k}">＋ ${items.length - 3} lainnya</button>` : ""}</section>`;
   }).join("");
-  return `<div class="nfp-kartu-baris">${kartu || ""}</div>${bagian || `<p class="nfp-kosong">Tidak ada pemberitahuan. Semua beres.</p>`}`;
+  const pindah = sembunyiSemua.length || lihatSembunyi ? `<button type="button" class="nfp-lain" data-nfp-level="${lihatSembunyi ? "semua" : "sembunyi"}">${lihatSembunyi ? "‹ Kembali ke pemberitahuan aktif" : `Disembunyikan (${sembunyiSemua.length})`}</button>` : "";
+  return `<div class="nfp-kartu-baris">${kartu || ""}</div>${bagian ? bar(idTampil) : ""}${bagian || `<p class="nfp-kosong">${lihatSembunyi ? "Tidak ada yang disembunyikan." : "Tidak ada pemberitahuan. Semua beres."}</p>`}${pindah}`;
 }
 
 function gambar() {
   if (!root) return;
   const semua = semuaItem();
   root.innerHTML = `<div class="nfp"><header class="nfp-kepala"><div><h2>Pemberitahuan</h2><p class="mr-sub">${semua.length ? `${semua.length} hal masih perlu ditangani` : "Semua beres"}</p></div><button type="button" class="mr-btn" data-nfp-segar>Segarkan</button></header>${bisaKelola() ? (hp() ? gambarHP(semua) : gambarDesktop(semua)) : `<p class="nfp-kosong">Halaman ini untuk admin atau master.</p>`}</div>`;
+}
+
+async function aksi(mode, ids) {
+  if (!ids.length) return;
+  const sampai = await aturItem(ids, mode, 7);
+  ids.forEach((id) => St.cek.delete(id));
+  toast(mode === "tunda" ? `<b>${ids.length} pemberitahuan ditunda.</b> Muncul lagi ${sampai}.` : mode === "selesai" ? `<b>${ids.length} pemberitahuan ditandai selesai.</b> Muncul lagi bila ada perubahan.` : `<b>${ids.length} pemberitahuan dikembalikan.</b>`, "ok");
+  gambar();
 }
 
 let terpasang = false;
@@ -70,6 +91,9 @@ export function mulaiPemberitahuan() {
       else if ((b = ambil("data-nfp-level"))) { St.level = b.dataset.nfpLevel; St.pilih = null; }
       else if ((b = ambil("data-nfp-pilih"))) St.pilih = b.dataset.nfpPilih;
       else if ((b = ambil("data-nfp-lain"))) St.buka.add(b.dataset.nfpLain);
+      else if ((b = ambil("data-nfp-cek"))) { St.cek.has(b.dataset.nfpCek) ? St.cek.delete(b.dataset.nfpCek) : St.cek.add(b.dataset.nfpCek); }
+      else if (ambil("data-nfp-semua")) { const ids = [...root.querySelectorAll("[data-nfp-cek]")].map((x) => x.dataset.nfpCek); const semuaDipilih = ids.every((id) => St.cek.has(id)); ids.forEach((id) => (semuaDipilih ? St.cek.delete(id) : St.cek.add(id))); }
+      else if ((b = ambil("data-nfp-aksi") || ambil("data-nfp-satu"))) { aksi(b.dataset.nfpAksi || b.dataset.nfpSatu, b.dataset.id ? [b.dataset.id] : [...St.cek]); return; }
       else if ((b = ambil("data-nfp-buka"))) { const it = semuaItem().find((i) => i.id === b.dataset.nfpBuka); if (it) bukaTujuan(it.tujuan); return; }
       else if (ambil("data-nfp-segar")) { muatUlang(true); return; }
       else return;

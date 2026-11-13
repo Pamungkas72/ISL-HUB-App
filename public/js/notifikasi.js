@@ -10,7 +10,7 @@ import { muatSemua as muatApp } from "./app-store.js";
 import { adalahMaster } from "./config-akses.js";
 import { auth, db } from "./firebase-config.js";
 import { bukaPendaftarAksi } from "./pendaftar-aksi.js";
-import { collection, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // Aturan tampilan: peringatan di layar (Beranda, banner) hanya muncul paling lama LAMA_LAYAR_MS sejak login, atau
 // sampai ditutup dengan X. Setelahnya tetap ada di lonceng, yang menyimpan semua pemberitahuan yang masih perlu perhatian.
@@ -159,16 +159,48 @@ export const ambilTujuan = () => { const t = baca(K_BUKA, null); try { sessionSt
 const IKON = { bahaya: '<path d="M12 9v4M12 17h.01M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>', warn: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5M12 16h.01"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>' };
 const svg = (d, n = 18) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const baris = (i, bisaTutup) => `<div class="nf-i nf-i--${i.level}" data-nf-id="${esc(i.id)}"><button type="button" class="nf-i__b" data-nf-buka="${esc(i.id)}">${svg(IKON[i.level])}<span><b>${esc(i.judul)}</b><small>${esc(i.ket)}</small></span></button>${!bisaTutup ? "" : `<button type="button" class="nf-i__x" data-nf-tutup="${esc(i.id)}" aria-label="Tutup, tetap tersimpan di lonceng" title="Tutup (tetap tersimpan di lonceng)">${svg('<path d="M6 6l12 12M18 6 6 18"/>', 16)}</button>`}</div>`;
+// ---------- tunda / tandai selesai (per akun master/admin: Firestore pemberitahuan_tunda/{uid}, cadangan lokal) ----------
+// tunda: hilang sampai tanggal tertentu. selesai: hilang sampai judulnya berubah (mis. jumlahnya bertambah).
+const K_TUNDA = "islhub-tunda";
+let tunda = (() => { try { return JSON.parse(localStorage.getItem(K_TUNDA) || "{}"); } catch (e) { return {}; } })();
+let tundaDimuat = false;
+const sembunyi = (i) => { const t = tunda[i.id]; return !!t && (t.s === "tunda" ? t.sampai > hariIni() : t.sig === i.judul); };
+async function simpanTunda() {
+  const hariIniStr = hariIni();
+  Object.keys(tunda).forEach((k) => { if (tunda[k].s === "tunda" && tunda[k].sampai <= hariIniStr) delete tunda[k]; }); // kedaluwarsa dibersihkan
+  try { localStorage.setItem(K_TUNDA, JSON.stringify(tunda)); } catch (e) {}
+  const u = auth.currentUser;
+  if (u && kelola()) { try { await setDoc(doc(db, "pemberitahuan_tunda", u.uid), { map: tunda, diubah: Date.now() }); } catch (e) { console.warn("Tunda pemberitahuan tidak tersimpan di server:", e && e.code); } }
+}
+async function muatTunda() {
+  const u = auth.currentUser; if (!u || !kelola()) return;
+  try {
+    const d = await getDoc(doc(db, "pemberitahuan_tunda", u.uid));
+    if (d.exists()) tunda = { ...(d.data().map || {}), ...tunda }; // yang baru diubah di perangkat ini menang
+    try { localStorage.setItem(K_TUNDA, JSON.stringify(tunda)); } catch (e) {}
+  } catch (e) { console.warn("Tunda pemberitahuan belum bisa dibaca:", e && e.code); }
+}
+const tambahHari = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+// mode: "tunda" (hari hari) | "selesai" | "kembali"
+export async function aturItem(ids, mode, hari = 7) {
+  const per = new Map(terakhir.semua.map((i) => [i.id, i]));
+  ids.forEach((id) => { const it = per.get(id); if (!it) return; if (mode === "kembali") delete tunda[id]; else tunda[id] = mode === "tunda" ? { s: "tunda", sampai: tambahHari(hari) } : { s: "selesai", sig: it.judul }; });
+  await simpanTunda();
+  perbaruiLencana(); gambarPanel(); document.dispatchEvent(new CustomEvent("islhub:notif"));
+  return mode === "tunda" ? tambahHari(hari) : null;
+}
+export const tersembunyi = () => terakhir.semua.filter(sembunyi);
+
 let terakhir = { semua: [], t: new Set() };
 // Kategori tampilan (halaman Pemberitahuan). Item boleh membawa `grup` sendiri.
 export const GRUP = [["tarif", "Master Rate · Tarif"], ["vendor", "Master Rate · Vendor"], ["lokasi", "Master Rate · Lokasi"], ["quotation", "Quotation"], ["sistem", "Sistem"]];
 const GRUP_JENIS = { quotation: "quotation", riwayat: "quotation", tarif: "tarif", vendor: "vendor", lokasi: "lokasi" };
 export const grupDari = (i) => i.grup || GRUP_JENIS[i.jenis] || "sistem";
-export const semuaItem = () => terakhir.semua;
+export const semuaItem = () => terlihat();
 export const muatUlang = (paksa) => muat(paksa);
 export const bisaKelola = kelola;
-const terlihat = () => terakhir.semua;                       // lonceng: semua yang masih perlu perhatian
-const dilayar = () => (sisaLayarMs() > 0 ? terakhir.semua.filter((i) => !ditutup().has(i.id)) : []);  // di layar: 10 detik pertama, belum ditutup
+const terlihat = () => terakhir.semua.filter((i) => !sembunyi(i));                       // lonceng: semua yang masih perlu perhatian
+const dilayar = () => (sisaLayarMs() > 0 ? terakhir.semua.filter((i) => !ditutup().has(i.id) && !sembunyi(i)) : []);  // di layar: 10 detik pertama, belum ditutup
 
 // Pemberitahuan per modul: tampil di halaman modulnya saja (bukan di Beranda), 3 contoh + tautan ke lonceng.
 // hanyaLayar: tampil hanya selama LAMA_LAYAR_MS sejak login; setelahnya tinggal di lonceng.
@@ -225,7 +257,7 @@ function popupPendaftar() {
   kotak.querySelector("#pp-nanti").addEventListener("click", () => kotak.remove());
   kotak.querySelector("#pp-buka").addEventListener("click", () => { kotak.remove(); bukaPendaftarAksi({ onSelesai: () => muat(true) }); });
 }
-async function muat(paksa) { const sebelum = terakhir.semua.length; try { terakhir = await kumpulkan({ paksa }); if (terakhir.semua.length > sebelum) goyang(); } catch (e) { console.warn(e); } perbaruiLencana(); gambarPanel(); document.dispatchEvent(new CustomEvent("islhub:notif")); popupPendaftar(); }
+async function muat(paksa) { if (!tundaDimuat) { tundaDimuat = true; await muatTunda(); } const sebelum = terlihat().length; try { terakhir = await kumpulkan({ paksa }); if (terlihat().length > sebelum) goyang(); } catch (e) { console.warn(e); } perbaruiLencana(); gambarPanel(); document.dispatchEvent(new CustomEvent("islhub:notif")); popupPendaftar(); }
 
 // lonceng bergoyang sebentar saat peringatan di layar pindah ke lonceng
 export function goyang() { const b = document.getElementById("btn-lonceng"); if (!b) return; b.classList.remove("nf-goyang"); void b.offsetWidth; b.classList.add("nf-goyang"); }
@@ -304,4 +336,4 @@ export function pasangLonceng(kanan) {
   mulaiLayar(); jadwalkanHabis(); coba(); pantauPendaftar();
   setInterval(pwCek, 1000);
 }
-export const dapatItem = () => ({ semua: terakhir.semua, terlihat: dilayar() });
+export const dapatItem = () => ({ semua: terlihat(), terlihat: dilayar() });
