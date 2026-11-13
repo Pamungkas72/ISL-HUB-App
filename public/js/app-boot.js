@@ -21,7 +21,7 @@ window.__islUJ = {
 import { renderNav } from "./nav.js";
 import { adalahMaster, emailMasterBelumDiisi, labelAkun } from "./config-akses.js";
 import * as MRDB from "./db.js";
-import { buatKunci } from "./kunci.js";
+import { buatKunci, slug } from "./kunci.js";
 import { URUTAN_LINI } from "./standar.js";
 import * as store from "./app-store.js";
 import { ambilSalinan, simpanSalinan, bannerSinkron } from "./cache-lokal.js";
@@ -93,10 +93,37 @@ watchAuthState(
         if (h.gagal.length) throw new Error(h.gagal[0].alasan);
         return { ...baris, kunci, id: kunci };
       };
+      /* Modal yang diisi di quotation disetujui ikut masuk Master Rate: vendor (pilih yang ada atau buat draf), tarif, dan jual rekomendasi. */
+      const modalKeMR = async ({ lini, vendorId, vendorBaru, layanan, nama, satuanKode, modal, jualSaran }) => {
+        const m = window.__islMR; let vid = vendorId;
+        if (!vid) {
+          const dasar = slug(vendorBaru); let id = dasar, n = 2; while ((m.vendor || []).some((v) => v.id === id)) id = dasar + "_" + n++;
+          const data = { nama: vendorBaru, namaLengkap: vendorBaru, jenisBadanUsaha: "", alamatKantor: "", mapsUrl: "", emailUmum: "", website: "", kontak: [], terminBayar: null, warnaHue: null, liniBisnis: [lini], aktif: true, status: "draf", catatan: "Dibuat otomatis dari quotation (modal diisi setelah disetujui).", pic: null, legalitas: [], tnc: [] };
+          (m.vendor = m.vendor || []).push(await MRDB.simpanVendor(id, data, { baru: true, oleh: user.email })); vid = id;
+        } else {
+          const v = (m.vendor || []).find((x) => x.id === vid);
+          if (v && !(v.liniBisnis || []).includes(lini)) Object.assign(v, await MRDB.simpanVendor(vid, { liniBisnis: [...(v.liniBisnis || []), lini] }, { baru: false, oleh: user.email }));
+        }
+        const kunci = buatKunci(lini, vid, null, layanan, {}, satuanKode, null), ada = (m.tarif || []).find((t) => t.kunci === kunci);
+        let item = null;
+        if (ada) {
+          const p = [];
+          if ((ada.modal ?? null) !== modal) p.push({ field: "modal", lama: ada.modal ?? null, baru: modal });
+          if (jualSaran != null && (ada.hargaJualSaran ?? null) !== jualSaran) p.push({ field: "hargaJualSaran", lama: ada.hargaJualSaran ?? null, baru: jualSaran });
+          if (p.length) item = { jenis: "ubah", kunci, perubahan: p, liniBisnisId: lini, vendorId: vid };
+        } else item = { jenis: "baru", kunci, baris: { liniBisnisId: lini, vendorId: vid, lokasiId: null, layanan, layananNama: nama, dimensi: {}, satuanKode, mataUang: "IDR", nilaiAsing: null, modal, hargaJualSaran: jualSaran ?? null, metodeHarga: "tetap", hargaJualReferensi: null, referensiSumber: null, customerId: null, berlakuDari: null, berlakuSampai: null, aktif: true, catatan: "Ditambahkan dari quotation yang sudah disetujui." } };
+        if (item) {
+          const h = await MRDB.terapkanBanyak([item], { oleh: user.email, sumber: "quotation" });
+          if (h.gagal.length) throw new Error(h.gagal[0].alasan);
+          if (item.jenis === "baru") m.tarif.push({ ...item.baris, kunci, id: kunci, diperbaruiPada: new Date().toISOString(), diperbaruiOleh: user.email });
+          else item.perubahan.forEach((c) => { ada[c.field] = c.baru; });
+        }
+        return { kunci, vendorId: vid };
+      };
       window.__ISL = {
         email: user.email, master, kelola, admin, hariIni, uid: user.uid, sales, peran: (profil && profil.peran) || (master ? "master" : "lihat"), nama: (profil && profil.nama) || user.displayName || "", telepon: (profil && profil.telepon) || "", ttdSales: (profil && profil.ttd) || "", kodeSales: (profil && profil.kodeSales) || "",
         tulis: store.tulis, unggahBlob: store.unggahBlob, diagnosa: store.diagnosa, buatLini: MRDB.buatJikaBelumAda, simpanMarkupLini: MRDB.simpanMarkupLini,
-        tarifTambah,
+        tarifTambah, modalKeMR,
         navAktif: (id) => renderNav(id === "quotation" || id === "customer" || id === "performa" ? id : "customer"),
       };
       renderNav(RUTE.includes(location.hash.slice(1)) ? location.hash.slice(1) : "customer");
