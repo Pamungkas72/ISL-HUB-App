@@ -74,6 +74,8 @@ const bisaEdit = () => masterSaja() || akunSales() || akunAdmin();
 /* kelolaSaja: pengaturan dokumen, nomor, dan markup. Master dan admin (sama dengan aturan qt_pengaturan). */
 const kelolaSaja = () => masterSaja() || akunAdmin();
 const masterAtauAdmin = () => masterSaja() || akunAdmin();
+/* sales boleh menghapus draf customer yang diajukannya sendiri dan belum disetujui (aturan Firestore cu_customers) */
+const bolehHapusDrafCust = c => akunSales() && c.persetujuan === 'menunggu' && c.diajukanUid === window.__ISL.uid;
 
 /* ---------- data contoh ---------- */
 const S = {
@@ -351,7 +353,7 @@ ${bilahPilihCu(list)}
     ${list.map(c => { const pic = c.kontak.find(k => k.utama) || c.kontak[0]; const na = jumlahAktif(c.id); const sg = jumlahSegera(c.id);
       return `<tr class="cu-baris ${c.status === 'nonaktif' ? 'is-nonaktif' : ''}" data-cu="buka" data-id="${c.id}">${masterAtauAdmin() ? `<td class="cu-cek"><input type="checkbox" data-cu-pilih="${c.id}" ${PILIH_CU.has(c.id) ? 'checked' : ''} aria-label="Pilih ${esc(c.nama)}"></td>` : ''}
         <td class="mr-td-nama"><div><b>${esc(c.nama)}</b> ${tagKat(c.kategori)}<div class="mr-sub">${esc(c.alias)}</div>${bilahLengkap(Math.round(kelengkapanCust(c) * 100))}</div></td>
-        <td data-label="Status">${tampilStatusC(c.status)}</td>
+        <td data-label="Status">${tampilStatusC(c.status)}${c.persetujuan === 'menunggu' ? ' <span class="mr-status cu-st--info">Baru dari sales</span>' : ''}</td>
         <td data-label="PIC utama">${pic ? `${esc(pic.nama)}<div class="mr-sub">${esc(pic.jabatan)}</div>` : '—'}</td>
         <td data-label="Termin">${c.termin ? c.termin + ' hari' : '—'}</td>
         <td data-label="Rate aktif">${na}${sg ? ` <span class="cu-segera">${sg} segera berakhir</span>` : ''}</td>
@@ -371,9 +373,9 @@ function viewDetail() {
     <button class="mr-btn mr-btn--kecil" data-cu="kembali">${ik('kembali', 14)} Semua customer</button>
     <span class="mr-ruang"></span>
     ${(masterAtauAdmin() && c.persetujuan === 'menunggu') ? `<button class="mr-btn mr-btn--utama" data-cu="setujui-customer">${ik('cek', 16)} Setujui customer baru</button>` : ''}
-    ${(masterAtauAdmin() || akunAdmin() || (akunSales() && c.diajukanUid === window.__ISL.uid && c.persetujuan === 'menunggu')) ? `<button class="mr-btn" data-cu="edit-customer">${ik('edit', 16)} Ubah</button>` : ''}${masterSaja() ? `<button class="mr-btn mr-btn--bahaya" data-cu="hapus-customer">${ik('tong', 16)} Hapus</button>` : ''}
+    ${(masterAtauAdmin() || akunAdmin() || (akunSales() && c.diajukanUid === window.__ISL.uid && c.persetujuan === 'menunggu')) ? `<button class="mr-btn" data-cu="edit-customer">${ik('edit', 16)} Ubah</button>` : ''}${(masterSaja() || bolehHapusDrafCust(c)) ? `<button class="mr-btn mr-btn--bahaya" data-cu="hapus-customer">${ik('tong', 16)} Hapus</button>` : ''}
   </div>
-  <div class="cu-judul"><h2>${esc(c.nama)}</h2><div class="cu-judul__tag">${tagKat(c.kategori)} ${tampilStatusC(c.status)}<span class="mr-sub">${esc(c.alias)}</span></div></div>
+  <div class="cu-judul"><h2>${esc(c.nama)}</h2><div class="cu-judul__tag">${tagKat(c.kategori)} ${tampilStatusC(c.status)}${c.persetujuan === 'menunggu' ? `<span class="mr-status cu-st--info" title="Diajukan ${esc(c.diajukanOleh || '')}; menunggu tinjauan master atau admin">Baru dari sales</span>` : ''}<span class="mr-sub">${esc(c.alias)}</span></div></div>
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Hanya master atau sales yang bisa mengubah.</div></div>`}
   <div class="mr-tabs">${tabs.map(([k, n, j]) => `<button class="mr-tab ${S.tab === k ? 'is-aktif' : ''}" data-cu="tab" data-tab="${k}">${n}${j !== '' ? ` <span class="cu-jml">${j}</span>` : ''}</button>`).join('')}</div>
   <div id="cu-tab">${S.tab === 'profil' ? tabProfil(c) : S.tab === 'rate' ? tabRate(c) : S.tab === 'kontrak' ? tabKontrak(c) : S.tab === 'order' && window.__qt ? window.__qt.tabOrder(c) : tabQuot(c)}</div>`;
@@ -1139,6 +1141,7 @@ async function setujuiCustomer() {
 }
 async function hapusCustomer() {
   const c = cust(S.id), nr = rateCust(c.id).length, np = paketCust(c.id).length, tk = window.__qt && window.__qt.terkaitCustomer ? window.__qt.terkaitCustomer(c.id) : { q: 0, o: 0 };
+  if (akunSales() && (nr || np)) return toast('Customer ini sudah punya rate disetujui. Minta master menghapusnya, atau ubah statusnya menjadi Nonaktif.', 'bahaya');
   if (tk.q || tk.o) { const yakin = await konfirmasi({ judul: 'Customer ini tidak bisa dihapus', aksi: 'Jadikan Nonaktif', isi: `<b>${esc(c.nama)}</b> punya <b>${tk.q} quotation</b> dan <b>${tk.o} order</b>. Kalau dihapus, riwayat itu kehilangan induknya dan laporan laba berubah. Ubah statusnya menjadi <b>Nonaktif</b> saja: semua data tetap tersimpan dan customer tidak muncul di pilihan baru.` }); if (!yakin) return;
     try { await tulisDB(() => { c.status = 'nonaktif'; }, () => cust(c.id).status === 'nonaktif'); } catch (e) { return toast(`<b>GAGAL.</b> ${esc(e.message)}`, 'bahaya'); }
     toast(`<b>${esc(c.nama)}</b> dijadikan Nonaktif dan terverifikasi.`); return gambar(); }
@@ -2708,14 +2711,14 @@ Repo.setujui = async function (id, o) {
     const rc = R.rancangRate(q, o.bentuk);
     if (rc.bentuk === 'paket') {
       const p = { id: uid('p'), cid: q.customerId, nama: q.judul, noQ: q.nomor, appr: o.appr, sampai: o.sampai || null, dok: o.dokNama, tanpaDok: false,
-        catatan: 'Dari quotation ' + q.nomor + '.', dokData: o.dokData, quotationId: q.id,
+        catatan: 'Dari quotation ' + q.nomor + '.', dokData: o.dokData, quotationId: q.id, pemilikUid: q.pemilikUid || null,
         komponen: rc.komponen.map(k => ({ id: uid('k'), ...k })) };
       S.paket.push(p); hasil.paketId = p.id;
     } else {
       rc.komponen.forEach(k => {
         const d = { id: uid('r'), cid: q.customerId, lini: k.lini, liniNama: k.liniNama, item: k.item, satuan: k.satuan, jual: k.jual, modal: k.modal,
           appr: o.appr, sampai: o.sampai || null, noQ: q.nomor, dok: o.dokNama, dokData: o.dokData, tanpaDok: false, catatan: k.qty > 1 ? 'Perkiraan jumlah di quotation: ' + k.qty : '',
-          alasan: '', digantikanOleh: null, ver: 1, vendorId: k.vendorId, vendorNama: k.vendorNama, tarifKunci: k.tarifKunci, modalDariMR: k.modalDariMR, quotationId: q.id };
+          alasan: '', digantikanOleh: null, ver: 1, vendorId: k.vendorId, vendorNama: k.vendorNama, tarifKunci: k.tarifKunci, modalDariMR: k.modalDariMR, quotationId: q.id, pemilikUid: q.pemilikUid || null };
         const sebelum = S.rates.find(r => kunciGrup(r) === kunciGrup(d) && statusRate(r) === 'aktif');
         if (sebelum) { d.ver = sebelum.ver + 1; d.alasan = 'Disetujui lewat quotation ' + q.nomor + '.'; sebelum.digantikanOleh = d.id; hasil.versiBaru++; }
         S.rates.push(d); hasil.rateIds.push(d.id);
@@ -2752,11 +2755,11 @@ Repo.tambahRate = async function (cid, o) {
   await tulis(() => {
     const base = { appr: o.appr, sampai: o.sampai || null, noQ: o.noQ || '', dok: o.dokNama || null, dokData: o.dokData || null, tanpaDok: !o.dokNama };
     if (o.bentuk === 'paket') {
-      const p = { id: uid('p'), cid, nama: o.namaPaket, ...base, catatan: o.catatan || '', komponen: o.baris.map(k => ({ id: uid('k'), ...k })) };
+      const p = { id: uid('p'), cid, pemilikUid: window.__ISL.uid, nama: o.namaPaket, ...base, catatan: o.catatan || '', komponen: o.baris.map(k => ({ id: uid('k'), ...k })) };
       S.paket.push(p); hasil.paketId = p.id;
     } else {
       o.baris.forEach(k => {
-        const d = { id: uid('r'), cid, lini: k.lini, liniNama: k.liniNama, item: k.item, satuan: k.satuan, jual: k.jual, modal: k.modal, ...base, catatan: o.catatan || '', alasan: '', digantikanOleh: null, ver: 1,
+        const d = { id: uid('r'), cid, pemilikUid: window.__ISL.uid, lini: k.lini, liniNama: k.liniNama, item: k.item, satuan: k.satuan, jual: k.jual, modal: k.modal, ...base, catatan: o.catatan || '', alasan: '', digantikanOleh: null, ver: 1,
           vendorId: k.vendorId, vendorNama: k.vendorNama, tarifKunci: k.tarifKunci, modalDariMR: !!k.modalDariMR };
         const sebelum = S.rates.find(r => r.cid === cid && kunciGrup(r) === kunciGrup(d) && statusRate(r) === 'aktif');
         if (sebelum) { d.ver = sebelum.ver + 1; d.alasan = 'Versi baru dari input manual.'; sebelum.digantikanOleh = d.id; hasil.versiBaru++; }

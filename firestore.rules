@@ -5,7 +5,7 @@
 // Email master HARUS huruf kecil semua (Firebase menyimpan email login dalam huruf kecil).
 // Peran:
 //  - master  : email di isMaster(). Boleh semuanya.
-//  - sales   : dokumen pengguna/{uid} berstatus aktif dan peran 'sales'. Hanya quotation miliknya (pemilikUid), customer baru masuk sebagai draf.
+//  - sales   : dokumen pengguna/{uid} berstatus aktif dan peran 'sales'. Hanya quotation, rate, dan paket miliknya (pemilikUid); customer baru langsung dipakai tetapi bertanda 'menunggu' sampai ditinjau.
 //  - lihat   : status aktif, peran 'lihat'. Hanya membaca (tanpa modal).
 //  - akun baru: status 'menunggu' sampai master menyetujui. Tidak bisa membaca data apa pun.
 // Modal: disimpan di koleksi *_modal dan master_modal yang HANYA bisa dibaca master. Sales hanya membaca master_tarif.hargaMin (batas harga aman).
@@ -125,19 +125,21 @@ service cloud.firestore {
               (resource.data.diajukanUid == request.auth.uid && resource.data.persetujuan == 'menunggu'
                  && request.resource.data.persetujuan == 'menunggu' && request.resource.data.diajukanUid == request.auth.uid)
               || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'belumMaksimal', 'diubahPada'])));
-      allow delete: if isMaster();
+      // Sales boleh menghapus draf customer yang diajukannya sendiri dan belum disetujui; selebihnya master.
+      allow delete: if isMaster() || (isSales() && resource.data.persetujuan == 'menunggu' && resource.data.diajukanUid == request.auth.uid);
     }
+    // Rate dan paket: sales hanya membaca miliknya (query WAJIB memakai where pemilikUid == uid; harga negosiasi sales lain tertutup).
     match /cu_rates/{id} {
-      allow read: if aktif();
+      allow read: if isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data));
       allow create: if isStaf()
         || (isSales() && exists(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId))
             && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid);
       allow update: if isStaf()
-        || (isSales() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['digantikanOleh']));
+        || (isSales() && milikSaya(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['digantikanOleh']));
       allow delete: if isMaster();
     }
     match /cu_paket/{id} {
-      allow read: if aktif();
+      allow read: if isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data));
       allow create: if isStaf()
         || (isSales() && exists(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId))
             && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid);

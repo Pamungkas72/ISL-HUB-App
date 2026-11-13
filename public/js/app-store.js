@@ -84,7 +84,7 @@ const urlFile = (s) => typeof s === "string" && /^https?:\/\//.test(s);
 // ---------- baca ----------
 function bersihkanDokumen(d) { const o = { ...d.data() }; o.id = d.id; return o; }
 /* akun sales hanya boleh membaca dokumennya sendiri di koleksi ini (aturan Firestore mensyaratkan filter pemilikUid) */
-const SALES_PEMILIK = new Set(["qt_quotations", "qt_riwayat"]);
+const SALES_PEMILIK = new Set(["qt_quotations", "qt_riwayat", "cu_rates", "cu_paket"]);
 const SALES_KOSONG = new Set(["qt_orders"]);
 const SALES_TULIS = new Set(["cu_customers", "cu_rates", "cu_paket", "qt_quotations", "qt_counters", "qt_riwayat", "qt_templates"]);
 const PEMILIK_BUKAN_MASTER = new Set(["qt_templates"]); // template: akun selain master hanya memuat miliknya
@@ -141,6 +141,8 @@ export async function muatSemua({ master, sales = false, admin = false, uid = ""
   }));
   if (!hanyaBaca) { terakhir = {}; KOLEKSI.forEach((k) => { terakhir[k] = {}; hasil[k].forEach((d) => { const { id, ...isi } = d; terakhir[k][d.id] = stabil(isi); }); }); }
   if (master || admin) KOL_RAHASIA.forEach((k) => { const peta = new Map(hasil[namaModal(k)].map((x) => [x.id, x.nilai])); hasil[k].forEach((d) => suntikRahasia(d, peta.get(d.id))); });
+  /* data lama tanpa pemilikUid: isi dari pemilik quotation-nya (hanya di memori; tersimpan pada penyimpanan berikutnya), supaya sales melihat rate miliknya */
+  if (master || admin) { const pq = new Map(hasil.qt_quotations.map((q) => [q.id, q.pemilikUid])); ["cu_rates", "cu_paket"].forEach((k) => hasil[k].forEach((d) => { if (!d.pemilikUid && pq.get(d.quotationId)) d.pemilikUid = pq.get(d.quotationId); })); }
   const peng = hasil.qt_pengaturan[0] || null;
   if (peng) {
     const asetLama = !!(peng.aset && ["ttd", "cap"].some((k) => peng.aset[k] && typeof peng.aset[k].__rahasia === "string"));
