@@ -21,3 +21,4 @@ exports.aturKataSandi = onCall({ region: "asia-southeast2" }, async (req) => {
   await admin.firestore().collection("pengguna_log").add({ uid, email, aksi: "atur-sandi", dari: null, ke: null, oleh: a.token.email, waktu: admin.firestore.FieldValue.serverTimestamp() });
   return { ok: true };
 });
+exports.notifDailyJob = require("./dailyjob").notifDailyJob;

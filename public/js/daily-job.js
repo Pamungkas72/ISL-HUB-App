@@ -12,6 +12,7 @@ import { db } from "./firebase-config.js";
 import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
+import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 
 const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "performa", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", fStatus: "aktif", cari: "", muat: false, galat: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -114,7 +115,7 @@ function render() {
     ${S.periode === "rentang" ? `<input type="date" id="dj-dari" value="${e(S.dari)}" aria-label="Dari"><input type="date" id="dj-sampai" value="${e(S.sampai)}" aria-label="Sampai">` : ""}
     ${S.kelola ? `<select data-dj="f-kel" aria-label="Kelompok">${opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel, "Semua kelompok")}</select>` : ""}
     <select data-dj="f-pic" aria-label="PIC">${opsi(daftarPic(), S.fPic, "Semua PIC")}</select><select data-dj="f-kat" aria-label="Kategori">${opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori")}</select>
-    ${S.kelola ? `<button type="button" class="mr-btn dj-pdf" data-dj="impor" title="Import dari Excel" style="margin-left:auto">${ikon("upload", 15)} Import</button>` : ""}<button type="button" class="mr-btn dj-pdf" data-dj="pdf" title="Unduh laporan PDF">${ikon("download", 15)} PDF</button></div>`;
+    <span class="dj-aksi"><button type="button" class="mr-btn${statusPush(S.u.uid) === "aktif" ? " dj-push-aktif" : ""}" data-dj="push" title="Notifikasi ke perangkat ini: pengingat catat job 09.00, 14.00, 17.00 dan deadline H-1"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> ${statusPush(S.u.uid) === "aktif" ? "Notifikasi aktif" : "Notifikasi"}</button>${S.kelola ? `<button type="button" class="mr-btn" data-dj="impor" title="Import dari Excel">${ikon("upload", 15)} Import</button>` : ""}<button type="button" class="mr-btn dj-pdf" data-dj="pdf" title="Unduh laporan PDF">${ikon("download", 15)} PDF</button></span></div>`;
   let isi;
   if (S.muat) isi = `<p class="mr-sub">Memuat…</p>`;
   else if (S.galat) isi = `<div class="dj-alert dj-alert--bahaya">${e(S.galat)}</div>`;
@@ -285,6 +286,14 @@ document.addEventListener("click", async (ev) => {
   if (a === "kat") { S.fKat = S.fKat === v ? "" : v; return render(); }
   if (a === "pic") { S.fPic = S.fPic === v ? "" : v; return render(); }
   if (a === "pdf") return unduhPdf();
+  if (a === "push") {
+    const st = statusPush(S.u.uid);
+    if (st === "aktif") { if (await konfirmasi("Matikan notifikasi?", "Perangkat ini tidak lagi menerima pengingat Daily Job.", "Matikan")) { await matikanPush(S.u.uid); render(); toast("Notifikasi dimatikan di perangkat ini."); } return; }
+    if (st === "iphone-pasang") return toast("Di iPhone, tambahkan ISL HUB ke Layar Utama dulu (Bagikan, lalu Tambah ke Layar Utama), buka dari ikon itu, lalu aktifkan notifikasi.", "info");
+    if (st === "tidak-didukung") return toast("Browser ini belum mendukung notifikasi. Pakai Chrome, Edge, atau Safari terbaru.", "bahaya");
+    if (st === "diblokir") return toast("Notifikasi diblokir untuk situs ini. Izinkan di pengaturan browser (ikon gembok di alamat), lalu coba lagi.", "bahaya");
+    try { await aktifkanPush(S.u.uid); render(); toast("Notifikasi aktif di perangkat ini: pengingat 09.00, 14.00, 17.00 dan deadline H-1."); } catch (err) { console.error(err); toast("Notifikasi belum aktif: " + e(err.message || err), "bahaya"); } return;
+  }
   if (a === "impor") return panelImpor();
   if (a === "impor-jalan") return jalankanImpor();
   if (a === "simpan") return simpanJob();
@@ -341,10 +350,9 @@ export function pasangPengingat(user, profil) {
     kotak.innerHTML = `<b>Pengingat ${jam} · catat daily job</b><p>Catat job baru, yang sedang dikerjakan, dan yang masih pending.${p.terlambat.length || p.hariIni.length ? `<br><b>${p.terlambat.length} terlambat</b> · ${p.hariIni.length} jatuh tempo hari ini.` : ""}</p>
       <div><button class="mr-btn mr-btn--utama" data-x="catat">Catat sekarang</button><button class="mr-btn" data-x="nanti">Tutup</button></div>`;
     document.body.appendChild(kotak);
-    if ("Notification" in window && Notification.permission === "granted" && document.hidden) new Notification("ISL HUB · Catat daily job", { body: `Pengingat ${jam}. Catat job baru dan yang masih pending.` });
     kotak.querySelector('[data-x="catat"]').onclick = () => { tandai(k); kotak.remove(); if (window.__rute === "dailyjob") { window.__djBukaForm = false; formJob(null); } else { window.__djBukaForm = true; location.hash = "#dailyjob"; } };
     kotak.querySelector('[data-x="nanti"]').onclick = () => { tandai(k); kotak.remove(); };
   };
-  if ("Notification" in window && Notification.permission === "default") document.addEventListener("click", () => Notification.requestPermission().catch(() => {}), { once: true });
+  jagaPush(user.uid, (h) => toast(h)); // perbarui token notifikasi; pesan saat aplikasi terbuka jadi toast
   cek(); setInterval(cek, 60000);
 }
