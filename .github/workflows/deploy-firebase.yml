@@ -42,6 +42,14 @@ jobs:
       - name: Deploy aturan dan hosting
         run: firebase deploy --only firestore:rules,storage,hosting --non-interactive --project system-marketing-bd-isl-2026
 
+      # Function pengatur kata sandi butuh paket Blaze dan peran Cloud Functions Admin + Service Account User di service account.
+      # Gagal tidak membatalkan deploy hosting dan aturan di atas.
+      - name: Deploy Cloud Function (opsional)
+        continue-on-error: true
+        run: |
+          (cd functions && npm install --omit=dev --no-audit --no-fund)
+          firebase deploy --only functions --non-interactive --project system-marketing-bd-isl-2026
+
       - name: Bersihkan kredensial
         if: always()
         run: rm -f "$RUNNER_TEMP/sa.json"
