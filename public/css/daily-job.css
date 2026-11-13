@@ -1,4 +1,4 @@
-/* Daily Job. Warna memakai variabel tema (terang dan gelap); hanya kertas laporan PDF (.dj-cetak) putih. */
+/* Daily Job. Warna memakai variabel tema (terang dan gelap). Laporan PDF digambar langsung oleh daily-job-pdf.js (kertas putih). */
 #dj-root { display: flex; flex-direction: column; gap: 12px; }
 .dj-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); }
 .dj-tabs button { border: 0; background: none; padding: 10px 14px; font: 600 14px var(--font-body); color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; min-height: 44px; }
@@ -73,9 +73,6 @@ label.dj-org select { max-width: 55%; }
   .dj-form { grid-template-columns: 1fr; }
   .dj-ingat { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 }
-/* Kertas laporan PDF: putih, apa pun tema aplikasi. */
-.dj-cetak #dj-dash { --surface: #fff; --bg: #fff; --text: #13283D; --head: #0A3D66; --muted: #5D7085; --border: #DCE5EF; --sky-soft: #E8F4FD; --accent-soft: #FFF1E0; --danger-soft: #FCEAEA; --success-soft: #E4F5EE; background: #fff; padding: 8px; }
-.dj-cetak .dj-kpi, .dj-cetak .dj-kartu { background: #fff; }
 /* Tombol + sama dengan Master Rate dan Quotation: oranye (--mr-accent), ikon gelap. */
 #dj-root .mr-fab { background: var(--mr-accent); color: #1b1307; }
 @media (max-width: 760px) {

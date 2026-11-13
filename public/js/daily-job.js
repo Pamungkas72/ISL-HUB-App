@@ -243,37 +243,19 @@ async function tandaiSelesai(id) {
 }
 
 /* ---------- PDF ---------- */
-const tungguLib = async () => { for (let i = 0; i < 40 && !(window.jspdf && window.html2canvas); i++) await new Promise((r) => setTimeout(r, 250)); if (!(window.jspdf && window.html2canvas)) throw new Error("Pustaka PDF belum siap. Coba lagi sebentar lagi."); };
+const tungguLib = async () => { for (let i = 0; i < 40 && !(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable); i++) await new Promise((r) => setTimeout(r, 250)); if (!(window.jspdf && window.jspdf.jsPDF.API.autoTable)) throw new Error("Pustaka PDF belum siap. Coba lagi sebentar lagi."); };
 async function unduhPdf() {
   const tombol = $(".dj-pdf"); if (tombol) tombol.disabled = true;
   try {
     await tungguLib();
-    const adaDash = S.tab === "performa"; if (!adaDash) { S.tab = "performa"; render(); }
-    const root = $("#dj-root"), now = H.hariIni(), r = rentangAktif(), js = tampak(), k = H.hitungKpi(js, r, now);
-    root.classList.add("dj-cetak"); // kertas laporan putih
-    const cv = await window.html2canvas($("#dj-dash"), { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-    root.classList.remove("dj-cetak");
-    const { jsPDF } = window.jspdf, pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" }), W = pdf.internal.pageSize.getWidth(), Hh = pdf.internal.pageSize.getHeight();
+    const { buatLaporanPdf } = await import("./daily-job-pdf.js"), r = rentangAktif(), p = periodeAktif();
     const kel = S.fKel ? namaKel(S.fKel) : S.kelola ? "Semua kelompok" : namaKel(S.kelompokSaya);
-    pdf.setFontSize(16); pdf.setTextColor(10, 61, 102); pdf.text("Laporan Kinerja Daily Job", 12, 14);
-    pdf.setFontSize(10); pdf.setTextColor(90, 100, 115); pdf.text(`${kel}  |  Periode ${fmtTgl(r[0])} – ${fmtTgl(r[1])}${S.fPic ? "  |  PIC " + S.fPic : ""}${S.fKat ? "  |  " + S.fKat : ""}  |  Dibuat ${fmtTgl(now)}`, 12, 20);
-    const sk = Math.min((W - 24) / cv.width, (Hh - 30) / cv.height); pdf.addImage(cv.toDataURL("image/jpeg", 0.92), "JPEG", 12, 25, cv.width * sk, cv.height * sk);
-    const tabel = (judul, baris, kolom) => {
-      pdf.addPage("a4", "landscape"); pdf.setFontSize(13); pdf.setTextColor(10, 61, 102); pdf.text(judul, 12, 14);
-      pdf.autoTable({ startY: 18, margin: { left: 12, right: 12 }, head: [kolom.map((c) => c[0])], body: baris.map((j, i) => kolom.map((c) => c[1](j, i))), styles: { fontSize: 8, cellPadding: 1.6 }, headStyles: { fillColor: [10, 61, 102] },
-        didDrawCell: (h) => { const c = kolom[h.column.index]; if (h.section === "body" && c[2]) { const u = c[2](baris[h.row.index]); if (u) pdf.link(h.cell.x, h.cell.y, h.cell.width, h.cell.height, { url: u }); } } });
-    };
-    const urut = (a, b) => (a.tglSelesai || a.tglTarget || "").localeCompare(b.tglSelesai || b.tglTarget || "");
-    const selesai = js.filter((j) => j.status === "selesai" && H.dalam(j.tglSelesai, r)).sort(urut), aktif = js.filter(H.aktif).sort(urut);
-    const fl = (j) => [...(j.file || []).map((x) => x.url), ...(j.tautan || []).map((x) => x.url)];
-    const kolomF = [["No", (j, i) => i + 1], ["Job", (j) => j.judul], ["Kategori", (j) => j.kategori || "-"], ["Customer", (j) => j.customer || "-"], ["PIC", (j) => j.pic || "-"], ["Masuk", (j) => fmtTgl(j.tglMasuk)], ["Target", (j) => fmtTgl(j.tglTarget)]];
-    if (selesai.length) tabel(`Job selesai (${selesai.length}) — ${k.persenTepat ?? 0}% tepat waktu`, selesai, [...kolomF, ["Selesai", (j) => fmtTgl(j.tglSelesai)], ["File project", (j) => (fl(j).length ? `Buka (${fl(j).length})` : "-"), (j) => fl(j)[0]]]);
-    if (aktif.length) tabel(`Job belum selesai (${aktif.length})`, aktif, [...kolomF, ["Status", (j) => H.STATUS[j.status]], ["Posisi", (j) => H.labelTarget(j, now).t]]);
-    pdf.save(`daily-job-${r[0]}_${r[1]}.pdf`);
+    const filter = [S.fPic && "PIC: " + S.fPic, S.fKat && "Kategori: " + S.fKat].filter(Boolean).join(", ");
+    const pdf = buatLaporanPdf({ jsPDF: window.jspdf.jsPDF, jobs: tampak(), r, periode: p, kelompok: kel, filter, now: H.hariIni(), pembuat: S.u.nama || S.u.email });
+    pdf.save(`laporan-kinerja-daily-job-${p === "bulan" ? r[0].slice(0, 7) : r[0] + "_" + r[1]}.pdf`);
   } catch (err) { console.error(err); toast("PDF belum jadi: " + e(err.message || err), "bahaya"); }
-  finally { $("#dj-root")?.classList.remove("dj-cetak"); if (tombol) tombol.disabled = false; }
+  finally { if (tombol) tombol.disabled = false; }
 }
-
 
 /* ---------- import Excel (master/admin) ---------- */
 const NAMA_TIM = "Marketing dan BD";

@@ -54,4 +54,12 @@ eq("tabel per PIC: Rina", (({ nama, selesai, masuk }) => ({ nama, selesai, masuk
 const gk = H.kelompokkan(J, "kategori", now);
 eq("kelompok: yang terlambat di atas", [gk[0].nama, gk[0].telat], ["Monitoring kasus", 1]);
 eq("kelompok per status", H.kelompokkan(J, "status", now).map((g) => g.nama).sort(), ["Baru", "Dikerjakan", "Selesai"]);
+const kk = { masuk: 42, selesai: 37, persenSelesai: 76, persenTepat: 70, rataHari: 5.8, terlambat: 6 }, pp = { selesai: 25, persenTepat: 84 };
+const kt = [{ nama: "Monitoring Kasus", rataHari: 12, terlambat: 3 }, { nama: "Dokumen Kontrak", rataHari: 10, terlambat: 3 }, { nama: "Quotation", rataHari: 3.6, terlambat: 0 }];
+const po = H.buatPoin({ k: kk, pk: pp, kat: kt, usia: [{ n: 9 }, { n: 2 }, { n: 0 }, { n: 8 }], lab: "September" });
+eq("poin: selesai naik", po[0], { t: "ok", teks: "37 job selesai dari 42 masuk (76%), naik 12 job dari September." });
+eq("poin: ketepatan turun >= 5 poin = merah", po[1], { t: "er", teks: "Ketepatan waktu 70%, turun 14 poin dari September (84%)." });
+eq("poin: paling lama", po[2].teks, "Rata-rata penyelesaian 5,8 hari; paling lama Monitoring Kasus (12 hari) dan Dokumen Kontrak (10 hari).");
+eq("poin: terlambat dan job tua", po[3].teks, "6 job terlambat dan 8 job aktif berusia lebih dari 14 hari, terbanyak di Monitoring Kasus dan Dokumen Kontrak.");
+eq("poin: tanpa masalah", H.buatPoin({ k: { masuk: 3, selesai: 3, persenSelesai: 100, persenTepat: 100, rataHari: 2, terlambat: 0 }, pk: null, kat: [], usia: [{ n: 1 }, { n: 0 }, { n: 0 }, { n: 0 }], lab: "x" }).map((x) => x.t), ["ok", "ok", "ok", "ok"]);
 process.exit(gagal ? 1 : 0);

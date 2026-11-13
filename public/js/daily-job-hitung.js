@@ -193,3 +193,21 @@ export function kelompokkan(jobs, mode, now = hariIni()) {
   return [...m].map(([nama, l]) => ({ nama, jobs: l, telat: l.filter((j) => terlambat(j, now)).length, selesai: l.filter((j) => j.status === "selesai").length }))
     .sort((a, b) => b.telat - a.telat || b.jobs.length - a.jobs.length || a.nama.localeCompare(b.nama, "id"));
 }
+
+/** Poin penting laporan: kalimat otomatis dari angka periode. t: 'ok' | 'wn' | 'er'. lab = nama periode pembanding (mis. "September"). */
+export function buatPoin({ k, pk, kat, usia, lab }) {
+  const kom = (n) => String(n).replace(".", ","), poin = [];
+  const dSel = pk && pk.selesai != null ? k.selesai - pk.selesai : null;
+  poin.push({ t: dSel != null && dSel < 0 ? "wn" : "ok", teks: `${k.selesai} job selesai dari ${k.masuk} masuk${k.persenSelesai != null ? ` (${k.persenSelesai}%)` : ""}${dSel ? `, ${dSel > 0 ? "naik" : "turun"} ${Math.abs(dSel)} job dari ${lab}` : ""}.` });
+  if (k.persenTepat != null) {
+    const d = pk && pk.persenTepat != null ? k.persenTepat - pk.persenTepat : null;
+    poin.push({ t: d != null && d <= -5 ? "er" : d != null && d < 0 ? "wn" : "ok", teks: `Ketepatan waktu ${k.persenTepat}%${d ? `, ${d > 0 ? "naik" : "turun"} ${Math.abs(d)} poin dari ${lab} (${pk.persenTepat}%)` : ""}.` });
+  }
+  if (k.rataHari != null) {
+    const lama = kat.filter((o) => o.rataHari != null && o.rataHari >= 7).sort((a, b) => b.rataHari - a.rataHari).slice(0, 2);
+    poin.push({ t: lama.length ? "wn" : "ok", teks: `Rata-rata penyelesaian ${kom(k.rataHari)} hari${lama.length ? `; paling lama ${lama.map((o) => `${o.nama} (${kom(o.rataHari)} hari)`).join(" dan ")}` : ""}.` });
+  }
+  const tua = usia && usia[3] ? usia[3].n : 0, tel = kat.filter((o) => o.terlambat > 0).sort((a, b) => b.terlambat - a.terlambat).slice(0, 2);
+  poin.push(k.terlambat || tua ? { t: "er", teks: `${k.terlambat} job terlambat${tua ? ` dan ${tua} job aktif berusia lebih dari 14 hari` : ""}${tel.length ? `, terbanyak di ${tel.map((o) => o.nama).join(" dan ")}` : ""}.` } : { t: "ok", teks: "Tidak ada job terlambat atau berusia lebih dari 14 hari." });
+  return poin;
+}
