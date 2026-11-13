@@ -30,6 +30,11 @@ before(async () => {
     await isi("pengguna/uid-admin", { email: "admin@isl.test", nama: "Admin", peran: "admin", status: "aktif" });
     await isi("pengguna/uid-sales", { email: "sales@isl.test", nama: "Sales", peran: "sales", status: "aktif", kodeSales: "BD" });
     await isi("pengguna/uid-lihat", { email: "lihat@isl.test", nama: "Lihat", peran: "lihat", status: "aktif" });
+    await isi("pengguna/uid-dj1", { email: "dj1@isl.test", nama: "DJ1", peran: "sales", status: "aktif", kelompokDJ: "k1" });
+    await isi("pengguna/uid-dj2", { email: "dj2@isl.test", nama: "DJ2", peran: "lihat", status: "aktif", kelompokDJ: "k2" });
+    await isi("dj_job/j-k1", { kelompokId: "k1", judul: "Job k1", status: "baru" });
+    await isi("dj_job/j-k2", { kelompokId: "k2", judul: "Job k2", status: "baru" });
+    await isi("dj_kelompok/k1", { nama: "Marketing" });
     await isi("pengguna/uid-pending", { email: "pending@isl.test", nama: "Pendaftar", peranDiminta: "sales", peran: null, status: "menunggu" });
     await isi("qt_quotations/q-sales", { pemilikUid: "uid-sales", status: "disetujui", nomor: "001/QL", customerId: "c1", baris: [] });
     await isi("qt_quotations/q-draf-sales", { pemilikUid: "uid-sales", status: "draf", customerId: "c1", baris: [] });
@@ -184,4 +189,26 @@ describe("Pendaftaran akun: hanya sales, dengan nomor WhatsApp", () => {
   it("meminta peran admin ditolak", () => assertFails(setDoc(doc(ctx("u-d4", "u-d4@isl.test"), "pengguna/u-d4"), baru("u-d4", { peranDiminta: "admin" }))));
   it("telepon lebih dari 15 karakter ditolak", () => assertFails(setDoc(doc(ctx("u-d5", "u-d5@isl.test"), "pengguna/u-d5"), baru("u-d5", { telepon: "1".repeat(16) }))));
   it("master membuat akun manual dengan telepon", () => assertSucceeds(setDoc(doc(master(), "pengguna/u-m1"), { email: "m1@isl.test", nama: "Manual", peranDiminta: "sales", peran: "sales", status: "aktif", dibuat: serverTimestamp(), disetujuiPada: serverTimestamp(), kodeSales: "MAN", targetBulanan: null, dibuatOleh: "manual", telepon: "6281200000000" })));
+});
+
+describe("Daily Job: akses per kelompok", () => {
+  const dj1 = () => ctx("uid-dj1", "dj1@isl.test"), dj2 = () => ctx("uid-dj2", "dj2@isl.test"), job = (k, judul = "Baru") => ({ kelompokId: k, judul, status: "baru" });
+  it("anggota membaca job kelompoknya", () => assertSucceeds(getDoc(doc(dj1(), "dj_job/j-k1"))));
+  it("anggota tidak membaca job kelompok lain", () => assertFails(getDoc(doc(dj1(), "dj_job/j-k2"))));
+  it("anggota menyaring daftar job kelompoknya", async () => { const { query, where } = await import("firebase/firestore"); await assertSucceeds(getDocs(query(collection(dj1(), "dj_job"), where("kelompokId", "==", "k1")))); });
+  it("anggota membaca semua job tanpa saringan ditolak", () => assertFails(getDocs(collection(dj1(), "dj_job"))));
+  it("anggota membuat job di kelompoknya", () => assertSucceeds(setDoc(doc(dj1(), "dj_job/n1"), job("k1"))));
+  it("anggota tidak membuat job di kelompok lain", () => assertFails(setDoc(doc(dj1(), "dj_job/n2"), job("k2"))));
+  it("anggota tidak memindahkan job ke kelompok lain", () => assertFails(updateDoc(doc(dj1(), "dj_job/j-k1"), { kelompokId: "k2" })));
+  it("anggota mengubah job kelompoknya", () => assertSucceeds(updateDoc(doc(dj1(), "dj_job/j-k1"), { status: "selesai" })));
+  it("anggota kelompok lain tidak mengubah job k1", () => assertFails(updateDoc(doc(dj2(), "dj_job/j-k1"), { status: "selesai" })));
+  it("judul kosong ditolak", () => assertFails(setDoc(doc(dj1(), "dj_job/n3"), job("k1", ""))));
+  it("akun tanpa kelompok tidak membaca job", () => assertFails(getDoc(doc(sales(), "dj_job/j-k1"))));
+  it("master membaca semua kelompok", () => assertSucceeds(getDoc(doc(master(), "dj_job/j-k2"))));
+  it("admin mengubah job kelompok mana pun", () => assertSucceeds(updateDoc(doc(admin(), "dj_job/j-k2"), { status: "proses" })));
+  it("anggota tidak membuat kelompok", () => assertFails(setDoc(doc(dj1(), "dj_kelompok/x"), { nama: "X", dibuat: "2026-11-13" })));
+  it("akun aktif membaca daftar kelompok", () => assertSucceeds(getDoc(doc(sales(), "dj_kelompok/k1"))));
+  it("admin membuat kelompok", () => assertSucceeds(setDoc(doc(admin(), "dj_kelompok/k3"), { nama: "BD", dibuat: "2026-11-13" })));
+  it("admin menetapkan kelompok akun sales", () => assertSucceeds(updateDoc(doc(admin(), "pengguna/uid-sales"), { kelompokDJ: "k1" })));
+  it("anggota tidak mengganti kelompoknya sendiri", () => assertFails(updateDoc(doc(dj1(), "pengguna/uid-dj1"), { kelompokDJ: "k2" })));
 });

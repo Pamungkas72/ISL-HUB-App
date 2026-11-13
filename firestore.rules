@@ -304,7 +304,7 @@ service cloud.firestore {
         || (isAdmin() && uid != request.auth.uid
             && resource.data.peran in ['sales', 'lihat', null] && request.resource.data.peran in ['sales', 'lihat', null]
             && request.resource.data.status in ['aktif', 'nonaktif']
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['peran', 'kodeSales', 'status', 'targetBulanan', 'disetujuiPada', 'ditolakPada'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['peran', 'kodeSales', 'status', 'targetBulanan', 'disetujuiPada', 'ditolakPada', 'kelompokDJ'])
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['targetBulanan']) || request.resource.data.targetBulanan == null))
         || (sesiBerlaku() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'telepon', 'ttd']))
         || (sesiBerlaku() && (isSales() || isAdmin()) && request.auth.uid == uid
@@ -345,6 +345,24 @@ service cloud.firestore {
     // Pemberitahuan yang ditunda atau ditandai selesai: milik sendiri, hanya akun pengelola.
     match /pemberitahuan_tunda/{uid} {
       allow read, write: if isKelola() && request.auth.uid == uid;
+    }
+
+    // ---------------- Daily Job (13 Nov 2026) ----------------
+    // Tiap akun punya satu kelompok (pengguna.kelompokDJ, diatur master/admin). Anggota hanya membaca dan mengubah job kelompoknya; master dan admin semua kelompok.
+    function kelompokDJ() { return profilAda() && profil().status == 'aktif' ? profil().get('kelompokDJ', null) : null; }
+    function djAnggota(k) { return k is string && kelompokDJ() == k; }
+    match /dj_kelompok/{id} {
+      allow read: if aktif();
+      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat']);
+      allow delete: if isKelola();
+    }
+    match /dj_job/{id} {
+      allow read: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
+      allow create: if (isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
+        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200;
+      allow update: if (isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && djAnggota(request.resource.data.get('kelompokId', null))))
+        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200;
+      allow delete: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
     }
 
     // Selain daftar di atas: ditutup. (Aturan umum lama dihapus supaya tidak membuka celah lewat "ATAU".)

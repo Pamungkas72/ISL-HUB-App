@@ -2,6 +2,15 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-13 (modul baru: Daily Job)
+
+- **Menu Daily Job** (desktop: sidebar; HP: lembar Lainnya) untuk mencatat job harian tim marketing dan BD. Desain C dipilih dari 3 opsi (HP dan desktop): halaman utama = dashboard performa; tab **Daftar job** dan **Kelompok** (khusus master/admin).
+- **Catat job** lewat tombol **+** oranye (pola sama dengan Tambah item di Master Rate), panel dari samping/bawah: judul, kategori, customer, PIC, tanggal masuk/mulai/target/selesai, status, prioritas, bobot, deskripsi, file project (unggah maks 4 MB atau tautan), catatan progres berriwayat. Ketuk baris job = ubah; ikon centang = tandai selesai.
+- **Pengingat**: pop-up "catat daily job" pukul 09.00, 14.00, 17.00 WIB (muncul sekali per jam pengingat, saat aplikasi terbuka; notifikasi browser bila diizinkan dan tab di latar), banner terlambat / jatuh tempo hari ini / mulai minggu ini.
+- **Dashboard**: periode Minggu/Bulan/Tahun/Rentang; filter kelompok, PIC, kategori; kartu Job selesai, Tepat waktu, Rata-rata selesai, Terlambat (bisa diklik menyaring daftar); grafik masuk vs selesai, komposisi kategori (klik = filter), beban kerja per orang (klik = filter), daftar perlu perhatian. **PDF**: halaman dashboard + tabel job selesai (dengan tautan file project) + tabel job belum selesai.
+- **Kelompok**: tiap akun punya satu kelompok (`pengguna.kelompokDJ`); anggota hanya melihat dan mengubah job kelompoknya (aturan server), master dan admin semua. Semua peran akun (sales, lihat saja) bisa memakai modul ini bila sudah masuk kelompok.
+- Teknis: `daily-job.js`, `daily-job-hitung.js` (hitungan murni, diuji `tests/unit/daily-job.test.mjs`), `css/daily-job.css`; koleksi `dj_job` dan `dj_kelompok`, Storage `dailyjob/{kelompok}/`. **Perlu deploy aturan**: `firebase deploy --only firestore:rules,storage`. Diuji di harness lokal (HP dan desktop, terang dan gelap), 18 uji aturan baru lulus.
+
 ## 2026-11-09 (Depo: Fee administrasi per invoice, satu tarif)
 
 - **Hanya baris ADM di blok B Handling yang diganti "Fee administrasi"**: satu tarif Rp 60.000 per invoice, tidak terkait ukuran container. Di PDF sel tarif membentang dua kolom dan rata kanan, dengan gaya angka dan "Rp" yang sama dengan kolom lain. Di formulir satu kolom "Tarif per invoice". Rekomendasi bawaan 60.000 (Pengaturan > Harga rekomendasi dan Tarif minimum juga satu kolom).

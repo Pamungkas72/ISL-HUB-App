@@ -18,6 +18,7 @@ const icons = {
   laporan: `<path d="M3 12h4.5v9H3z M9.8 7h4.5v14H9.8z M16.6 3h4.5v18h-4.5z"/>`,
   setelan: `<path d="M3 5h18v2H3z M3 11h18v2H3z M3 17h18v2H3z"/><path fill-rule="evenodd" d="M5.2 6a2.8 2.8 0 1 0 5.6 0a2.8 2.8 0 1 0 -5.6 0zM6.9 6a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0z"/><path fill-rule="evenodd" d="M13.2 12a2.8 2.8 0 1 0 5.6 0a2.8 2.8 0 1 0 -5.6 0zM14.9 12a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0z"/><path fill-rule="evenodd" d="M7.2 18a2.8 2.8 0 1 0 5.6 0a2.8 2.8 0 1 0 -5.6 0zM8.9 18a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0z"/>`,
   uangjalan: `<path fill-rule="evenodd" d="M3 6h18v12H3z M5.5 8.5v7h13v-7z M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5z"/>`,
+  dailyjob: `<path fill-rule="evenodd" d="M5 3h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z M7 7h2v2H7z M11 7.5h6v1.2h-6z M7 11h2v2H7z M11 11.5h6v1.2h-6z M7 15h2v2H7z M11 15.5h4v1.2h-4z"/>`,
   logout: `<path d="M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" />`,
 };
 
@@ -52,6 +53,13 @@ export const navItems = [
     label: "Customer",
     href: "app.html#customer",
     icon: icons.users,
+    status: "active",
+  },
+  {
+    id: "dailyjob",
+    label: "Daily Job",
+    href: "app.html#dailyjob",
+    icon: icons.dailyjob,
     status: "active",
   },
   {

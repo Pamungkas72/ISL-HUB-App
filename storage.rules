@@ -8,6 +8,7 @@
 //  - quotation_pdf/    PDF quotation yang terbit  : akun aktif boleh melihat, master dan sales mengunggah
 //  - dokumen/          dokumen bertanda tangan, foto galeri formulir lini : akun aktif boleh melihat, master dan sales mengunggah
 //  - quotation_riwayat/ PDF quotation terkirim di luar sistem (riwayat) : akun aktif boleh melihat, master dan sales mengunggah
+//  - dailyjob/{kelompok}/  lampiran Daily Job : anggota kelompok itu, master, dan admin (maks 4 MB; gambar, PDF, Office, CSV, ZIP)
 //  - open_yard/, vendor_dokumen/  seperti sebelumnya
 // ===========================================================
 rules_version = '2';
@@ -60,13 +61,26 @@ service firebase.storage {
       allow create, update: if isMaster() && fileBolehDiunggah(4 * 1024 * 1024);
     }
 
+    // Daily Job: lampiran job per kelompok. Hanya anggota kelompok itu (pengguna.kelompokDJ), master, dan admin.
+    function anggotaDJ(k) {
+      return profilAktif() && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.get('kelompokDJ', null) == k;
+    }
+    function djBoleh() { return request.resource.size <= 4 * 1024 * 1024
+      && (request.resource.contentType.matches('image/.*') || request.resource.contentType in ['application/pdf', 'text/csv', 'application/zip',
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']); }
+    match /dailyjob/{kelompok}/{allPaths=**} {
+      allow read, delete: if isMaster() || (profilAktif() && (anggotaDJ(kelompok) || firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'admin'));
+      allow create, update: if folder != 'dailyjob' && (isMaster() || (profilAktif() && (anggotaDJ(kelompok) || firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'admin'))) && djBoleh();
+    }
+
     // Sales dan admin boleh mengunggah PDF dan lampiran quotation miliknya, tanda tangannya sendiri, dan foto galeri formulir.
     match /{folder}/{allPaths=**} {
-      allow read: if aktif() && folder != 'vendor_rahasia' && folder != 'rahasia';
+      allow read: if aktif() && folder != 'vendor_rahasia' && folder != 'rahasia' && folder != 'dailyjob';
       allow create, update: if (isMaster() || ((isSales() || isAdmin()) && folder in ['quotation_pdf', 'dokumen', 'quotation_riwayat'])
           || (isAdmin() && folder in ['open_yard', 'vendor_dokumen', 'profil_fasilitas']))
         && folder != 'vendor_rahasia' && folder != 'rahasia' && fileBolehDiunggah(4 * 1024 * 1024);
-      allow delete: if isMaster() && folder != 'vendor_rahasia' && folder != 'rahasia';
+      allow delete: if isMaster() && folder != 'vendor_rahasia' && folder != 'rahasia' && folder != 'dailyjob';
     }
   }
 }
