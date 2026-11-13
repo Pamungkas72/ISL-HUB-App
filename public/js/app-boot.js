@@ -131,6 +131,7 @@ watchAuthState(
       const MODUL = {
         beranda: { kontainer: "bd-root", muat: () => import("./dashboard.js"), mulai: "mulaiBeranda", judul: "Beranda" },
         "master-rate": { kontainer: "mr-kontainer", muat: () => import("./master-rate.js"), mulai: "mulaiMR", judul: "Master Rate" },
+        pemberitahuan: { kontainer: "nf-halaman", muat: () => import("./pemberitahuan.js"), mulai: "mulaiPemberitahuan", judul: "Pemberitahuan" },
         pengaturan: { kontainer: "st-root", muat: () => import("./pengaturan.js"), mulai: "mulaiPengaturan", judul: "Pengaturan" },
       };
       const KONTAINER_CUSTOMER = ["cu-root", "qt-root", "lp-root", "lr-root", "pf-root"];
@@ -148,6 +149,7 @@ watchAuthState(
         const id = location.hash.slice(1);
         if (MODUL[id]) {
           if (sales && id !== "beranda") { location.hash = "#quotation"; return; } // akun sales tidak punya menu ini
+          if (id === "pemberitahuan" && !kelola) { location.hash = "#beranda"; return; } // halaman penuh hanya untuk master dan admin
           return tampilModul(id);
         }
         Object.values(MODUL).forEach((x) => document.getElementById(x.kontainer)?.classList.add("hidden"));

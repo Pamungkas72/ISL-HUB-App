@@ -16,7 +16,7 @@ import NAV from "./riwayat.js";
 import "./tanggal.js";
 import { e, $, $$, angka, tgl, toast, bukaLayer, tutupLayer, konfirmasi, konfirmasiKetik } from "./ui.js";
 import { bukaTambahItem } from "./form-tambah.js";
-import { bukaVendor, statusBerlaku, DOK_WAJIB } from "./form-vendor.js";
+import { bukaVendor, statusBerlaku, kurangVendor } from "./form-vendor.js";
 import { htmlTabProfil, htmlTabProfilHP, infoFilterProfil, hapusProfilLangsung, ubahStatusProfil, bukaProfil, bukaDetailProfil, kartuProfil, filterProfil, isiContohProfil, daftarProfil, profilTampil } from "./profil-fasilitas.js";
 import { bukaLaporan } from "./laporan-ui.js";
 import { vendorUntukLini, kelompokkan, kunciKelompok } from "./tampilan-data.js";
@@ -141,18 +141,6 @@ function kelengkapanVendor(v) {
 // Bilah kelengkapan vendor, seperti di halaman Lokasi: hijau 80% ke atas, kuning 50-79%, merah di bawah 50%.
 function bilahVendor(pct) {
   return `<div class="mr-pf-skor" title="${pct}% data lengkap" style="margin-top:6px;max-width:260px"><span class="mr-pf-skor__bar"><i style="width:${pct}%" class="${pct >= 80 ? "ok" : pct >= 50 ? "sedang" : "rendah"}"></i></span><small>${pct}% lengkap</small></div>`;
-}
-function kurangVendor(v) {
-  if (v.aktif === false || v.id === VENDOR_INTERNAL) return [];
-  const k = [];
-  if (v.status === "draf") k.push("Draf");
-  if (!(v.pic || []).some((p) => p.telepon || p.email)) k.push("Kontak PIC");
-  const kurangDok = DOK_WAJIB.filter((w) => !(v.legalitas || []).some((l) => l.jenis === w.jenis && l.file)).map((w) => w.nama);
-  if (kurangDok.length) k.push(`Dokumen ${kurangDok.join(", ")}`);
-  const izin = (v.legalitas || []).map((l) => statusBerlaku(l.berlakuSampai)).filter(Boolean);
-  if (izin.some((x) => x.kelas === "mati")) k.push("Legalitas berakhir");
-  else if (izin.some((x) => x.kelas === "warn")) k.push("Legalitas segera berakhir");
-  return k;
 }
 // Rata-rata kelengkapan vendor aktif (tanpa vendor internal), dalam persen.
 function kelengkapanVendorRata() {
@@ -2218,7 +2206,7 @@ async function muatData() {
   render();
   if (S.muat === "siap" && window.__skBuka && SK_TIPE[window.__skBuka]) { const tipe = window.__skBuka; window.__skBuka = null; bukaSkTipe(tipe); }
   // pemberitahuan dari halaman lain: buka tarif yang bermasalah setelah data siap
-  if (S.muat === "siap") { const tujuan = ambilTujuan(); if (tujuan && tujuan.jenis === "tarif") setTimeout(() => window.__islBukaMR(tujuan), 0); }
+  if (S.muat === "siap") { const tujuan = ambilTujuan(); if (tujuan && ["tarif", "vendor", "lokasi"].includes(tujuan.jenis)) setTimeout(() => window.__islBukaMR(tujuan), 0); }
 }
 
 let mulai = false;
@@ -2241,6 +2229,15 @@ export function mulaiMR(user, profil) {
 }
 // Dari pemberitahuan: buka tarif yang bermasalah (master: form edit; lihat saja: filter ke tarifnya).
 window.__islBukaMR = (t) => {
+  // dari halaman Pemberitahuan: filter tarif, vendor, atau fasilitas yang perlu dilengkapi
+  const bersih = { lini: "semua", vendor: "semua", cari: "", kosong: false, baru: false, jualKosong: false };
+  if (t.filter) {
+    S.tab = "tarif"; S.f = { ...bersih, ...({ tanpalini: { lini: "__belum__" }, tanpavendor: { vendor: "__belum__" }, kosong: { kosong: true }, jualkosong: { jualKosong: true } }[t.filter] || {}) };
+    if (t.filter === "jualkosong") S.view = "daftar";
+    ganti(); render(); return;
+  }
+  if (t.jenis === "vendor") { S.tab = "vendor"; S.fv = { cari: "", lini: "semua", status: "semua" }; render(); bukaVendor({ S, DB, id: t.id, namaLini, render }); return; }
+  if (t.jenis === "lokasi") { S.tab = "lokasi"; render(); bukaDetailProfil({ S, DB, id: t.id, namaVendor, render }); return; }
   if (t.verifikasi) { S.tab = "tarif"; render(); if (S.kelola) bukaVerifikasi(t.verifikasi); return; }
   const tr = S.tarif.find((x) => x.kunci === t.kunci);
   if (!tr) return;

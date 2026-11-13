@@ -570,3 +570,17 @@ export async function bukaVendor({ S, DB, id, namaLini, render }) {
 
   gambar();
 }
+
+// Hal yang masih kurang dari data vendor (kosong = lengkap). Vendor Internal dan yang nonaktif tidak dihitung.
+export function kurangVendor(v) {
+  if (v.aktif === false || v.id === "internal") return [];
+  const k = [];
+  if (v.status === "draf") k.push("Draf");
+  if (!(v.pic || []).some((p) => p.telepon || p.email)) k.push("Kontak PIC");
+  const kurangDok = DOK_WAJIB.filter((w) => !(v.legalitas || []).some((l) => l.jenis === w.jenis && l.file)).map((w) => w.nama);
+  if (kurangDok.length) k.push(`Dokumen ${kurangDok.join(", ")}`);
+  const izin = (v.legalitas || []).map((l) => statusBerlaku(l.berlakuSampai)).filter(Boolean);
+  if (izin.some((x) => x.kelas === "mati")) k.push("Legalitas berakhir");
+  else if (izin.some((x) => x.kelas === "warn")) k.push("Legalitas segera berakhir");
+  return k;
+}
