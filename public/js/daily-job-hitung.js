@@ -229,3 +229,24 @@ export function teksBagikan(jobs, fmt = (s) => s || "-") {
   const satu = (j) => `*${j.judul}*\n${[j.kategori, j.customer].filter(Boolean).join(" · ")}\nPIC: ${j.pic || "-"} · Target: ${fmt(j.tglTarget)} · ${STATUS[j.status] || "-"}`;
   return jobs.length === 1 ? satu(jobs[0]) : `Daftar job (${jobs.length}):\n\n` + jobs.map((j, i) => `${i + 1}. ${satu(j)}`).join("\n\n");
 }
+
+/* ---------- Identitas login anggota tim (salinan functions/dailyjob-akun-util.js; harus sama) ---------- */
+export const normalUsername = (s) => String(s || "").trim().toLowerCase();
+export const usernameValid = (s) => /^[a-z0-9][a-z0-9._-]{2,29}$/.test(s);
+export function normalTelepon(s) {
+  let d = String(s || "").replace(/[^0-9]/g, ""); if (!d) return "";
+  if (d.startsWith("0")) d = "62" + d.slice(1); else if (d.startsWith("8")) d = "62" + d;
+  return d.length >= 9 && d.length <= 15 ? d : "";
+}
+export const emailValid = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(s || "").trim());
+/** Kunci dokumen dj_login untuk masukan di halaman masuk: email, nomor telepon, atau username. */
+export function kunciLogin(masukan) {
+  const t = String(masukan || "").trim(); if (!t) return "";
+  if (t.includes("@")) return "e_" + t.toLowerCase();
+  const tel = /^[+0-9\s().-]+$/.test(t) ? normalTelepon(t) : "";
+  return tel ? "p_" + tel : "u_" + normalUsername(t);
+}
+/** Kata sandi acak 10 karakter (tanpa huruf yang mudah tertukar) untuk akun baru atau reset. */
+export function sandiAcak(rand = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n) {
+  const h = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return Array.from({ length: 10 }, () => h[rand(h.length)]).join("");
+}

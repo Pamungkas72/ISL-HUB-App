@@ -3,7 +3,9 @@
 // Kalau nanti mau ganti aturan login (tambah role, dsb),
 // cukup ubah di sini, HTML/CSS tidak perlu disentuh.
 // ===========================================================
-import { auth, siapAuth } from "./firebase-config.js";
+import { auth, db, siapAuth } from "./firebase-config.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { kunciLogin } from "./daily-job-hitung.js";
 import { adalahMaster } from "./config-akses.js";
 import { hapusSemuaSalinan } from "./cache-lokal.js";
 import { muatProfil, tampilGerbang, simpanProfilSaya, muatKegiatan, tambahKegiatan, ubahKegiatan, hapusKegiatan, muatSemuaKegiatan, muatVolume, tambahVolumeBanyak, hapusVolume, muatSemuaVolume } from "./akses.js";
@@ -11,6 +13,16 @@ import { periksaSesi, mulaiPemantauSesi, bersihkanSesi } from "./sesi.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 export function loginUser(email, password) {
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
+/* Masuk dengan email, username, atau nomor telepon. Akun anggota tim Daily Job (dibuat kepala divisi) dicari lewat dj_login;
+   selain itu masukan dianggap email biasa. */
+export async function loginIdentitas(masukan, password) {
+  await siapAuth;
+  const t = String(masukan || "").trim(), kunci = kunciLogin(t); let email = t.includes("@") ? t : "";
+  if (kunci) { try { const s = await getDoc(doc(db, "dj_login", kunci)); if (s.exists()) email = s.data().email; } catch (_) { /* tanpa alias: dicoba sebagai email */ } }
+  if (!email) { const err = new Error("Akun tidak ditemukan"); err.code = "auth/invalid-credential"; throw err; }
   return signInWithEmailAndPassword(auth, email, password);
 }
 
@@ -70,9 +82,9 @@ export function mapAuthError(code, konteks = "masuk") {
     "auth/invalid-email": "Format email tidak valid.",
     "auth/missing-email": "Isi email.",
     "auth/missing-password": "Isi kata sandi.",
-    "auth/user-not-found": "Email atau password salah.",
-    "auth/wrong-password": "Email atau password salah.",
-    "auth/invalid-credential": "Email atau password salah.",
+    "auth/user-not-found": "Email, username, atau kata sandi salah.",
+    "auth/wrong-password": "Email, username, atau kata sandi salah.",
+    "auth/invalid-credential": "Email, username, atau kata sandi salah.",
     "auth/user-disabled": "Akun ini dinonaktifkan di Firebase. Hubungi admin.",
     "auth/too-many-requests": "Terlalu banyak percobaan. Coba lagi beberapa saat.",
     "auth/email-already-in-use": "Email ini sudah terdaftar. Silakan masuk.",

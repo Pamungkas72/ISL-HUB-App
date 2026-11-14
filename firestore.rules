@@ -35,6 +35,10 @@ service cloud.firestore {
     }
     // Akun yang boleh MEMBACA: master, atau akun yang sudah disetujui master.
     function aktif() {
+      return isMaster() || (profilAda() && profil().status == 'aktif' && profil().get('peran', null) != 'dj');
+    }
+    // Anggota tim Daily Job (peran 'dj', dibuat kepala divisi): hanya boleh Daily Job. Tidak termasuk aktif(), jadi tidak bisa membaca data lain.
+    function aktifDJ() {
       return isMaster() || (profilAda() && profil().status == 'aktif');
     }
     function isSales() {
@@ -372,9 +376,9 @@ service cloud.firestore {
     // Token notifikasi push Daily Job: tiap perangkat mendaftarkan tokennya sendiri; hanya server (Cloud Function) yang membaca semuanya.
     match /dj_token/{id} {
       allow read, delete: if isKelola() || (sesiBerlaku() && resource.data.uid == request.auth.uid);
-      allow create: if aktif() && request.resource.data.uid == request.auth.uid && id.matches(request.auth.uid + '_.*')
+      allow create: if aktifDJ() && request.resource.data.uid == request.auth.uid && id.matches(request.auth.uid + '_.*')
         && request.resource.data.keys().hasOnly(['uid', 'token', 'agen', 'diubah']) && request.resource.data.token is string && request.resource.data.token.size() <= 400;
-      allow update: if aktif() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid
+      allow update: if aktifDJ() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid
         && request.resource.data.keys().hasOnly(['uid', 'token', 'agen', 'diubah']) && request.resource.data.token is string && request.resource.data.token.size() <= 400;
     }
 
@@ -384,8 +388,13 @@ service cloud.firestore {
     function djAnggota(k) { return k is string && kelompokDJ() == k; }
     // Kepala divisi: master dan admin, atau akun yang ditetapkan di dj_kelompok.kepala. Hanya kepala yang boleh menilai (Setujui / Perlu revisi).
     function djKepala(k) { return isKelola() || (k is string && djAnggota(k) && request.auth.uid in get(/databases/$(database)/documents/dj_kelompok/$(k)).data.get('kepala', [])); }
+    // Alias login anggota tim (username, telepon, email -> email sintetis). Hanya dibaca per kunci (tanpa daftar) oleh halaman masuk; ditulis Cloud Function.
+    match /dj_login/{kunci} {
+      allow get: if true;
+      allow list, write: if false;
+    }
     match /dj_kelompok/{id} {
-      allow read: if aktif();
+      allow read: if aktifDJ();
       allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala']) && request.resource.data.get('kepala', []) is list;
       allow delete: if isKelola();
     }

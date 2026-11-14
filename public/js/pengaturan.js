@@ -187,7 +187,7 @@ async function tambahAkunManual() {
   await dialogAkunBaru({ nama, email, sandi, kode: peran === "sales" ? kode : "", telepon });
 }
 async function muatAkun() {
-  try { const snap = await getDocs(collection(db, "pengguna")); S.akun = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.email).localeCompare(String(b.email))); } catch (er) { S.akun = []; toast(`<b>Daftar akun gagal dimuat.</b> ${e(er.code || er.message)}. Pasang aturan Firestore terbaru.`, "bahaya"); }
+  try { const snap = await getDocs(collection(db, "pengguna")); S.akun = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.peran !== "dj").sort((a, b) => String(a.email).localeCompare(String(b.email))); } catch (er) { S.akun = []; toast(`<b>Daftar akun gagal dimuat.</b> ${e(er.code || er.message)}. Pasang aturan Firestore terbaru.`, "bahaya"); }
   try { const p = await getDoc(doc(db, "sistem", "performa")); S.perf = { targetDefault: 0, ...(p.exists() ? p.data() : {}) }; } catch (_) {}
   try { S.log = await muatLogAkun(); } catch (_) { S.log = []; }
   try { const [t, f] = await Promise.all([MRDB.hitungModalBelumDipisah(), hitungModalFase2()]); S.modal = { tarif: t.inline, fase2: f.total, siap: !t.inline && !f.total && f.tandai && !f.gagal.length }; } catch (er) { S.modal = { tarif: "?", fase2: "?", siap: false }; }

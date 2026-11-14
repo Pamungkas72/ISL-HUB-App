@@ -17,6 +17,7 @@ const master = () => ctx("uid-master", MASTER);
 const admin = () => ctx("uid-admin", "admin@isl.test");
 const sales = () => ctx("uid-sales", "sales@isl.test");
 const lihat = () => ctx("uid-lihat", "lihat@isl.test");
+const dj1 = () => ctx("uid-dj1", "dj1@isl.test");
 const sales2 = () => ctx("uid-sales2", "sales2@isl.test");
 
 const kegiatan = (quotationId, pemilikUid, oleh) => ({ quotationId, pemilikUid, tanggal: "2026-10-30", jenis: "kunjungan", omzet: 0, catatan: "uji", oleh, dibuat: "2026-10-30" });
@@ -33,6 +34,8 @@ before(async () => {
     await isi("pengguna/uid-lihat", { email: "lihat@isl.test", nama: "Lihat", peran: "lihat", status: "aktif" });
     await isi("pengguna/uid-dj1", { email: "dj1@isl.test", nama: "DJ1", peran: "sales", status: "aktif", kelompokDJ: "k1" });
     await isi("pengguna/uid-sales2", { email: "sales2@isl.test", nama: "S2", peran: "sales", status: "aktif", kelompokDJ: "k1" });
+    await isi("pengguna/uid-anggota", { email: "anggota@dj.isl-hub.app", nama: "Anggota", peran: "dj", status: "aktif", kelompokDJ: "k1", username: "anggota" });
+    await isi("dj_login/u_anggota", { email: "anggota@dj.isl-hub.app", uid: "uid-anggota" });
     await isi("pengguna/uid-dj2", { email: "dj2@isl.test", nama: "DJ2", peran: "lihat", status: "aktif", kelompokDJ: "k2" });
     await isi("dj_job/j-k1", { kelompokId: "k1", judul: "Job k1", status: "baru" });
     await isi("dj_job/j-k2", { kelompokId: "k2", judul: "Job k2", status: "baru" });
@@ -249,4 +252,21 @@ describe("Daily Job: komentar, penilaian kepala divisi, tautan bagikan", () => {
   it("kelompok lain tidak membuat tautan untuk job k1", () => assertFails(setDoc(doc(dj2(), "dj_bagikan/tokenBaru0000000000000002"), { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj2", aktif: true, berlakuSampai: Date.now() + 864e5, unduh: false, snapshot: { judul: "x" } })));
   it("anggota mencabut tautan kelompoknya", () => assertSucceeds(updateDoc(doc(dj1(), "dj_bagikan/tokenAktif00000000000001"), { aktif: false })));
   it("admin menetapkan kepala divisi", () => assertSucceeds(setDoc(doc(admin(), "dj_kelompok/k4"), { nama: "X", dibuat: "2026-11-14", kepala: ["uid-dj1"] })));
+});
+
+describe("Daily Job: akun anggota tim (peran dj) hanya Daily Job", () => {
+  const ang = () => ctx("uid-anggota", "anggota@dj.isl-hub.app"), anon = () => env.unauthenticatedContext().firestore();
+  it("anggota membaca job kelompoknya", () => assertSucceeds(getDoc(doc(ang(), "dj_job/j-k1"))));
+  it("anggota membuat dan menilai: komentar boleh, penilaian tidak", async () => { await assertSucceeds(setDoc(doc(ang(), "dj_job/j-akt/aktivitas/ag1"), { uid: "uid-anggota", oleh: "Anggota", peran: "anggota", jenis: "komentar", teks: "ok", nilai: "", waktu: 1 })); await assertFails(setDoc(doc(ang(), "dj_job/j-akt/aktivitas/ag2"), { uid: "uid-anggota", oleh: "Anggota", peran: "anggota", jenis: "komentar", teks: "ok", nilai: "setuju", waktu: 1 })); });
+  it("anggota membaca daftar kelompok", () => assertSucceeds(getDoc(doc(ang(), "dj_kelompok/k1"))));
+  it("anggota tidak membaca tarif", () => assertFails(getDoc(doc(ang(), "master_tarif/apa-saja"))));
+  it("anggota tidak membaca customer", () => assertFails(getDocs(collection(ang(), "cu_customers"))));
+  it("anggota tidak membaca quotation", () => assertFails(getDoc(doc(ang(), "qt_quotations/q-sales"))));
+  it("anggota tidak membaca akun orang lain", () => assertFails(getDoc(doc(ang(), "pengguna/uid-sales"))));
+  it("anggota membaca profilnya sendiri", () => assertSucceeds(getDoc(doc(ang(), "pengguna/uid-anggota"))));
+  it("anggota tidak mengubah peran atau kelompoknya", async () => { await assertFails(updateDoc(doc(ang(), "pengguna/uid-anggota"), { peran: "sales" })); await assertFails(updateDoc(doc(ang(), "pengguna/uid-anggota"), { kelompokDJ: "k2" })); });
+  it("anggota mendaftarkan token notifikasi", () => assertSucceeds(setDoc(doc(ang(), "dj_token/uid-anggota_t1"), { uid: "uid-anggota", token: "tk", agen: "uji", diubah: 1 })));
+  it("alias login dibaca per kunci tanpa login", () => assertSucceeds(getDoc(doc(anon(), "dj_login/u_anggota"))));
+  it("alias login tidak bisa didaftar atau ditulis", async () => { await assertFails(getDocs(collection(anon(), "dj_login"))); await assertFails(setDoc(doc(dj1(), "dj_login/u_palsu"), { email: "x@y.z" })); });
+  it("kelompok lain tidak membaca job anggota", () => assertFails(getDoc(doc(ctx("uid-dj2", "dj2@isl.test"), "dj_job/j-k1"))));
 });

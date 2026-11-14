@@ -80,5 +80,5 @@ export const navItems = [
 ];
 
 // Menu yang disembunyikan per peran (aturan sebenarnya ada di firestore.rules; ini hanya merapikan tampilan).
-export const SEMBUNYI_PERAN = { sales: ["master-rate", "pengaturan"], lihat: ["performa"], admin: [] };
+export const SEMBUNYI_PERAN = { sales: ["master-rate", "pengaturan"], lihat: ["performa"], admin: [], dj: ["beranda", "master-rate", "quotation", "customer", "pengaturan", "performa"] }; // dj = anggota tim Daily Job: hanya Daily Job
 export const logoutIcon = icons.logout;
