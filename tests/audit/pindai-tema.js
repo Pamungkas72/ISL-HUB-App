@@ -1,7 +1,7 @@
 // Pemindai konsistensi tema (dijalankan DI DALAM halaman lewat page.evaluate).
 // Tema gelap: melaporkan area berlatar TERANG yang tidak sengaja. Tema terang: area berlatar GELAP yang tidak sengaja.
 // Selain itu melaporkan teks yang hampir tidak terbaca (kontras rendah terhadap latar efektifnya).
-// Dikecualikan: pratinjau dokumen (kertas A4 memang putih), gambar, tombol utama, bilah navigasi, dan elemen yang sengaja diberi data-tema-tetap.
+// Dikecualikan (warna tetap disengaja): avatar inisial Daily Job (.dj-av, warna pastel per orang dengan huruf gelap), knob sakelar. Dikecualikan: pratinjau dokumen (kertas A4 memang putih), gambar, tombol utama, bilah navigasi, dan elemen yang sengaja diberi data-tema-tetap.
 module.exports = function pindai({ tema, ketat }) {
   const gelap = tema === 'gelap';
   const parse = c => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return null; const p = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); return { r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1 }; };
@@ -10,7 +10,7 @@ module.exports = function pindai({ tema, ketat }) {
   const over = (f, b) => ({ r: f.r * f.a + b.r * (1 - f.a), g: f.g * f.a + b.g * (1 - f.a), b: f.b * f.a + b.b * (1 - f.a), a: 1 });
   /* latar efektif; bila ada gradasi/gambar di rantai induk, warna latar tidak bisa dipastikan (null) dan kontras tidak diperiksa */
   const efektif = el => { const rantai = []; for (let e = el; e; e = e.parentElement) rantai.push(e); let bg = { r: gelap ? 14 : 243, g: gelap ? 22 : 247, b: gelap ? 34 : 251, a: 1 }; for (let i = rantai.length - 1; i >= 0; i--) { const cs = getComputedStyle(rantai[i]); if (cs.backgroundImage !== 'none') return null; const c = parse(cs.backgroundColor); if (c && c.a > 0) bg = over(c, bg); } return bg; };
-  const KECUALI = '.app-nav,.nav-lain,.isl-page,.isl-host,.qt-pv-hal,.cu-lembar,.cu-prev__pdf,img,svg,canvas,video,iframe,[data-tema-tetap],.qt-aset__p,.pf-ttd,.mr-vbadge i';
+  const KECUALI = '.app-nav,.nav-lain,.isl-page,.isl-host,.qt-pv-hal,.cu-lembar,.cu-prev__pdf,img,svg,canvas,video,iframe,[data-tema-tetap],.qt-aset__p,.pf-ttd,.mr-vbadge i,.dj-av,.dj-sakelar i';
   const nama = el => { const p = []; for (let e = el; e && p.length < 4 && e !== document.body; e = e.parentElement) p.unshift(e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (e.classList.length ? '.' + [...e.classList].slice(0, 2).join('.') : '')); return p.join(' > '); };
   const hasil = [], lihat = new Set();
   document.querySelectorAll('body *').forEach(el => {

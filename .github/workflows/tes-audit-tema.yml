@@ -53,3 +53,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
         run: node tests/audit/audit-halaman-lain.js ${{ matrix.tema }} ${{ matrix.layar }} --ketat
+      - name: Audit Daily Job (${{ matrix.tema }}, ${{ matrix.layar }})
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/audit/audit-daily-job.js ${{ matrix.tema }} ${{ matrix.layar }} --ketat
