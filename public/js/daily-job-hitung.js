@@ -211,3 +211,21 @@ export function buatPoin({ k, pk, kat, usia, lab }) {
   poin.push(k.terlambat || tua ? { t: "er", teks: `${k.terlambat} job terlambat${tua ? ` dan ${tua} job aktif berusia lebih dari 14 hari` : ""}${tel.length ? `, terbanyak di ${tel.map((o) => o.nama).join(" dan ")}` : ""}.` } : { t: "ok", teks: "Tidak ada job terlambat atau berusia lebih dari 14 hari." });
   return poin;
 }
+
+/* ---------- Daftar job (desain C): masalah yang perlu ditindaklanjuti ---------- */
+/** Jenis masalah satu job aktif: telat (lewat target), hari (target hari ini), tunggu (menunggu pihak lain), tanpa (belum ada target). Job selesai/batal: kosong. */
+export function masalahJob(j, now = hariIni()) {
+  if (!aktif(j)) return [];
+  const m = [];
+  if (terlambat(j, now)) m.push("telat"); else if (j.tglTarget === now) m.push("hari");
+  if (j.status === "tunggu") m.push("tunggu");
+  if (!j.tglTarget) m.push("tanpa");
+  return m;
+}
+export const perluTindakan = (j, now = hariIni()) => masalahJob(j, now).length > 0;
+
+/** Teks ringkas untuk dibagikan (WhatsApp, salin): satu atau banyak job. */
+export function teksBagikan(jobs, fmt = (s) => s || "-") {
+  const satu = (j) => `*${j.judul}*\n${[j.kategori, j.customer].filter(Boolean).join(" · ")}\nPIC: ${j.pic || "-"} · Target: ${fmt(j.tglTarget)} · ${STATUS[j.status] || "-"}`;
+  return jobs.length === 1 ? satu(jobs[0]) : `Daftar job (${jobs.length}):\n\n` + jobs.map((j, i) => `${i + 1}. ${satu(j)}`).join("\n\n");
+}

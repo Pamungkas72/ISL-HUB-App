@@ -62,4 +62,15 @@ eq("poin: ketepatan turun >= 5 poin = merah", po[1], { t: "er", teks: "Ketepatan
 eq("poin: paling lama", po[2].teks, "Rata-rata penyelesaian 5,8 hari; paling lama Monitoring Kasus (12 hari) dan Dokumen Kontrak (10 hari).");
 eq("poin: terlambat dan job tua", po[3].teks, "6 job terlambat dan 8 job aktif berusia lebih dari 14 hari, terbanyak di Monitoring Kasus dan Dokumen Kontrak.");
 eq("poin: tanpa masalah", H.buatPoin({ k: { masuk: 3, selesai: 3, persenSelesai: 100, persenTepat: 100, rataHari: 2, terlambat: 0 }, pk: null, kat: [], usia: [{ n: 1 }, { n: 0 }, { n: 0 }, { n: 0 }], lab: "x" }).map((x) => x.t), ["ok", "ok", "ok", "ok"]);
+eq("masalah: terlambat", H.masalahJob(J[2], now), ["telat"]);
+eq("masalah: hari ini", H.masalahJob(J[3], now), ["hari"]);
+eq("masalah: menunggu dan tanpa target", H.masalahJob({ status: "tunggu", tglTarget: "" }, now), ["tunggu", "tanpa"]);
+eq("masalah: selesai tidak ada", H.masalahJob(J[0], now), []);
+eq("perlu tindakan: job normal tidak", H.perluTindakan({ status: "proses", tglTarget: "2026-12-01" }, now), false);
+eq("bagikan: satu job", H.teksBagikan([{ judul: "Quotation X", kategori: "Quotation", customer: "PT A", pic: "Ega", tglTarget: "2026-11-20", status: "proses" }]), "*Quotation X*\nQuotation · PT A\nPIC: Ega · Target: 2026-11-20 · Dikerjakan");
+eq("bagikan: banyak job diberi nomor", H.teksBagikan([{ judul: "A", status: "baru" }, { judul: "B", status: "baru" }]).startsWith("Daftar job (2):\n\n1. *A*"), true);
+globalThis.document = undefined;
+const V = await import("../../public/js/daily-job-viewer.js");
+eq("tipe berkas", ["a.DOCX", "b.xlsx", "c.pdf", "d.JPG", "e.doc", "f.pptx", "g.csv"].map((n) => V.tipeBerkas(n)), ["docx", "xlsx", "pdf", "gambar", "lain", "lain", "csv"]);
+eq("ukuran teks", [V.ukuranTeks(184 * 1024), V.ukuranTeks(2.5 * 1048576)], ["184 KB", "2,5 MB"]);
 process.exit(gagal ? 1 : 0);
