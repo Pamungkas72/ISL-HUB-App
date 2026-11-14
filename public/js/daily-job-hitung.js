@@ -1,6 +1,6 @@
 // Daily Job: aturan murni (tanpa tampilan/Firebase). Diuji di tests/unit/daily-job.test.js.
 export const KATEGORI = ["Quotation", "RFQ", "Dokumen Kontrak", "DSR Projek", "Setup Project", "Monitoring Kasus", "Produk Administrasi", "Laporan", "Lainnya"]; // dari Excel Daily Report tim
-export const STATUS = { baru: "Baru", proses: "Dikerjakan", tunggu: "Menunggu pihak lain", selesai: "Selesai", batal: "Batal" };
+export const STATUS = { baru: "Dikerjakan", proses: "Dikerjakan", tunggu: "Tertunda", selesai: "Selesai", batal: "Batal" };
 export const PRIORITAS = { tinggi: "Tinggi", sedang: "Sedang", rendah: "Rendah" };
 export const BOBOT = { 1: "Ringan", 2: "Sedang", 3: "Berat" };
 export const SLOT_PENGINGAT = [9, 14, 17]; // jam WIB
@@ -80,7 +80,9 @@ export function pengingat(jobs, now = hariIni()) {
 }
 
 /** Slot pengingat (jam 9/14/17 WIB) yang sudah lewat hari ini dan belum ditandai. Kembali kunci slot terbaru, atau null. */
+export const akhirPekan = (d = new Date()) => ["Sat", "Sun"].includes(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", weekday: "short" }).format(d));
 export function slotJatuhTempo(sudah, d = new Date()) {
+  if (akhirPekan(d)) return null; // pengingat catat job hanya Senin sampai Jumat
   const jam = +new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", hour12: false }).format(d) % 24;
   const lewat = SLOT_PENGINGAT.filter((s) => s <= jam);
   const s = lewat[lewat.length - 1];
@@ -105,24 +107,41 @@ export const isoTanggal = (v) => {
   return a ? a[0] : b ? `${b[3]}-${b[2].padStart(2, "0")}-${b[1].padStart(2, "0")}` : null;
 };
 export const normKategori = (k) => { const t = String(k || "").trim(); if (!t) return "Lainnya"; if (/^setup project/i.test(t)) return "Setup Project"; if (/^lainnya/i.test(t)) return "Lainnya"; if (/^daily job/i.test(t)) return "Produk Administrasi"; return KATEGORI.find((x) => x.toLowerCase() === t.toLowerCase()) || t; };
+/** Status, prioritas, dan bobot dari teks sel Excel (kosong atau tidak dikenal: null atau bawaan). */
+export function normStatus(t) {
+  const x = String(t || "").trim().toLowerCase(); if (!x) return null;
+  if (/^(selesai|done|beres|closed?)$/.test(x)) return "selesai"; if (/^(batal|cancel(led)?|dibatalkan)/.test(x)) return "batal"; if (/^(baru|new)$/.test(x)) return "proses";
+  if (/^menunggu|^pending|^hold|^tunggu|^tertunda/.test(x)) return "tunggu"; if (/^(dikerjakan|proses|on proses|berjalan|progress|in progress)$/.test(x)) return "proses"; return null;
+}
+export const normPrioritas = (t) => { const x = String(t || "").trim().toLowerCase(); return x === "tinggi" || x === "high" ? "tinggi" : x === "rendah" || x === "low" ? "rendah" : "sedang"; };
+export const normBobot = (t) => { const x = String(t || "").trim().toLowerCase(); return /^(1|ringan)/.test(x) ? 1 : /^(3|berat)/.test(x) ? 3 : 2; };
 const BUTUH_TUNGGU = /menunggu|menungu|approval|pending|pendding|\bacc\b|jadwal|respon/i;
 
 /** baris: larik-larik sel lembar Excel (header:1). Mengembalikan {jobs, peringatan, dilewati}. id = x + nomor baris, jadi impor ulang menimpa, bukan menggandakan. */
 export function petaExcel(baris) {
   const h = baris.findIndex((r) => (r || []).some((c) => /^tanggal diberikan$/i.test(String(c || "").trim())));
   if (h < 0) return { galat: 'Lembar tidak punya kolom "Tanggal Diberikan". Pakai lembar "Input Tugas Harian".' };
-  const kol = {}; baris[h].forEach((c, i) => { const t = String(c || "").trim().toLowerCase(); [["masuk", "tanggal diberikan"], ["pic", "pic"], ["kategori", "kategori"], ["customer", "customer"], ["desk", "deskripsi"], ["target", "deadline"], ["selesai", "tanggal selesai"], ["ket", "keterangan"]].forEach(([k, n]) => { if (t.startsWith(n) && kol[k] == null) kol[k] = i; }); });
+  const kol = {}; baris[h].forEach((c, i) => {
+    const t = String(c || "").trim().toLowerCase();
+    [["masuk", "tanggal diberikan"], ["pic", "pic"], ["kategori", "kategori"], ["customer", "customer"], ["desk", "deskripsi"], ["target", "deadline"], ["selesai", "tanggal selesai"], ["ket", "keterangan"]].forEach(([k, n]) => { if (t.startsWith(n) && kol[k] == null) kol[k] = i; });
+    [["status", "status"], ["prio", "prioritas"], ["bobot", "bobot"]].forEach(([k, n]) => { if (t === n && kol[k] == null) kol[k] = i; }); // "Status Waktu" (kolom hitung Excel lama) tidak dipakai
+  });
   const jobs = [], peringatan = []; let dilewati = 0;
   baris.slice(h + 1).forEach((r, i) => {
-    const n = h + i + 2, v = (k) => (r[kol[k]] == null ? "" : String(r[kol[k]]).trim());
+    const n = h + i + 2, v = (k) => (kol[k] == null || r[kol[k]] == null ? "" : String(r[kol[k]]).trim());
     if (!v("desk") && !v("customer") && !v("kategori")) { dilewati++; return; }
+    if (/^contoh\b/i.test(v("desk")) || /^contoh\b/i.test(v("customer"))) { dilewati++; return; } // baris contoh di template
     const kategori = normKategori(v("kategori")), customer = v("customer"), judul = v("desk") || [kategori, customer].filter(Boolean).join(" – ");
-    let masuk = isoTanggal(r[kol.masuk]); const target = isoTanggal(r[kol.target]), selesai = isoTanggal(r[kol.selesai]), ket = v("ket");
+    let masuk = isoTanggal(r[kol.masuk]); const target = isoTanggal(r[kol.target]), ket = v("ket"); let selesai = isoTanggal(r[kol.selesai]);
     if (!v("desk")) peringatan.push(`Baris ${n}: deskripsi kosong, judul memakai "${judul}".`);
+    if (!v("pic")) peringatan.push(`Baris ${n} (${judul.slice(0, 40)}): PIC kosong.`);
+    if (!target) peringatan.push(`Baris ${n} (${judul.slice(0, 40)}): deadline kosong, job tanpa target.`);
     if (!masuk) { masuk = selesai || target; peringatan.push(`Baris ${n} (${judul.slice(0, 40)}): tanggal diberikan kosong, memakai ${masuk || "hari impor"}.`); }
-    const status = selesai ? "selesai" : BUTUH_TUNGGU.test(ket) ? "tunggu" : "proses";
+    let status = selesai ? "selesai" : BUTUH_TUNGGU.test(ket) ? "tunggu" : "proses";
+    const st = normStatus(v("status")); if (v("status") && !st) peringatan.push(`Baris ${n} (${judul.slice(0, 40)}): status "${v("status")}" tidak dikenal, diabaikan.`);
+    if (st) { status = st; if (st === "selesai" && !selesai) { selesai = hariIni(); peringatan.push(`Baris ${n} (${judul.slice(0, 40)}): status Selesai tanpa tanggal selesai, memakai hari ini.`); } if (st !== "selesai") selesai = null; }
     const catatan = ket && !/^done$/i.test(ket) ? [{ tgl: masuk || "", oleh: "Import Excel", teks: ket }] : [];
-    jobs.push({ id: "x" + n, judul, kategori, customer, pic: v("pic"), deskripsi: "", tglMasuk: masuk, tglMulai: null, tglTarget: target, tglSelesai: selesai, status, prioritas: "sedang", bobot: 2, file: [], tautan: [], catatan });
+    jobs.push({ id: "x" + n, judul, kategori, customer, pic: v("pic"), deskripsi: "", tglMasuk: masuk, tglMulai: null, tglTarget: target, tglSelesai: selesai, status, prioritas: normPrioritas(v("prio")), bobot: normBobot(v("bobot")), file: [], tautan: [], catatan });
   });
   return { jobs, peringatan, dilewati };
 }
@@ -213,7 +232,7 @@ export function buatPoin({ k, pk, kat, usia, lab }) {
 }
 
 /* ---------- Daftar job (desain C): masalah yang perlu ditindaklanjuti ---------- */
-/** Jenis masalah satu job aktif: telat (lewat target), hari (target hari ini), tunggu (menunggu pihak lain), tanpa (belum ada target). Job selesai/batal: kosong. */
+/** Jenis masalah satu job aktif: telat (lewat target), hari (target hari ini), tunggu (tertunda), tanpa (belum ada target). Job selesai/batal: kosong. */
 export function masalahJob(j, now = hariIni()) {
   if (!aktif(j)) return [];
   const m = [];
@@ -228,4 +247,25 @@ export const perluTindakan = (j, now = hariIni()) => masalahJob(j, now).length >
 export function teksBagikan(jobs, fmt = (s) => s || "-") {
   const satu = (j) => `*${j.judul}*\n${[j.kategori, j.customer].filter(Boolean).join(" · ")}\nPIC: ${j.pic || "-"} · Target: ${fmt(j.tglTarget)} · ${STATUS[j.status] || "-"}`;
   return jobs.length === 1 ? satu(jobs[0]) : `Daftar job (${jobs.length}):\n\n` + jobs.map((j, i) => `${i + 1}. ${satu(j)}`).join("\n\n");
+}
+
+/* ---------- Identitas login anggota tim (salinan functions/dailyjob-akun-util.js; harus sama) ---------- */
+export const normalUsername = (s) => String(s || "").trim().toLowerCase();
+export const usernameValid = (s) => /^[a-z0-9][a-z0-9._-]{2,29}$/.test(s);
+export function normalTelepon(s) {
+  let d = String(s || "").replace(/[^0-9]/g, ""); if (!d) return "";
+  if (d.startsWith("0")) d = "62" + d.slice(1); else if (d.startsWith("8")) d = "62" + d;
+  return d.length >= 9 && d.length <= 15 ? d : "";
+}
+export const emailValid = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(s || "").trim());
+/** Kunci dokumen dj_login untuk masukan di halaman masuk: email, nomor telepon, atau username. */
+export function kunciLogin(masukan) {
+  const t = String(masukan || "").trim(); if (!t) return "";
+  if (t.includes("@")) return "e_" + t.toLowerCase();
+  const tel = /^[+0-9\s().-]+$/.test(t) ? normalTelepon(t) : "";
+  return tel ? "p_" + tel : "u_" + normalUsername(t);
+}
+/** Kata sandi acak 10 karakter (tanpa huruf yang mudah tertukar) untuk akun baru atau reset. */
+export function sandiAcak(rand = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n) {
+  const h = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return Array.from({ length: 10 }, () => h[rand(h.length)]).join("");
 }

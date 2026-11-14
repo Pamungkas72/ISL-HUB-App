@@ -73,12 +73,29 @@ async function segarkanDiBelakang(kunci, ambilServer, user) {
   }
 }
 
+/* Anggota tim Daily Job (peran dj): tidak memuat Master Rate, Customer, atau Quotation (aturan server juga menolaknya). Hanya modul Daily Job. */
+function mulaiAnggotaDJ(user, profil) {
+  window.__ISL_KELOLA = false;
+  window.__ISL = { email: user.email, uid: user.uid, master: false, kelola: false, admin: false, sales: false, peran: "dj", nama: profil.nama || user.displayName || "" };
+  const tampil = () => {
+    ["mr-root", "mr-kontainer", "nf-halaman", "st-root", "bd-root"].forEach((id) => document.getElementById(id)?.classList.add("hidden"));
+    document.getElementById("dj-root")?.classList.remove("hidden");
+    const h = document.querySelector(".app-topbar h1"); if (h) h.textContent = "Daily Job";
+    document.title = "Daily Job — ISL HUB"; window.__rute = "dailyjob"; renderNav("dailyjob");
+  };
+  window.addEventListener("hashchange", () => { if (location.hash !== "#dailyjob") location.hash = "#dailyjob"; });
+  if (location.hash !== "#dailyjob") location.hash = "#dailyjob";
+  tampil();
+  import("./daily-job.js").then((m) => { m.mulaiDailyJob(user, profil); m.pasangPengingat(user, profil); }).catch((err) => { console.error(err); toast("Daily Job belum bisa dibuka. Muat ulang aplikasi.", "bahaya"); });
+}
+
 let mulai = false;
 watchAuthState(
   async (user, profil) => {
     if (mulai) return; mulai = true;
     document.getElementById("user-email").textContent = labelAkun(user.email, user.displayName);
     try {
+      if (profil && profil.peran === "dj" && profil.status === "aktif") return mulaiAnggotaDJ(user, profil); // anggota tim: hanya Daily Job, tanpa memuat data lain
       const master = adalahMaster(user.email);
       if (emailMasterBelumDiisi()) console.warn("EMAIL_MASTER belum diisi di config-akses.js: semua akun hanya bisa melihat.");
       const sales = !!profil && profil.peran === "sales" && profil.status === "aktif";

@@ -1,4 +1,4 @@
-// Notifikasi push Daily Job: tiap 09.00, 14.00, 17.00 WIB. Penerima: akun aktif yang mengaktifkan notifikasi di perangkatnya.
+// Notifikasi push Daily Job: tiap 09.00, 14.00, 17.00 WIB, hanya Senin sampai Jumat. Penerima: akun aktif yang mengaktifkan notifikasi di perangkatnya.
 // Anggota menerima ringkasan kelompoknya; master dan admin menerima semua kelompok.
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
@@ -7,7 +7,7 @@ const { bangunPesan } = require("./dailyjob-pesan");
 const EMAIL_MASTER = "codcodan1@gmail.com";
 const TOKEN_MATI = ["messaging/registration-token-not-registered", "messaging/invalid-registration-token"];
 
-exports.notifDailyJob = onSchedule({ schedule: "0 9,14,17 * * *", timeZone: "Asia/Jakarta", region: "asia-southeast2" }, async (ev) => {
+exports.notifDailyJob = onSchedule({ schedule: "0 9,14,17 * * 1-5", timeZone: "Asia/Jakarta", region: "asia-southeast2" }, async (ev) => {
   const db = admin.firestore(), sekarang = ev.scheduleTime ? new Date(ev.scheduleTime) : new Date();
   const [tok, peng, js] = await Promise.all([db.collection("dj_token").get(), db.collection("pengguna").get(), db.collection("dj_job").get()]);
   const akun = new Map(peng.docs.map((d) => [d.id, d.data()])), jobs = js.docs.map((d) => d.data());

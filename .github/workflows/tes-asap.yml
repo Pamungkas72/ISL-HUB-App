@@ -40,7 +40,9 @@ jobs:
       - name: Uji unit Daily Job
         run: |
           node tests/unit/daily-job.test.mjs
+          node tests/unit/daily-job-pdf.test.mjs
           node tests/unit/daily-job-notif.test.js
+          node tests/unit/daily-job-akun.test.js
 
       - name: Pasang Playwright dan Chromium
         run: |

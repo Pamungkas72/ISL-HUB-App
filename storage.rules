@@ -35,7 +35,7 @@ service firebase.storage {
       return profilAktif()
         && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'sales';
     }
-    function aktif() { return isMaster() || profilAktif(); }
+    function aktif() { return isMaster() || (profilAktif() && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.get('peran', null) != 'dj'); }
     // Admin (pemeliharaan): boleh mengunggah dokumen Master Rate yang tidak rahasia (open_yard, vendor_dokumen).
     function isAdmin() {
       return profilAktif()

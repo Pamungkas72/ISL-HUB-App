@@ -9,7 +9,7 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, ge
 import { adalahMaster } from "./config-akses.js";
 import { WA_ADMIN_TAMPILAN, linkWaAdmin, pesanDaftarSales } from "./kontak-admin.js";
 
-export const PERAN = { master: "Master", admin: "Admin", sales: "Sales", lihat: "Lihat saja" };
+export const PERAN = { master: "Master", admin: "Admin", sales: "Sales", lihat: "Lihat saja", dj: "Anggota Daily Job" };
 /* Pendaftaran mandiri hanya untuk sales. Admin dibuat master (Pengaturan > Akun). */
 export const PERAN_DIMINTA = { sales: "Sales" };
 

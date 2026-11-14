@@ -48,6 +48,7 @@ export function buatLaporanPdf({ jsPDF, jobs, r, periode, kelompok, filter = "",
   const halamanBaru = () => { d.addPage(); kepala(); y = ATAS; };
   const perlu = (h) => { if (y + h > BAWAH) halamanBaru(); };
   const bagian = (judul) => { perlu(14); y += 2; d.setFillColor(...C.ac); d.roundedRect(ML, y - 3.4, 1.2, 4.2, 0.5, 0.5, "F"); teks(judul.toUpperCase(), ML + 3, y, { size: 8.5, bold: true, warna: C.nv }); y += 4; };
+  const noBaris = (h) => ((h.row.raw && h.row.raw[0]) || h.row.index + 1) - 1; // baris tinggi terpecah antarhalaman: row.index bisa di luar larik, kolom No tetap benar
   const tabel = (kolom, baris, opsi = {}) => {
     const awal = d.internal.getCurrentPageInfo().pageNumber;
     d.autoTable({ startY: y, margin: { left: ML, right: ML, top: ATAS, bottom: 16 }, head: [kolom.map((c) => c.j)], body: baris, theme: "grid", tableWidth: W,
@@ -114,7 +115,7 @@ export function buatLaporanPdf({ jsPDF, jobs, r, periode, kelompok, filter = "",
   bagian("Komposisi dan usia job");
   kotak(ML, y, W / 2 - 2, 40); kotak(ML + W / 2 + 2, y, W / 2 - 2, 40);
   teks("Status job", ML + 3, y + 5, { size: 8, bold: true });
-  const seg = [[st.selesai, C.ok, "Selesai"], [st.proses, C.sky, "Dikerjakan"], [st.tunggu, C.ac, "Menunggu pihak lain"], [st.terlambat, C.dg, "Terlambat"]], tot = Math.max(1, seg.reduce((a, s) => a + s[0], 0)), cx = ML + 22, cy = y + 23;
+  const seg = [[st.selesai, C.ok, "Selesai"], [st.proses, C.sky, "Dikerjakan"], [st.tunggu, C.ac, "Tertunda"], [st.terlambat, C.dg, "Terlambat"]], tot = Math.max(1, seg.reduce((a, s) => a + s[0], 0)), cx = ML + 22, cy = y + 23;
   let a0 = -Math.PI / 2; d.setFillColor(...C.bd); sektor(cx, cy, 8, 14, -Math.PI / 2, Math.PI * 1.5 - 0.001, C.bd);
   seg.forEach((s) => { if (s[0]) { const a1 = a0 + (s[0] / tot) * Math.PI * 2; sektor(cx, cy, 8, 14, a0, Math.min(a1, Math.PI * 1.5 - 0.001), s[1]); a0 = a1; } });
   teks(tot, cx, cy + 1.6, { size: 9, bold: true, align: "center" });
@@ -138,7 +139,7 @@ export function buatLaporanPdf({ jsPDF, jobs, r, periode, kelompok, filter = "",
   bagian("Performa per kategori");
   tabel([{ j: "Kategori", l: true }, { j: "Masuk" }, { j: "Selesai" }, { j: "Tepat waktu" }, { j: "Rata-rata hari" }, { j: "Terlambat" }],
     kat.map((o) => [o.nama, o.masuk, o.selesai, pers(o.persenTepat), o.rataHari == null ? "–" : kom(o.rataHari), o.terlambat]),
-    { warna: (h) => { const o = kat[h.row.index], ci = h.column.index; if (ci === 3 && o.persenTepat != null && o.persenTepat < 60) { h.cell.styles.textColor = C.dg; h.cell.styles.fontStyle = "bold"; } if (ci === 5 && o.terlambat) { h.cell.styles.textColor = C.dg; h.cell.styles.fontStyle = "bold"; } } });
+    { warna: (h) => { const o = kat[h.row.index], ci = h.column.index; if (o && ci === 3 && o.persenTepat != null && o.persenTepat < 60) { h.cell.styles.textColor = C.dg; h.cell.styles.fontStyle = "bold"; } if (o && ci === 5 && o.terlambat) { h.cell.styles.textColor = C.dg; h.cell.styles.fontStyle = "bold"; } } });
   if (kat.length) {
     const tinggi = 9 + kat.length * 5.4; perlu(tinggi); kotak(ML, y, W, tinggi); teks("Job selesai per kategori (selesai/masuk · tepat waktu)", ML + 3, y + 5, { size: 8, bold: true });
     const mxK = Math.max(1, ...kat.map((o) => o.masuk));
@@ -154,15 +155,15 @@ export function buatLaporanPdf({ jsPDF, jobs, r, periode, kelompok, filter = "",
   if (selesai.length) {
     tabel([{ j: "No", l: true, w: 8 }, { j: "Job", l: true, w: 58 }, { j: "Kategori", l: true, w: 28 }, { j: "Customer", l: true, w: 28 }, { j: "PIC", l: true, w: 14 }, { j: "Target", w: 14 }, { j: "Selesai", w: 14 }, { j: "Ket.", w: 11 }, { j: "File", w: 11 }],
       selesai.map((j, i) => [i + 1, j.judul, j.kategori || "–", pot(j.customer, 24) || "–", j.pic || "–", tglPendek(j.tglTarget), tglPendek(j.tglSelesai), tepat(j) ? "Tepat" : "Telat", tautanJob(j).length ? (tautanJob(j).length > 1 ? `Buka (${tautanJob(j).length})` : "Buka") : "–"]),
-      { warna: (h) => { const j = selesai[h.row.index]; if (h.column.index === 7) { h.cell.styles.textColor = tepat(j) ? C.ok : C.dg; h.cell.styles.fontStyle = "bold"; } if (h.column.index === 8 && tautanJob(j).length) { h.cell.styles.textColor = C.sky; h.cell.styles.fontStyle = "bold"; } },
-        tautan: (h) => { const j = selesai[h.row.index]; if (h.column.index === 8) { const u = tautanJob(j)[0]; if (u) d.link(h.cell.x, h.cell.y, h.cell.width, h.cell.height, { url: u }); } } });
+      { warna: (h) => { const j = selesai[noBaris(h)]; if (!j) return; if (h.column.index === 7) { h.cell.styles.textColor = tepat(j) ? C.ok : C.dg; h.cell.styles.fontStyle = "bold"; } if (h.column.index === 8 && tautanJob(j).length) { h.cell.styles.textColor = C.sky; h.cell.styles.fontStyle = "bold"; } },
+        tautan: (h) => { const j = selesai[noBaris(h)]; if (j && h.column.index === 8) { const u = tautanJob(j)[0]; if (u) d.link(h.cell.x, h.cell.y, h.cell.width, h.cell.height, { url: u }); } } });
   } else { teks("Tidak ada job selesai pada periode ini.", ML, y + 3, { size: 8.5, warna: C.mu }); y += 8; }
 
   bagian(`Lampiran 2 · Job belum selesai, perlu tindak lanjut (${terbuka.length})`);
   if (terbuka.length) {
     tabel([{ j: "No", l: true, w: 8 }, { j: "Job", l: true, w: 74 }, { j: "Kategori", l: true, w: 34 }, { j: "PIC", l: true, w: 18 }, { j: "Target", w: 18 }, { j: "Posisi", w: 34 }],
       terbuka.map((j, i) => [i + 1, j.judul, j.kategori || "–", j.pic || "–", tglPendek(j.tglTarget), H.labelTarget(j, now).t]),
-      { warna: (h) => { if (h.column.index === 5) { const l = H.labelTarget(terbuka[h.row.index], now); h.cell.styles.fontStyle = "bold"; h.cell.styles.textColor = l.k === "bahaya" ? C.dg : l.k === "warn" ? C.ac : C.mu; } } });
+      { warna: (h) => { if (h.column.index === 5 && terbuka[noBaris(h)]) { const l = H.labelTarget(terbuka[noBaris(h)], now); h.cell.styles.fontStyle = "bold"; h.cell.styles.textColor = l.k === "bahaya" ? C.dg : l.k === "warn" ? C.ac : C.mu; } } });
   } else { teks("Tidak ada job yang belum selesai.", ML, y + 3, { size: 8.5, warna: C.mu }); y += 8; }
 
   perlu(26); bagian("Catatan dan definisi");

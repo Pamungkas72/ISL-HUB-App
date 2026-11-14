@@ -22,3 +22,4 @@ exports.aturKataSandi = onCall({ region: "asia-southeast2" }, async (req) => {
   return { ok: true };
 });
 exports.notifDailyJob = require("./dailyjob").notifDailyJob;
+Object.assign(exports, require("./dailyjob-akun"));
