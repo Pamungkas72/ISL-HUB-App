@@ -45,10 +45,22 @@ jobs:
       # Function pengatur kata sandi butuh paket Blaze dan peran Cloud Functions Admin + Service Account User di service account.
       # Gagal tidak membatalkan deploy hosting dan aturan di atas.
       - name: Deploy Cloud Function (opsional)
+        id: fungsi
         continue-on-error: true
         run: |
           (cd functions && npm install --omit=dev --no-audit --no-fund)
           firebase deploy --only functions --non-interactive --project system-marketing-bd-isl-2026
+
+      # Gagal tidak membatalkan deploy, tetapi harus terlihat: tanpa fungsi, notifikasi push dan pembuatan akun tim Daily Job mati.
+      - name: Peringatan bila Cloud Function gagal
+        if: steps.fungsi.outcome == 'failure'
+        run: |
+          echo "::warning title=Cloud Function belum aktif::Deploy fungsi gagal. Notifikasi push dan akun tim Daily Job tidak berjalan sampai fungsi terdeploy. Lihat log langkah Deploy Cloud Function."
+          {
+            echo "### Cloud Function belum aktif"
+            echo "Deploy fungsi gagal (hosting dan aturan tetap terpasang). Notifikasi push dan pembuatan akun tim Daily Job tidak berjalan."
+            echo "Periksa: paket Blaze aktif, peran Cloud Functions Admin dan Service Account User pada service account, lalu jalankan ulang workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Bersihkan kredensial
         if: always()

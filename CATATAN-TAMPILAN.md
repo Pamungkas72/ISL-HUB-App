@@ -467,3 +467,8 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
   - **Tab Kelompok crash** saat balasan daftar tim tidak berisi anggota: kini dianggap daftar kosong.
   - Avatar inisial dan knob sakelar dikecualikan dari pemindai (warna sengaja tetap).
 - Harness fungsi Daily Job (daftar 58, detail 46, akun tim 44 uji): semua lulus.
+
+## Perbaikan operasional hasil audit (14 Nov 2026)
+- **Deploy Cloud Function gagal kini terlihat:** langkah deploy fungsi tetap tidak membatalkan hosting dan aturan, tetapi menulis peringatan dan ringkasan di Actions (notifikasi push dan akun tim mati bila fungsi tidak terdeploy).
+- **Alias login `dj_login` tanpa uid:** dokumen publik hanya berisi email. Kepemilikan alias saat ubah data dicek dari daftar `alias` di dokumen pengguna (`kunciBentrok`, ada uji). Dokumen lama yang masih memuat uid tertimpa otomatis saat data akun diubah.
+- **CORS Storage** untuk pratinjau berkas belum otomatis: jalankan sekali `gsutil cors set cors-storage.json gs://system-marketing-bd-isl-2026.firebasestorage.app` (Cloud Shell, akun pemilik proyek).

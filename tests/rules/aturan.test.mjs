@@ -35,7 +35,7 @@ before(async () => {
     await isi("pengguna/uid-dj1", { email: "dj1@isl.test", nama: "DJ1", peran: "sales", status: "aktif", kelompokDJ: "k1" });
     await isi("pengguna/uid-sales2", { email: "sales2@isl.test", nama: "S2", peran: "sales", status: "aktif", kelompokDJ: "k1" });
     await isi("pengguna/uid-anggota", { email: "anggota@dj.isl-hub.app", nama: "Anggota", peran: "dj", status: "aktif", kelompokDJ: "k1", username: "anggota" });
-    await isi("dj_login/u_anggota", { email: "anggota@dj.isl-hub.app", uid: "uid-anggota" });
+    await isi("dj_login/u_anggota", { email: "anggota@dj.isl-hub.app" });
     await isi("pengguna/uid-dj2", { email: "dj2@isl.test", nama: "DJ2", peran: "lihat", status: "aktif", kelompokDJ: "k2" });
     await isi("dj_job/j-k1", { kelompokId: "k1", judul: "Job k1", status: "baru" });
     await isi("dj_job/j-k2", { kelompokId: "k2", judul: "Job k2", status: "baru" });

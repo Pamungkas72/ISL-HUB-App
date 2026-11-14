@@ -27,12 +27,12 @@ const catat = (c, uid, email, aksi) => db().collection("pengguna_log").add({ uid
 
 /** Kunci login (alias) yang dipesan satu akun: username wajib, telepon dan email opsional. */
 const daftarAlias = (username, telepon, emailKontak) => [`u_${username}`, ...(telepon ? [`p_${telepon}`] : []), ...(emailKontak ? [`e_${emailKontak.toLowerCase()}`] : [])];
-async function pesanAlias(kunci, email, kecualiUid) {
+async function pesanAlias(kunci, email, milik = []) {
   const ref = (k) => db().doc(`dj_login/${k}`);
   await db().runTransaction(async (t) => {
-    const s = await Promise.all(kunci.map((k) => t.get(ref(k))));
-    s.forEach((d, i) => { if (d.exists && d.get("uid") !== kecualiUid) throw new HttpsError("already-exists", { u: "Username sudah dipakai.", p: "Nomor telepon sudah dipakai akun lain.", e: "Email sudah dipakai akun lain." }[kunci[i][0]]); });
-    kunci.forEach((k) => t.set(ref(k), { email, uid: kecualiUid || "" }));
+    const s = await Promise.all(kunci.map((k) => t.get(ref(k)))), bentrok = U.kunciBentrok(kunci, s.map((d) => d.exists), milik);
+    if (bentrok) throw new HttpsError("already-exists", { u: "Username sudah dipakai.", p: "Nomor telepon sudah dipakai akun lain.", e: "Email sudah dipakai akun lain." }[bentrok[0]]);
+    kunci.forEach((k) => t.set(ref(k), { email })); // publik: hanya email (tanpa uid)
   });
 }
 const lepasAlias = (kunci) => Promise.all(kunci.map((k) => db().doc(`dj_login/${k}`).delete().catch(() => {})));
@@ -48,12 +48,11 @@ exports.djBuatAnggota = onCall(OPSI, async (req) => {
   if (emailKontak && !U.emailValid(emailKontak)) throw new HttpsError("invalid-argument", "Format email tidak valid.");
   if (!U.sandiValid(sandi)) throw new HttpsError("invalid-argument", "Kata sandi 8 sampai 64 karakter.");
   const email = U.emailSintetis(username), alias = daftarAlias(username, telepon, emailKontak);
-  await pesanAlias(alias, email, "");
+  await pesanAlias(alias, email);
   let uid;
   try { uid = (await admin.auth().createUser({ email, password: sandi, displayName: nama })).uid; }
   catch (err) { await lepasAlias(alias); throw new HttpsError("internal", "Akun belum bisa dibuat: " + (err.message || err)); }
-  await Promise.all(alias.map((k) => db().doc(`dj_login/${k}`).set({ email, uid })));
-  await db().doc(`pengguna/${uid}`).set({ email, nama, peran: "dj", status: "aktif", kelompokDJ: kelompokId, username, telepon: telepon || null, emailKontak: emailKontak || null, alias, dibuat: admin.firestore.FieldValue.serverTimestamp(), disetujuiPada: admin.firestore.FieldValue.serverTimestamp(), dibuatOleh: c.uid, dibuatOlehNama: c.nama });
+    await db().doc(`pengguna/${uid}`).set({ email, nama, peran: "dj", status: "aktif", kelompokDJ: kelompokId, username, telepon: telepon || null, emailKontak: emailKontak || null, alias, dibuat: admin.firestore.FieldValue.serverTimestamp(), disetujuiPada: admin.firestore.FieldValue.serverTimestamp(), dibuatOleh: c.uid, dibuatOlehNama: c.nama });
   await catat(c, uid, email, "dj-tambah");
   return { uid, username, email };
 });
@@ -83,7 +82,7 @@ exports.djAturAnggota = onCall(OPSI, async (req) => {
     const nama = String(d.nama || s.get("nama") || "").trim().slice(0, 80), telepon = d.telepon ? U.normalTelepon(d.telepon) : "", emailKontak = String(d.emailKontak || "").trim().toLowerCase();
     if (d.telepon && !telepon) throw new HttpsError("invalid-argument", "Nomor telepon tidak valid."); if (emailKontak && !U.emailValid(emailKontak)) throw new HttpsError("invalid-argument", "Format email tidak valid.");
     const lama = s.get("alias") || [], baru = daftarAlias(s.get("username"), telepon, emailKontak);
-    await pesanAlias(baru, email, uid); await lepasAlias(lama.filter((k) => !baru.includes(k)));
+    await pesanAlias(baru, email, lama); await lepasAlias(lama.filter((k) => !baru.includes(k)));
     await ref.update({ nama, telepon: telepon || null, emailKontak: emailKontak || null, alias: baru }); await admin.auth().updateUser(uid, { displayName: nama }); await catat(c, uid, email, "dj-ubah");
   } else throw new HttpsError("invalid-argument", "Aksi tidak dikenal.");
   return { ok: true };
