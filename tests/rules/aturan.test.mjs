@@ -17,6 +17,7 @@ const master = () => ctx("uid-master", MASTER);
 const admin = () => ctx("uid-admin", "admin@isl.test");
 const sales = () => ctx("uid-sales", "sales@isl.test");
 const lihat = () => ctx("uid-lihat", "lihat@isl.test");
+const sales2 = () => ctx("uid-sales2", "sales2@isl.test");
 
 const kegiatan = (quotationId, pemilikUid, oleh) => ({ quotationId, pemilikUid, tanggal: "2026-10-30", jenis: "kunjungan", omzet: 0, catatan: "uji", oleh, dibuat: "2026-10-30" });
 const volume = (quotationId, pemilikUid, oleh) => ({ quotationId, barisId: "b1", pemilikUid, customerId: "c1", customerNama: "PT Uji", liniKey: "depo", liniNama: "Depo", item: "Stripping", satuan: "per kontainer 20ft", jual: 100000, volume: 2, tanggal: "2026-10-30", catatan: "", oleh, dibuat: "2026-10-30" });
@@ -31,10 +32,15 @@ before(async () => {
     await isi("pengguna/uid-sales", { email: "sales@isl.test", nama: "Sales", peran: "sales", status: "aktif", kodeSales: "BD" });
     await isi("pengguna/uid-lihat", { email: "lihat@isl.test", nama: "Lihat", peran: "lihat", status: "aktif" });
     await isi("pengguna/uid-dj1", { email: "dj1@isl.test", nama: "DJ1", peran: "sales", status: "aktif", kelompokDJ: "k1" });
+    await isi("pengguna/uid-sales2", { email: "sales2@isl.test", nama: "S2", peran: "sales", status: "aktif", kelompokDJ: "k1" });
     await isi("pengguna/uid-dj2", { email: "dj2@isl.test", nama: "DJ2", peran: "lihat", status: "aktif", kelompokDJ: "k2" });
     await isi("dj_job/j-k1", { kelompokId: "k1", judul: "Job k1", status: "baru" });
     await isi("dj_job/j-k2", { kelompokId: "k2", judul: "Job k2", status: "baru" });
-    await isi("dj_kelompok/k1", { nama: "Marketing" });
+    await isi("dj_kelompok/k1", { nama: "Marketing", kepala: ["uid-dj1"] });
+    await isi("dj_job/j-akt", { kelompokId: "k1", judul: "Job akt", status: "baru" });
+    await isi("dj_bagikan/tokenAktif00000000000001", { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: true, berlakuSampai: Date.now() + 864e5, unduh: true, snapshot: { judul: "x" } });
+    await isi("dj_bagikan/tokenKedaluwarsa000000001", { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: true, berlakuSampai: Date.now() - 1000, unduh: true, snapshot: { judul: "x" } });
+    await isi("dj_bagikan/tokenDicabut00000000000001", { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: false, berlakuSampai: Date.now() + 864e5, unduh: true, snapshot: { judul: "x" } });
     await isi("pengguna/uid-pending", { email: "pending@isl.test", nama: "Pendaftar", peranDiminta: "sales", peran: null, status: "menunggu" });
     await isi("qt_quotations/q-sales", { pemilikUid: "uid-sales", status: "disetujui", nomor: "001/QL", customerId: "c1", baris: [] });
     await isi("qt_quotations/q-draf-sales", { pemilikUid: "uid-sales", status: "draf", customerId: "c1", baris: [] });
@@ -222,4 +228,25 @@ describe("Daily Job: token notifikasi push", () => {
   it("akun membaca dan menghapus tokennya sendiri", async () => { await assertSucceeds(getDoc(doc(dj1(), "dj_token/uid-dj1_abc"))); await assertSucceeds(deleteDoc(doc(dj1(), "dj_token/uid-dj1_abc"))); });
   it("akun lain tidak membaca token orang", async () => { await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "dj_token/uid-dj1_x"), tok("uid-dj1"))); await assertFails(getDoc(doc(sales(), "dj_token/uid-dj1_x"))); });
   it("akun yang menunggu persetujuan tidak mendaftarkan token", async () => { await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "pengguna/uid-tunggu-dj"), { email: "t@isl.test", nama: "T", peranDiminta: "sales", peran: null, status: "menunggu" })); await assertFails(setDoc(doc(ctx("uid-tunggu-dj", "t@isl.test"), "dj_token/uid-tunggu-dj_a"), tok("uid-tunggu-dj"))); });
+});
+
+describe("Daily Job: komentar, penilaian kepala divisi, tautan bagikan", () => {
+  const dj1 = () => ctx("uid-dj1", "dj1@isl.test"), dj2 = () => ctx("uid-dj2", "dj2@isl.test"), anon = () => env.unauthenticatedContext().firestore();
+  const akt = (uid, extra = {}) => ({ uid, oleh: "Uji", peran: "anggota", jenis: "komentar", teks: "Halo", nilai: "", waktu: Date.now(), ...extra });
+  it("anggota kelompok mengomentari job", () => assertSucceeds(setDoc(doc(sales2(), "dj_job/j-akt/aktivitas/a1"), akt("uid-sales2"))));
+  it("anggota biasa tidak boleh menilai", () => assertFails(setDoc(doc(sales2(), "dj_job/j-akt/aktivitas/a2"), akt("uid-sales2", { nilai: "revisi" }))));
+  it("kepala divisi (ditetapkan) boleh menilai", () => assertSucceeds(setDoc(doc(dj1(), "dj_job/j-akt/aktivitas/a3"), akt("uid-dj1", { peran: "kepala", nilai: "revisi" }))));
+  it("master boleh menilai", () => assertSucceeds(setDoc(doc(master(), "dj_job/j-akt/aktivitas/a4"), akt("uid-master", { peran: "kepala", nilai: "setuju" }))));
+  it("komentar atas nama orang lain ditolak", () => assertFails(setDoc(doc(dj1(), "dj_job/j-akt/aktivitas/a5"), akt("uid-lain"))));
+  it("kelompok lain tidak membaca atau mengomentari", async () => { await assertFails(getDoc(doc(dj2(), "dj_job/j-akt/aktivitas/a1"))); await assertFails(setDoc(doc(dj2(), "dj_job/j-akt/aktivitas/a6"), akt("uid-dj2"))); });
+  it("aktivitas tidak bisa diubah", () => assertFails(updateDoc(doc(dj1(), "dj_job/j-akt/aktivitas/a3"), { teks: "ubah" })));
+  it("hanya kepala yang mengisi review pada job", async () => { await assertFails(updateDoc(doc(sales2(), "dj_job/j-akt"), { review: { nilai: "setuju" } })); await assertSucceeds(updateDoc(doc(dj1(), "dj_job/j-akt"), { review: { nilai: "setuju" } })); });
+  it("tautan aktif bisa dibuka tanpa login", () => assertSucceeds(getDoc(doc(anon(), "dj_bagikan/tokenAktif00000000000001"))));
+  it("tautan kedaluwarsa ditolak", () => assertFails(getDoc(doc(anon(), "dj_bagikan/tokenKedaluwarsa000000001"))));
+  it("tautan dicabut ditolak", () => assertFails(getDoc(doc(anon(), "dj_bagikan/tokenDicabut00000000000001"))));
+  it("daftar tautan tidak bisa dibaca tanpa login", () => assertFails(getDocs(collection(anon(), "dj_bagikan"))));
+  it("anggota kelompok membuat tautan", () => assertSucceeds(setDoc(doc(dj1(), "dj_bagikan/tokenBaru0000000000000001"), { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: true, berlakuSampai: Date.now() + 864e5, unduh: false, snapshot: { judul: "x" }, diubah: Date.now() })));
+  it("kelompok lain tidak membuat tautan untuk job k1", () => assertFails(setDoc(doc(dj2(), "dj_bagikan/tokenBaru0000000000000002"), { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj2", aktif: true, berlakuSampai: Date.now() + 864e5, unduh: false, snapshot: { judul: "x" } })));
+  it("anggota mencabut tautan kelompoknya", () => assertSucceeds(updateDoc(doc(dj1(), "dj_bagikan/tokenAktif00000000000001"), { aktif: false })));
+  it("admin menetapkan kepala divisi", () => assertSucceeds(setDoc(doc(admin(), "dj_kelompok/k4"), { nama: "X", dibuat: "2026-11-14", kepala: ["uid-dj1"] })));
 });

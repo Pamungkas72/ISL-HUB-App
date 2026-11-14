@@ -347,6 +347,28 @@ service cloud.firestore {
       allow read, write: if isKelola() && request.auth.uid == uid;
     }
 
+    // Aktivitas job: komentar, penilaian (kepala divisi), dan riwayat perubahan target. Tidak bisa diubah setelah dibuat.
+    match /dj_job/{jid}/aktivitas/{aid} {
+      function kelJob() { return get(/databases/$(database)/documents/dj_job/$(jid)).data.get('kelompokId', null); }
+      allow read: if isKelola() || djAnggota(kelJob());
+      allow create: if (isKelola() || djAnggota(kelJob())) && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'oleh', 'peran', 'jenis', 'teks', 'nilai', 'dari', 'ke', 'alasan', 'waktu'])
+        && request.resource.data.jenis in ['komentar', 'target'] && request.resource.data.get('teks', '') is string && request.resource.data.get('teks', '').size() <= 2000
+        && request.resource.data.get('nilai', '') in ['', 'setuju', 'revisi'] && (request.resource.data.get('nilai', '') == '' || djKepala(kelJob()));
+      allow update: if false;
+      allow delete: if isKelola() || (djAnggota(kelJob()) && resource.data.uid == request.auth.uid);
+    }
+    // Tautan bagikan tanpa login (lihat saja): satu dokumen per tautan, dibaca per token (tanpa daftar), berlaku sampai berlakuSampai (ms) atau dicabut.
+    match /dj_bagikan/{token} {
+      allow get: if resource.data.aktif == true && resource.data.berlakuSampai > request.time.toMillis();
+      allow list: if false;
+      allow create: if (isKelola() || djAnggota(request.resource.data.get('kelompokId', null))) && token.size() >= 20 && token.size() <= 40
+        && request.resource.data.keys().hasOnly(['jobId', 'kelompokId', 'dibuatOleh', 'aktif', 'berlakuSampai', 'unduh', 'snapshot', 'diubah']) && request.resource.data.dibuatOleh == request.auth.uid;
+      allow update: if (isKelola() || djAnggota(resource.data.get('kelompokId', null))) && request.resource.data.get('kelompokId', null) == resource.data.get('kelompokId', null)
+        && request.resource.data.keys().hasOnly(['jobId', 'kelompokId', 'dibuatOleh', 'aktif', 'berlakuSampai', 'unduh', 'snapshot', 'diubah']);
+      allow delete: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
+    }
+
     // Token notifikasi push Daily Job: tiap perangkat mendaftarkan tokennya sendiri; hanya server (Cloud Function) yang membaca semuanya.
     match /dj_token/{id} {
       allow read, delete: if isKelola() || (sesiBerlaku() && resource.data.uid == request.auth.uid);
@@ -360,9 +382,11 @@ service cloud.firestore {
     // Tiap akun punya satu kelompok (pengguna.kelompokDJ, diatur master/admin). Anggota hanya membaca dan mengubah job kelompoknya; master dan admin semua kelompok.
     function kelompokDJ() { return profilAda() && profil().status == 'aktif' ? profil().get('kelompokDJ', null) : null; }
     function djAnggota(k) { return k is string && kelompokDJ() == k; }
+    // Kepala divisi: master dan admin, atau akun yang ditetapkan di dj_kelompok.kepala. Hanya kepala yang boleh menilai (Setujui / Perlu revisi).
+    function djKepala(k) { return isKelola() || (k is string && djAnggota(k) && request.auth.uid in get(/databases/$(database)/documents/dj_kelompok/$(k)).data.get('kepala', [])); }
     match /dj_kelompok/{id} {
       allow read: if aktif();
-      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat']);
+      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala']) && request.resource.data.get('kepala', []) is list;
       allow delete: if isKelola();
     }
     match /dj_job/{id} {
@@ -370,7 +394,8 @@ service cloud.firestore {
       allow create: if (isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
         && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200;
       allow update: if (isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && djAnggota(request.resource.data.get('kelompokId', null))))
-        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200;
+        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['review']) || djKepala(resource.data.get('kelompokId', null)));
       allow delete: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
     }
 

@@ -69,4 +69,8 @@ eq("masalah: selesai tidak ada", H.masalahJob(J[0], now), []);
 eq("perlu tindakan: job normal tidak", H.perluTindakan({ status: "proses", tglTarget: "2026-12-01" }, now), false);
 eq("bagikan: satu job", H.teksBagikan([{ judul: "Quotation X", kategori: "Quotation", customer: "PT A", pic: "Ega", tglTarget: "2026-11-20", status: "proses" }]), "*Quotation X*\nQuotation · PT A\nPIC: Ega · Target: 2026-11-20 · Dikerjakan");
 eq("bagikan: banyak job diberi nomor", H.teksBagikan([{ judul: "A", status: "baru" }, { judul: "B", status: "baru" }]).startsWith("Daftar job (2):\n\n1. *A*"), true);
+globalThis.document = undefined;
+const V = await import("../../public/js/daily-job-viewer.js");
+eq("tipe berkas", ["a.DOCX", "b.xlsx", "c.pdf", "d.JPG", "e.doc", "f.pptx", "g.csv"].map((n) => V.tipeBerkas(n)), ["docx", "xlsx", "pdf", "gambar", "lain", "lain", "csv"]);
+eq("ukuran teks", [V.ukuranTeks(184 * 1024), V.ukuranTeks(2.5 * 1048576)], ["184 KB", "2,5 MB"]);
 process.exit(gagal ? 1 : 0);

@@ -1,5 +1,6 @@
 // Ikon SVG inline (gaya garis, 24x24). Pakai: ikon("edit")
 const P = {
+  tema: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18Z" fill="currentColor"/>',
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   riwayat: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
