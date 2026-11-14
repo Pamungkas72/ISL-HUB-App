@@ -18,4 +18,6 @@ function kunciLogin(masukan) {
   return tel ? "p_" + tel : "u_" + normalUsername(t);
 }
 const sandiValid = (s) => typeof s === "string" && s.length >= 8 && s.length <= 64;
-module.exports = { DOMAIN, normalUsername, usernameValid, normalTelepon, emailValid, emailSintetis, kunciLogin, sandiValid };
+/** Kunci alias pertama yang sudah dipakai akun lain (ada di dj_login dan bukan milik akun ini); null bila tidak ada. Dokumen dj_login publik, jadi tanpa uid: kepemilikan dari daftar alias akun. */
+const kunciBentrok = (kunci, ada, milik) => kunci.find((k, i) => ada[i] && !(milik || []).includes(k)) || null;
+module.exports = { kunciBentrok, DOMAIN, normalUsername, usernameValid, normalTelepon, emailValid, emailSintetis, kunciLogin, sandiValid };
