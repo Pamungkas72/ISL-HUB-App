@@ -3,6 +3,8 @@
 // Shader menggeser tiap titik gambar sesuai kedalamannya mengikuti kursor (atau kemiringan HP): objek
 // dekat bergerak lebih jauh, objek jauh lebih pelan. Scroll/roda (desktop) memberi efek "maju-mundur".
 // Gerak diam otomatis supaya gambar tetap hidup. Dimuat di desktop dan HP.
+// Desktop (opsi "hidup"): adegan bergerak sendiri seperti screensaver. Awan dan laut mengalir, bayangan awan melintas,
+// dan truk (sprite dari foto) melaju di lajur tengah di atas pelat foto yang truknya sudah dihapus.
 // ===========================================================
 
 const VS = `#version 300 es
@@ -26,7 +28,47 @@ uniform float uDolly;
 uniform float uMargin;
 uniform float uGerak;
 uniform float uButir;
+uniform sampler2D uTopeng;
+uniform sampler2D uTruk;
+uniform float uHidup;
 out vec4 outColor;
+
+const vec2 UKURAN = vec2(4096.0, 2048.0);   // ukuran foto sumber (px); semua koordinat adegan memakai px foto
+const vec2 HILANG = vec2(1760.0, 900.0);    // titik hilang jalan
+const vec2 LAJUR  = vec2(700.0, 940.0);     // arah lajur kosong dari titik hilang (per satuan skala)
+
+float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float derau(vec2 p){
+  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y);
+}
+
+// aliran tanpa sambungan: dua sampel berbeda fase dicampur silang, jadi gerak terus maju tanpa loncatan
+vec3 alir(vec2 uv, vec2 geser, float T, int kanal, vec3 dasar){
+  float p1 = fract(uTime / T), p2 = fract(uTime / T + 0.5);
+  vec2 u1 = uv - geser * (p1 - 0.5), u2 = uv - geser * (p2 - 0.5);
+  vec3 c1 = mix(dasar, texture(uImg, u1).rgb, texture(uTopeng, u1)[kanal]);
+  vec3 c2 = mix(dasar, texture(uImg, u2).rgb, texture(uTopeng, u2)[kanal]);
+  return mix(c2, c1, 1.0 - abs(2.0 * p1 - 1.0));
+}
+
+// satu truk di lajur: fase 0 = jauh di ujung jalan, fase 1 = sudah lewat kamera. Mengembalikan warna pra-kali alfa.
+vec4 truk(vec2 px, float fase, vec3 cat, out float s, out float bayang){
+  s = 1.0 / mix(9.0, 0.4, 1.0 - pow(1.0 - fase, 1.6));                 // melambat saat mendekati penyeberangan
+  vec2 lokal = (px - (HILANG + LAJUR * s)) / s + vec2(270.0, 450.0);
+  lokal.y += 1.1 * sin(uTime * 8.0 + fase * 40.0);                     // getaran mesin
+  vec2 k = lokal / vec2(540.0, 580.0);
+  // bayangan jatuh ke kanan-bawah seperti objek lain di foto: siluet truk digeser lalu dilunakkan
+  vec2 kb = (lokal - vec2(62.0, 16.0)) / vec2(540.0, 580.0);
+  bayang = kb.x > 0.004 && kb.x < 0.996 && kb.y > 0.004 && kb.y < 0.996 ? textureLod(uTruk, vec2(clamp(kb.x, 0.06, 0.94) * 0.5, 1.0 - kb.y), 5.0).a * smoothstep(0.38, 0.72, kb.y) * smoothstep(0.004, 0.10, kb.x) * smoothstep(0.996, 0.90, kb.x) * smoothstep(0.111, 0.15, s) : 0.0;
+  if (k.x < 0.004 || k.x > 0.996 || k.y < 0.004 || k.y > 0.996) return vec4(0.0);
+  vec4 c = texture(uTruk, vec2(k.x * 0.5, 1.0 - k.y));
+  float kon = texture(uTruk, vec2(0.5 + k.x * 0.5, 1.0 - k.y)).r;
+  c.rgb = mix(c.rgb, c.rgb * cat, kon);                                 // warna kontainer berbeda tiap truk
+  c.rgb = mix(c.rgb, vec3(0.60, 0.67, 0.78), clamp(0.55 - s, 0.0, 0.5) * 0.45); // kabut jarak
+  c.a *= smoothstep(0.111, 0.15, s);
+  return vec4(c.rgb * c.a, c.a);
+}
 
 // layar -> koordinat gambar (mode "cover", tanpa gepeng); uCenter menentukan bagian yang tampil
 vec2 cover(vec2 p){
@@ -60,6 +102,34 @@ void main(){
 
   vec3 col = texture(uImg, uv2).rgb;
 
+  if (uHidup > 0.5) {
+    vec2 tp = texture(uTopeng, uv2).rg;       // r = langit, g = laut
+    vec2 px = vec2(uv2.x, 1.0 - uv2.y) * UKURAN;
+    // awan bergeser pelan; laut mengalir ke arah dermaga dengan riak kecil
+    if (tp.r > 0.01) col = mix(col, alir(uv2, vec2(0.016, 0.0), 40.0, 0, col), tp.r);
+    if (tp.g > 0.01) {
+      float dekat = clamp((px.y - 860.0) / 1100.0, 0.08, 1.0);
+      vec2 riak = vec2(sin(px.y * 0.11 / dekat + uTime * 1.7 + sin(px.x * 0.013) * 3.0), cos(px.x * 0.05 + uTime * 1.3)) * 0.0007 * dekat;
+      col = mix(col, alir(uv2 + riak, vec2(0.012, -0.004) * dekat, 7.0, 1, col), tp.g);
+      col += tp.g * 0.05 * dekat * smoothstep(0.72, 0.95, derau(px * vec2(0.03, 0.12) / dekat + vec2(uTime * 0.9, uTime * 0.4)));
+    }
+    // truk: empat truk bergantian di lajur tengah, yang lebih dekat digambar di atas
+    vec4 lap = vec4(0.0); float sAtas = 0.0, gelap = 0.0;
+    for (int i = 0; i < 4; i++) {
+      float s, b; float fase = fract(uTime / 65.0 + float(i) / 4.0);
+      vec3 cat = i == 0 ? vec3(1.0) : i == 1 ? vec3(0.30, 0.47, 0.80) : i == 2 ? vec3(0.78, 0.36, 0.30) : vec3(0.36, 0.62, 0.50);
+      vec4 c = truk(px, fase, cat, s, b); gelap = max(gelap, b);
+      lap = s > sAtas ? c + lap * (1.0 - c.a) : lap + c * (1.0 - lap.a);
+      sAtas = max(sAtas, s);
+    }
+    col = col * (1.0 - 0.6 * gelap) * (1.0 - lap.a) + lap.rgb;
+    // bayangan awan melintas di atas lapangan (mengikuti perspektif tanah)
+    float jauh = 1.0 / max(px.y / UKURAN.y - 0.42, 0.03);
+    vec2 tanah = vec2((px.x / UKURAN.x - 0.43) * jauh, jauh);
+    float teduh = smoothstep(0.42, 0.78, derau(tanah * vec2(0.55, 0.22) + vec2(uTime * 0.035, uTime * 0.012)) * 0.65 + derau(tanah * 1.3 + uTime * 0.02) * 0.35);
+    col *= 1.0 - 0.16 * teduh * (1.0 - tp.r);
+  }
+
   // kabut tipis di kejauhan untuk menambah kedalaman
   col = mix(col, vec3(0.64, 0.76, 0.92), (1.0 - d) * 0.07);
 
@@ -87,10 +157,11 @@ function muatGambar(src) {
   return new Promise((ok, gagal) => { const i = new Image(); i.decoding = "async"; i.onload = () => ok(i); i.onerror = () => gagal(new Error("gagal memuat " + src)); i.src = src; });
 }
 
-export async function mulaiParallax(kanvas, { foto, depth, kurangiGerak = false, ringan = false, fokus = 0.5, amp = 0.035, giro = false, onSiap } = {}) {
+export async function mulaiParallax(kanvas, { foto, depth, kurangiGerak = false, ringan = false, fokus = 0.5, amp = 0.035, giro = false, hidup = null, onSiap } = {}) {
   const gl = kanvas.getContext("webgl2", { antialias: false, alpha: false });
   if (!gl) throw new Error("WebGL2 tidak tersedia");
-  const [imgFoto, imgDepth] = await Promise.all([muatGambar(foto), muatGambar(depth)]);
+  // hidup = { topeng, truk }: aset adegan hidup (desktop); tanpa itu hanya parallax
+  const [imgFoto, imgDepth, imgTopeng, imgTruk] = await Promise.all([foto, depth, hidup && hidup.topeng, hidup && hidup.truk].map((u) => (u ? muatGambar(u) : null)));
 
   const prog = gl.createProgram();
   gl.attachShader(prog, buatShader(gl, gl.VERTEX_SHADER, VS));
@@ -123,9 +194,11 @@ export async function mulaiParallax(kanvas, { foto, depth, kurangiGerak = false,
   const fotoKecil = kecil(imgFoto);
   tekstur(fotoKecil, 0);
   tekstur(kecil(imgDepth), 1);
+  if (hidup) { tekstur(imgTopeng, 2); tekstur(imgTruk, 3); }
 
   const U = (n) => gl.getUniformLocation(prog, n);
-  gl.uniform1i(U("uImg"), 0); gl.uniform1i(U("uDepth"), 1);
+  gl.uniform1i(U("uImg"), 0); gl.uniform1i(U("uDepth"), 1); gl.uniform1i(U("uTopeng"), hidup ? 2 : 0); gl.uniform1i(U("uTruk"), hidup ? 3 : 0);
+  gl.uniform1f(U("uHidup"), hidup ? 1 : 0);
   gl.uniform2f(U("uImgSize"), fotoKecil.width, fotoKecil.height);
   gl.uniform1f(U("uStrength"), amp);
   gl.uniform1f(U("uDolly"), 0.32);
