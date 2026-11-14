@@ -387,7 +387,10 @@ service cloud.firestore {
     function kelompokDJ() { return profilAda() && profil().status == 'aktif' ? profil().get('kelompokDJ', null) : null; }
     function djAnggota(k) { return k is string && kelompokDJ() == k; }
     // Kepala divisi: master dan admin, atau akun yang ditetapkan di dj_kelompok.kepala. Hanya kepala yang boleh menilai (Setujui / Perlu revisi).
-    function djKepala(k) { return isKelola() || (k is string && djAnggota(k) && request.auth.uid in get(/databases/$(database)/documents/dj_kelompok/$(k)).data.get('kepala', [])); }
+    function djKepalaDesig(k) { return k is string && djAnggota(k) && request.auth.uid in get(/databases/$(database)/documents/dj_kelompok/$(k)).data.get('kepala', []); }
+    function djKepala(k) { return isKelola() || djKepalaDesig(k); }
+    // Tingkat penetap target (deadline): master 4 > admin 3 > kepala divisi 2 > anggota 1. Yang lebih rendah tidak bisa mengubah target yang sudah ditetapkan tingkat lebih tinggi.
+    function djTingkat(k) { return isMaster() ? 4 : (isAdmin() ? 3 : (djKepalaDesig(k) ? 2 : 1)); }
     // Alias login anggota tim (username, telepon, email -> email sintetis). Hanya dibaca per kunci (tanpa daftar) oleh halaman masuk; ditulis Cloud Function.
     match /dj_login/{kunci} {
       allow get: if true;
@@ -395,16 +398,19 @@ service cloud.firestore {
     }
     match /dj_kelompok/{id} {
       allow read: if aktifDJ();
-      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala']) && request.resource.data.get('kepala', []) is list;
+      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan']) && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool;
       allow delete: if isKelola();
     }
     match /dj_job/{id} {
       allow read: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
       allow create: if (isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
-        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200;
+        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200
+        && request.resource.data.get('targetTingkat', 1) <= djTingkat(request.resource.data.get('kelompokId', null));
       allow update: if (isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && djAnggota(request.resource.data.get('kelompokId', null))))
         && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['review']) || djKepala(resource.data.get('kelompokId', null)));
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['review']) || djKepala(resource.data.get('kelompokId', null)))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tglTarget', 'targetTingkat'])
+            || (djTingkat(resource.data.get('kelompokId', null)) >= resource.data.get('targetTingkat', 1) && request.resource.data.get('targetTingkat', 1) == djTingkat(resource.data.get('kelompokId', null))));
       allow delete: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
     }
 

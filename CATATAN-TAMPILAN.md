@@ -450,3 +450,12 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 - Tab **Daftar | Ringkasan** di halaman Quotation. Ringkasan memuat semua quotation terbit (sistem + riwayat PDF) dengan filter periode (bulan ini, 3 bulan, 6 bulan, 1 tahun, semua, rentang), sales, lini, dan pencarian. Periode dihitung dari tanggal terbit/kirim.
 - Desain B: kategori di kiri (HP: baris geser), lalu komposisi, tren per bulan, tabel per sales/lini, dan daftar. **Perlu follow up** = ditolak + diabaikan (tanpa kabar ≥ 14 hari) + menunggu yang tanpa kabar. Ekspor Excel/PDF mengikuti filter aktif.
 - Quotation Ditolak dan Tidak dipakai **tidak lagi dihapus otomatis** supaya riwayat penuh tersimpan. Pembersihan manual tetap ada di Pengaturan.
+
+## Daily Job: filter, status, hak deadline, notifikasi, template (14 Nov 2026)
+- **Filter satu tombol (desain C):** baris "Kelompokkan PIC/Kategori/Status/Tabel" dipindah ke tombol Filter (HP dan desktop). Chip Perlu tindakan / Semua aktif / Selesai tetap di luar.
+- **Status disederhanakan:** Dikerjakan, Tertunda, Selesai (Batal hanya di form Ubah). "Menunggu pihak lain" diganti **Tertunda** dan **wajib alasan** ("Tertunda karena apa?"), tampil di detail job. Data lama `baru` tampil sebagai Dikerjakan.
+- **Hak deadline bertingkat:** master > admin > kepala (satu per kelompok) > anggota. Tingkat lebih tinggi boleh mengubah; tingkat lebih rendah tidak bisa mengembalikan.
+- **Notifikasi** (3x sehari dan H-1 deadline) **mati Sabtu-Minggu**, aktif Senin-Jumat. Jumat menyertakan deadline Sabtu-Senin.
+- **Template Excel:** `public/templates/template-daily-job.xlsx`, tautan "Unduh template Excel" di dialog Import. Kolom Status/Prioritas/Bobot dibaca; baris CONTOH dilewati.
+- **Perbaikan PDF:** laporan tahunan/periode panjang gagal ("reading 'file'") bila judul job sangat panjang atau banyak baris (baris tabel terpecah antarhalaman). Kini baris dicocokkan lewat kolom No. Uji: `tests/unit/daily-job-pdf.test.mjs`.
+- Rencana per divisi: lihat `RENCANA-DAILY-JOB-DIVISI.md`.

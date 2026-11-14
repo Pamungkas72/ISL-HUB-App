@@ -53,7 +53,7 @@ eq("komposisi status", H.hitungStatus(J, r, now), { selesai: 2, terlambat: 1, tu
 eq("tabel per PIC: Rina", (({ nama, selesai, masuk }) => ({ nama, selesai, masuk }))(H.perDetail(J, "pic", r, now).find((o) => o.nama === "Rina")), { nama: "Rina", selesai: 1, masuk: 2 });
 const gk = H.kelompokkan(J, "kategori", now);
 eq("kelompok: yang terlambat di atas", [gk[0].nama, gk[0].telat], ["Monitoring kasus", 1]);
-eq("kelompok per status", H.kelompokkan(J, "status", now).map((g) => g.nama).sort(), ["Baru", "Dikerjakan", "Selesai"]);
+eq("kelompok per status", H.kelompokkan(J, "status", now).map((g) => g.nama).sort(), ["Dikerjakan", "Selesai"]);
 const kk = { masuk: 42, selesai: 37, persenSelesai: 76, persenTepat: 70, rataHari: 5.8, terlambat: 6 }, pp = { selesai: 25, persenTepat: 84 };
 const kt = [{ nama: "Monitoring Kasus", rataHari: 12, terlambat: 3 }, { nama: "Dokumen Kontrak", rataHari: 10, terlambat: 3 }, { nama: "Quotation", rataHari: 3.6, terlambat: 0 }];
 const po = H.buatPoin({ k: kk, pk: pp, kat: kt, usia: [{ n: 9 }, { n: 2 }, { n: 0 }, { n: 8 }], lab: "September" });
@@ -78,4 +78,13 @@ const masukan = ["0812-3456-7890", "+62 812 3456 7890", "81234567890", "0812", "
 eq("klien dan server: normalTelepon sama", masukan.map(H.normalTelepon), masukan.map(SV.normalTelepon));
 eq("klien dan server: kunciLogin sama", masukan.map(H.kunciLogin), masukan.map(SV.kunciLogin));
 eq("sandi acak 10 karakter tanpa huruf mirip", /^[a-km-zA-HJ-NP-Z2-9]{10}$/.test(H.sandiAcak()), true);
+eq("pengingat catat job: Sabtu dan Minggu tidak muncul", [H.slotJatuhTempo([], new Date("2026-11-14T10:00:00+07:00")), H.slotJatuhTempo([], new Date("2026-11-15T15:00:00+07:00"))], [null, null]);
+eq("pengingat catat job: Senin muncul", H.slotJatuhTempo([], new Date("2026-11-16T09:05:00+07:00")), "2026-11-16#9");
+const kepala2 = ["Tanggal Diberikan", "PIC", "Kategori Tugas", "Customer / Project", "Deskripsi Tugas", "Deadline", "Tanggal Selesai", "Status", "Prioritas", "Bobot", "Keterangan"];
+const tp = H.petaExcel([kepala2, ["2026-11-02", "Rina", "Quotation", "CONTOH - PT A", "CONTOH - jangan diimpor", "2026-11-03", "", "Baru", "", "", ""], ["2026-11-02", "Rina", "Quotation", "PT Maju", "Kirim quotation", "2026-11-03", "2026-11-03", "Selesai", "Tinggi", "Berat (3)", "Done"], ["2026-11-04", "Dede", "Dokumen Kontrak", "PT Sinar", "Review perjanjian", "2026-11-12", "", "Menunggu pihak lain", "Rendah", "Ringan (1)", "Menunggu revisi"], ["2026-11-05", "Ega", "RFQ", "PT B", "Tarif handling", "", "", "", "", "", ""], ["2026-11-06", "", "RFQ", "PT B", "Tanpa pic", "2026-11-09", "", "Aneh", "", "", ""]]);
+eq("template: baris CONTOH dilewati", [tp.jobs.length, tp.dilewati], [4, 1]);
+eq("template: status, prioritas, bobot dibaca", tp.jobs.slice(0, 2).map((j) => [j.status, j.prioritas, j.bobot]), [["selesai", "tinggi", 3], ["tunggu", "rendah", 1]]);
+eq("template: tanpa status dan tanggal selesai = dikerjakan", [tp.jobs[2].status, tp.jobs[2].prioritas, tp.jobs[2].bobot], ["proses", "sedang", 2]);
+eq("template: peringatan deadline kosong, PIC kosong, status aneh", [tp.peringatan.some((x) => /deadline kosong/.test(x)), tp.peringatan.some((x) => /PIC kosong/.test(x)), tp.peringatan.some((x) => /tidak dikenal/.test(x))], [true, true, true]);
+eq("Status Waktu (Excel lama) tidak dianggap Status", H.petaExcel([["Tanggal Diberikan", "PIC", "Kategori Tugas", "Deskripsi Tugas", "Status Waktu"], ["2026-11-01", "A", "Quotation", "Tugas", "Terlambat"]]).jobs[0].status, "proses");
 process.exit(gagal ? 1 : 0);

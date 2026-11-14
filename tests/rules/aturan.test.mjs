@@ -270,3 +270,20 @@ describe("Daily Job: akun anggota tim (peran dj) hanya Daily Job", () => {
   it("alias login tidak bisa didaftar atau ditulis", async () => { await assertFails(getDocs(collection(anon(), "dj_login"))); await assertFails(setDoc(doc(dj1(), "dj_login/u_palsu"), { email: "x@y.z" })); });
   it("kelompok lain tidak membaca job anggota", () => assertFails(getDoc(doc(ctx("uid-dj2", "dj2@isl.test"), "dj_job/j-k1"))));
 });
+
+describe("Daily Job: tingkat penetap target (master > admin > kepala > anggota)", () => {
+  const sal2 = () => ctx("uid-sales2", "sales2@isl.test"), kep = () => ctx("uid-dj1", "dj1@isl.test"), adm = () => ctx("uid-admin", "admin@isl.test"), mas = () => ctx("uid-master", MASTER);
+  const baru = (id, tingkat) => env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "dj_job/" + id), { kelompokId: "k1", judul: "T", status: "baru", tglTarget: "2026-11-20", targetTingkat: tingkat }));
+  it("anggota membuat job dengan target sendiri (tingkat 1)", () => assertSucceeds(setDoc(doc(sal2(), "dj_job/tg1"), { kelompokId: "k1", judul: "T", status: "baru", tglTarget: "2026-11-20", targetTingkat: 1 })));
+  it("anggota tidak boleh mengaku tingkat lebih tinggi", () => assertFails(setDoc(doc(sal2(), "dj_job/tg2"), { kelompokId: "k1", judul: "T", status: "baru", tglTarget: "2026-11-20", targetTingkat: 3 })));
+  it("anggota mengubah target miliknya (tingkat 1)", async () => { await baru("tg3", 1); await assertSucceeds(updateDoc(doc(sal2(), "dj_job/tg3"), { tglTarget: "2026-11-25", targetTingkat: 1 })); });
+  it("kepala divisi mengambil alih target anggota", async () => { await baru("tg4", 1); await assertSucceeds(updateDoc(doc(kep(), "dj_job/tg4"), { tglTarget: "2026-11-22", targetTingkat: 2 })); });
+  it("anggota tidak bisa mengubah target yang ditetapkan kepala", async () => { await baru("tg5", 2); await assertFails(updateDoc(doc(sal2(), "dj_job/tg5"), { tglTarget: "2026-11-30", targetTingkat: 1 })); });
+  it("anggota tidak bisa menurunkan tingkat target", async () => { await baru("tg6", 2); await assertFails(updateDoc(doc(sal2(), "dj_job/tg6"), { targetTingkat: 1 })); });
+  it("anggota tetap bisa mengubah isian lain pada job bertarget terkunci", async () => { await baru("tg7", 2); await assertSucceeds(updateDoc(doc(sal2(), "dj_job/tg7"), { status: "proses" })); });
+  it("admin mengubah target tingkat 2", async () => { await baru("tg8", 2); await assertSucceeds(updateDoc(doc(adm(), "dj_job/tg8"), { tglTarget: "2026-11-28", targetTingkat: 3 })); });
+  it("master mengubah target admin (tingkat 3)", async () => { await baru("tg9", 3); await assertSucceeds(updateDoc(doc(mas(), "dj_job/tg9"), { tglTarget: "2026-12-01", targetTingkat: 4 })); });
+  it("admin tidak bisa mengubah target yang ditetapkan master", async () => { await baru("tg10", 4); await assertFails(updateDoc(doc(adm(), "dj_job/tg10"), { tglTarget: "2026-12-05", targetTingkat: 3 })); });
+  it("kepala divisi tidak bisa mengubah target admin", async () => { await baru("tg11", 3); await assertFails(updateDoc(doc(kep(), "dj_job/tg11"), { tglTarget: "2026-12-06", targetTingkat: 2 })); });
+  it("hanya satu kepala divisi per kelompok", async () => { await assertFails(setDoc(doc(adm(), "dj_kelompok/kx"), { nama: "X", dibuat: "2026-11-14", kepala: ["a", "b"] })); await assertSucceeds(setDoc(doc(adm(), "dj_kelompok/ky"), { nama: "Y", dibuat: "2026-11-14", kepala: ["a"], bawaan: true })); });
+});
