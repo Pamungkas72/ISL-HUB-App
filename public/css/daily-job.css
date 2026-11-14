@@ -1,3 +1,7 @@
+/* teks aksen (Hari ini, Perlu revisi): oranye tua di tema terang agar kontras 4,5:1 di atas latar aksen muda */
+:root { --dj-tx-aksen: #9a5300; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --dj-tx-aksen: #f2a65a; } }
+:root[data-theme="dark"] { --dj-tx-aksen: #f2a65a; }
 /* Daily Job. Warna memakai variabel tema (terang dan gelap). Laporan PDF digambar langsung oleh daily-job-pdf.js (kertas putih). */
 #dj-root { display: flex; flex-direction: column; gap: 12px; }
 .dj-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); }
@@ -47,7 +51,7 @@ label.dj-org select { max-width: 55%; }
 .dj-job__isi { min-width: 0; display: flex; flex-direction: column; gap: 2px; } .dj-job__isi b { font-size: 14px; } .dj-job__isi small { color: var(--muted); font-size: 12px; }
 .dj-job__aksi { display: flex; align-items: center; gap: 6px; flex: none; }
 .dj-chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; background: var(--sky-soft); color: var(--head); }
-.dj-chip--bahaya { background: var(--danger-soft); color: var(--danger); } .dj-chip--warn { background: var(--accent-soft); color: var(--accent-hover); } .dj-chip--ok { background: var(--success-soft); color: var(--success); } .dj-chip--mu { background: var(--bg); color: var(--muted); }
+.dj-chip--bahaya { background: var(--danger-soft); color: var(--danger); } .dj-chip--warn { background: var(--accent-soft); color: var(--dj-tx-aksen); } .dj-chip--ok { background: var(--success-soft); color: var(--success); } .dj-chip--mu { background: var(--bg); color: var(--muted); }
 .dj-form .dj-lebar { grid-column: 1 / -1; }
 .dj-fl { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 13px; } .dj-fl a { color: var(--sky); word-break: break-all; }
 .dj-tautan { display: flex; gap: 8px; } .dj-tautan input { flex: 1; }
@@ -127,7 +131,7 @@ label.dj-org select { max-width: 55%; }
 .dj-tg { width: 46px; flex: none; text-align: center; border-radius: 9px; padding: 4px 0; background: var(--bg); line-height: 1.1; }
 .dj-tg b { display: block; font: 700 17px var(--font-body); color: var(--text); } .dj-tg small { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; } .dj-tg em { display: block; font: 700 9.5px var(--font-body); font-style: normal; color: var(--muted); margin-top: 1px; }
 .dj-tg.telat { background: var(--danger-soft); } .dj-tg.telat b, .dj-tg.telat em { color: var(--danger); }
-.dj-tg.hari { background: var(--accent-soft); } .dj-tg.hari b, .dj-tg.hari em { color: var(--accent-hover); }
+.dj-tg.hari { background: var(--accent-soft); } .dj-tg.hari b, .dj-tg.hari em { color: var(--dj-tx-aksen); }
 .dj-tg.ok { background: var(--success-soft); } .dj-tg.ok b, .dj-tg.ok em { color: var(--success); }
 .dj-job__isi { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .dj-job__isi b { font-size: 13.5px; line-height: 1.25; } .dj-job__isi small { color: var(--muted); font-size: 11.5px; }
 .dj-av { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font: 700 12px var(--font-body); color: #0e1622; flex: none; }
@@ -144,7 +148,7 @@ label.dj-org select { max-width: 55%; }
 .dj-tbw { padding: 0; overflow: hidden; } .dj-tb { width: 100%; border-collapse: collapse; font-size: 13px; }
 .dj-tb th { text-align: left; font: 700 10.5px var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 9px 10px; border-bottom: 1px solid var(--border); }
 .dj-tb td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; } .dj-tb tbody tr { cursor: pointer; } .dj-tb tbody tr:hover { background: var(--sky-soft); } .dj-tb tr.is-pilih { background: var(--sky-soft); }
-.dj-tb td b { display: block; } .dj-tb td small { color: var(--muted); font-size: 11.5px; } .dj-tb__c { width: 34px; } .dj-tb__t { font-weight: 700; white-space: nowrap; } .dj-tb__t.is-telat { color: var(--danger); } .dj-tb__t.is-hari { color: var(--accent-hover); }
+.dj-tb td b { display: block; } .dj-tb td small { color: var(--muted); font-size: 11.5px; } .dj-tb__c { width: 34px; } .dj-tb__t { font-weight: 700; white-space: nowrap; } .dj-tb__t.is-telat { color: var(--danger); } .dj-tb__t.is-hari { color: var(--dj-tx-aksen); }
 .dj-pic { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media (max-width: 760px) { .dj-hanya-desktop { display: none; } #dj-root { padding-bottom: 150px; } }
 @media (min-width: 761px) { .dj-barpilih { left: calc(var(--nav-lebar, 72px) + 24px); right: 96px; bottom: 20px; } .dj-barpilih__b .mr-btn { flex: 0 1 180px; } .dj-lipat { display: none; } }

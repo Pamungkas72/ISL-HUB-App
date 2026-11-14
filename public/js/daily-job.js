@@ -349,7 +349,7 @@ async function panggil(nama, data) {
 }
 async function muatTim(kid) {
   const t = S.tim[kid] = { muat: true, anggota: [], galat: "" }; if (S.tab === "kelompok") render();
-  try { t.anggota = (await panggil("djDaftarTim", { kelompokId: kid })).anggota; } catch (err) { t.galat = err.message; }
+  try { t.anggota = (await panggil("djDaftarTim", { kelompokId: kid })).anggota || []; } catch (err) { t.galat = err.message; }
   t.muat = false; if (S.tab === "kelompok") render();
 }
 function htmlTim(k) {

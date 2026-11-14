@@ -459,3 +459,11 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 - **Template Excel:** `public/templates/template-daily-job.xlsx`, tautan "Unduh template Excel" di dialog Import. Kolom Status/Prioritas/Bobot dibaca; baris CONTOH dilewati.
 - **Perbaikan PDF:** laporan tahunan/periode panjang gagal ("reading 'file'") bila judul job sangat panjang atau banyak baris (baris tabel terpecah antarhalaman). Kini baris dicocokkan lewat kolom No. Uji: `tests/unit/daily-job-pdf.test.mjs`.
 - Rencana per divisi: lihat `RENCANA-DAILY-JOB-DIVISI.md`.
+
+## Audit menyeluruh tema dan fungsi (14 Nov 2026)
+- Audit tema seluruh halaman (4 kombinasi): **0 temuan**. Audit halaman lain (login, gerbang, sales, admin): **0 temuan**.
+- Audit baru **Daily Job** (`tests/audit/audit-daily-job.js`, 13 tampilan + halaman publik): temuan dan perbaikan:
+  - **Teks "Hari ini" di tema terang** (`#E0820F` di atas latar aksen muda, kontras 2,6:1) diganti token `--dj-tx-aksen` (#9a5300 terang, #f2a65a gelap). Berlaku di chip Hari ini, kolom Target, dan blok tanggal.
+  - **Tab Kelompok crash** saat balasan daftar tim tidak berisi anggota: kini dianggap daftar kosong.
+  - Avatar inisial dan knob sakelar dikecualikan dari pemindai (warna sengaja tetap).
+- Harness fungsi Daily Job (daftar 58, detail 46, akun tim 44 uji): semua lulus.
