@@ -35,3 +35,6 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 - **PR dibuat otomatis**, tanpa bertanya, setelah perubahan selesai (bila belum ada PR untuk branch itu).
 - Tiap pembaruan: **commit dan push otomatis**, dan PR yang ada ikut terbarui.
 - **Penggabungan (merge) PR otomatis** setelah semua CI hijau. Tidak perlu menunggu persetujuan pemilik. Pemilik ingin langsung melihat hasilnya di aplikasi (dicatat 9 Nov 2026 atas permintaan pemilik). Bila CI merah, jangan digabung: perbaiki dulu.
+
+## Daily Job per kelompok (aturan pemilik, 18 Nov 2026)
+- Kerangka sama di semua kelompok; **pencatatan job, daftar, dashboard Performa, laporan, dan impor berbeda isinya per divisi**, ditentukan kelompok akun yang login. Jangan menganggap satu bentuk untuk semua. Catatan lengkap: `RENCANA-DAILY-JOB-DIVISI.md`.
