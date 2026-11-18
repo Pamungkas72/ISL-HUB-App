@@ -45,6 +45,9 @@ const IK = {
   simpan: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/>',
   mata: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>', mataTutup: '<path d="M3 3l18 18"/><path d="M10.6 5.1A10.9 10.9 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.2M6.6 6.6A17.4 17.4 0 0 0 2 12s3.5 7 10 7c1.6 0 3-.4 4.3-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   naik: '<path d="m18 15-6-6-6 6"/>', turun: '<path d="m6 9 6 6 6-6"/>',
+  koin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.4-.8-1.3-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8s1.1 1.6 2.5 1.8 2.5.7 2.5 1.8-1.1 1.8-2.5 1.8c-1.2 0-2.1-.4-2.5-1.2M12 6.5V8m0 8v1.5"/>',
+  'berkas-plus': '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v6M9 15h6"/>',
+  'orang-plus': '<circle cx="9" cy="8" r="4"/><path d="M3 20v-1a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v1M19 8v6M16 11h6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>', cari: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
   tong: '<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13"/><path d="M9 7V4h6v3"/>',
@@ -352,7 +355,7 @@ function viewDaftar() {
     <select class="mr-select" id="cu-flengkap" aria-label="Filter kelengkapan data"><option value="">Semua data</option><option value="belum" ${S.fLengkap === 'belum' ? 'selected' : ''}>Belum lengkap</option></select>
     <span class="mr-ruang"></span>
   </div>
-  ${bisaEdit() ? `<button type="button" class="mr-fab" data-cu="tambah-customer" aria-label="Tambah customer" title="Tambah customer">${ik('plus', 20)}<span class="fab-teks">Tambah customer</span></button>` : ''}
+  ${bisaEdit() ? `<button type="button" class="mr-fab fab-d fab--customer" data-cu="tambah-customer" aria-label="Tambah customer" title="Tambah customer">${ik('orang-plus', 24)}<span class="fab-teks">Tambah customer</span></button>` : ''}
 ${bilahPilihCu(list)}
     <div class="mr-kartu mr-tabelkartu">
     ${list.length ? `<table class="mr-table"><thead><tr>${masterAtauAdmin() ? `<th class="cu-cek"><input type="checkbox" data-cu-pilih-semua aria-label="Pilih semua customer" ${list.length && list.every(c => PILIH_CU.has(c.id)) ? 'checked' : ''}></th>` : ''}<th>Customer</th><th>Status</th><th>PIC utama</th><th>Termin</th><th>Rate aktif</th><th></th></tr></thead><tbody>
@@ -3685,7 +3688,7 @@ function viewFollow() {
     <button type="button" class="mr-kartu qt-fu-belum" data-qt="belum-buka">${ik('telp', 20)}<span><b>Customer tanpa penawaran aktif</b><small>${nBelum ? `${nBelum} customer · quotation ditolak atau diabaikan` : 'Tidak ada saat ini'}</small></span></button>
     ${!HP() ? (!daftar.length ? '' : `<div class="mr-kartu mr-tabelkartu"><table class="mr-tabel qt-fu-tabel"><thead><tr><th>Nomor</th><th>Customer</th><th>Lama</th><th>Aksi</th></tr></thead><tbody>${daftar.slice(0, 50).map(i => `<tr><td><b>${esc(i.nama)}</b></td><td>${esc(i.cust)}</td><td class="${i.h >= 7 ? 'qt-fu-warn' : ''}">${i.h} hari · ${i.ket.replace(/ \d+ hari/, '')}</td><td><div class="qt-fu-aksi">${i.aksi}${fuKanal(i)}</div></td></tr>`).join('')}</tbody></table></div>`) : daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}${fuKanal(i)}</div></div>`).join('')}
     ${daftar.length > 50 ? `<p class="mr-sub">50 teratas ditampilkan, terlama di atas.</p>` : ''}
-  </div>${bisaEdit() ? `<button type="button" class="qt-fab" data-qt="${HP() ? 'm-tambah' : 'baru'}" aria-label="Buat quotation">${ik('plus', 20)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
+  </div>${bisaEdit() ? `<button type="button" class="qt-fab fab-d fab--quotation" data-qt="${HP() ? 'm-tambah' : 'baru'}" aria-label="Buat quotation">${ik('berkas-plus', 24)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
 }
 function viewRingkasan() {
   const r = Q.rg, D = rgData(), [a, b] = rgPeriode(), sales = [...new Set(D.semua.map(i => i.sales))].sort(), lini = [...new Set(D.semua.flatMap(i => i.lini))];
@@ -3852,7 +3855,7 @@ ${bilahPilihQt(list)}
       <td data-label="Tanggal">${tgl(x.dikirim || x.dibuat)}<div class="mr-sub">${x.dikirim ? 'dikirim' : 'dibuat'}${x.dikirim ? ' · ' + umurHari(x.dikirim) : ''}</div>${berlakuChip(x)}</td>
       <td class="mr-td-aksi">${aksiBaris(x)}</td></tr>`; }).join('')}
     </tbody></table>` : `<div class="mr-kosong">${ik('file', 28)}<p>Tidak ada quotation yang cocok.</p></div>`}
-  </div>${bisaEdit() ? `<button type="button" class="qt-fab" data-qt="baru" aria-label="Buat quotation">${ik('plus', 20)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
+  </div>${bisaEdit() ? `<button type="button" class="qt-fab fab-d fab--quotation" data-qt="baru" aria-label="Buat quotation">${ik('berkas-plus', 24)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
 }
 
 /* =============================== DAFTAR QUOTATION DI HP ===============================
@@ -3939,7 +3942,7 @@ function viewDaftarHP({ list, semua, semuaAll, rw, nBelum, bannerKpi, gagalRw, c
     ${bilahPilihQt(list)}
     <div class="qt-m-daftar" ${pilih ? 'data-pilih="1"' : ''}>${list.length ? baris : `<div class="mr-kosong">${ik('file', 28)}<p>Tidak ada quotation yang cocok.</p>${Q.fStatus || Q.fTahun || Q.fSumber || Q.q ? `<button type="button" class="mr-btn" data-qt="reset-filter">Hapus filter</button>` : ''}</div>`}</div>
   </div>
-  ${ed ? `<button type="button" class="qt-fab qt-fab--m" data-qt="m-tambah" aria-label="Buat quotation">${ik('plus', 24)}</button>` : ''}`;
+  ${ed ? `<button type="button" class="qt-fab qt-fab--m fab-d fab--quotation" data-qt="m-tambah" aria-label="Buat quotation">${ik('berkas-plus', 24)}</button>` : ''}`;
 }
 
 /* ---------- sheet dari bawah ---------- */
