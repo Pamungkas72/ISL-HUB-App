@@ -17,6 +17,8 @@ const DATA = () => ({ ...JSON.parse(JSON.stringify(awal)), dj_kelompok: { k1: { 
 
 /* adegan: tiap entri mengubah tampilan lalu memanggil periksa(label) */
 const ADEGAN = [
+  ['dj: performa', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="performa"]'); await tunggu(p, 600); }],
+  ['dj: performa, filter (panel)', async (p) => { await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 400); }],
   ['dj: daftar job (status aktif)', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="job"]'); await tunggu(p, 400); }],
   ['dj: daftar, filter (panel)', async (p) => { await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 300); }],
   ['dj: daftar, menu aksi ⋯', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await tunggu(p, 200); await klikSel(p, '.dj-tb [data-dj="menu"], .dj-job2 [data-dj="menu"]'); await tunggu(p, 300); }],
