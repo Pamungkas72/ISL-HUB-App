@@ -38,3 +38,6 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 
 ## Daily Job per kelompok (aturan pemilik, 18 Nov 2026)
 - Kerangka sama di semua kelompok; **pencatatan job, daftar, dashboard Performa, laporan, dan impor berbeda isinya per divisi**, ditentukan kelompok akun yang login. Jangan menganggap satu bentuk untuk semua. Catatan lengkap: `RENCANA-DAILY-JOB-DIVISI.md`.
+
+## Tombol "Ke atas" (aturan pemilik, 18 Nov 2026)
+- Satu tombol global (`js/ke-atas.js`, gaya `.ke-atas` di `tambahan.css`): **tengah bawah, melayang, transparan, muncul hanya setelah halaman digulir**. Berlaku di semua halaman; halaman atau fitur baru yang punya daftar/gulir otomatis memakainya. Jangan membuat tombol ke atas sendiri atau memindahkan posisinya per halaman.
