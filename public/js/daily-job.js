@@ -107,15 +107,15 @@ const warnaPic = (n) => { let h = 0; for (const c of String(n || "-")) h = (h * 
 const avatar = (n) => `<span class="dj-av" style="background:${warnaPic(n)}" title="${e(n || "Tanpa PIC")}">${e((n || "?")[0].toUpperCase())}</span>`;
 const MASALAH = [["telat", "Terlambat"], ["hari", "Hari ini"], ["tunggu", "Tertunda"], ["tanpa", "Tanpa target"]];
 const STATUS_DJ = [["aktif", "Aktif"], ["tunggu", "Tertunda"], ["selesai", "Selesai"], ["batal", "Dibatalkan"]];
-const PERIODE_DJ = [["semua", "Semua"], ["minggu", "Minggu ini"], ["mingguLalu", "Minggu lalu"], ["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]];
+const PERIODE_DJ = [["semua", "Semua"], ["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]];
 const COCOK = { aktif: H.aktif, tunggu: (j) => j.status === "tunggu", selesai: (j) => j.status === "selesai", batal: (j) => j.status === "batal" };
 const PER_HAL = 15, pilihAktif = () => S.modePilih || S.pilih.size > 0, layarHp = () => matchMedia("(max-width: 760px)").matches;
 const bukanBawaanDaftar = () => S.status !== "aktif" || S.pDaftar !== "semua" || !!S.fPic || !!S.fKat || !!S.masalah;
 
-/** Daftar job: saring (status, PIC, kategori, periode target, cari), urut menurut target (terbaru dulu), lalu potong per halaman. */
+/** Daftar job: saring (status, PIC, kategori, periode job dibuat, cari), urut menurut target (terbaru dulu), lalu potong per halaman. */
 function dataDaftar(now) {
   const cari = S.cari.trim().toLowerCase(), pr = H.rentangDaftar(S.pDaftar, now, S.pDari, S.pSampai), arah = S.urut === "baru" ? -1 : 1, kunci = (j) => (j.tglTarget || (arah < 0 ? "" : "9999")) + "|" + (j.tglMasuk || "");
-  const dasar = S.jobs.filter((j) => (!S.fPic || j.pic === S.fPic) && (!S.fKat || j.kategori === S.fKat) && (!pr || H.dalam(j.tglTarget, pr)));
+  const dasar = S.jobs.filter((j) => (!S.fPic || j.pic === S.fPic) && (!S.fKat || j.kategori === S.fKat) && (!pr || H.dalam(j.tglMasuk || j.dibuatPada, pr)));
   const n = Object.fromEntries(STATUS_DJ.map(([k]) => [k, dasar.filter(COCOK[k]).length]));
   const l = dasar.filter(COCOK[S.status] || COCOK.aktif).filter((j) => !S.masalah || H.masalahJob(j, now).includes(S.masalah))
     .filter((j) => !cari || [j.judul, j.customer, j.pic, j.kategori, j.deskripsi].join(" ").toLowerCase().includes(cari))
@@ -432,14 +432,14 @@ function panelFilter() {
   ${S.periode === "rentang" ? `<div class="dj-tgl"><input type="date" id="dj-dari" value="${e(S.dari)}" aria-label="Dari"><input type="date" id="dj-sampai" value="${e(S.sampai)}" aria-label="Sampai"></div>` : ""}</div>
   ${S.kelola ? selF("f-kel", "Kelompok", opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel, "Semua kelompok")) : ""}${selF("f-pic", "PIC", opsi(daftarPic(), S.fPic, "Semua PIC"))}${selF("f-kat", "Kategori", opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori"))}</div></div>${kakiPanel("Selesai")}`);
 }
-/** Filter daftar job: status, PIC, kategori, periode target. Bawaan: job aktif, semua periode, terbaru dulu. */
+/** Filter daftar job: status, PIC, kategori, periode job dibuat (tglMasuk). Bawaan: job aktif, semua periode, terbaru dulu. */
 function panelFilterJob() {
   const d = dataDaftar(H.hariIni());
   bukaLayer(`${kepalaPanel("Bawaan: job aktif, semua periode.")}<div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
   <div class="mr-f"><span>Status</span><div class="mr-seg dj-seg">${STATUS_DJ.map(([k, t]) => chipF("st", k, t, d.n[k], S.status === k)).join("")}</div></div>
   <div class="mr-f"><span>PIC</span><div class="mr-seg dj-seg">${chipF("f-picchip", "", "Semua", null, !S.fPic)}${daftarPic().map((p) => `<button type="button" class="mr-chip${S.fPic === p ? " is-aktif" : ""}" data-dj="f-picchip" data-v="${e(p)}">${avatar(p)} ${e(p)}</button>`).join("")}</div></div>
   ${selF("f-kat", "Kategori", opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori"))}
-  <div class="mr-f"><span>Periode target</span><div class="mr-seg dj-seg" role="group" aria-label="Periode target">${PERIODE_DJ.map(([k, t]) => chipF("pd", k, t, null, S.pDaftar === k)).join("")}</div>
+  <div class="mr-f"><span>Periode job dibuat</span><div class="mr-seg dj-seg" role="group" aria-label="Periode job dibuat">${PERIODE_DJ.map(([k, t]) => chipF("pd", k, t, null, S.pDaftar === k)).join("")}</div>
   ${S.pDaftar === "rentang" ? `<div class="dj-tgl"><input type="date" id="dj-pdari" value="${e(S.pDari)}" aria-label="Dari"><input type="date" id="dj-psampai" value="${e(S.pSampai)}" aria-label="Sampai"></div>` : ""}</div></div></div>${kakiPanel(`Tampilkan ${d.l.length} job`)}`);
 }
 matchMedia("(max-width: 760px)").addEventListener("change", () => { if (window.__rute === "dailyjob") render(); });
