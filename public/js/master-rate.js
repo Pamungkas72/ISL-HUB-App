@@ -244,10 +244,10 @@ function render() {
         .join("")}
       ${S.tab === "tarif" ? `<label class="mr-cari mr-cari--atas">${ikon("cari", 16)}<input id="mr-cari" type="search" placeholder="Cari layanan, vendor, lokasi…" value="${e(S.f.cari)}" autocomplete="off"></label>` : ""}
     </div>
-    ${S.kelola && S.tab === "tarif" ? `<button type="button" class="mr-fab" data-aksi="tambah" aria-label="Tambah item">${ikon("plus", 18)}<span class="fab-teks">Tambah item</span></button>` : ""}
-    ${S.kelola && S.tab === "vendor" ? `<button type="button" class="mr-fab" data-aksi="vendor-tambah" aria-label="Tambah vendor">${ikon("plus", 18)}<span class="fab-teks">Tambah vendor</span></button>` : ""}
-    ${S.kelola && S.tab === "lokasi" ? `<button type="button" class="mr-fab" data-aksi="lokasi-tambah" aria-label="Tambah fasilitas">${ikon("plus", 18)}<span class="fab-teks">Tambah fasilitas</span></button>` : ""}
-    ${S.kelola && S.tab === "lini" ? `<button type="button" class="mr-fab" data-aksi="lini-tambah" aria-label="Tambah lini bisnis">${ikon("plus", 18)}<span class="fab-teks">Tambah lini bisnis</span></button>` : ""}
+    ${S.kelola && S.tab === "tarif" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="tambah" aria-label="Tambah item">${ikon("koin", 24)}<span class="fab-teks">Tambah item</span></button>` : ""}
+    ${S.kelola && S.tab === "vendor" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="vendor-tambah" aria-label="Tambah vendor">${ikon("vendor", 24)}<span class="fab-teks">Tambah vendor</span></button>` : ""}
+    ${S.kelola && S.tab === "lokasi" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="lokasi-tambah" aria-label="Tambah fasilitas">${ikon("pin", 24)}<span class="fab-teks">Tambah fasilitas</span></button>` : ""}
+    ${S.kelola && S.tab === "lini" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="lini-tambah" aria-label="Tambah lini bisnis">${ikon("lini", 24)}<span class="fab-teks">Tambah lini bisnis</span></button>` : ""}
     <div id="mr-isi">${S.tab === "tarif" ? htmlTarif() : S.tab === "vendor" ? htmlVendor() : S.tab === "lini" ? htmlLini() : barPilihTab(S.pilihLok.size, profilTampil(S, namaVendor).filter((p) => !p.lama).length) + htmlTabProfil(S, namaVendor)}</div>`;
   if (window.ISLMorph) window.ISLMorph(root, isiHtml); else root.innerHTML = isiHtml;
 }
@@ -1691,8 +1691,8 @@ const pilihBarHP = (n, total, tipe) => {
 };
 const fabHP = () => {
   if (!S.kelola || pilihAktif()) return "";
-  const [aksi, label] = { tarif: ["tambah", "Tambah item"], vendor: ["vendor-tambah", "Tambah vendor"], lokasi: ["lokasi-tambah", "Tambah fasilitas"], lini: ["lini-tambah", "Tambah lini bisnis"] }[S.tab];
-  return `<button type="button" class="mr-fab mr-fab--m" data-aksi="${aksi}" aria-label="${label}">${ikon("plus", 22)}</button>`;
+  const [aksi, label, ik] = { tarif: ["tambah", "Tambah item", "koin"], vendor: ["vendor-tambah", "Tambah vendor", "vendor"], lokasi: ["lokasi-tambah", "Tambah fasilitas", "pin"], lini: ["lini-tambah", "Tambah lini bisnis", "lini"] }[S.tab];
+  return `<button type="button" class="mr-fab fab-d fab--tarif mr-fab--m" data-aksi="${aksi}" aria-label="${label}">${ikon(ik, 24)}</button>`;
 };
 
 /* geser kanan di semua list = Pilih (mulai memilih banyak) */

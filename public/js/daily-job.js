@@ -304,7 +304,7 @@ function render() {
   else if (S.detail && S.tab === "job") isi = htmlDetail(now);
   else isi = S.tab === "job" ? kepalaD + htmlDaftar(now) : htmlKelompok();
   el.innerHTML = `${tabs.length > 1 ? `<div class="dj-tabs" role="tablist">${tabs.map(([k, t]) => `<button type="button" role="tab" class="${S.tab === k ? "is-aktif" : ""}" data-dj="tab" data-v="${k}">${t}</button>`).join("")}</div>`: ""}${isi}
-    ${perlu && !S.muat && !S.detail ? `<button type="button" class="mr-fab" data-dj="baru" aria-label="Catat job baru">${ikon("plus", 22)}<span class="fab-teks">Catat job</span></button>` : ""}`;
+    ${perlu && !S.muat && !S.detail ? `<button type="button" class="mr-fab fab-d fab--job" data-dj="baru" aria-label="Catat job baru">${ikon("papan-plus", 24)}<span class="fab-teks">Catat job</span></button>` : ""}`;
   if (S.detail && S.tab === "job" && !S.muat) muatPratinjau();
 }
 
