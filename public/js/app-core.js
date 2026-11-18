@@ -56,7 +56,7 @@ const IK = {
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6 6 0 0 1 3.5 6"/>',
   star: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/>',
   jam: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', telp: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1Z"/>',
-  surat: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>', lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  surat: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>', wa: '<path d="M4 20l1.2-3.6A8 8 0 1 1 8.4 19.2Z"/><path d="M9.3 8.8c.3 2.2 2 4.1 4.2 4.9l1.2-1.1 1.6.9-.5 1.2c-.3.5-.9.7-1.5.5-2.7-.9-4.7-2.9-5.6-5.6-.2-.6 0-1.2.5-1.5Z"/>', lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   salin: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/>', panah: '<path d="m9 6 6 6-6 6"/>',
   target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
   galeri: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/>',
@@ -3667,7 +3667,7 @@ function viewFollow() {
   <div class="qt-fu">
     <div class="mr-kartu qt-fu-ring"><b>${daftar.length + nBelum ? `${daftar.length} perlu tindak lanjut` : 'Semua sudah ditindaklanjuti'}</b>${daftar.length ? `<small>${lama ? `<em>${lama} sudah ≥ 7 hari</em> · ` : ''}menggantung ≥ 7 hari, tanpa kabar ≥ ${PENG.tindakLanjutHari || 3} hari, riwayat PDF ≥ ${RW_HARI} hari</small>` : ''}</div>
     <button type="button" class="mr-kartu qt-fu-belum" data-qt="belum-buka">${ik('telp', 20)}<span><b>Customer tanpa penawaran aktif</b><small>${nBelum ? `${nBelum} customer · quotation ditolak atau diabaikan` : 'Tidak ada saat ini'}</small></span></button>
-    ${!HP() ? (!daftar.length ? '' : `<div class="mr-kartu mr-tabelkartu"><table class="mr-tabel qt-fu-tabel"><thead><tr><th>Nomor</th><th>Customer</th><th>Lama</th><th>Aksi</th></tr></thead><tbody>${daftar.slice(0, 50).map(i => `<tr><td><b>${esc(i.nama)}</b></td><td>${esc(i.cust)}</td><td class="${i.h >= 7 ? 'qt-fu-warn' : ''}">${i.h} hari · ${i.ket.replace(/ \d+ hari/, '')}</td><td>${i.aksi}</td></tr>`).join('')}</tbody></table></div>`) : daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}</div></div>`).join('')}
+    ${!HP() ? (!daftar.length ? '' : `<div class="mr-kartu mr-tabelkartu"><table class="mr-tabel qt-fu-tabel"><thead><tr><th>Nomor</th><th>Customer</th><th>Lama</th><th>Aksi</th></tr></thead><tbody>${daftar.slice(0, 50).map(i => `<tr><td><b>${esc(i.nama)}</b></td><td>${esc(i.cust)}</td><td class="${i.h >= 7 ? 'qt-fu-warn' : ''}">${i.h} hari · ${i.ket.replace(/ \d+ hari/, '')}</td><td><div class="qt-fu-aksi">${i.aksi}${fuKanal(i)}</div></td></tr>`).join('')}</tbody></table></div>`) : daftar.slice(0, 50).map(i => `<div class="mr-kartu qt-fu-item"><div><b>${esc(i.nama)}</b><small>${esc(i.cust)}</small></div><span class="${i.h >= 7 ? 'is-warn' : ''}">${i.ket}</span><div class="qt-fu-aksi">${i.aksi}${fuKanal(i)}</div></div>`).join('')}
     ${daftar.length > 50 ? `<p class="mr-sub">50 teratas ditampilkan, terlama di atas.</p>` : ''}
   </div>${bisaEdit() ? `<button type="button" class="qt-fab" data-qt="${HP() ? 'm-tambah' : 'baru'}" aria-label="Buat quotation">${ik('plus', 20)}<span class="fab-teks">Buat quotation</span></button>` : ''}`;
 }
@@ -3763,11 +3763,38 @@ async function aksiSembunyi(jenis, id, sembunyi) {
 /* daftar quotation yang perlu ditindaklanjuti: menggantung, tanpa kabar, atau riwayat PDF yang belum direspons (dipakai banner PC dan sheet Follow up di HP) */
 function kumpulTL(semuaAll, semua) {
     const item = new Map();
-    semuaAll.filter(x => R.hariGantung(x) !== null).forEach(x => item.set(x.id, { nama: namaQ(x), cust: namaCust(x), h: R.hariGantung(x), ket: `menggantung ${R.hariGantung(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="buka" data-id="${x.id}">perbarui</button>` }));
-    semua.filter(x => perluTL(x) !== null && !item.has(x.id)).forEach(x => item.set(x.id, { nama: namaQ(x), cust: namaCust(x), h: perluTL(x), ket: `tanpa kabar ${perluTL(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="buka" data-id="${x.id}">catat tindak lanjut</button>` }));
-    rwPerlu().forEach(x => item.set('rw:' + x.id, { nama: x.nomor, cust: x.customerNama, h: rwHari(x), ket: `riwayat PDF ${rwHari(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="rw-status" data-id="${x.id}">ubah status</button>` }));
+    semuaAll.filter(x => R.hariGantung(x) !== null).forEach(x => item.set(x.id, { nama: namaQ(x), cust: namaCust(x), h: R.hariGantung(x), ket: `menggantung ${R.hariGantung(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="buka" data-id="${x.id}">perbarui</button>`, ...kirimFu(x, false) }));
+    semua.filter(x => perluTL(x) !== null && !item.has(x.id)).forEach(x => item.set(x.id, { nama: namaQ(x), cust: namaCust(x), h: perluTL(x), ket: `tanpa kabar ${perluTL(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="buka" data-id="${x.id}">catat tindak lanjut</button>`, ...kirimFu(x, false) }));
+    rwPerlu().forEach(x => item.set('rw:' + x.id, { nama: x.nomor, cust: x.customerNama, h: rwHari(x), ket: `riwayat PDF ${rwHari(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="rw-status" data-id="${x.id}">ubah status</button>`, ...kirimFu(x, true) }));
     return [...item.values()].sort((a, b) => b.h - a.h);
 }
+/* data kirim untuk satu item follow up: PIC quotation didahulukan, lalu PIC utama customer */
+const kirimFu = (x, rw) => {
+  const kl = (cust(rw ? rwCid(x) : x.customerId) || {}).kontak || [], pic = rw ? '' : (x.picNama || ''), k = kl.find(z => norm(z.nama) === norm(pic)) || kl.find(z => z.utama) || kl[0] || {};
+  return { key: rw ? 'rw:' + x.id : x.id, pic: pic || k.nama || '', telp: (rw ? '' : x.picTelp) || k.telp || '', email: (rw ? '' : x.picEmail) || k.email || '', nomor: rw ? (x.nomor || '') : namaQ(x), judul: rw ? (x.perihal || '') : (x.judul || '') };
+};
+/* tiga pilihan pesan tindak lanjut; isi dan sapaan sama untuk WhatsApp dan email */
+const FU_GAYA = [['formal', 'Formal'], ['ramah', 'Ramah'], ['singkat', 'Singkat']];
+function pesanFu(i, gaya) {
+  const sapa = i.pic ? `Bapak/Ibu ${i.pic}` : 'Bapak/Ibu', nama = (window.__ISL && window.__ISL.nama) || 'Tim ISL', no = i.nomor, ju = i.judul ? ` perihal ${i.judul}` : '';
+  return { formal: `Yth. ${sapa},\n\nSelamat siang. Kami ingin menindaklanjuti penawaran ${no}${ju}. Mohon informasinya apakah penawaran tersebut masih dipertimbangkan, atau ada hal yang perlu kami sesuaikan.\n\nTerima kasih atas perhatian Bapak/Ibu.\n\nHormat kami,\n${nama}\nPT Indo Sukses Logistik`,
+    ramah: `Halo ${sapa}, semoga kabarnya baik.\n\nKami ingin menanyakan kabar penawaran ${no}${ju}. Apakah masih sesuai dengan kebutuhan Bapak/Ibu, atau ada yang ingin kami diskusikan? Kami siap membantu kapan saja.\n\nTerima kasih.\n${nama}\nPT Indo Sukses Logistik`,
+    singkat: `Selamat siang ${sapa}, mohon izin menanyakan kelanjutan penawaran ${no}${ju}. Apakah sudah ada keputusan, atau masih perlu penyesuaian? Terima kasih.` }[gaya];
+}
+const fuKanal = i => `<span class="qt-fu-kanal"><button type="button" class="mr-ikonbtn" data-qt="fu-kirim" data-k="wa" data-id="${esc(i.key)}" aria-label="Kirim WhatsApp ke ${esc(i.cust)}" title="Kirim WhatsApp">${ik('wa', 17)}</button><button type="button" class="mr-ikonbtn" data-qt="fu-kirim" data-k="email" data-id="${esc(i.key)}" aria-label="Kirim email ke ${esc(i.cust)}" title="Kirim email">${ik('surat', 17)}</button></span>`;
+/* klik ikon: buka sheet pilihan pesan; klik pilihan: WhatsApp atau email terbuka dengan teks itu */
+function sheetFu(i, k) {
+  const wa = k === 'wa', ket = wa ? (i.telp ? '' : 'PIC belum punya nomor telepon. WhatsApp akan meminta memilih kontak.') : (i.email ? '' : 'PIC belum punya email. Isi alamat penerima di aplikasi email.');
+  bukaSheet({ judul: wa ? 'Tindak lanjut lewat WhatsApp' : 'Tindak lanjut lewat email', sub: `${i.nomor} · ${i.cust}`, isi: FU_GAYA.map(([g, l]) => `<button type="button" class="qt-sheet__i qt-fu-pilih" data-qt="fu-pilih" data-k="${k}" data-g="${g}" data-id="${esc(i.key)}"><span><b>${l}</b><small>${esc(pesanFu(i, g))}</small></span></button>`).join('') + (ket ? `<p class="mr-sub">${ket}</p>` : '') });
+}
+document.addEventListener('click', ev => {
+  const e = ev.target.closest('[data-qt="fu-kirim"],[data-qt="fu-pilih"]'); if (!e) return;
+  const sm = Repo.semua(), i = kumpulTL(sm, sm).find(z => z.key === e.dataset.id); if (!i) return;
+  if (e.dataset.qt === 'fu-kirim') return sheetFu(i, e.dataset.k);
+  if (e.dataset.k === 'wa') window.open(`https://wa.me/${nomorWa(i.telp)}?text=${encodeURIComponent(pesanFu(i, e.dataset.g))}`, '_blank');
+  else window.open(`mailto:${encodeURIComponent(i.email)}?subject=${encodeURIComponent(`Tindak lanjut penawaran ${i.nomor}${i.judul ? ' - ' + i.judul : ''}`)}&body=${encodeURIComponent(pesanFu(i, e.dataset.g))}`, '_blank');
+  tutupSheet();
+});
 function viewDaftar() {
   const q = norm(Q.q), semuaAll = Repo.semua(), semua = semuaAll, nBelum = Repo.belumMaksimal().length, rw = rwSemua();
   const cariS = x => !q || norm([x.nomor, x.labelDraf, x.judul, namaCust(x), pembuatDokumen(x), ...(x.nomorLama || []).map(z => z.nomor)].join(' ')).includes(q);

@@ -2188,7 +2188,9 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-fu-belum { display: flex; align-items: center; gap: 12px; padding: 12px 14px; font: inherit; color: var(--mr-ink); text-align: left; cursor: pointer; } .qt-fu-belum small { display: block; color: var(--mr-muted); }
 .qt-fu-item { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 12px 14px; } .qt-fu-item small { display: block; color: var(--mr-muted); }
 .qt-fu-item > span { font-size: 12.5px; color: var(--mr-muted); text-align: right; } .qt-fu-item > span.is-warn { color: var(--mr-warn); font-weight: 600; }
-.qt-fu-aksi { grid-column: 1 / -1; display: flex; gap: 8px; }
+.qt-fu-aksi { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
+.qt-fu-kanal { display: inline-flex; gap: 6px; } .qt-fu-aksi .qt-fu-kanal { margin-left: auto; }
+.qt-fu-pilih span { min-width: 0; } .qt-fu-pilih small { display: block; margin-top: 4px; white-space: pre-line; line-height: 1.5; font-size: 12.5px; color: var(--mr-muted); }
 .qt-rg-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 6px; }
 .qt-rg-pil { padding: 6px 13px; border: 1px solid var(--mr-border); border-radius: 999px; background: var(--mr-surface); color: var(--mr-muted); font: inherit; font-size: 13.5px; cursor: pointer; }
 .qt-rg-pil.is-on { background: var(--mr-accent); border-color: var(--mr-accent); color: #1b1307; font-weight: 600; }
