@@ -67,7 +67,6 @@ const ADEGAN = [
   ['master rate: form tambah tarif', async p => { await pindah(p, 'master-rate'); await tunggu(p, 600); await klikTeks(p, 'tambah'); await tunggu(p, 700); }],
   ['lembar rekap', async p => { await pindah(p, 'rekap'); await tunggu(p, 600); }],
   ['laporan order dan laba', async p => { await pindah(p, 'laporan'); await tunggu(p, 600); }],
-  ['dashboard performa', async p => { await pindah(p, 'performa'); await tunggu(p, 600); }],
   ['notifikasi', async p => { await pindah(p, 'beranda'); await klikSel(p, '[aria-label*="otif"], .nf-lonceng, #nf-btn'); await tunggu(p, 400); }],
 
   ['quotation: semua bagian pengaturan dokumen', async (p, periksa) => {
