@@ -199,7 +199,7 @@ watchAuthState(
         }
         Object.values(MODUL).forEach((x) => document.getElementById(x.kontainer)?.classList.add("hidden"));
         /* Dashboard Performa untuk pemilik, admin, dan sales. */
-        const ok = RUTE.includes(id) && !(!kelola && !sales && id === "performa");
+        const ok = RUTE.includes(id) && id !== "performa"; // Dashboard Performa ditutup (19 Nov 2026); kode dan data tetap ada
         window.__rute = ok ? id : "customer";
         window.__pindahHalaman(ok ? id : "customer");
       };

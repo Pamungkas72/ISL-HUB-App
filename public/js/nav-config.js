@@ -70,13 +70,7 @@ export const navItems = [
     icon: icons.setelan,
     status: "active",
   },
-  {
-    id: "performa",
-    label: "Dashboard Performa",
-    href: "app.html#performa",
-    icon: icons.dashboard,
-    status: "active",
-  },
+  // Dashboard Performa (id "performa") disembunyikan dari navigasi atas permintaan pemilik (19 Nov 2026); kode dan data tetap ada.
 ];
 
 // Menu yang disembunyikan per peran (aturan sebenarnya ada di firestore.rules; ini hanya merapikan tampilan).
