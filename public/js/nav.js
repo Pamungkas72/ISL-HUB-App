@@ -145,10 +145,10 @@ export function morphKecualiFokus(root, html) {
     for (let i = 0; i < L.length; i++) {
       const l = L[i], b = B[i];
       if (l.nodeType === 1 && l.contains(a)) {
-        if (l === a) continue;
         if (b.nodeType !== 1 || b.tagName !== l.tagName) return false;
+        // atribut elemen yang difokus tetap diperbarui (mis. aria-pressed kartu KPI), isinya tidak disentuh
         [...b.attributes].forEach((x) => { if (l.getAttribute(x.name) !== x.value) l.setAttribute(x.name, x.value); });
-        if (!samakan(l, b)) return false;
+        if (l !== a && !samakan(l, b)) return false;
       } else if (!(l.nodeType === 3 && b.nodeType === 3 && l.data === b.data) && !(l.isEqualNode && l.isEqualNode(b))) live.replaceChild(b.cloneNode(true), l);
     }
     return true;
