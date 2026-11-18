@@ -69,6 +69,18 @@ export function deret(jobs, r, periode) {
   return [...d.values()];
 }
 
+/** Dokumen Firestore jadi objek job: id dokumen selalu menang atas field `id` di isi dokumen (impor lama menyimpan id "x12", yang membuat ubah/hapus menulis ke dokumen baru = duplikat). */
+export const dariDok = (id, data) => ({ ...data, id });
+
+/** Target otomatis job baru: tanggal masuk + hari kalender dari pengaturan kategori; null bila belum diatur. */
+export const targetKategori = (peta, kat, masuk) => { const n = Math.round(+(peta || {})[kat]); return n > 0 && masuk ? tambahHari(masuk, n) : null; };
+/** Rentang filter periode daftar job; null = semua periode. */
+export function rentangDaftar(p, now = hariIni(), dari = "", sampai = "") {
+  if (p === "mingguLalu") { const a = tambahHari(awalMinggu(now), -7); return [a, tambahHari(a, 6)]; }
+  if (p === "rentang") return dari && sampai ? [dari, sampai] : null;
+  return p === "minggu" || p === "bulan" || p === "tahun" ? rentang(p, now) : null;
+}
+
 /** Pengingat: terlambat, jatuh tempo hari ini, dan mulai dalam 7 hari. */
 export function pengingat(jobs, now = hariIni()) {
   const a = jobs.filter(aktif);
