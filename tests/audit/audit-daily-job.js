@@ -1,4 +1,4 @@
-// Audit tema (terang/gelap) Daily Job di HP dan desktop: dashboard, daftar, filter, detail, form, panel, dan halaman publik.
+// Audit tema (terang/gelap) Daily Job di HP dan desktop: daftar, filter, detail, form, panel, dan halaman publik.
 // Data job diisi di sini saja (tidak menambah ke data-contoh.js). Jalankan: node tests/audit/audit-daily-job.js [gelap|terang] [hp|desktop] [--ketat] [--gambar]
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs');
@@ -17,9 +17,7 @@ const DATA = () => ({ ...JSON.parse(JSON.stringify(awal)), dj_kelompok: { k1: { 
 
 /* adegan: tiap entri mengubah tampilan lalu memanggil periksa(label) */
 const ADEGAN = [
-  ['dj: dashboard performa', async (p) => { await tunggu(p, 500); }],
-  ['dj: filter (panel)', async (p) => { await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 400); }],
-  ['dj: daftar job (perlu tindakan)', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="job"]'); await tunggu(p, 400); }],
+  ['dj: daftar job (status aktif)', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="job"]'); await tunggu(p, 400); }],
   ['dj: daftar, filter (panel)', async (p) => { await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 300); }],
   ['dj: daftar, menu aksi ⋯', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="menu"]'); await tunggu(p, 300); }],
   ['dj: daftar, pilih semua (bilah aksi)', async (p) => { await klikSel(p, '[data-dj="pilih-mulai"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="cb-semua"]'); await tunggu(p, 300); }],
@@ -28,7 +26,7 @@ const ADEGAN = [
   ['dj: detail, panel bagikan', async (p) => { await klikSel(p, '[data-dj="d-tutup"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="menu"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="a-bagikan"]'); await tunggu(p, 400); }],
   ['dj: form catat job baru', async (p) => { await klikSel(p, '[data-dj="baru"]'); await tunggu(p, 500); }],
   ['dj: form catat, status tertunda (alasan)', async (p) => { await p.evaluate(() => { const s = document.getElementById('djf-status'); if (s) { s.value = 'tunggu'; s.dispatchEvent(new Event('change', { bubbles: true })); } }); await tunggu(p, 300); }],
-  ['dj: panel impor Excel', async (p) => { await klikSel(p, '[data-aksi="impor"]'); await tunggu(p, 500); }],
+  ['dj: panel impor Excel', async (p) => { await klikSel(p, '[data-dj="impor"]'); await tunggu(p, 500); }],
   ['dj: tab kelompok', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="kelompok"]'); await tunggu(p, 500); }],
   ['dj: daftar, status selesai (chip di halaman)', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await klikSel(p, '[data-dj="tab"][data-v="job"]'); await klikSel(p, '[data-dj="st"][data-v="selesai"]'); await tunggu(p, 300); }],
 ];
@@ -41,11 +39,10 @@ const ADEGAN = [
   let adegan = 'awal'; p.on('pageerror', e => galat.push(adegan + ' | ' + e.message.slice(0, 140) + ' | ' + ((e.stack || '').split('\n')[1] || '').trim().slice(0, 160)));
   await pasang(p, PUBLIK, { awal: DATA() });
   await p.addInitScript(t => { try { localStorage.setItem('isl-tema', t); } catch (e) {} }, TEMA === 'gelap' ? 'gelap' : 'terang');
-  await p.goto('http://isl.test/app.html#dailyjob'); await p.waitForSelector('#dj-dash', { timeout: 10000 }); await p.evaluate(() => document.getElementById('dj-ingat')?.remove()); await tunggu(p, 800);
+  await p.goto('http://isl.test/app.html#dailyjob'); await p.waitForSelector('#dj-root .dj-chips', { timeout: 10000 }); await p.evaluate(() => document.getElementById('dj-ingat')?.remove()); await tunggu(p, 800);
   const semua = []; let n = 0;
   const periksa = async label => { n++; const temuan = await p.evaluate(pindai, { tema: TEMA, ketat: KETAT }); temuan.forEach(t => semua.push({ adegan: label, ...t })); if (GAMBAR) await p.screenshot({ path: `${OUT}dj-${TEMA}-${LAYAR}-${label.replace(/[^a-z0-9]+/gi, '_')}.png` }); };
-  await periksa('dj: dashboard performa');
-  for (const [nama, fn] of ADEGAN.slice(1)) {
+  for (const [nama, fn] of ADEGAN) {
     adegan = nama;
     try { await fn(p); } catch (e) { semua.push({ adegan: nama, jenis: 'adegan-gagal', el: String(e.message).slice(0, 100) }); continue; }
     await periksa(nama);
