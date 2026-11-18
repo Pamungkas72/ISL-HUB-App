@@ -3778,7 +3778,7 @@ const kirimFu = (x, rw) => {
 /* deskripsi default per kanal: WhatsApp singkat dan hangat, email panjang dan formal; isi diambil dari data quotation */
 function pesanFu(i, kanal) {
   const sapa = i.pic ? `Bapak/Ibu ${i.pic}` : 'Bapak/Ibu', nama = (window.__ISL && window.__ISL.nama) || 'Tim ISL', tg = i.tgl ? ` yang kami kirimkan pada ${tgl(i.tgl)}` : '', per = `${i.nomor}${i.judul ? ' perihal ' + i.judul : ''}`;
-  if (kanal === 'wa') return `Selamat siang ${sapa}, semoga kabarnya baik. Kami ingin menanyakan penawaran ${per}${tg}. Apakah sudah ada keputusan, atau masih ada yang perlu kami bantu? Terima kasih.`;
+  if (kanal === 'wa') return `Selamat siang ${sapa}, semoga kabarnya baik. Kami ingin menanyakan penawaran ${per}${tg}. Apakah sudah ada keputusan? Terima kasih.`;
   return `Yth. ${sapa},\n\nSelamat siang. Kami ingin menindaklanjuti penawaran ${per}${tg}. Mohon kiranya Bapak/Ibu berkenan memberikan persetujuan atau tanggapan atas penawaran tersebut. Apabila masih ada hal yang perlu disesuaikan atau didiskusikan, kami dengan senang hati membantu.\n\nDemikian permohonan kami. Atas perhatian dan kerja sama Bapak/Ibu, kami ucapkan terima kasih.\n\nHormat kami,\n${nama}\nPT Indo Sukses Logistik`;
 }
 const fuKanal = i => `<span class="qt-fu-kanal"><button type="button" class="mr-ikonbtn" data-qt="fu-kirim" data-k="wa" data-id="${esc(i.key)}" aria-label="Kirim WhatsApp ke ${esc(i.cust)}" title="Kirim WhatsApp">${ik('wa', 17)}</button><button type="button" class="mr-ikonbtn" data-qt="fu-kirim" data-k="email" data-id="${esc(i.key)}" aria-label="Kirim email ke ${esc(i.cust)}" title="Kirim email">${ik('surat', 17)}</button></span>`;
