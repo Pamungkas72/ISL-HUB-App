@@ -91,4 +91,5 @@ eq("target kategori: masuk + hari kalender", H.targetKategori({ Quotation: 1, RF
 eq("target kategori: belum diatur atau 0 = null", [H.targetKategori({ Quotation: 0 }, "Quotation", now), H.targetKategori({}, "RFQ", now), H.targetKategori(null, "RFQ", now)], [null, null, null]);
 eq("rentang daftar: semua = null, minggu lalu Senin-Minggu", [H.rentangDaftar("semua", now), H.rentangDaftar("mingguLalu", now)], [null, ["2026-11-02", "2026-11-08"]]);
 eq("rentang daftar: rentang butuh dua tanggal, bulan ini", [H.rentangDaftar("rentang", now, "2026-11-01", ""), H.rentangDaftar("rentang", now, "2026-11-01", "2026-11-05"), H.rentangDaftar("bulan", now)], [null, ["2026-11-01", "2026-11-05"], ["2026-11-01", "2026-11-30"]]);
+eq("dariDok: id dokumen menang atas field id (bug duplikat setelah edit job impor)", [H.dariDok("imp-k1-x12", { id: "x12", judul: "A" }).id, H.dariDok("abc", { judul: "B" }).id], ["imp-k1-x12", "abc"]);
 process.exit(gagal ? 1 : 0);

@@ -29,7 +29,7 @@ async function muat() {
     const ks = await getDocs(collection(db, "dj_kelompok"));
     S.kelompok = ks.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
     const q = S.kelola ? collection(db, "dj_job") : S.kelompokSaya ? query(collection(db, "dj_job"), where("kelompokId", "==", S.kelompokSaya)) : null;
-    S.jobs = q ? (await getDocs(q)).docs.map((d) => ({ id: d.id, ...d.data() })) : [];
+    S.jobs = q ? (await getDocs(q)).docs.map((d) => H.dariDok(d.id, d.data())) : [];
     if (S.kelola) S.akun = (await getDocs(collection(db, "pengguna"))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.status === "aktif").sort((a, b) => String(a.nama || a.email).localeCompare(String(b.nama || b.email), "id"));
   } catch (err) { console.error(err); S.galat = "Data Daily Job belum bisa dibaca. Pemilik perlu memasang aturan Firestore terbaru (firebase deploy --only firestore:rules,storage)."; }
   S.muat = false; render();
@@ -506,7 +506,7 @@ async function simpanJob() {
       status, alasanTunda: status === "tunggu" ? v("djf-tunda").trim() : null, ...(!d.id || target !== d.tglTarget ? { targetTingkat: tingkatSaya(kel) } : {}), tglSelesai: status === "selesai" ? v("djf-selesai") || H.hariIni() : null, prioritas: v("djf-prio"), bobot: +v("djf-bobot") || 2, file, tautan: d.tautan, catatan: d.catatan || [],
       dibuatOleh: d.dibuatOleh || S.u.uid, dibuatNama: d.dibuatNama || S.u.nama || S.u.email, dibuatPada: d.dibuatPada || H.hariIni(), diubah: serverTimestamp(),
     };
-    await setDoc(doc(db, "dj_job", id), data, { merge: true });
+    if (form.dataset.id) await updateDoc(doc(db, "dj_job", id), data); else await setDoc(doc(db, "dj_job", id), data); // ubah tidak boleh membuat dokumen baru
     if (berubahTarget) { const x = { uid: S.u.uid, oleh: S.u.nama || S.u.email, peran: adalahKepala(d) ? "kepala" : "anggota", jenis: "target", dari: d.tglTarget, ke: target, alasan, waktu: Date.now() }; await setDoc(doc(db, "dj_job", id, "aktivitas", uid()), x).catch((err) => console.warn(err)); if (S.detail && S.detail.id === id) S.detail.aktivitas.push(x); }
     const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...(ada >= 0 ? S.jobs[ada] : {}), id, ...data, diubah: null };
     if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru); segarkanTautan(baru);
@@ -563,7 +563,7 @@ async function jalankanImpor() {
     if (kel === "__baru") { kel = uid(); await setDoc(doc(db, "dj_kelompok", kel), { nama: NAMA_TIM, dibuat: H.hariIni() }); S.kelompok.push({ id: kel, nama: NAMA_TIM, dibuat: H.hariIni() }); }
     const sekarang = H.hariIni();
     for (let i = 0; i < rencana.length; i += 15) await Promise.all(rencana.slice(i, i + 15).map(async (j) => {
-      const id = `imp-${kel}-${j.id}`, data = { ...j, kelompokId: kel, tglMasuk: j.tglMasuk || sekarang, dibuatOleh: S.u.uid, dibuatNama: "Import Excel", dibuatPada: sekarang, diimpor: true, targetTingkat: tingkatSaya(kel), diubah: serverTimestamp() };
+      const id = `imp-${kel}-${j.id}`, { id: _nomor, ...isi } = j, data = { ...isi, kelompokId: kel, tglMasuk: j.tglMasuk || sekarang, dibuatOleh: S.u.uid, dibuatNama: "Import Excel", dibuatPada: sekarang, diimpor: true, targetTingkat: tingkatSaya(kel), diubah: serverTimestamp() };
       await setDoc(doc(db, "dj_job", id), data); n++;
       const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...data, id, diubah: null }; if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru);
     }));
