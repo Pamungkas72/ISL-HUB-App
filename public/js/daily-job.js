@@ -15,7 +15,7 @@ import * as H from "./daily-job-hitung.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 
-const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "performa", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", tampil: "perlu", masalah: "", kel: matchMedia("(min-width: 761px)").matches ? "tabel" : "pic", buka: {}, pilih: new Set(), modePilih: false, terbuka: "", detail: null, tim: {}, cari: "", muat: false, galat: "", kpi: {} };
+const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "performa", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", tampil: "perlu", masalah: "", kel: matchMedia("(min-width: 761px)").matches ? "tabel" : "pic", buka: {}, pilih: new Set(), modePilih: false, terbuka: "", detail: null, tim: {}, cari: "", muat: false, galat: "", kpi: {}, subKel: "kelompok", pilihKel: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 const namaKel = (id) => (S.kelompok.find((k) => k.id === id) || {}).nama || "–";
@@ -304,11 +304,27 @@ function htmlKelompok() {
   return (S.kelola ? htmlKelompokKelola() : "") + kepalaDi().map(htmlTim).join("") + (!S.kelola && !kepalaDi().length ? `<section class="mr-kartu dj-kartu"><p class="mr-sub">Hanya kepala divisi yang bisa mengurus tim.</p></section>` : "");
 }
 function htmlKelompokKelola() {
+  const sempit = matchMedia("(max-width: 760px)").matches;
   const hit = (id) => S.akun.filter((a) => a.kelompokDJ === id).length;
-  return `<section class="mr-kartu dj-kartu"><h3>Kelompok</h3><p class="mr-sub">Anggota hanya melihat dan mengubah job kelompoknya. Master dan admin melihat semua.</p>
-    ${S.kelompok.map((k) => `<div class="dj-org"><span><b>${e(k.nama)}</b> · ${hit(k.id)} anggota · ${S.jobs.filter((j) => j.kelompokId === k.id).length} job</span><span class="mr-ruang"></span><button class="mr-btn mr-btn--kecil" data-dj="kel-ubah" data-id="${e(k.id)}">Ubah</button><button class="mr-ikonbtn" data-dj="kel-hapus" data-id="${e(k.id)}" aria-label="Hapus kelompok">${ikon("tong", 15)}</button></div>`).join("") || `<p class="mr-sub">Belum ada kelompok.</p>`}
-    <button class="mr-btn mr-btn--utama" data-dj="kel-baru">${ikon("plus", 14)} Kelompok baru</button></section>
-    <section class="mr-kartu dj-kartu"><h3>Kelompok tiap akun</h3>${S.akun.filter((a) => a.peran !== "dj").map((a) => `<div class="dj-org"><span>${e(a.nama || a.email)}<small> ${e(a.email)}</small></span>${a.kelompokDJ ? `<span class="dj-kep"><input type="checkbox" data-dj="kep-akun" data-id="${e(a.id)}" id="kep-${e(a.id)}" ${((S.kelompok.find((k) => k.id === a.kelompokDJ) || {}).kepala || []).includes(a.id) ? "checked" : ""}><label for="kep-${e(a.id)}">Kepala</label></span>` : ""}<select data-dj="kel-akun" data-id="${e(a.id)}" aria-label="Kelompok ${e(a.nama || a.email)}">${opsi(S.kelompok.map((k) => [k.id, k.nama]), a.kelompokDJ || "", "Tanpa kelompok")}</select></div>`).join("")}<p class="mr-sub">Satu kepala divisi per kelompok: menilai hasil kerja dan menentukan target (deadline) yang tidak bisa diubah anggota. Admin berada di atas kepala divisi, master di atas admin: tingkat lebih tinggi bisa mengubah target tingkat di bawahnya, tidak sebaliknya.</p></section>${htmlKpi()}`;
+  const akunList = S.akun.filter((a) => a.peran !== "dj");
+  const kid = S.kelompok.some((k) => k.id === S.pilihKel) ? S.pilihKel : (S.kelompok[0] || {}).id || "";
+  const baris = (k) => `<div class="dj-kel${k.id === kid ? " is-aktif" : ""}" data-dj="kel-pilih" data-id="${e(k.id)}"><span class="dj-kel__n"><b>${e(k.nama)}</b><small>${hit(k.id)} anggota · ${S.jobs.filter((j) => j.kelompokId === k.id).length} job</small></span><button class="mr-btn mr-btn--kecil" data-dj="kel-ubah" data-id="${e(k.id)}">Ubah</button><button class="mr-ikonbtn" data-dj="kel-hapus" data-id="${e(k.id)}" aria-label="Hapus kelompok">${ikon("tong", 15)}</button></div>`;
+  const akunBaris = (a) => `<div class="dj-akun"><span>${e(a.nama || a.email)}<small> ${e(a.email)}</small></span>${a.kelompokDJ ? `<span class="dj-kep"><input type="checkbox" data-dj="kep-akun" data-id="${e(a.id)}" id="kep-${e(a.id)}" ${((S.kelompok.find((k) => k.id === a.kelompokDJ) || {}).kepala || []).includes(a.id) ? "checked" : ""}><label for="kep-${e(a.id)}">Kepala</label></span>` : ""}<select data-dj="kel-akun" data-id="${e(a.id)}" aria-label="Kelompok ${e(a.nama || a.email)}">${opsi(S.kelompok.map((k) => [k.id, k.nama]), a.kelompokDJ || "", "Tanpa kelompok")}</select></div>`;
+  const tambah = `<button class="mr-btn mr-btn--utama" data-dj="kel-baru">${ikon("plus", 14)} Kelompok baru</button>`;
+  const catatan = `<p class="mr-sub dj-catatan">Satu kepala divisi per kelompok: menilai hasil kerja dan menentukan target (deadline) yang tidak bisa diubah anggota. Admin berada di atas kepala divisi, master di atas admin: tingkat lebih tinggi bisa mengubah target tingkat di bawahnya, tidak sebaliknya.</p>`;
+  const daftar = S.kelompok.map(baris).join("") || `<p class="mr-sub">Belum ada kelompok.</p>`;
+  if (sempit) {
+    const sub = [["kelompok", "Kelompok"], ["akun", "Akun"], ["kpi", "KPI"]];
+    const isi = S.subKel === "akun" ? `<section class="mr-kartu dj-kartu"><h3>Kelompok tiap akun</h3>${akunList.map(akunBaris).join("")}</section>${catatan}`
+      : S.subKel === "kpi" ? htmlKpi()
+      : `<section class="mr-kartu dj-kartu"><h3>Kelompok</h3><p class="mr-sub">Anggota hanya melihat dan mengubah job kelompoknya. Master dan admin melihat semua.</p>${daftar}${tambah}</section>`;
+    return `<div class="mr-seg dj-subtab" role="tablist">${sub.map(([k, t]) => `<button type="button" class="mr-seg__btn${S.subKel === k ? " is-aktif" : ""}" data-dj="subkel" data-v="${k}">${t}</button>`).join("")}</div>${isi}`;
+  }
+  const k = S.kelompok.find((x) => x.id === kid), tanpa = akunList.filter((a) => !a.kelompokDJ), anggota = akunList.filter((a) => a.kelompokDJ === kid);
+  return `<div class="dj-split"><div>
+    <section class="mr-kartu dj-kartu"><h3>Kelompok</h3><p class="mr-sub">Anggota hanya melihat dan mengubah job kelompoknya. Master dan admin melihat semua.</p>${daftar}${tambah}</section>
+    ${tanpa.length ? `<section class="mr-kartu dj-kartu"><h3>Tanpa kelompok</h3>${tanpa.map(akunBaris).join("")}</section>` : ""}</div>
+    <div>${k ? `<section class="mr-kartu dj-kartu"><h3>${e(k.nama)}</h3><p class="mr-sub">${anggota.length} anggota</p>${anggota.map(akunBaris).join("") || `<p class="mr-sub">Belum ada anggota. Atur lewat daftar Tanpa kelompok.</p>`}${catatan}</section>` : ""}${htmlKpi()}</div></div>`;
 }
 /* KPI: target hari selesai per kategori, dihitung dari tanggal masuk; dipakai sebagai usulan target job baru. */
 function htmlKpi() {
@@ -683,6 +699,8 @@ document.addEventListener("click", async (ev) => {
   if (a === "tim-hapus") { const x = anggotaDi(t.dataset.k, id); if (!x) return;
     if (!(await konfirmasiKetik("Hapus akun anggota?", `Akun <b>${e(x.nama)}</b> (@${e(x.username)}) dihapus permanen dan tidak bisa masuk lagi. Job yang pernah dibuatnya tetap ada.`, "HAPUS"))) return;
     try { await panggil("djAturAnggota", { uid: id, aksi: "hapus" }); toast("Akun dihapus."); muatTim(t.dataset.k); } catch (err) { toast(e(err.message), "bahaya"); } return; }
+  if (a === "subkel") { S.subKel = v; render(); return; }
+  if (a === "kel-pilih") { S.pilihKel = id; render(); return; }
   if (a === "kel-baru" || a === "kel-ubah") {
     const k = S.kelompok.find((x) => x.id === id), nama = (prompt("Nama kelompok / divisi:", k ? k.nama : "") || "").trim(); if (!nama) return;
     const kid = k ? k.id : uid(); try { await setDoc(doc(db, "dj_kelompok", kid), { nama, dibuat: k ? k.dibuat || H.hariIni() : H.hariIni(), kepala: k ? k.kepala || [] : [], ...(k && k.bawaan ? { bawaan: true } : {}) }); await muat(); toast("Kelompok tersimpan."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;

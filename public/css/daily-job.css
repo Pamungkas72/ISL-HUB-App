@@ -223,3 +223,16 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-agt { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); flex-wrap: wrap; } .dj-agt.is-mati { opacity: .65; }
 .dj-agt__i { flex: 1; min-width: 160px; } .dj-agt__i small { display: block; color: var(--muted); font-size: 12px; word-break: break-all; } .dj-agt__a { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .dj-kred { display: flex; flex-direction: column; gap: 10px; border: 1px dashed var(--border); border-radius: 12px; padding: 14px; } .dj-kred span { display: block; color: var(--muted); font-size: 11.5px; } .dj-kred b { font-size: 14px; word-break: break-all; } .dj-kred__s { font: 700 18px ui-monospace, Menlo, monospace; letter-spacing: .04em; color: var(--accent-hover); }
+
+/* Halaman Kelompok (admin dan master): HP sub-tab, desktop daftar kiri + detail kanan (760px) */
+.dj-subtab { display: flex; margin-bottom: 12px; }
+.dj-kel, .dj-akun { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 8px; border-top: 1px solid var(--border); }
+.dj-kel { cursor: pointer; border-radius: 8px; }
+.dj-kel:hover { background: var(--surface); }
+.dj-kel.is-aktif { background: var(--surface); box-shadow: inset 3px 0 0 var(--dj-tx-aksen); }
+.dj-kel__n { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.dj-kel small, .dj-akun small { color: var(--muted); }
+.dj-akun > span:first-child { flex: 1; min-width: 150px; overflow-wrap: anywhere; }
+.dj-catatan { margin-top: 10px; }
+.dj-split { display: grid; gap: 14px; }
+@media (min-width: 761px) { .dj-split { grid-template-columns: minmax(260px, 1fr) minmax(0, 1.6fr); align-items: start; } }
