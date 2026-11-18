@@ -20,15 +20,17 @@ const ADEGAN = [
   ['dj: dashboard performa', async (p) => { await tunggu(p, 500); }],
   ['dj: filter (panel)', async (p) => { await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 400); }],
   ['dj: daftar job (perlu tindakan)', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="job"]'); await tunggu(p, 400); }],
-  ['dj: daftar, kelompok status (panel filter)', async (p) => { await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 300); await klikSel(p, '#mr-layer [data-dj="kel-mode"][data-v="status"]'); await tunggu(p, 300); }],
-  ['dj: daftar, pilih semua (bilah aksi)', async (p) => { await klikSel(p, '[data-dj="cb-semua"]'); await tunggu(p, 300); }],
+  ['dj: daftar, filter (panel)', async (p) => { await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 300); }],
+  ['dj: daftar, menu aksi ⋯', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="menu"]'); await tunggu(p, 300); }],
+  ['dj: daftar, pilih semua (bilah aksi)', async (p) => { await klikSel(p, '[data-dj="pilih-mulai"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="cb-semua"]'); await tunggu(p, 300); }],
   ['dj: detail job', async (p) => { await klikSel(p, '[data-dj="buka"]'); await tunggu(p, 600); }],
   ['dj: detail, panel ubah target', async (p) => { await klikSel(p, '[data-dj="d-target"]'); await tunggu(p, 400); }],
-  ['dj: detail, panel bagikan', async (p) => { await klikSel(p, '[data-dj="a-bagikan"]'); await tunggu(p, 400); }],
+  ['dj: detail, panel bagikan', async (p) => { await klikSel(p, '[data-dj="d-tutup"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="menu"]'); await tunggu(p, 200); await klikSel(p, '[data-dj="a-bagikan"]'); await tunggu(p, 400); }],
   ['dj: form catat job baru', async (p) => { await klikSel(p, '[data-dj="baru"]'); await tunggu(p, 500); }],
   ['dj: form catat, status tertunda (alasan)', async (p) => { await p.evaluate(() => { const s = document.getElementById('djf-status'); if (s) { s.value = 'tunggu'; s.dispatchEvent(new Event('change', { bubbles: true })); } }); await tunggu(p, 300); }],
   ['dj: panel impor Excel', async (p) => { await klikSel(p, '[data-aksi="impor"]'); await tunggu(p, 500); }],
   ['dj: tab kelompok', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="kelompok"]'); await tunggu(p, 500); }],
+  ['dj: daftar, filter status selesai (panel)', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await klikSel(p, '[data-dj="tab"][data-v="job"]'); await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 300); await klikSel(p, '#mr-layer [data-dj="st"][data-v="selesai"]'); await tunggu(p, 300); }],
 ];
 
 (async () => {
