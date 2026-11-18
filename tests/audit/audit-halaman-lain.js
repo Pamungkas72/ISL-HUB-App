@@ -44,6 +44,7 @@ async function konteks(browser, { email, awalData, mulai }) {
     await p.evaluate(() => { window.__qt.baru('c1'); window.ISLFL.terapkanAwal(window.__qt._Q.edit, 'depo'); window.__qt.gambar(); }); await tunggu(p, 500); await periksa(p, peran + ': formulir Depo');
     await p.evaluate(() => { const i = document.querySelector('[data-fl="rows.1.0.h20"]'); i && (i.value = '90000') && i.dispatchEvent(new Event('input', { bubbles: true })); });
     await p.evaluate(() => { location.hash = '#customer'; }); await tunggu(p, 900); await periksa(p, peran + ': customer');
+    await p.evaluate(() => { location.hash = '#pengaturan'; }); await tunggu(p, 1200); await periksa(p, peran + ': pengaturan (daftar bagian)');
     if (galat.length) semua.push({ adegan: peran, jenis: 'galat-halaman', el: galat[0] });
     await p.close();
   }

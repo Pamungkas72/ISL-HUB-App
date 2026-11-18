@@ -129,6 +129,17 @@
     if (!L.length) return '';
     return `<section class="mr-kartu cu-kartu"><h3>Pengajuan hapus quotation${master() ? ` <span class="cu-jml">${L.length}</span>` : ''}</h3><div class="pf-fu">${L.map((a) => `<div class="pf-fu__r"><div><b>${esc(a.nomor || a.quotationId)}</b><div class="mr-sub">${esc(a.customerNama || '')} · ${esc(a.pemilikNama || '')}${master() ? '' : ' · ' + esc(LABEL_AJUAN[a.status] || a.status)}<br>${esc(a.alasan || '')}</div></div>${master() ? `<div class="pf-fu__aksi"><button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-pf="ajuan-setuju" data-id="${esc(a.id)}">Setujui</button><button class="mr-btn mr-btn--kecil" data-pf="ajuan-tolak" data-id="${esc(a.id)}">Tolak</button></div>` : ''}</div>`).join('')}</div></section>`;
   }
+  /* Konten untuk halaman Pengaturan (tanpa pembungkus kartu): profil sales dan daftar pengajuan hapus. */
+  function kontenProfil() { return htmlProfil().replace(/^<section[^>]*><h3>Profil sales<\/h3>/, '').replace(/<\/section>$/, ''); }
+  function kontenAjuan() {
+    const L = master() ? S.ajuan.filter((a) => a.status === 'menunggu') : S.ajuan.slice(0, 10);
+    if (!L.length) return `<p class="cu-kosong">${master() ? 'Tidak ada pengajuan yang menunggu keputusan.' : 'Belum ada pengajuan hapus.'}</p>`;
+    return htmlAjuan().replace(/^<section[^>]*><h3>[^]*?<\/h3>/, '').replace(/<\/section>$/, '');
+  }
+  async function muatAjuan() {
+    try { await siapkan(); const { collection, getDocs, query, where } = S.fs, aj = await getDocs(ISL().kelola ? collection(S.db, 'qt_ajuan_hapus') : query(collection(S.db, 'qt_ajuan_hapus'), where('pemilikUid', '==', ISL().uid))); S.ajuan = aj.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.waktu).localeCompare(String(a.waktu))); } catch (e) { S.ajuan = []; }
+    return S.ajuan;
+  }
   const htmlTargetMaster = () => (master() ? '<p class="mr-sub qt-ket">Target bulanan tiap sales diatur di Pengaturan > Akun.</p>' : '');
 
   function gambar() {
@@ -181,7 +192,7 @@
     try {
       await siapkan(); const { doc, updateDoc } = S.fs, d = { nama: document.getElementById('pf-nama').value.trim(), telepon: document.getElementById('pf-telp').value.trim() };
       const f = document.getElementById('pf-ttd').files[0]; if (f) { d.ttd = window.__islHapusLatar ? await window.__islHapusLatar(f) : await perkecilGambar(f); if (!d.ttd) throw new Error('Latar foto tanda tangan tidak cukup terang. Foto di atas kertas putih.'); }
-      await updateDoc(doc(S.db, 'pengguna', ISL().uid), d); Object.assign(window.__ISL, { nama: d.nama, telepon: d.telepon }, d.ttd ? { ttdSales: d.ttd } : {}); toast('Profil tersimpan.'); gambar();
+      await updateDoc(doc(S.db, 'pengguna', ISL().uid), d); Object.assign(window.__ISL, { nama: d.nama, telepon: d.telepon }, d.ttd ? { ttdSales: d.ttd } : {}); toast('Profil tersimpan.'); gambar(); if (window.ISLSales.saatUbah) window.ISLSales.saatUbah();
     } catch (e) { toast('Profil gagal disimpan: ' + esc(e.code || e.message), 'bahaya'); }
   }
   // Sales mengajukan hapus untuk quotation yang sudah terbit; master yang menyetujui.
@@ -200,7 +211,7 @@
         else { toast('Quotation sudah <b>disetujui customer</b> dan rate-nya aktif. Ubah lewat Customer > Rate, lalu tolak pengajuan ini.', 'bahaya'); return; }
       }
       await siapkan(); await S.fs.updateDoc(S.fs.doc(S.db, 'qt_ajuan_hapus', id), { status: setuju ? 'disetujui' : 'ditolak', diputuskan: new Date().toISOString() });
-      a.status = setuju ? 'disetujui' : 'ditolak'; toast(setuju ? 'Pengajuan disetujui. ' + info : 'Pengajuan ditolak.'); gambar();
+      a.status = setuju ? 'disetujui' : 'ditolak'; toast(setuju ? 'Pengajuan disetujui. ' + info : 'Pengajuan ditolak.'); gambar(); if (window.ISLSales.saatUbah) window.ISLSales.saatUbah();
     } catch (e) { toast('Gagal memproses pengajuan: ' + esc(e.message || e.code), 'bahaya'); }
   }
   document.addEventListener('click', (ev) => {
@@ -218,7 +229,7 @@
   });
 
   window.ISLSales = {
-    ATURAN, hitung, ajukanHapus,
+    ATURAN, hitung, ajukanHapus, kontenProfil, kontenAjuan, muatAjuan, jumlahMenunggu: () => S.ajuan.filter((a) => a.status === 'menunggu').length, saatUbah: null,
     async tampil() { if (!S.bulan) S.bulan = bulanIni(); gambar(); if (!S.siap && !S.muat) { await muatData(); } await simpanRingkasan(); gambar(); },
     gambar,
   };

@@ -18,7 +18,8 @@ import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
 import { pasangPembersihan } from "./pembersihan-qt.js";
 
-const S = { akun: [], log: [], akunMuat: false, modal: null, perf: { targetDefault: 0 }, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
+const S = { bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, perf: { targetDefault: 0 }, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
+const IKON_BAG = { umum: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', profil: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/></svg>', ajuan: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>', cad: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a8 3 0 0 1 16 0v10a8 3 0 0 1-16 0zM4 12a8 3 0 0 0 16 0"/></svg>', akses: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' };
 const kb = (n) => (n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(2) + " MB");
 const wkt = (t) => new Date(t).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
 const NAMA_BAGIAN = { master: "Master Rate (tarif, vendor, lini, satuan)", fase2: "Customer, Rate, Quotation, Order, Pengaturan dokumen" };
@@ -28,19 +29,16 @@ function render() {
   const lama = umur === null ? "Belum pernah mengunduh cadangan di perangkat ini." : umur === 0 ? "Terakhir diunduh hari ini." : `Terakhir diunduh ${umur} hari lalu.`;
   const basi = umur === null || umur >= 7;
   const bagianTerbaru = ["master", "fase2"].map((b) => S.lokal.find((x) => x.bagian === b));
-  $("#st-root").innerHTML = `
-  <div class="st-grid">
-    <section class="st-kartu"><h3>Tampilan</h3><p>Berlaku di semua halaman pada perangkat ini.</p>
+  const kUmum = `<section class="st-kartu"><h3>Tampilan</h3><p>Berlaku di semua halaman pada perangkat ini.</p>
       <div class="st-pil" role="group" aria-label="Tema">${[["otomatis", "Ikut perangkat"], ["terang", "Terang"], ["gelap", "Gelap"]].map(([k, l]) => `<button type="button" data-tema="${k}" class="${tema === k ? "is-aktif" : ""}">${l}</button>`).join("")}</div>
     </section>
 
     <section class="st-kartu"><h3>Akun saya</h3><p>Masuk sebagai <b>${e(S.email)}</b>.</p>
       <div class="st-stat">Peran: <span class="st-badge ${S.kelola ? "st-badge--ok" : ""}">${S.master ? "Pemilik (bisa mengubah semua data)" : S.admin ? "Admin (mengelola Master Rate, modal, dan akun sales)" : "Lihat saja"}</span></div>
-    </section>
-    ${S.kelola ? htmlAkun() : ""}
-    ${S.master ? htmlCekFirebase() : ""}
-
-    <section class="st-kartu" style="grid-column:1/-1"><h3>Cadangan data</h3>
+    </section>`;
+  const kAkses = `${S.kelola ? htmlAkun() : ""}
+    ${S.master ? htmlCekFirebase() : ""}`;
+  const kCad = `<section class="st-kartu" style="grid-column:1/-1"><h3>Cadangan data</h3>
       <p>Cadangan otomatis disimpan <b>di browser PC ini</b>, bukan di Firebase, jadi tidak memakai kuota atau memori Firebase. Dibuat 45 detik setelah perubahan terakhir, dilewati kalau isinya sama, dikompres, dan hanya 8 terakhir per bagian yang disimpan.</p>
       ${basi ? `<div class="mr-banner mr-banner--peringatan"><div><b>Saatnya unduh cadangan ke PC.</b> ${lama} Cadangan di browser bisa hilang kalau data browser dibersihkan, jadi simpan juga filenya.</div></div>` : `<div class="st-stat">${lama}</div>`}
       <div class="st-baris">
@@ -61,9 +59,21 @@ function render() {
       <div class="st-baris"><input type="file" id="st-file" accept="application/json,.json" ${S.master ? "" : "disabled"}><span class="mr-sub">${S.master ? "" : (S.kelola ? "Hanya pemilik yang bisa memulihkan cadangan." : "Akun ini hanya bisa melihat.")}</span></div>
       <div id="st-hasil-pulih"></div>
     </section>
-    ${S.master ? `<section class="st-kartu" style="grid-column:1/-1"><h3>Riwayat koreksi rate</h3><p>Teks koreksi rate yang tersimpan sebelum perbaikan ini memuat nilai modal dan bisa dibaca akun sales. Tombol ini menghapus baris Modal dari teks koreksi lama. Nilai rate, dokumen, dan tanggal tidak berubah.</p><div class="st-baris"><button class="mr-btn" data-st="bersih-koreksi">Bersihkan nilai modal dari riwayat koreksi</button></div><div class="st-stat" id="st-bersih-koreksi"></div></section>` : ""}
-  </div>`;
-  if (S.kelola) pasangPembersihan(document.getElementById("st-bersih"), { master: S.master });
+    ${S.master ? `<section class="st-kartu" style="grid-column:1/-1"><h3>Riwayat koreksi rate</h3><p>Teks koreksi rate yang tersimpan sebelum perbaikan ini memuat nilai modal dan bisa dibaca akun sales. Tombol ini menghapus baris Modal dari teks koreksi lama. Nilai rate, dokumen, dan tanggal tidak berubah.</p><div class="st-baris"><button class="mr-btn" data-st="bersih-koreksi">Bersihkan nilai modal dari riwayat koreksi</button></div><div class="st-stat" id="st-bersih-koreksi"></div></section>` : ""}`;
+  const n = window.ISLSales ? window.ISLSales.jumlahMenunggu() : 0, jmlAj = S.kelola ? n : (window.ISLSales ? window.ISLSales.jumlahMenunggu() : 0);
+  const BAG = [
+    { id: "umum", label: "Tampilan dan akun", ket: "Tema, peran akun", ikon: "umum", isi: kUmum },
+    ...(S.sales ? [{ id: "profil", label: "Profil sales", ket: "Nama, telepon, tanda tangan", ikon: "profil", isi: `<section class="st-kartu"><h3>Profil sales</h3>${window.ISLSales ? window.ISLSales.kontenProfil() : ""}</section>` }] : []),
+    ...(S.sales || S.kelola ? [{ id: "ajuan", label: "Pengajuan hapus quotation", ket: S.master ? (jmlAj ? `${jmlAj} menunggu keputusan` : "Tidak ada yang menunggu") : S.sales ? (jmlAj ? `${jmlAj} menunggu master` : "Status pengajuan milikmu") : "Daftar pengajuan sales", badge: jmlAj, ikon: "ajuan", isi: `<section class="st-kartu"><h3>Pengajuan hapus quotation${jmlAj ? ` <span class="cu-jml">${jmlAj}</span>` : ""}</h3><p>${S.master ? "Keputusan ada di tangan pemilik. Quotation yang sudah disetujui customer tidak bisa dihapus dari sini." : S.sales ? "Status pengajuan hapus yang kamu kirim. Master yang memutuskan." : "Pengajuan hapus dari sales. Keputusan ada di tangan pemilik."}</p>${window.ISLSales ? window.ISLSales.kontenAjuan() : ""}</section>` }] : []),
+    ...(!S.sales ? [{ id: "cadangan", label: "Cadangan data", ket: "Unduh dan pulihkan", ikon: "cad", isi: kCad }] : []),
+    ...(S.kelola ? [{ id: "akses", label: "Akun sales dan akses", ket: "Persetujuan, target, pemeriksaan", ikon: "akses", isi: kAkses }] : []),
+  ];
+  const hp = matchMedia("(max-width: 760px)").matches, aktif = BAG.find((x) => x.id === S.bag) || (hp ? null : BAG[0]);
+  const lencana = (x) => (x.badge ? `<span class="cu-jml">${x.badge}</span>` : "");
+  const baris = (x, kls) => `<button type="button" class="${kls}${aktif && aktif.id === x.id ? " is-aktif" : ""}" data-st="bag" data-v="${x.id}"><span class="st-bag__ik">${IKON_BAG[x.ikon]}</span><span class="st-bag__t"><b>${x.label}</b>${hp ? `<small>${x.ket}</small>` : ""}</span>${lencana(x)}<span class="st-bag__p">›</span></button>`;
+  $("#st-root").innerHTML = `<div class="st-judul-hp">${hp && aktif ? `<button type="button" class="mr-link" data-st="bag-kembali">‹ Pengaturan</button>` : ""}</div>` + (hp ? (aktif ? `<div class="st-grid">${aktif.isi}</div>` : `<div class="st-daftar">${BAG.map((x) => baris(x, "st-bag")).join("")}</div>`)
+    : `<div class="st-dua"><nav class="st-menu" aria-label="Bagian pengaturan">${BAG.map((x) => baris(x, "st-bag")).join("")}</nav><div class="st-isi"><div class="st-grid" style="grid-template-columns:1fr">${aktif.isi}</div></div></div>`);
+  if (S.kelola && document.getElementById("st-bersih")) pasangPembersihan(document.getElementById("st-bersih"), { master: S.master });
 }
 
 /* ---------- cek koneksi dan aturan Firebase (master dan admin) ---------- */
@@ -281,6 +291,8 @@ document.addEventListener("click", async (ev) => {
   if (window.__rute !== "pengaturan") return;
   const t = ev.target.closest("[data-tema],[data-st]"); if (!t) return;
   if (t.dataset.tema) { window.ISLTema.set(t.dataset.tema); render(); return; }
+  if (t.dataset.st === "bag") { S.bag = t.dataset.v; render(); return window.scrollTo({ top: 0 }); }
+  if (t.dataset.st === "bag-kembali") { S.bag = ""; render(); return window.scrollTo({ top: 0 }); }
   const a = t.dataset.st;
   if (a === "bersih-koreksi") {
     if (!S.master) return;
@@ -358,17 +370,18 @@ document.addEventListener("change", async (ev) => {
   }
 });
 
+matchMedia("(max-width: 760px)").addEventListener("change", () => { if (window.__rute === "pengaturan") render(); });
 NAV.pasang({ lapisan: () => ($("#mr-layer.is-open") ? 1 : 0), tutup: () => { tutupLayer(); return true; } });
 document.addEventListener("click", (ev) => { if (window.__rute === "pengaturan" && ev.target.closest('[data-aksi="tutup-layer"]')) tutupLayer(); });
 
 let sudahMuat = false;
 /* Dipanggil router (app.html#pengaturan) setiap kali halaman ini dibuka. */
 export async function mulaiPengaturan(user, profil) {
-  if (profil && profil.peran === "sales") { location.hash = "#quotation"; return; }
-  S.email = user.email; S.master = adalahMaster(user.email);
+  S.email = user.email; S.master = adalahMaster(user.email); S.sales = !!profil && profil.peran === "sales" && profil.status === "aktif";
   S.admin = !!profil && profil.peran === "admin" && profil.status === "aktif";
   S.kelola = S.master || S.admin;
   window.__ISL_KELOLA = S.kelola;
   $("#user-email").textContent = labelAkun(user.email, user.displayName); renderNav("pengaturan");
+  if (window.ISLSales && (S.kelola || S.sales)) { window.ISLSales.saatUbah = render; window.ISLSales.muatAjuan().then(render); } // profil sales dan ajuan hapus pindah ke sini dari Dashboard Performa
   if (!sudahMuat) { sudahMuat = true; await muatLokal(); } else render();
 }
