@@ -82,8 +82,8 @@ function barisJob(j, now, naik) {
 /** Tabel job (desktop): Job, Kategori, PIC, Target (tanggal + posisi), ⋯. Kotak centang hanya saat mode pilih. */
 function htmlTabelJob(l, now) {
   const ada = pilihAktif(), semua = l.length > 0 && l.every((j) => S.pilih.has(j.id));
-  return `<div class="mr-kartu dj-kartu dj-tbw"><table class="dj-tb"><thead><tr>${ada ? `<th class="dj-tb__c mr-th-cek">${cbx(semua, "cb-semua")}</th>` : ""}<th>Job</th><th>Kategori</th><th>PIC</th><th>Target</th><th class="dj-tb__m"></th></tr></thead><tbody>
-  ${l.map((j, i) => `<tr class="${S.pilih.has(j.id) ? "is-pilih" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0">${ada ? `<td class="dj-tb__c mr-td-cek">${cbx(S.pilih.has(j.id), "cb", j.id)}</td>` : ""}
+  return `<div class="mr-kartu dj-kartu dj-tbw"><table class="dj-tb"><thead><tr>${ada ? `<th class="dj-tb__c mr-th-cek">${cbx(semua, "cb-semua")}</th>` : `<th class="dj-tb__c"></th>`}<th>Job</th><th>Kategori</th><th>PIC</th><th>Target</th><th class="dj-tb__m"></th></tr></thead><tbody>
+  ${l.map((j, i) => `<tr class="${S.pilih.has(j.id) ? "is-pilih" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0">${ada ? `<td class="dj-tb__c mr-td-cek">${cbx(S.pilih.has(j.id), "cb", j.id)}</td>` : `<td class="dj-tb__c"><button type="button" class="dj-cb0" data-dj="cb0" data-id="${e(j.id)}" title="Pilih job" aria-label="Pilih job"></button></td>`}
     <td><b>${e(j.judul)}</b><small>${e(j.customer || "")}${infoJob(j)}</small></td><td><span class="dj-chip dj-chip--info">${e(j.kategori || "–")}</span></td>
     <td><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span></td><td class="dj-tb__t"><span>${tglPendek(j)}</span>${badgeTarget(j, now)}</td><td class="dj-tb__m">${ada ? "" : menuJob(j, l.length > 3 && i >= l.length - 2)}</td></tr>`).join("")}</tbody></table></div>`;
 }
@@ -100,15 +100,7 @@ function htmlDaftar(now) {
   const chipStatus = `<div class="dj-chips" role="group" aria-label="Status job">${STATUS_DJ.map(([k, t]) => `<button type="button" class="mr-chip${S.status === k ? " is-aktif" : ""}" data-dj="st" data-v="${k}" aria-pressed="${S.status === k}"><i class="dj-st__t" style="background:${WARNA_ST[k]}"></i>${t} <span>${n[k]}</span></button>`).join("")}${S.masalah ? `<button type="button" class="mr-chip is-aktif" data-dj="masalah-hapus" aria-label="Hapus saringan">${e(Object.fromEntries(MASALAH)[S.masalah])} ${ikon("tutup", 12)}</button>` : ""}</div>`;
   const isi = !l.length ? `<div class="mr-kartu dj-kartu"><p class="mr-sub">Tidak ada job pada filter ini. Ketuk + untuk mencatat job baru.</p></div>` : layarHp() ? `<div class="dj-lst">${halaman.map((j, i) => barisJob(j, now, halaman.length > 3 && i >= halaman.length - 2)).join("")}</div>` : htmlTabelJob(halaman, now);
   const nav = l.length ? `<div class="dj-hal"><span class="mr-sub dj-hal__i">${awal + 1}–${awal + halaman.length} dari ${l.length} job · ${S.urut === "baru" ? "terbaru dulu" : "terlama dulu"}</span>${jml > 1 ? htmlPager(hal, jml) : ""}</div>` : "";
-  return chipStatus + htmlBarPilih(halaman) + isi + nav;
-}
-
-/** Bilah job terpilih: pola sama dengan Master Rate (ringkasan di atas, aksi di bawah); muncul hanya saat mode pilih. */
-function htmlBarPilih(halaman) {
-  if (!pilihAktif()) return "";
-  const n = S.pilih.size, semua = halaman.length > 0 && halaman.every((j) => S.pilih.has(j.id));
-  return `<div class="mr-pilihbar" role="region" aria-label="Job terpilih"><div class="mr-pilihbar__atas"><span class="mr-pilihbar__jml"><b>${n}</b> dipilih</span>${semua ? "" : `<button type="button" class="mr-link" data-dj="cb-semua">Pilih semua di halaman ini</button>`}<span class="mr-ruang"></span><button type="button" class="mr-link" data-dj="pilih-batal">Batal</button></div>
-    ${n ? `<div class="mr-pilihbar__aksi"><button type="button" class="mr-btn" data-dj="m-selesai">${ikon("cek", 14)}Selesai</button><button type="button" class="mr-btn" data-dj="m-pic">${ikon("orang", 14)}Ubah PIC</button><button type="button" class="mr-btn" data-dj="m-bagikan">${ikon("salin", 14)}Bagikan</button><button type="button" class="mr-btn mr-btn--hapus" data-dj="m-hapus">${ikon("tong", 14)}Hapus</button></div>` : ""}</div>`;
+  return chipStatus + isi + nav;
 }
 
 /* ---------- detail job (desain B): berkas dan pratinjau jadi fokus, review kepala divisi, ubah target, tautan bagikan ---------- */
@@ -295,8 +287,11 @@ function render() {
   const ikb = (aksi, ikn, judul, kelas = "") => `<button type="button" class="mr-btn dj-ib ${kelas}" data-dj="${aksi}" title="${judul}" aria-label="${judul}">${ikn}</button>`;
   const btnFilter = `<button type="button" class="mr-btn dj-ib" data-dj="filter" title="Filter"  aria-label="Filter">${ikon("filter", 16)}${bukanBawaan ? `<i class="dj-dot"></i>` : ""}</button>`;
   const BEL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
-  const aksiBtn = `${ikb("push", BEL, pushOn ? "Notifikasi aktif di perangkat ini (ketuk untuk mematikan)" : "Aktifkan notifikasi: pengingat catat job 09.00, 14.00, 17.00 dan deadline H-1", pushOn ? "dj-push-aktif" : "")}${S.kelola ? ikb("impor", ikon("upload", 16), "Import dari Excel") : ""}${ikb("pdf", ikon("download", 16), "Unduh laporan PDF (kinerja bulan ini)", "dj-pdf")}`;
-  const kepalaD = `<div class="dj-kepala dj-kepala--d"><input type="search" id="dj-cari" class="dj-cari" placeholder="Cari judul, customer, PIC…" value="${e(S.cari)}" aria-label="Cari job"><button type="button" class="mr-btn dj-ib" data-dj="urut" title="${S.urut === "baru" ? "Terbaru dulu" : "Terlama dulu"} (ketuk untuk membalik)" aria-label="Balik urutan">${ikon("tukar", 16)}</button><button type="button" class="mr-btn dj-ib${pilihAktif() ? " is-aktif" : ""}" data-dj="pilih-mulai" title="Pilih beberapa job" aria-label="Pilih beberapa job">${ikon("cek", 16)}</button>${btnFilter}${aksiBtn}</div>`;
+  const mn = (a, i, t) => `<button type="button" role="menuitem" class="dj-mn__i" data-dj="${a}">${i} ${t}</button>`;
+  const menuAlat = `<span class="dj-mw"><button type="button" class="mr-btn dj-ib" data-dj="menu" data-id="__alat" aria-haspopup="menu" aria-expanded="${S.menu === "__alat"}" title="Lainnya" aria-label="Lainnya">${ikon("titik", 18)}</button>${S.menu === "__alat" ? `<div class="dj-mn" role="menu">${mn("push", BEL, pushOn ? "Matikan notifikasi" : "Aktifkan notifikasi")}${S.kelola ? mn("impor", ikon("upload", 15), "Impor dari Excel") : ""}${mn("pdf", ikon("download", 15), "Unduh laporan PDF")}</div>` : ""}</span>`;
+  const n = S.pilih.size, bs = (a, i, t, k = "") => `<button type="button" class="mr-btn dj-bp${k ? " " + k : ""}" data-dj="${a}" title="${t}" aria-label="${t}">${ikon(i, 16)}<span class="dj-bp__t"> ${t}</span></button>`;
+  const kepalaD = pilihAktif() ? `<div class="dj-kepala dj-kepala--d dj-kepala--pilih"><button type="button" class="mr-ikonbtn" data-dj="pilih-batal" title="Batal pilih" aria-label="Batal pilih">${ikon("tutup", 16)}</button><b class="dj-bp__n">${n} dipilih</b><button type="button" class="mr-link" data-dj="cb-semua">Semua</button><span class="mr-ruang"></span>${n ? `${bs("m-selesai", "cek", "Selesai")}${bs("m-pic", "orang", "Ubah PIC")}${bs("m-bagikan", "salin", "Bagikan")}${bs("m-hapus", "tong", "Hapus", "dj-bp--hapus")}` : ""}</div>`
+    : `<div class="dj-kepala dj-kepala--d"><input type="search" id="dj-cari" class="dj-cari" placeholder="Cari judul, customer, PIC…" value="${e(S.cari)}" aria-label="Cari job">${btnFilter}${menuAlat}</div>`;
   let isi;
   if (S.muat) isi = `<p class="mr-sub">Memuat…</p>`;
   else if (S.galat) isi = `<div class="dj-alert dj-alert--bahaya">${e(S.galat)}</div>`;
@@ -548,6 +543,17 @@ async function hapusJob(ids) {
   catch (err) { toast("Belum bisa dihapus: " + e(err.message || err), "bahaya"); }
 }
 
+/* tekan lama kartu (HP) = mulai memilih; saat memilih, tekan lama menambah/mencabut pilihan */
+let tekan = null, blokKlik = 0;
+document.addEventListener("touchstart", (ev) => {
+  if (window.__rute !== "dailyjob") return;
+  const el = ev.target.closest(".dj-job2"); if (!el || ev.target.closest(".dj-mw, input")) return;
+  const t = ev.touches[0], id = el.dataset.id;
+  tekan = { x: t.clientX, y: t.clientY, w: setTimeout(() => { if (!tekan) return; tekan = null; blokKlik = Date.now(); if (navigator.vibrate) navigator.vibrate(15); pilihAktif() ? togglePilih(id) : mulaiPilih(id); }, 480) };
+}, { passive: true });
+document.addEventListener("touchmove", (ev) => { if (!tekan) return; const t = ev.touches[0]; if (Math.hypot(t.clientX - tekan.x, t.clientY - tekan.y) > 10) { clearTimeout(tekan.w); tekan = null; } }, { passive: true });
+document.addEventListener("touchend", () => { if (tekan) { clearTimeout(tekan.w); tekan = null; } });
+document.addEventListener("contextmenu", (ev) => { if (window.__rute === "dailyjob" && ev.target.closest(".dj-job2")) ev.preventDefault(); });
 const periksa = (ev) => window.__rute === "dailyjob" || ev.target.closest("#mr-layer");
 document.addEventListener("click", async (ev) => {
   if (!periksa(ev)) return;
@@ -558,10 +564,10 @@ document.addEventListener("click", async (ev) => {
   if (a === "tab") { S.tab = v; S.detail = null; render(); if (v === "kelompok") kepalaDi().forEach((k) => muatTim(k.id)); return; }
   if (a === "baru") return formJob(null);
   if (a === "menu") { S.menu = S.menu === id ? "" : id; return render(); }
-  if (a === "urut") { S.urut = S.urut === "baru" ? "lama" : "baru"; S.hal = 0; return render(); }
   if (a === "hal" || a === "hal-ke") { S.hal = Math.max(0, a === "hal" ? S.hal + +v : +v); render(); return window.scrollTo({ top: 0 }); }
-  if (a === "pilih-mulai") return pilihAktif() ? selesaiPilih() : mulaiPilih();
-  if (a === "buka") { if (pilihAktif()) return togglePilih(id); return bukaDetail(id); }
+  if (a === "cb0") return pilihAktif() ? togglePilih(id) : mulaiPilih(id);
+  if (a === "push" || a === "impor" || a === "pdf") { S.menu = ""; render(); }
+  if (a === "buka") { if (Date.now() - blokKlik < 500) return; if (pilihAktif()) return togglePilih(id); return bukaDetail(id); }
   if (a === "d-tutup") { S.detail = null; return render(); }
   if (a === "d-berkas") { S.detail.berkas = +t.dataset.i; render(); return; }
   if (a === "d-kertas") { S.detail.kertas = S.detail.kertas === "putih" ? "ikut" : "putih"; const v1 = $(".dj-vw"); if (v1) v1.classList.toggle("dj-vw--putih", S.detail.kertas === "putih"); return; }
