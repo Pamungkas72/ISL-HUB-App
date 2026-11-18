@@ -15,12 +15,10 @@ if (portal) {
     try {
       const { mulaiParallax } = await import("./portal-parallax.js");
       const ponsel = hp.matches;
-      // desktop: adegan hidup (awan, laut, truk melaju) di atas pelat foto tanpa truk; HP dan "kurangi gerak" memakai foto biasa
-      const hidup = !ponsel && !reduce;
+      // foto asli (truk diam di posisi aslinya) dengan efek kedalaman; tanpa adegan hidup
       const P = "assets/portal/";
-      parallax = await mulaiParallax(kanvas, { foto: P + (hidup ? "hidup-pelat.jpg" : "foto-hd.jpg"), depth: P + (hidup ? "hidup-depth.png" : "depth-hd.png"), kurangiGerak: reduce,
-        ringan: ponsel, fokus: ponsel ? 0.42 : 0.5, amp: ponsel ? 0.02 : 0.035, giro: ponsel,
-        hidup: hidup ? { topeng: P + "hidup-topeng.png", truk: P + "hidup-truk.png" } : null });
+      parallax = await mulaiParallax(kanvas, { foto: P + "foto-hd.jpg", depth: P + "depth-hd.png", kurangiGerak: reduce,
+        ringan: ponsel, fokus: ponsel ? 0.42 : 0.5, amp: ponsel ? 0.02 : 0.035, giro: ponsel });
     } catch (err) {
       // tanpa WebGL: foto diam sebagai latar biasa
       console.warn("Latar WebGL tidak tersedia, memakai foto diam:", err && err.message);
