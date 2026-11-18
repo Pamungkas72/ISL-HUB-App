@@ -30,7 +30,7 @@ const ADEGAN = [
   ['dj: form catat, status tertunda (alasan)', async (p) => { await p.evaluate(() => { const s = document.getElementById('djf-status'); if (s) { s.value = 'tunggu'; s.dispatchEvent(new Event('change', { bubbles: true })); } }); await tunggu(p, 300); }],
   ['dj: panel impor Excel', async (p) => { await klikSel(p, '[data-aksi="impor"]'); await tunggu(p, 500); }],
   ['dj: tab kelompok', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="kelompok"]'); await tunggu(p, 500); }],
-  ['dj: daftar, filter status selesai (panel)', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await klikSel(p, '[data-dj="tab"][data-v="job"]'); await klikSel(p, '[data-dj="filter"]'); await tunggu(p, 300); await klikSel(p, '#mr-layer [data-dj="st"][data-v="selesai"]'); await tunggu(p, 300); }],
+  ['dj: daftar, status selesai (chip di halaman)', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await klikSel(p, '[data-dj="tab"][data-v="job"]'); await klikSel(p, '[data-dj="st"][data-v="selesai"]'); await tunggu(p, 300); }],
 ];
 
 (async () => {

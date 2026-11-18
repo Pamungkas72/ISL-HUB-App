@@ -110,7 +110,7 @@ const STATUS_DJ = [["aktif", "Aktif"], ["tunggu", "Tertunda"], ["selesai", "Sele
 const PERIODE_DJ = [["semua", "Semua"], ["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]];
 const COCOK = { aktif: H.aktif, tunggu: (j) => j.status === "tunggu", selesai: (j) => j.status === "selesai", batal: (j) => j.status === "batal" };
 const PER_HAL = 15, pilihAktif = () => S.modePilih || S.pilih.size > 0, layarHp = () => matchMedia("(max-width: 760px)").matches;
-const bukanBawaanDaftar = () => S.status !== "aktif" || S.pDaftar !== "semua" || !!S.fPic || !!S.fKat || !!S.masalah;
+const bukanBawaanDaftar = () => S.pDaftar !== "semua" || !!S.fPic || !!S.fKat || !!S.masalah;
 
 /** Daftar job: saring (status, PIC, kategori, periode job dibuat, cari), urut menurut target (terbaru dulu), lalu potong per halaman. */
 function dataDaftar(now) {
@@ -151,12 +151,13 @@ function htmlTabelJob(l, now) {
     <td><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span></td><td class="dj-tb__t"><span>${tglPendek(j)}</span>${badgeTarget(j, now)}</td><td class="dj-tb__m">${ada ? "" : menuJob(j, l.length > 3 && i >= l.length - 2)}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
+const WARNA_ST = { aktif: "var(--sky)", tunggu: "var(--accent)", selesai: "var(--success)", batal: "var(--muted)" };
 function htmlDaftar(now) {
-  const { l, halaman, hal, jml } = dataDaftar(now), ada = pilihAktif(), awal = hal * PER_HAL;
-  const chipMasalah = S.masalah ? `<div class="dj-chips"><button type="button" class="mr-chip is-aktif" data-dj="masalah-hapus" aria-label="Hapus saringan">${e(Object.fromEntries(MASALAH)[S.masalah])} ${ikon("tutup", 12)}</button></div>` : "";
+  const { l, n, halaman, hal, jml } = dataDaftar(now), ada = pilihAktif(), awal = hal * PER_HAL;
+  const chipStatus = `<div class="dj-chips" role="group" aria-label="Status job">${STATUS_DJ.map(([k, t]) => `<button type="button" class="mr-chip${S.status === k ? " is-aktif" : ""}" data-dj="st" data-v="${k}" aria-pressed="${S.status === k}"><i class="dj-st__t" style="background:${WARNA_ST[k]}"></i>${t} <span>${n[k]}</span></button>`).join("")}${S.masalah ? `<button type="button" class="mr-chip is-aktif" data-dj="masalah-hapus" aria-label="Hapus saringan">${e(Object.fromEntries(MASALAH)[S.masalah])} ${ikon("tutup", 12)}</button>` : ""}</div>`;
   const isi = !l.length ? `<div class="mr-kartu dj-kartu"><p class="mr-sub">Tidak ada job pada filter ini. Ketuk + untuk mencatat job baru.</p></div>` : layarHp() ? `<div class="dj-lst">${halaman.map((j, i) => barisJob(j, now, halaman.length > 3 && i >= halaman.length - 2)).join("")}</div>` : htmlTabelJob(halaman, now);
   const nav = l.length ? `<div class="dj-hal"><span class="mr-sub">${awal + 1}–${awal + halaman.length} dari ${l.length} job · ${S.urut === "baru" ? "terbaru dulu" : "terlama dulu"}</span><span class="mr-ruang"></span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="-1"${hal <= 0 ? " disabled" : ""}>‹ Sebelumnya</button><span class="mr-sub">Halaman ${hal + 1} / ${jml}</span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="1"${hal >= jml - 1 ? " disabled" : ""}>Berikutnya ›</button></div>` : "";
-  return chipMasalah + htmlBarPilih(halaman) + isi + nav;
+  return chipStatus + htmlBarPilih(halaman) + isi + nav;
 }
 
 /** Bilah job terpilih: pola sama dengan Master Rate (ringkasan di atas, aksi di bawah); muncul hanya saat mode pilih. */
@@ -450,8 +451,7 @@ function panelFilter() {
 /** Filter daftar job: status, PIC, kategori, periode job dibuat (tglMasuk). Bawaan: job aktif, semua periode, terbaru dulu. */
 function panelFilterJob() {
   const d = dataDaftar(H.hariIni());
-  bukaLayer(`${kepalaPanel("Bawaan: job aktif, semua periode.")}<div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
-  <div class="mr-f"><span>Status</span><div class="mr-seg dj-seg">${STATUS_DJ.map(([k, t]) => chipF("st", k, t, d.n[k], S.status === k)).join("")}</div></div>
+  bukaLayer(`${kepalaPanel("PIC, kategori, dan periode job dibuat. Status ada di halaman daftar.")}<div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
   <div class="mr-f"><span>PIC</span><div class="mr-seg dj-seg">${chipF("f-picchip", "", "Semua", null, !S.fPic)}${daftarPic().map((p) => `<button type="button" class="mr-chip${S.fPic === p ? " is-aktif" : ""}" data-dj="f-picchip" data-v="${e(p)}">${avatar(p)} ${e(p)}</button>`).join("")}</div></div>
   ${selF("f-kat", "Kategori", opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori"))}
   <div class="mr-f"><span>Periode job dibuat</span><div class="mr-seg dj-seg" role="group" aria-label="Periode job dibuat">${PERIODE_DJ.map(([k, t]) => chipF("pd", k, t, null, S.pDaftar === k)).join("")}</div>
@@ -662,7 +662,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "pic-simpan") { const pic = ($("#djp-pic") || {}).value.trim(); if (!pic) return toast("Isi nama PIC.", "bahaya"); tutupLayer(); return ubahBanyak(t.dataset.ids.split(","), { pic }, "PIC diperbarui."); }
   if (a === "k-selesai") { S.status = "selesai"; S.masalah = ""; S.hal = 0; S.tab = "job"; return render(); }
   if (a === "k-telat") { S.status = "aktif"; S.masalah = "telat"; S.hal = 0; S.tab = "job"; return render(); }
-  if (a === "st") { S.status = v; S.hal = 0; render(); return panelFilterJob(); }
+  if (a === "st") { S.status = v; S.hal = 0; S.pilih.clear(); render(); return t.closest("#mr-layer") ? panelFilterJob() : undefined; }
   if (a === "pd") { S.pDaftar = v; S.hal = 0; if (v === "rentang" && !S.pDari) [S.pDari, S.pSampai] = H.rentang("bulan"); render(); return panelFilterJob(); }
   if (a === "masalah-hapus") { S.masalah = ""; S.hal = 0; return render(); }
   if (a === "f-picchip") { S.fPic = v; S.hal = 0; render(); return panelAktif(); }
@@ -678,7 +678,7 @@ document.addEventListener("click", async (ev) => {
     try { await aktifkanPush(S.u.uid); render(); toast("Notifikasi aktif di perangkat ini: pengingat 09.00, 14.00, 17.00 dan deadline H-1."); } catch (err) { console.error(err); toast("Notifikasi belum aktif: " + e(err.message || err), "bahaya"); } return;
   }
   if (a === "filter") return panelAktif();
-  if (a === "filter-reset") { S.fPic = ""; S.fKat = ""; S.periode = "bulan"; S.status = "aktif"; S.pDaftar = "semua"; S.masalah = ""; S.hal = 0; if (S.kelola) S.fKel = ""; render(); return panelAktif(); }
+  if (a === "filter-reset") { S.fPic = ""; S.fKat = ""; S.periode = "bulan"; S.pDaftar = "semua"; S.masalah = ""; S.hal = 0; if (S.kelola) S.fKel = ""; render(); return panelAktif(); }
   if (a === "impor") return panelImpor();
   if (a === "impor-jalan") return jalankanImpor();
   if (a === "simpan") return simpanJob();

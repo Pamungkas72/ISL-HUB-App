@@ -231,3 +231,5 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-catatan { margin-top: 10px; }
 .dj-split { display: grid; gap: 14px; }
 @media (min-width: 761px) { .dj-split { grid-template-columns: minmax(260px, 1fr) minmax(0, 1.6fr); align-items: start; } }
+.dj-st__t { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; flex: none; } .dj-chips { margin-bottom: 4px; }
+.mr-chip.is-aktif .dj-st__t { background: #fff !important; }
