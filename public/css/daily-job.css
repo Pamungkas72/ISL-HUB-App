@@ -57,8 +57,11 @@ label.dj-org select { max-width: 55%; }
 .dj-tautan { display: flex; gap: 8px; } .dj-tautan input { flex: 1; }
 .dj-cat { border-left: 3px solid var(--border); padding: 4px 10px; margin-top: 6px; font-size: 13px; } .dj-cat small { display: block; color: var(--muted); }
 .mr-btn--bahaya { color: var(--danger); border-color: var(--danger-border); }
-.dj-ingat { position: fixed; z-index: 90; right: 16px; top: 72px; width: min(360px, calc(100vw - 32px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-left: 5px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 14px; }
-.dj-ingat p { margin: 6px 0 10px; font-size: 13px; color: var(--muted); } .dj-ingat div { display: flex; gap: 8px; flex-wrap: wrap; }
+.dj-ingat { position: fixed; z-index: 90; left: 16px; right: 16px; top: 72px; display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: var(--radius-lg); box-shadow: var(--shadow); font-size: 13.5px; }
+.dj-ingat__teks { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dj-ingat__aksi { flex: none; padding: 6px 12px; }
+.dj-ingat__x { flex: none; border: 0; background: none; color: var(--muted); font-size: 15px; padding: 4px 6px; cursor: pointer; }
+@media (min-width: 761px) { .dj-ingat { left: auto; width: 520px; } }
 /* Desain A: toolbar ringkas. Tombol aksi ikon persegi; di desktop "Import" dan "Notifikasi" juga ikon, PDF berlabel. */
 .dj-ib { width: 38px; padding: 0; justify-content: center; } .dj-aksi .dj-pdf:not(.dj-ib) { padding: 0 12px; }
 .dj-filter { flex: 1; justify-content: flex-start; height: 38px; display: inline-flex; align-items: center; gap: 8px; }
@@ -75,7 +78,6 @@ label.dj-org select { max-width: 55%; }
   .dj-kpis { grid-template-columns: 1fr 1fr; } .dj-grid2 { grid-template-columns: 1fr; }
   .dj-bar2 select { flex: 1 1 130px; } #dj-root .dj-bar2 .tg-w { flex: 1 1 130px; width: auto; } .dj-aksi { margin-left: 0; }
   .dj-form { grid-template-columns: 1fr; }
-  .dj-ingat { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
 }
 /* Tombol + sama dengan Master Rate dan Quotation: oranye (--mr-accent), ikon gelap. */
 #dj-root .mr-fab { background: var(--mr-accent); color: #1b1307; }

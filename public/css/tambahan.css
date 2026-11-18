@@ -2349,7 +2349,8 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 /* ---------- Ringkasan quotation (desain R2): kartu hero + daftar berfilter + analisis dilipat ---------- */
 .qt-rg2 { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "list" "an"; gap: 12px; margin-top: 8px; }
 .qt-rg2 > * { min-width: 0; }
-@media (min-width: 761px) { .qt-rg2 { grid-template-columns: 360px minmax(0, 1fr); grid-template-areas: "hero list" "an list"; grid-template-rows: auto 1fr; align-items: start; } }
+/* desktop: Analisis (tabel per sales 480px+) di lebar penuh di bawah, supaya tidak melebar menimpa daftar */
+@media (min-width: 761px) { .qt-rg2 { grid-template-columns: 360px minmax(0, 1fr); grid-template-areas: "hero list" "an an"; align-items: start; } }
 .qt-rg-hero { padding: 14px 16px; border-color: var(--mr-warn-garis); }
 .qt-rg-hero__n { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin-top: 2px; } .qt-rg-hero__n b { font-size: 34px; line-height: 1.1; } .qt-rg-hero__n span { color: var(--mr-muted); } .qt-rg-hero__n em { margin-left: auto; font-style: normal; font-weight: 700; color: var(--mr-warn); }
 .qt-rg-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
@@ -2358,7 +2359,8 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-rg-ket { margin: 12px 0 0 !important; }
 .qt-rg-fk b { color: var(--mr-ink); } .qt-rg-fk.is-on { background: var(--mr-warn-bg); border-color: var(--mr-warn-garis); color: var(--mr-warn); font-weight: 700; } .qt-rg-fk.is-on b { color: inherit; } .qt-rg-fk.is-perhatian b { color: var(--mr-warn); }
 .qt-rg-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; align-items: center; } .qt-rg-filter .qt-rg-cari { flex: 1 1 180px; }
-.qt-rg-an { display: grid; gap: 12px; }
+.qt-rg-an { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+.qt-rg-an > * { min-width: 0; }
 .qt-rg-anbtn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 12px 16px; font: inherit; color: var(--mr-ink); text-align: left; cursor: pointer; } .qt-rg-anbtn small { flex: 1; } .qt-rg-anbtn[aria-expanded="true"] .qt-lipat-chev { transform: rotate(180deg); }
 @media (max-width: 760px) { .qt-rg-filter .qt-rg-cari { flex: 1 1 100%; } .qt-rg-filter .mr-btn { flex: 1; } .qt-rg-filter .mr-select { flex: 1 1 45%; } }
 

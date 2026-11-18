@@ -759,8 +759,8 @@ export function pasangPengingat(user, profil) {
     try { const q = kelola ? collection(db, "dj_job") : query(collection(db, "dj_job"), where("kelompokId", "==", kelompok)); p = H.pengingat((await getDocs(q)).docs.map((d) => ({ id: d.id, ...d.data() }))); } catch (_) { /* tetap ingatkan mencatat */ }
     const jam = k.split("#")[1].padStart(2, "0") + ".00";
     const kotak = document.createElement("div"); kotak.id = "dj-ingat"; kotak.className = "dj-ingat"; kotak.setAttribute("role", "alertdialog");
-    kotak.innerHTML = `<b>Pengingat ${jam} · catat daily job</b><p>Catat job baru, yang sedang dikerjakan, dan yang masih pending.${p.terlambat.length || p.hariIni.length ? `<br><b>${p.terlambat.length} terlambat</b> · ${p.hariIni.length} jatuh tempo hari ini.` : ""}</p>
-      <div><button class="mr-btn mr-btn--utama" data-x="catat">Catat sekarang</button><button class="mr-btn" data-x="nanti">Tutup</button></div>`;
+    /* pita tipis di atas konten (desain 1): tidak menutupi isi di HP */
+    kotak.innerHTML = `<span class="dj-ingat__teks"><b>Pengingat ${jam}</b> · ${p.terlambat.length} terlambat · ${p.hariIni.length} hari ini</span><button type="button" class="mr-btn mr-btn--utama dj-ingat__aksi" data-x="catat">Catat</button><button type="button" class="dj-ingat__x" data-x="nanti" aria-label="Tutup pengingat">✕</button>`;
     document.body.appendChild(kotak);
     kotak.querySelector('[data-x="catat"]').onclick = () => { tandai(k); kotak.remove(); if (window.__rute === "dailyjob") { window.__djBukaForm = false; formJob(null); } else { window.__djBukaForm = true; location.hash = "#dailyjob"; } };
     kotak.querySelector('[data-x="nanti"]').onclick = () => { tandai(k); kotak.remove(); };

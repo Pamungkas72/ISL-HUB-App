@@ -2,6 +2,14 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-18 (pengingat daily job di HP)
+
+- **Pengingat "catat daily job" kini pita tipis di atas konten** (dipilih dari 3 desain, opsi 1), bukan kartu yang menutupi layar. Satu baris: jam, jumlah terlambat dan jatuh tempo hari ini, tombol Catat, dan ✕. HP dan desktop (pita di kanan atas, 520 px). Isinya tetap sama, pengingat tetap muncul pukul 09.00, 14.00, 17.00.
+
+## 2026-11-18 (Quotation: Ringkasan desktop)
+
+- **Analisis (tren, per sales, customer, lini) di desktop tidak lagi melebar menimpa daftar.** Sebelumnya tabel per sales (lebar min 480 px) keluar dari kolom 360 px di kiri. Sekarang Analisis tampil lebar penuh di bawah hero dan daftar. HP tidak berubah. Teknis: `.qt-rg2` (desktop) dan `.qt-rg-an` di `tambahan.css`.
+
 ## 2026-11-13 (modul baru: Daily Job)
 
 - **Menu Daily Job** (desktop: sidebar; HP: bilah bawah; Dashboard Performa pindah ke lembar Lainnya) untuk mencatat job harian tim marketing dan BD. Desain C dipilih dari 3 opsi (HP dan desktop): halaman utama = dashboard performa; tab **Daftar job** dan **Kelompok** (khusus master/admin).
