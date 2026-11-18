@@ -15,7 +15,7 @@ import * as H from "./daily-job-hitung.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 
-const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "performa", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", tampil: "perlu", masalah: "", kel: matchMedia("(min-width: 761px)").matches ? "tabel" : "pic", buka: {}, pilih: new Set(), modePilih: false, terbuka: "", detail: null, tim: {}, cari: "", muat: false, galat: "" };
+const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "performa", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 const namaKel = (id) => (S.kelompok.find((k) => k.id === id) || {}).nama || "–";
@@ -29,7 +29,7 @@ async function muat() {
     const ks = await getDocs(collection(db, "dj_kelompok"));
     S.kelompok = ks.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
     const q = S.kelola ? collection(db, "dj_job") : S.kelompokSaya ? query(collection(db, "dj_job"), where("kelompokId", "==", S.kelompokSaya)) : null;
-    S.jobs = q ? (await getDocs(q)).docs.map((d) => ({ id: d.id, ...d.data() })) : [];
+    S.jobs = q ? (await getDocs(q)).docs.map((d) => H.dariDok(d.id, d.data())) : [];
     if (S.kelola) S.akun = (await getDocs(collection(db, "pengguna"))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.status === "aktif").sort((a, b) => String(a.nama || a.email).localeCompare(String(b.nama || b.email), "id"));
   } catch (err) { console.error(err); S.galat = "Data Daily Job belum bisa dibaca. Pemilik perlu memasang aturan Firestore terbaru (firebase deploy --only firestore:rules,storage)."; }
   S.muat = false; render();
@@ -106,61 +106,65 @@ const BLN = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt
 const warnaPic = (n) => { let h = 0; for (const c of String(n || "-")) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h},62%,68%)`; };
 const avatar = (n) => `<span class="dj-av" style="background:${warnaPic(n)}" title="${e(n || "Tanpa PIC")}">${e((n || "?")[0].toUpperCase())}</span>`;
 const MASALAH = [["telat", "Terlambat"], ["hari", "Hari ini"], ["tunggu", "Tertunda"], ["tanpa", "Tanpa target"]];
+const STATUS_DJ = [["aktif", "Aktif"], ["tunggu", "Tertunda"], ["selesai", "Selesai"], ["batal", "Dibatalkan"]];
+const PERIODE_DJ = [["semua", "Semua"], ["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]];
+const COCOK = { aktif: H.aktif, tunggu: (j) => j.status === "tunggu", selesai: (j) => j.status === "selesai", batal: (j) => j.status === "batal" };
+const PER_HAL = 15, pilihAktif = () => S.modePilih || S.pilih.size > 0, layarHp = () => matchMedia("(max-width: 760px)").matches;
+const bukanBawaanDaftar = () => S.status !== "aktif" || S.pDaftar !== "semua" || !!S.fPic || !!S.fKat || !!S.masalah;
 
-/** Daftar job: saring (tampil, masalah, cari), lalu kelompokkan menurut S.kel ('tabel' = tanpa kelompok). */
+/** Daftar job: saring (status, PIC, kategori, periode job dibuat, cari), urut menurut target (terbaru dulu), lalu potong per halaman. */
 function dataDaftar(now) {
-  const cari = S.cari.trim().toLowerCase(), r = rentangAktif(), dasar = tampak();
-  const ft = { perlu: (j) => H.perluTindakan(j, now), aktif: (j) => H.aktif(j), selesai: (j) => j.status === "selesai" && H.dalam(j.tglSelesai, r) };
-  const n = { perlu: dasar.filter(ft.perlu).length, aktif: dasar.filter(ft.aktif).length, selesai: dasar.filter(ft.selesai).length };
-  const mas = Object.fromEntries(MASALAH.map(([k]) => [k, dasar.filter((j) => H.masalahJob(j, now).includes(k)).length]));
-  const l = dasar.filter(ft[S.tampil] || ft.perlu).filter((j) => S.tampil === "selesai" || !S.masalah || H.masalahJob(j, now).includes(S.masalah))
+  const cari = S.cari.trim().toLowerCase(), pr = H.rentangDaftar(S.pDaftar, now, S.pDari, S.pSampai), arah = S.urut === "baru" ? -1 : 1, kunci = (j) => (j.tglTarget || (arah < 0 ? "" : "9999")) + "|" + (j.tglMasuk || "");
+  const dasar = S.jobs.filter((j) => (!S.fPic || j.pic === S.fPic) && (!S.fKat || j.kategori === S.fKat) && (!pr || H.dalam(j.tglMasuk || j.dibuatPada, pr)));
+  const n = Object.fromEntries(STATUS_DJ.map(([k]) => [k, dasar.filter(COCOK[k]).length]));
+  const l = dasar.filter(COCOK[S.status] || COCOK.aktif).filter((j) => !S.masalah || H.masalahJob(j, now).includes(S.masalah))
     .filter((j) => !cari || [j.judul, j.customer, j.pic, j.kategori, j.deskripsi].join(" ").toLowerCase().includes(cari))
-    .sort((a, b) => (a.tglTarget || "9").localeCompare(b.tglTarget || "9"));
-  const mode = S.kel === "tabel" && matchMedia("(max-width: 760px)").matches ? "pic" : S.kel;
-  const gr = mode === "tabel" ? [] : H.kelompokkan(l, mode, now).map((g, i) => { const key = mode + ":" + g.nama; return { ...g, key, buka: key in S.buka ? S.buka[key] : mode === "pic" || i === 0 }; });
-  return { l, gr, n, mas, mode };
+    .sort((a, b) => arah * kunci(a).localeCompare(kunci(b)));
+  const jml = Math.max(1, Math.ceil(l.length / PER_HAL)), hal = Math.min(S.hal, jml - 1);
+  return { l, n, hal, jml, halaman: l.slice(hal * PER_HAL, (hal + 1) * PER_HAL) };
 }
 
-/** Blok target di depan baris: tanggal besar, bulan, dan sisa/lewat hari. */
-function blokTgl(j, now) {
-  const selesai = j.status === "selesai", t = selesai ? j.tglSelesai : j.tglTarget, telat = H.terlambat(j, now), hari = H.aktif(j) && j.tglTarget === now;
-  const kls = selesai ? "ok" : telat ? "telat" : hari ? "hari" : "", ket = selesai ? "selesai" : telat ? `${H.selisihHari(now, j.tglTarget)} hr` : hari ? "hari ini" : !j.tglTarget ? "tanpa" : H.aktif(j) ? `${H.selisihHari(j.tglTarget, now)} hr` : "";
-  return `<div class="dj-tg ${kls}"><b>${t ? +t.slice(8, 10) : "–"}</b><small>${t ? BLN[+t.slice(5, 7) - 1] : "target"}</small>${ket ? `<em>${ket}</em>` : ""}</div>`;
-}
-const cbx = (on, dj, id, v) => `<button type="button" class="dj-cb${on ? " is-on" : ""}" data-dj="${dj}" ${id ? `data-id="${e(id)}"` : ""} ${v ? `data-v="${e(v)}"` : ""} aria-pressed="${on}" aria-label="Pilih">${on ? ikon("cek", 14) : ""}</button>`;
-const aksiIkon = (id) => `<span class="dj-hv">${[["a-selesai", "cek", "Selesai"], ["a-ubah", "edit", "Ubah"], ["a-bagikan", "salin", "Bagikan"], ["a-hapus", "tong", "Hapus"]].map(([a, i, t]) => `<button type="button" class="mr-ikonbtn" data-dj="${a}" data-id="${e(id)}" title="${t}" aria-label="${t}">${ikon(i, 15)}</button>`).join("")}</span>`;
-
-/** Baris job (HP dan desktop): target di depan, judul dan kategori, PIC di ujung. Geser kiri membuka aksi; geser kanan memilih. */
-function barisJob(j, now, o = {}) {
-  const telat = H.terlambat(j, now), adaPilih = S.modePilih || S.pilih.size > 0, geser = S.terbuka === j.id ? " is-geser" : "";
-  const aksi = `<div class="dj-sw">${[["a-selesai", "cek", "Selesai", "ok"], ["a-ubah", "edit", "Ubah", "sky"], ["a-bagikan", "salin", "Bagikan", "info"], ["a-hapus", "tong", "Hapus", "bahaya"]].map(([a, i, t, w]) => `<button type="button" class="dj-sw__${w}" data-dj="${a}" data-id="${e(j.id)}">${ikon(i, 18)}<span>${t}</span></button>`).join("")}</div>`;
-  return `<div class="dj-rw${S.pilih.has(j.id) ? " is-pilih" : ""}">${adaPilih ? "" : aksi}<div class="dj-job2 dj-job2--${telat ? "telat" : j.status === "selesai" ? "ok" : "aktif"}${geser}" data-dj="buka" data-id="${e(j.id)}" tabindex="0" role="button">${adaPilih ? cbx(S.pilih.has(j.id), "cb", j.id) : ""}${blokTgl(j, now)}
-    <div class="dj-job__isi"><b>${e(j.judul)}</b><small>${[j.kategori, j.customer, o.kel ? namaKel(j.kelompokId) : ""].filter(Boolean).map(e).join(" · ")}${j.review && j.review.nilai === "revisi" && H.aktif(j) ? ' · <span class="dj-rev">Perlu revisi</span>' : ""}</small></div>${avatar(j.pic)}${aksiIkon(j.id)}</div></div>`;
+const cbx = (on, dj, id, v) => `<input type="checkbox" data-dj="${dj}" ${id ? `data-id="${e(id)}"` : ""} ${v ? `data-v="${e(v)}"` : ""} ${on ? "checked" : ""} aria-label="${dj === "cb-semua" ? "Pilih semua di halaman ini" : "Pilih job"}">`;
+const tglPendek = (j) => (j.tglTarget ? fmtTgl(j.tglTarget).replace(/ \d{4}$/, "") : "–");
+const badgeTarget = (j, now) => { const l = H.labelTarget(j, now); return `<span class="dj-chip dj-chip--${l.k || "info"}">${e(l.t)}</span>`; };
+const infoJob = (j) => (j.status === "tunggu" ? ' <span class="dj-chip dj-chip--warn">Tertunda</span>' : "") + (j.review && j.review.nilai === "revisi" && H.aktif(j) ? ' <span class="dj-rev">Perlu revisi</span>' : "");
+/** Satu tombol ⋯ per job (posisi tetap, tanpa layout bergeser); aksi muncul di menu kecil. */
+function menuJob(j, naik) {
+  const bukaM = S.menu === j.id, item = ([a, i, t, k]) => `<button type="button" role="menuitem" class="dj-mn__i${k ? " dj-mn__i--" + k : ""}" data-dj="${a}" data-id="${e(j.id)}">${ikon(i, 15)} ${t}</button>`;
+  return `<span class="dj-mw"><button type="button" class="mr-ikonbtn dj-more" data-dj="menu" data-id="${e(j.id)}" aria-haspopup="menu" aria-expanded="${bukaM}" title="Aksi" aria-label="Aksi job">${ikon("titik", 18)}</button>${bukaM ? `<div class="dj-mn${naik ? " naik" : ""}" role="menu">${[...(H.aktif(j) ? [["a-selesai", "cek", "Selesai"]] : []), ["a-ubah", "edit", "Ubah"], ["a-bagikan", "salin", "Bagikan"], ["a-hapus", "tong", "Hapus", "bahaya"]].map(item).join("")}</div>` : ""}</span>`;
 }
 
+/** Kartu job (HP): judul, customer dan kategori, PIC, target dan posisi; menu ⋯ di ujung. */
+function barisJob(j, now, naik) {
+  const ada = pilihAktif();
+  return `<div class="dj-job2${S.pilih.has(j.id) ? " is-pilih" : ""}${H.terlambat(j, now) ? " is-telat" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0" role="button">${ada ? cbx(S.pilih.has(j.id), "cb", j.id) : ""}
+    <div class="dj-job__isi"><b>${e(j.judul)}</b><small>${[j.customer, j.kategori].filter(Boolean).map(e).join(" · ")}${infoJob(j)}</small>
+    <div class="dj-job__kaki"><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span><span class="dj-job__t"><small>${tglPendek(j)}</small>${badgeTarget(j, now)}</span></div></div>${ada ? "" : menuJob(j, naik)}</div>`;
+}
+
+/** Tabel job (desktop): Job, Kategori, PIC, Target (tanggal + posisi), ⋯. Kotak centang hanya saat mode pilih. */
 function htmlTabelJob(l, now) {
-  const semua = l.length > 0 && l.every((j) => S.pilih.has(j.id));
-  return `<div class="mr-kartu dj-kartu dj-tbw"><table class="dj-tb"><thead><tr><th class="dj-tb__c">${cbx(semua, "cb-semua")}</th><th>Target</th><th>Job</th><th>Kategori</th><th>PIC</th><th>Posisi</th><th></th></tr></thead><tbody>
-  ${l.map((j) => { const lab = H.labelTarget(j, now), telat = H.terlambat(j, now); return `<tr class="${S.pilih.has(j.id) ? "is-pilih" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0"><td class="dj-tb__c">${cbx(S.pilih.has(j.id), "cb", j.id)}</td>
-    <td class="dj-tb__t${telat ? " is-telat" : j.tglTarget === now && H.aktif(j) ? " is-hari" : ""}">${j.tglTarget ? fmtTgl(j.tglTarget).replace(/ \d{4}$/, "") : "–"}</td><td><b>${e(j.judul)}</b><small>${e(j.customer || "")}</small></td><td>${e(j.kategori || "–")}</td>
-    <td><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span></td><td><span class="dj-chip dj-chip--${lab.k || "info"}">${e(lab.t)}</span></td><td>${aksiIkon(j.id)}</td></tr>`; }).join("")}</tbody></table></div>`;
+  const ada = pilihAktif(), semua = l.length > 0 && l.every((j) => S.pilih.has(j.id));
+  return `<div class="mr-kartu dj-kartu dj-tbw"><table class="dj-tb"><thead><tr>${ada ? `<th class="dj-tb__c mr-th-cek">${cbx(semua, "cb-semua")}</th>` : ""}<th>Job</th><th>Kategori</th><th>PIC</th><th>Target</th><th class="dj-tb__m"></th></tr></thead><tbody>
+  ${l.map((j, i) => `<tr class="${S.pilih.has(j.id) ? "is-pilih" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0">${ada ? `<td class="dj-tb__c mr-td-cek">${cbx(S.pilih.has(j.id), "cb", j.id)}</td>` : ""}
+    <td><b>${e(j.judul)}</b><small>${e(j.customer || "")}${infoJob(j)}</small></td><td><span class="dj-chip dj-chip--info">${e(j.kategori || "–")}</span></td>
+    <td><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span></td><td class="dj-tb__t"><span>${tglPendek(j)}</span>${badgeTarget(j, now)}</td><td class="dj-tb__m">${ada ? "" : menuJob(j, l.length > 3 && i >= l.length - 2)}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
 function htmlDaftar(now) {
-  const { l, gr, n, mode } = dataDaftar(now), chev = (b) => ikon(b ? "turun" : "maju", 16), adaPilih = S.modePilih || S.pilih.size > 0;
-  const strip = `<div class="dj-chips">${[["perlu", "Perlu tindakan"], ["aktif", "Semua aktif"], ["selesai", "Selesai"]].map(([k, t]) => `<button type="button" class="mr-chip${S.tampil === k ? " is-aktif" : ""}" data-dj="tampil" data-v="${k}">${t} <span>${n[k]}</span></button>`).join("")}</div>`;
-  const infoPilih = adaPilih ? `<div class="dj-infopilih">${cbx(l.length > 0 && l.every((j) => S.pilih.has(j.id)), "cb-semua")}<b>${S.pilih.size} dipilih</b><span class="mu">· ketuk Pilih semua untuk ${l.length} job</span><span class="mr-ruang"></span><button type="button" class="mr-link" data-dj="cb-semua">Pilih semua</button></div>` : "";
-  const grupHtml = (g) => `<section class="mr-kartu dj-grup"><div class="dj-gh">${adaPilih ? cbx(g.jobs.every((j) => S.pilih.has(j.id)), "cb-grup", "", g.key) : ""}<button type="button" class="dj-gh__b" data-dj="grup" data-v="${e(g.key)}" aria-expanded="${g.buka}"><span class="dj-gh__c">${chev(g.buka)}</span>${mode === "pic" ? avatar(g.nama) : ""}<span class="dj-gh__n"><b>${e(g.nama)}</b> <small>${g.jobs.length} job</small></span>${g.telat ? `<span class="dj-chip dj-chip--bahaya">${g.telat} terlambat</span>` : ""}${g.selesai ? `<span class="dj-chip dj-chip--ok">${g.selesai} selesai</span>` : ""}</button></div>
-    ${mode === "pic" && g.jobs.length ? `<div class="dj-beban" title="${g.telat} dari ${g.jobs.length} job terlambat"><i style="width:${(g.telat / g.jobs.length) * 100}%"></i></div>` : ""}${g.buka ? `<div class="dj-gb">${g.jobs.map((j) => barisJob(j, now, { kel: S.kelola && !S.fKel })).join("")}</div>` : ""}</section>`;
-  const isi = !l.length ? `<div class="mr-kartu dj-kartu"><p class="mr-sub">${S.tampil === "perlu" ? "Tidak ada job yang perlu tindakan. " : ""}Tidak ada job pada filter ini. Ketuk + untuk mencatat job baru.</p></div>` : mode === "tabel" ? htmlTabelJob(l, now) : gr.map(grupHtml).join("");
-  return strip + infoPilih + isi;
+  const { l, halaman, hal, jml } = dataDaftar(now), ada = pilihAktif(), awal = hal * PER_HAL;
+  const chipMasalah = S.masalah ? `<div class="dj-chips"><button type="button" class="mr-chip is-aktif" data-dj="masalah-hapus" aria-label="Hapus saringan">${e(Object.fromEntries(MASALAH)[S.masalah])} ${ikon("tutup", 12)}</button></div>` : "";
+  const isi = !l.length ? `<div class="mr-kartu dj-kartu"><p class="mr-sub">Tidak ada job pada filter ini. Ketuk + untuk mencatat job baru.</p></div>` : layarHp() ? `<div class="dj-lst">${halaman.map((j, i) => barisJob(j, now, halaman.length > 3 && i >= halaman.length - 2)).join("")}</div>` : htmlTabelJob(halaman, now);
+  const nav = l.length ? `<div class="dj-hal"><span class="mr-sub">${awal + 1}–${awal + halaman.length} dari ${l.length} job · ${S.urut === "baru" ? "terbaru dulu" : "terlama dulu"}</span><span class="mr-ruang"></span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="-1"${hal <= 0 ? " disabled" : ""}>‹ Sebelumnya</button><span class="mr-sub">Halaman ${hal + 1} / ${jml}</span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="1"${hal >= jml - 1 ? " disabled" : ""}>Berikutnya ›</button></div>` : "";
+  return chipMasalah + htmlBarPilih(halaman) + isi + nav;
 }
 
-/** Bilah aksi massal di bawah layar saat ada job dipilih. */
-function htmlBarPilih() {
-  if (!S.pilih.size) return "";
-  return `<div class="dj-barpilih" role="toolbar" aria-label="Aksi untuk job terpilih"><div class="dj-barpilih__a"><b>${S.pilih.size} dipilih</b><button type="button" class="mr-ikonbtn" data-dj="pilih-batal" aria-label="Batal pilih">${ikon("tutup", 14)}</button></div>
-    <div class="dj-barpilih__b"><button type="button" class="mr-btn dj-ok" data-dj="m-selesai">${ikon("cek", 16)} Selesai</button><button type="button" class="mr-btn" data-dj="m-pic">${ikon("orang", 16)} Ubah PIC</button><button type="button" class="mr-btn" data-dj="m-bagikan">${ikon("salin", 16)} Bagikan</button><button type="button" class="mr-btn dj-bhy" data-dj="m-hapus" aria-label="Hapus">${ikon("tong", 16)}</button></div></div>`;
+/** Bilah job terpilih: pola sama dengan Master Rate (ringkasan di atas, aksi di bawah); muncul hanya saat mode pilih. */
+function htmlBarPilih(halaman) {
+  if (!pilihAktif()) return "";
+  const n = S.pilih.size, semua = halaman.length > 0 && halaman.every((j) => S.pilih.has(j.id));
+  return `<div class="mr-pilihbar" role="region" aria-label="Job terpilih"><div class="mr-pilihbar__atas"><span class="mr-pilihbar__jml"><b>${n}</b> dipilih</span>${semua ? "" : `<button type="button" class="mr-link" data-dj="cb-semua">Pilih semua di halaman ini</button>`}<span class="mr-ruang"></span><button type="button" class="mr-link" data-dj="pilih-batal">Batal</button></div>
+    ${n ? `<div class="mr-pilihbar__aksi"><button type="button" class="mr-btn" data-dj="m-selesai">${ikon("cek", 14)}Selesai</button><button type="button" class="mr-btn" data-dj="m-pic">${ikon("orang", 14)}Ubah PIC</button><button type="button" class="mr-btn" data-dj="m-bagikan">${ikon("salin", 14)}Bagikan</button><button type="button" class="mr-btn mr-btn--hapus" data-dj="m-hapus">${ikon("tong", 14)}Hapus</button></div>` : ""}</div>`;
 }
 
 /* ---------- detail job (desain B): berkas dan pratinjau jadi fokus, review kepala divisi, ubah target, tautan bagikan ---------- */
@@ -223,7 +227,7 @@ const segarkanKop = () => { const j = jobDetail(), el = $("#dj-dt-kop"); if (j &
 const segarkanKanan = () => { const j = jobDetail(), el = $("#dj-dt-kanan"); if (j && el) { const t = ($("#djc-teks") || {}).value || ""; el.innerHTML = htmlKananDetail(j); const n = $("#djc-teks"); if (n) n.value = t; } };
 async function bukaDetail(id) {
   if (!jobId(id)) return;
-  S.detail = { id, aktivitas: [], berkas: 0, kertas: "ikut", nilai: "", muat: true }; S.tab = "job"; S.terbuka = ""; render(); scrollTo(0, 0);
+  S.detail = { id, aktivitas: [], berkas: 0, kertas: "ikut", nilai: "", muat: true }; S.tab = "job"; render(); scrollTo(0, 0);
   try { const r = await getDocs(query(collection(db, "dj_job", id, "aktivitas"), orderBy("waktu"))); if (S.detail && S.detail.id === id) S.detail.aktivitas = r.docs.map((d) => ({ id: d.id, ...d.data() })); }
   catch (err) { console.warn(err); if (S.detail) S.detail.galat = "Komentar belum bisa dimuat (aturan server belum dipasang?)."; }
   if (S.detail && S.detail.id === id) { S.detail.muat = false; segarkanKanan(); }
@@ -302,11 +306,24 @@ async function kirimTautan(id) {
 function htmlKelompok() {
   return (S.kelola ? htmlKelompokKelola() : "") + kepalaDi().map(htmlTim).join("") + (!S.kelola && !kepalaDi().length ? `<section class="mr-kartu dj-kartu"><p class="mr-sub">Hanya kepala divisi yang bisa mengurus tim.</p></section>` : "");
 }
+/** Master/admin: target hari kalender per kategori untuk satu kelompok; mengisi target job baru otomatis. */
+function htmlTargetKategori() {
+  const k = S.kelompok.find((x) => x.id === S.kelAtur) || S.kelompok[0]; if (!k) return "";
+  return `<section class="mr-kartu dj-kartu"><h3>Target per kategori</h3><p class="mr-sub">Target job baru = tanggal masuk + jumlah hari kalender di bawah. Kosong atau 0 = tanpa target otomatis. Berlaku untuk job baru.</p>
+    ${selF("kel-atur", "Kelompok", opsi(S.kelompok.map((x) => [x.id, x.nama]), k.id))}
+    <div class="dj-tgtk">${H.daftarKategori(S.jobs.filter((j) => j.kelompokId === k.id)).map((kat) => `<label class="dj-tgtk__r"><span>${e(kat)}</span><input type="number" min="0" max="365" inputmode="numeric" data-dj="tgt-kat" data-k="${e(k.id)}" data-kat="${e(kat)}" value="${e((k.targetKategori || {})[kat] || "")}" placeholder="–" aria-label="Target ${e(kat)} (hari)"><small>hari</small></label>`).join("")}</div></section>`;
+}
+async function simpanTargetKat(inp) {
+  const k = S.kelompok.find((x) => x.id === inp.dataset.k); if (!k) return;
+  const n = Math.min(365, Math.max(0, Math.round(+inp.value) || 0)), peta = { ...(k.targetKategori || {}) }; if (n) peta[inp.dataset.kat] = n; else delete peta[inp.dataset.kat];
+  try { await updateDoc(doc(db, "dj_kelompok", k.id), { targetKategori: peta }); k.targetKategori = peta; inp.value = n || ""; toast(`Target ${inp.dataset.kat}: ${n ? n + " hari" : "tanpa target otomatis"}.`); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); }
+}
 function htmlKelompokKelola() {
   const hit = (id) => S.akun.filter((a) => a.kelompokDJ === id).length;
   return `<section class="mr-kartu dj-kartu"><h3>Kelompok</h3><p class="mr-sub">Anggota hanya melihat dan mengubah job kelompoknya. Master dan admin melihat semua.</p>
     ${S.kelompok.map((k) => `<div class="dj-org"><span><b>${e(k.nama)}</b> · ${hit(k.id)} anggota · ${S.jobs.filter((j) => j.kelompokId === k.id).length} job</span><span class="mr-ruang"></span><button class="mr-btn mr-btn--kecil" data-dj="kel-ubah" data-id="${e(k.id)}">Ubah</button><button class="mr-ikonbtn" data-dj="kel-hapus" data-id="${e(k.id)}" aria-label="Hapus kelompok">${ikon("tong", 15)}</button></div>`).join("") || `<p class="mr-sub">Belum ada kelompok.</p>`}
     <button class="mr-btn mr-btn--utama" data-dj="kel-baru">${ikon("plus", 14)} Kelompok baru</button></section>
+    ${htmlTargetKategori()}
     <section class="mr-kartu dj-kartu"><h3>Kelompok tiap akun</h3>${S.akun.filter((a) => a.peran !== "dj").map((a) => `<div class="dj-org"><span>${e(a.nama || a.email)}<small> ${e(a.email)}</small></span>${a.kelompokDJ ? `<span class="dj-kep"><input type="checkbox" data-dj="kep-akun" data-id="${e(a.id)}" id="kep-${e(a.id)}" ${((S.kelompok.find((k) => k.id === a.kelompokDJ) || {}).kepala || []).includes(a.id) ? "checked" : ""}><label for="kep-${e(a.id)}">Kepala</label></span>` : ""}<select data-dj="kel-akun" data-id="${e(a.id)}" aria-label="Kelompok ${e(a.nama || a.email)}">${opsi(S.kelompok.map((k) => [k.id, k.nama]), a.kelompokDJ || "", "Tanpa kelompok")}</select></div>`).join("")}<p class="mr-sub">Satu kepala divisi per kelompok: menilai hasil kerja dan menentukan target (deadline) yang tidak bisa diubah anggota. Admin berada di atas kepala divisi, master di atas admin: tingkat lebih tinggi bisa mengubah target tingkat di bawahnya, tidak sebaliknya.</p></section>`;
 }
 
@@ -319,16 +336,16 @@ function htmlPengingat(now) {
 function render() {
   const el = $("#dj-root"); if (!el) return;
   const now = H.hariIni(), perlu = S.kelola || S.kelompokSaya;
-  const tabs = [["performa", "Performa"], ["job", "Daftar job"], ...(S.kelola || kepalaDi().length ? [["kelompok", S.kelola ? "Kelompok" : "Tim"]] : [])];
-  const hp = matchMedia("(max-width: 760px)").matches, pushOn = statusPush(S.u.uid) === "aktif";
-  const bukanBawaan = periodeAktif() !== "bulan" || S.fPic || S.fKat || (S.kelola && S.fKel) || (S.tab === "job" && (S.tampil !== "perlu" || S.masalah));
+  const tabs = [["performa", "Performa"], ["job", "Daftar job"], ...(S.kelola ? [["kelompok", "Kelompok"]] : [])];
+  const hp = layarHp(), pushOn = statusPush(S.u.uid) === "aktif";
+  const bukanBawaan = S.tab === "job" ? bukanBawaanDaftar() : periodeAktif() !== "bulan" || S.fPic || S.fKat || (S.kelola && S.fKel);
   const ikb = (aksi, ikn, judul, kelas = "") => `<button type="button" class="mr-btn dj-ib ${kelas}" data-dj="${aksi}" title="${judul}" aria-label="${judul}">${ikn}</button>`;
-  const btnFilter = `<button type="button" class="mr-btn dj-ib" data-dj="filter" title="Filter: periode, kelompok, PIC, kategori" aria-label="Filter">${ikon("filter", 16)}${bukanBawaan ? `<i class="dj-dot"></i>` : ""}</button>`;
+  const btnFilter = `<button type="button" class="mr-btn dj-ib" data-dj="filter" title="Filter"  aria-label="Filter">${ikon("filter", 16)}${bukanBawaan ? `<i class="dj-dot"></i>` : ""}</button>`;
   const BEL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
   const aksiBtn = `${ikb("push", BEL, pushOn ? "Notifikasi aktif di perangkat ini (ketuk untuk mematikan)" : "Aktifkan notifikasi: pengingat catat job 09.00, 14.00, 17.00 dan deadline H-1", pushOn ? "dj-push-aktif" : "")}${S.kelola ? ikb("impor", ikon("upload", 16), "Import dari Excel") : ""}${hp ? ikb("pdf", ikon("download", 16), "Unduh laporan PDF", "dj-pdf") : `<button type="button" class="mr-btn dj-pdf" data-dj="pdf" title="Unduh laporan PDF">${ikon("download", 15)} PDF</button>`}`;
   const r = rentangAktif(), kelNama = S.fKel ? namaKel(S.fKel) : S.kelola ? "Semua kelompok" : namaKel(S.kelompokSaya);
   const kepalaP = `<div class="dj-kepala"><div class="dj-kepala__t"><div class="dj-ttl">${judulPeriode(r)}</div><div class="mr-sub">${pBln(r[0])} – ${pBln(r[1])} · ${e(kelNama)}${S.fPic ? " · " + e(S.fPic) : ""}${S.fKat ? " · " + e(S.fKat) : ""}</div></div><span class="dj-kepala__a">${btnFilter}${aksiBtn}</span></div>`;
-  const kepalaD = `<div class="dj-kepala dj-kepala--d"><input type="search" id="dj-cari" class="dj-cari" placeholder="Cari judul, customer, PIC…" value="${e(S.cari)}" aria-label="Cari job"><button type="button" class="mr-btn dj-ib dj-lipat" data-dj="lipat" title="Ciutkan atau buka semua kelompok" aria-label="Ciutkan atau buka semua kelompok">${ikon("lipat", 16)}</button>${btnFilter}</div>`;
+  const kepalaD = `<div class="dj-kepala dj-kepala--d"><input type="search" id="dj-cari" class="dj-cari" placeholder="Cari judul, customer, PIC…" value="${e(S.cari)}" aria-label="Cari job"><button type="button" class="mr-btn dj-ib" data-dj="urut" title="${S.urut === "baru" ? "Terbaru dulu" : "Terlama dulu"} (ketuk untuk membalik)" aria-label="Balik urutan">${ikon("tukar", 16)}</button><button type="button" class="mr-btn dj-ib${pilihAktif() ? " is-aktif" : ""}" data-dj="pilih-mulai" title="Pilih beberapa job" aria-label="Pilih beberapa job">${ikon("cek", 16)}</button>${btnFilter}</div>`;
   let isi;
   if (S.muat) isi = `<p class="mr-sub">Memuat…</p>`;
   else if (S.galat) isi = `<div class="dj-alert dj-alert--bahaya">${e(S.galat)}</div>`;
@@ -336,7 +353,7 @@ function render() {
   else if (S.detail && S.tab === "job") isi = htmlDetail(now);
   else isi = S.tab === "performa" ? kepalaP + htmlPengingat(now) + htmlPerforma(now) : S.tab === "job" ? kepalaD + htmlDaftar(now) : htmlKelompok();
   el.innerHTML = `<div class="dj-tabs" role="tablist">${tabs.map(([k, t]) => `<button type="button" role="tab" class="${S.tab === k ? "is-aktif" : ""}" data-dj="tab" data-v="${k}">${t}</button>`).join("")}</div>${isi}
-    ${S.tab === "job" && !S.muat && !S.detail ? htmlBarPilih() : ""}${perlu && !S.muat && !S.detail && !(S.tab === "job" && S.pilih.size) ? `<button type="button" class="mr-fab" data-dj="baru" aria-label="Catat job baru">${ikon("plus", 22)}<span class="fab-teks">Catat job</span></button>` : ""}`;
+    ${perlu && !S.muat && !S.detail ? `<button type="button" class="mr-fab" data-dj="baru" aria-label="Catat job baru">${ikon("plus", 22)}<span class="fab-teks">Catat job</span></button>` : ""}`;
   if (S.detail && S.tab === "job" && !S.muat) muatPratinjau();
 }
 
@@ -403,23 +420,32 @@ async function jalankanTim(a, t) {
 }
 
 /* ---------- panel filter (HP dan desktop): periode cepat, kelompok, PIC, kategori ---------- */
+const chipF = (aksi, v, t, n, on) => `<button type="button" class="mr-chip${on ? " is-aktif" : ""}" data-dj="${aksi}" data-v="${v}">${t}${n != null ? ` <span>${n}</span>` : ""}</button>`;
+const kepalaPanel = (sub) => `<header class="mr-panel__kepala"><div><h2>Filter</h2><p class="mr-sub">${sub}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>`;
+const selF = (aksi, lab, isi) => `<label class="mr-f"><span>${lab}</span><select data-dj="${aksi}">${isi}</select></label>`;
+const kakiPanel = (tombol) => `<footer class="mr-panel__kaki dj-kaki"><button class="mr-btn" data-dj="filter-reset">Atur ulang</button><span class="mr-ruang"></span><button class="mr-btn mr-btn--utama" data-aksi="tutup-layer">${tombol}</button></footer>`;
+const panelAktif = () => (S.tab === "job" ? panelFilterJob() : panelFilter());
+/** Filter dashboard performa: periode, kelompok (master/admin), PIC, kategori. */
 function panelFilter() {
-  const sel = (aksi, lab, isi) => `<label class="mr-f"><span>${lab}</span><select data-dj="${aksi}">${isi}</select></label>`, job = S.tab === "job", d = job ? dataDaftar(H.hariIni()) : null;
-  const chip = (aksi, v, t, n, on, kls = "") => `<button type="button" class="mr-chip ${kls}${on ? " is-aktif" : ""}" data-dj="${aksi}" data-v="${v}">${t}${n != null ? ` <span>${n}</span>` : ""}</button>`;
-  bukaLayer(`<header class="mr-panel__kepala"><div><h2>Filter</h2><p class="mr-sub">Berlaku untuk dashboard dan daftar job.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
-  <div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
-  ${job ? `<div class="mr-f"><span>Tampilkan</span><div class="mr-seg dj-seg">${[["perlu", "Perlu tindakan"], ["aktif", "Semua aktif"], ["selesai", "Selesai"]].map(([k, t]) => chip("tampil", k, t, d.n[k], S.tampil === k)).join("")}</div></div>
-  <div class="mr-f"><span>Masalah</span><div class="mr-seg dj-seg">${MASALAH.map(([k, t]) => chip("masalah", k, t, d.mas[k], S.masalah === k)).join("")}</div></div>
-  <div class="mr-f"><span>Kelompokkan menurut</span><div class="mr-seg dj-seg">${[["pic", "PIC"], ["kategori", "Kategori"], ["status", "Status"], ["tabel", "Tabel"]].map(([k, t]) => chip("kel-mode", k, t, null, d.mode === k, k === "tabel" ? "dj-hanya-desktop" : "")).join("")}</div></div>
-  <div class="mr-f"><span>PIC</span><div class="mr-seg dj-seg">${chip("f-picchip", "", "Semua", null, !S.fPic)}${daftarPic().map((p) => `<button type="button" class="mr-chip${S.fPic === p ? " is-aktif" : ""}" data-dj="f-picchip" data-v="${e(p)}">${avatar(p)} ${e(p)}</button>`).join("")}</div></div>` : ""}
-  <div class="mr-f"><span>${job ? "Periode (untuk Selesai)" : "Periode"}</span><div class="mr-seg dj-seg" role="group" aria-label="Periode">${[["bulan", "Bulan ini"], ["minggu", "Minggu ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]].map(([k, t]) => `<button type="button" class="mr-chip${S.periode === k ? " is-aktif" : ""}" data-dj="periode" data-v="${k}">${t}</button>`).join("")}</div>
+  bukaLayer(`${kepalaPanel("Berlaku untuk dashboard performa.")}<div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
+  <div class="mr-f"><span>Periode</span><div class="mr-seg dj-seg" role="group" aria-label="Periode">${[["bulan", "Bulan ini"], ["minggu", "Minggu ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]].map(([k, t]) => chipF("periode", k, t, null, S.periode === k)).join("")}</div>
   ${S.periode === "rentang" ? `<div class="dj-tgl"><input type="date" id="dj-dari" value="${e(S.dari)}" aria-label="Dari"><input type="date" id="dj-sampai" value="${e(S.sampai)}" aria-label="Sampai"></div>` : ""}</div>
-  ${S.kelola ? sel("f-kel", "Kelompok", opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel, "Semua kelompok")) : ""}${job ? "" : sel("f-pic", "PIC", opsi(daftarPic(), S.fPic, "Semua PIC"))}${sel("f-kat", "Kategori", opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori"))}</div></div>
-  <footer class="mr-panel__kaki dj-kaki"><button class="mr-btn" data-dj="filter-reset">Atur ulang</button><span class="mr-ruang"></span><button class="mr-btn mr-btn--utama" data-aksi="tutup-layer">Selesai</button></footer>`);
+  ${S.kelola ? selF("f-kel", "Kelompok", opsi(S.kelompok.map((k) => [k.id, k.nama]), S.fKel, "Semua kelompok")) : ""}${selF("f-pic", "PIC", opsi(daftarPic(), S.fPic, "Semua PIC"))}${selF("f-kat", "Kategori", opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori"))}</div></div>${kakiPanel("Selesai")}`);
+}
+/** Filter daftar job: status, PIC, kategori, periode job dibuat (tglMasuk). Bawaan: job aktif, semua periode, terbaru dulu. */
+function panelFilterJob() {
+  const d = dataDaftar(H.hariIni());
+  bukaLayer(`${kepalaPanel("Bawaan: job aktif, semua periode.")}<div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
+  <div class="mr-f"><span>Status</span><div class="mr-seg dj-seg">${STATUS_DJ.map(([k, t]) => chipF("st", k, t, d.n[k], S.status === k)).join("")}</div></div>
+  <div class="mr-f"><span>PIC</span><div class="mr-seg dj-seg">${chipF("f-picchip", "", "Semua", null, !S.fPic)}${daftarPic().map((p) => `<button type="button" class="mr-chip${S.fPic === p ? " is-aktif" : ""}" data-dj="f-picchip" data-v="${e(p)}">${avatar(p)} ${e(p)}</button>`).join("")}</div></div>
+  ${selF("f-kat", "Kategori", opsi(H.daftarKategori(S.jobs), S.fKat, "Semua kategori"))}
+  <div class="mr-f"><span>Periode job dibuat</span><div class="mr-seg dj-seg" role="group" aria-label="Periode job dibuat">${PERIODE_DJ.map(([k, t]) => chipF("pd", k, t, null, S.pDaftar === k)).join("")}</div>
+  ${S.pDaftar === "rentang" ? `<div class="dj-tgl"><input type="date" id="dj-pdari" value="${e(S.pDari)}" aria-label="Dari"><input type="date" id="dj-psampai" value="${e(S.pSampai)}" aria-label="Sampai"></div>` : ""}</div></div></div>${kakiPanel(`Tampilkan ${d.l.length} job`)}`);
 }
 matchMedia("(max-width: 760px)").addEventListener("change", () => { if (window.__rute === "dailyjob") render(); });
 
 /* ---------- form catat / ubah job ---------- */
+const petaTarget = (kid) => (S.kelompok.find((k) => k.id === kid) || {}).targetKategori || {};
 const kelompokPilihan = () => (S.kelola ? S.kelompok : S.kelompok.filter((k) => k.id === S.kelompokSaya));
 let berkasBaru = [];
 function formJob(j) {
@@ -434,7 +460,7 @@ function formJob(j) {
     ${f("Customer / project", `<input id="djf-cust" value="${e(d.customer || "")}" placeholder="Nama customer">`)}
     ${f("Status", `<select id="djf-status">${opsi([["proses", "Dikerjakan"], ["tunggu", "Tertunda"], ["selesai", "Selesai"], ["batal", "Batal"]], d.status === "baru" ? "proses" : d.status)}</select>`)}
     ${f("Tertunda karena apa? * <small>mis. menunggu balasan customer</small>", `<input id="djf-tunda" maxlength="200" value="${e(d.alasanTunda || "")}">`, "dj-lebar dj-tunda").replace('class="mr-f', d.status === "tunggu" ? 'class="mr-f' : 'hidden class="mr-f')}
-    ${f(`Target selesai *${d.id && !bolehUbahTarget(d) ? ` <small>(ditetapkan ${LABEL_TINGKAT[d.targetTingkat]})</small>` : ""}`, `<input type="date" id="djf-target" value="${e(d.tglTarget || "")}"${d.id && !bolehUbahTarget(d) ? " disabled" : ""}>`)}
+    ${f(`Target selesai *${d.id && !bolehUbahTarget(d) ? ` <small>(ditetapkan ${LABEL_TINGKAT[d.targetTingkat]})</small>` : ""} <small id="djf-tgt-info"></small>`, `<input type="date" id="djf-target" value="${e(d.tglTarget || "")}"${d.id && !bolehUbahTarget(d) ? " disabled" : ""}>`)}
     ${baru ? "" : f("Alasan ubah target <small>(wajib bila target diubah, kecuali kepala divisi)</small>", `<input id="djf-alasan" maxlength="300" placeholder="mis. menunggu revisi dari customer">`, "dj-lebar dj-alasan").replace('class="mr-f', 'hidden class="mr-f')}
     ${f("Deskripsi pekerjaan", `<textarea id="djf-desk" rows="3" placeholder="Apa yang dikerjakan, permintaan customer, hasil yang diharapkan">${e(d.deskripsi || "")}</textarea>`, "dj-lebar")}
     <div class="mr-f dj-lebar"><span>Berkas hasil kerja <small>Word, Excel, PDF, gambar (maks. 4 MB per file). Bisa dipratinjau di halaman detail tanpa mengunduh.</small></span>
@@ -448,9 +474,13 @@ function formJob(j) {
   </div></div>
   <footer class="mr-panel__kaki dj-kaki">${baru ? "" : `<button class="mr-btn dj-ib dj-bhy" data-dj="hapus" data-id="${e(d.id)}" title="Hapus job" aria-label="Hapus job">${ikon("tong", 16)}</button>`}<span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="simpan" id="dj-simpan">Simpan</button></footer>`);
   $("#dj-form")._d = d;
-  $("#djf-kat").onchange = (ev) => { const n = $("#djf-kat-baru"); n.hidden = ev.target.value !== "__baru"; if (!n.hidden) n.focus(); };
+  let manual = false; // target otomatis dari kategori hanya untuk job baru dan selama target belum diketik sendiri
+  const isiTarget = () => { if (!baru || manual) return; const kid = S.kelola ? $("#djf-kel").value : S.kelompokSaya, kat = $("#djf-kat").value, hr = +((petaTarget(kid) || {})[kat]) || 0, t = H.targetKategori(petaTarget(kid), kat, $("#djf-masuk").value || H.hariIni()), i = $("#djf-tgt-info");
+    if (t) $("#djf-target").value = t; i.textContent = t ? `otomatis ${hr} hari dari kategori, bisa diubah` : ""; };
+  $("#djf-kat").onchange = (ev) => { const n = $("#djf-kat-baru"); n.hidden = ev.target.value !== "__baru"; if (!n.hidden) n.focus(); isiTarget(); };
+  $("#djf-masuk").onchange = isiTarget; if ($("#djf-kel")) $("#djf-kel").onchange = isiTarget; isiTarget();
   $("#djf-status").onchange = (ev) => { $(".dj-tunda").hidden = ev.target.value !== "tunggu"; const s = $("#djf-selesai"); if (ev.target.value === "selesai" && !s.value) s.value = H.hariIni(); if (ev.target.value !== "selesai") s.value = ""; };
-  $("#djf-target").oninput = (ev) => { const a = $(".dj-alasan"); if (a) a.hidden = !d.tglTarget || ev.target.value === d.tglTarget; };
+  $("#djf-target").oninput = (ev) => { manual = true; $("#djf-tgt-info").textContent = ""; const a = $(".dj-alasan"); if (a) a.hidden = !d.tglTarget || ev.target.value === d.tglTarget; };
   $("#djf-berkas").onchange = (ev) => { berkasBaru.push(...ev.target.files); ev.target.value = ""; tampilBaru(); };
 }
 const tampilBaru = () => { const w = $("#djf-file"); w.querySelectorAll(".dj-fl--baru").forEach((x) => x.remove()); berkasBaru.forEach((b, i) => w.insertAdjacentHTML("beforeend", `<div class="dj-fl dj-fl--baru"><span>${ikon("upload", 13)} ${e(b.name)} <small>(baru)</small></span><button type="button" class="mr-ikonbtn" data-dj="baru-lepas" data-i="${i}" aria-label="Batalkan">${ikon("tutup", 14)}</button></div>`)); };
@@ -476,7 +506,7 @@ async function simpanJob() {
       status, alasanTunda: status === "tunggu" ? v("djf-tunda").trim() : null, ...(!d.id || target !== d.tglTarget ? { targetTingkat: tingkatSaya(kel) } : {}), tglSelesai: status === "selesai" ? v("djf-selesai") || H.hariIni() : null, prioritas: v("djf-prio"), bobot: +v("djf-bobot") || 2, file, tautan: d.tautan, catatan: d.catatan || [],
       dibuatOleh: d.dibuatOleh || S.u.uid, dibuatNama: d.dibuatNama || S.u.nama || S.u.email, dibuatPada: d.dibuatPada || H.hariIni(), diubah: serverTimestamp(),
     };
-    await setDoc(doc(db, "dj_job", id), data, { merge: true });
+    if (form.dataset.id) await updateDoc(doc(db, "dj_job", id), data); else await setDoc(doc(db, "dj_job", id), data); // ubah tidak boleh membuat dokumen baru
     if (berubahTarget) { const x = { uid: S.u.uid, oleh: S.u.nama || S.u.email, peran: adalahKepala(d) ? "kepala" : "anggota", jenis: "target", dari: d.tglTarget, ke: target, alasan, waktu: Date.now() }; await setDoc(doc(db, "dj_job", id, "aktivitas", uid()), x).catch((err) => console.warn(err)); if (S.detail && S.detail.id === id) S.detail.aktivitas.push(x); }
     const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...(ada >= 0 ? S.jobs[ada] : {}), id, ...data, diubah: null };
     if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru); segarkanTautan(baru);
@@ -533,7 +563,7 @@ async function jalankanImpor() {
     if (kel === "__baru") { kel = uid(); await setDoc(doc(db, "dj_kelompok", kel), { nama: NAMA_TIM, dibuat: H.hariIni() }); S.kelompok.push({ id: kel, nama: NAMA_TIM, dibuat: H.hariIni() }); }
     const sekarang = H.hariIni();
     for (let i = 0; i < rencana.length; i += 15) await Promise.all(rencana.slice(i, i + 15).map(async (j) => {
-      const id = `imp-${kel}-${j.id}`, data = { ...j, kelompokId: kel, tglMasuk: j.tglMasuk || sekarang, dibuatOleh: S.u.uid, dibuatNama: "Import Excel", dibuatPada: sekarang, diimpor: true, targetTingkat: tingkatSaya(kel), diubah: serverTimestamp() };
+      const id = `imp-${kel}-${j.id}`, { id: _nomor, ...isi } = j, data = { ...isi, kelompokId: kel, tglMasuk: j.tglMasuk || sekarang, dibuatOleh: S.u.uid, dibuatNama: "Import Excel", dibuatPada: sekarang, diimpor: true, targetTingkat: tingkatSaya(kel), diubah: serverTimestamp() };
       await setDoc(doc(db, "dj_job", id), data); n++;
       const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...data, id, diubah: null }; if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru);
     }));
@@ -545,8 +575,9 @@ async function jalankanImpor() {
 /* ---------- aksi daftar: pilih banyak, selesai, ubah PIC, bagikan, hapus ---------- */
 const jobId = (id) => S.jobs.find((x) => x.id === id);
 const idsAksi = (id) => (id ? [id] : [...S.pilih]);
-function selesaiPilih() { S.pilih.clear(); S.modePilih = false; S.terbuka = ""; render(); }
-function mulaiPilih(id) { S.modePilih = true; S.terbuka = ""; if (id) S.pilih.add(id); render(); }
+function selesaiPilih() { S.pilih.clear(); S.modePilih = false; S.menu = ""; render(); }
+function mulaiPilih(id) { S.modePilih = true; S.menu = ""; if (id) S.pilih.add(id); render(); }
+function pilihHalaman() { const l = dataDaftar(H.hariIni()).halaman, semua = l.length && l.every((j) => S.pilih.has(j.id)); l.forEach((j) => (semua ? S.pilih.delete(j.id) : S.pilih.add(j.id))); S.modePilih = true; render(); }
 function togglePilih(id) { S.pilih.has(id) ? S.pilih.delete(id) : S.pilih.add(id); if (!S.pilih.size && matchMedia("(max-width: 760px)").matches) S.modePilih = false; render(); }
 async function ubahBanyak(ids, data, ok) {
   try {
@@ -574,43 +605,21 @@ async function hapusJob(ids) {
   catch (err) { toast("Belum bisa dihapus: " + e(err.message || err), "bahaya"); }
 }
 
-/* geser: kiri = aksi (Selesai, Ubah, Bagikan, Hapus), kanan = mulai pilih; tekan lama = mulai pilih */
-let sw = null, blokKlik = 0;
-const LEBAR_AKSI = 248, tutupGeser = () => { S.terbuka = ""; document.querySelectorAll(".dj-job2.is-geser").forEach((el) => { el.classList.remove("is-geser"); el.style.transform = ""; }); };
-document.addEventListener("touchstart", (ev) => {
-  if (window.__rute !== "dailyjob") return;
-  const el = ev.target.closest(".dj-job2"); if (S.terbuka && (!el || el.dataset.id !== S.terbuka) && !ev.target.closest(".dj-sw")) tutupGeser();
-  if (!el || S.modePilih || S.pilih.size) { sw = null; return; }
-  const t = ev.touches[0]; sw = { el, id: el.dataset.id, x: t.clientX, y: t.clientY, dx: 0, mode: "", dasar: S.terbuka === el.dataset.id ? -LEBAR_AKSI : 0 };
-  sw.lama = setTimeout(() => { if (sw && !sw.mode) { sw.mode = "tekan"; blokKlik = Date.now(); if (navigator.vibrate) navigator.vibrate(15); mulaiPilih(sw.id); } }, 520);
-}, { passive: true });
-document.addEventListener("touchmove", (ev) => {
-  if (!sw) return; const t = ev.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
-  if (!sw.mode) { if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { clearTimeout(sw.lama); sw = null; return; } if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3) { clearTimeout(sw.lama); sw.mode = "geser"; sw.el.style.transition = "none"; } else return; }
-  if (sw.mode !== "geser") return; ev.preventDefault(); sw.dx = dx;
-  sw.el.style.transform = `translateX(${Math.max(-LEBAR_AKSI, Math.min(90, sw.dasar + dx))}px)`;
-}, { passive: false });
-document.addEventListener("touchend", () => {
-  if (!sw) return; clearTimeout(sw.lama); const { el, id, dasar, dx, mode } = sw; sw = null; if (mode !== "geser") return;
-  blokKlik = Date.now(); el.style.transition = ""; const akhir = dasar + dx;
-  if (akhir < -90) { tutupGeser(); S.terbuka = id; el.classList.add("is-geser"); el.style.transform = ""; }
-  else if (akhir > 60) { el.style.transform = ""; mulaiPilih(id); }
-  else { el.style.transform = ""; if (S.terbuka === id) { S.terbuka = ""; el.classList.remove("is-geser"); } }
-});
-
 const periksa = (ev) => window.__rute === "dailyjob" || ev.target.closest("#mr-layer");
 document.addEventListener("click", async (ev) => {
   if (!periksa(ev)) return;
+  if (S.menu && !ev.target.closest(".dj-mw")) { S.menu = ""; render(); if (!ev.target.closest("[data-dj]") || ev.target.closest('[data-dj="buka"]')) return; } // klik di luar menu: tutup saja
   const t = ev.target.closest("[data-dj]"); if (!t) return;
   const a = t.dataset.dj, id = t.dataset.id, v = t.dataset.v;
   if (t.tagName === "SELECT" || t.tagName === "INPUT") return;
   if (a === "tab") { S.tab = v; S.detail = null; render(); if (v === "kelompok") kepalaDi().forEach((k) => muatTim(k.id)); return; }
   if (a === "periode") { S.periode = v; if (v === "rentang" && !S.dari) [S.dari, S.sampai] = H.rentang("bulan"); render(); return t.closest("#mr-layer") ? panelFilter() : undefined; }
-  if (a === "kel-mode") { S.kel = v; render(); return t.closest("#mr-layer") ? panelFilter() : undefined; }
-  if (a === "grup") { S.buka[v] = !(v in S.buka ? S.buka[v] : dataDaftar(H.hariIni()).gr.find((g) => g.key === v)?.buka); return render(); }
-  if (a === "lipat") { const gr = dataDaftar(H.hariIni()).gr, adaBuka = gr.some((g) => g.buka); gr.forEach((g) => { S.buka[g.key] = !adaBuka; }); return render(); }
   if (a === "baru") return formJob(null);
-  if (a === "buka") { if (Date.now() - blokKlik < 400) return; if (S.terbuka) return tutupGeser(); if (S.modePilih || S.pilih.size) return togglePilih(id); return bukaDetail(id); }
+  if (a === "menu") { S.menu = S.menu === id ? "" : id; return render(); }
+  if (a === "urut") { S.urut = S.urut === "baru" ? "lama" : "baru"; S.hal = 0; return render(); }
+  if (a === "hal") { S.hal = Math.max(0, S.hal + +v); render(); return window.scrollTo({ top: 0 }); }
+  if (a === "pilih-mulai") return pilihAktif() ? selesaiPilih() : mulaiPilih();
+  if (a === "buka") { if (pilihAktif()) return togglePilih(id); return bukaDetail(id); }
   if (a === "d-tutup") { S.detail = null; return render(); }
   if (a === "d-berkas") { S.detail.berkas = +t.dataset.i; render(); return; }
   if (a === "d-kertas") { S.detail.kertas = S.detail.kertas === "putih" ? "ikut" : "putih"; const v1 = $(".dj-vw"); if (v1) v1.classList.toggle("dj-vw--putih", S.detail.kertas === "putih"); return; }
@@ -625,24 +634,23 @@ document.addEventListener("click", async (ev) => {
   if (a === "b-kirim") return kirimTautan(id);
   if (a === "b-teks") { tutupLayer(); return bagikanJob([id]); }
   if (a === "b-salin") { const u = $("#djb-url"); try { await navigator.clipboard.writeText(u.value); toast("Tautan disalin."); } catch (_) { u.select(); document.execCommand("copy"); toast("Tautan disalin."); } return; }
-  if (a === "cb") return togglePilih(id);
-  if (a === "cb-semua") { const l = dataDaftar(H.hariIni()).l, semua = l.length && l.every((j) => S.pilih.has(j.id)); l.forEach((j) => (semua ? S.pilih.delete(j.id) : S.pilih.add(j.id))); S.modePilih = S.pilih.size > 0 || S.modePilih; return render(); }
-  if (a === "cb-grup") { const g = dataDaftar(H.hariIni()).gr.find((x) => x.key === v); if (g) { const semua = g.jobs.every((j) => S.pilih.has(j.id)); g.jobs.forEach((j) => (semua ? S.pilih.delete(j.id) : S.pilih.add(j.id))); } return render(); }
+  if (a === "cb-semua") return pilihHalaman();
   if (a === "pilih-batal") return selesaiPilih();
-  if (a === "a-selesai") { ev.stopPropagation(); return selesaikan([id]); }
-  if (a === "a-ubah") { ev.stopPropagation(); const j = jobId(id); tutupGeser(); return j && formJob(j); }
-  if (a === "a-bagikan") { ev.stopPropagation(); tutupGeser(); return panelBagikan(id); }
-  if (a === "a-hapus") { ev.stopPropagation(); tutupGeser(); return hapusJob([id]); }
+  if (a === "a-selesai") { ev.stopPropagation(); S.menu = ""; return selesaikan([id]); }
+  if (a === "a-ubah") { ev.stopPropagation(); S.menu = ""; render(); const j = jobId(id); return j && formJob(j); }
+  if (a === "a-bagikan") { ev.stopPropagation(); S.menu = ""; render(); return panelBagikan(id); }
+  if (a === "a-hapus") { ev.stopPropagation(); S.menu = ""; render(); return hapusJob([id]); }
   if (a === "m-selesai") return selesaikan(idsAksi());
   if (a === "m-pic") return panelPic(idsAksi());
   if (a === "m-bagikan") return bagikanJob(idsAksi());
   if (a === "m-hapus") return hapusJob(idsAksi());
   if (a === "pic-simpan") { const pic = ($("#djp-pic") || {}).value.trim(); if (!pic) return toast("Isi nama PIC.", "bahaya"); tutupLayer(); return ubahBanyak(t.dataset.ids.split(","), { pic }, "PIC diperbarui."); }
-  if (a === "k-selesai") { S.tampil = "selesai"; S.masalah = ""; S.tab = "job"; return render(); }
-  if (a === "k-telat") { S.tampil = "perlu"; S.masalah = "telat"; S.tab = "job"; return render(); }
-  if (a === "tampil") { S.tampil = v; if (v === "selesai") S.masalah = ""; render(); return t.closest("#mr-layer") ? panelFilter() : undefined; }
-  if (a === "masalah") { S.masalah = S.masalah === v ? "" : v; if (S.masalah && S.tampil === "selesai") S.tampil = "perlu"; render(); return t.closest("#mr-layer") ? panelFilter() : undefined; }
-  if (a === "f-picchip") { S.fPic = v; render(); return panelFilter(); }
+  if (a === "k-selesai") { S.status = "selesai"; S.masalah = ""; S.hal = 0; S.tab = "job"; return render(); }
+  if (a === "k-telat") { S.status = "aktif"; S.masalah = "telat"; S.hal = 0; S.tab = "job"; return render(); }
+  if (a === "st") { S.status = v; S.hal = 0; render(); return panelFilterJob(); }
+  if (a === "pd") { S.pDaftar = v; S.hal = 0; if (v === "rentang" && !S.pDari) [S.pDari, S.pSampai] = H.rentang("bulan"); render(); return panelFilterJob(); }
+  if (a === "masalah-hapus") { S.masalah = ""; S.hal = 0; return render(); }
+  if (a === "f-picchip") { S.fPic = v; S.hal = 0; render(); return panelAktif(); }
   if (a === "kat") { S.fKat = S.fKat === v ? "" : v; return render(); }
   if (a === "pic") { S.fPic = S.fPic === v ? "" : v; return render(); }
   if (a === "pdf") return unduhPdf();
@@ -654,8 +662,8 @@ document.addEventListener("click", async (ev) => {
     if (st === "diblokir") return toast("Notifikasi diblokir untuk situs ini. Izinkan di pengaturan browser (ikon gembok di alamat), lalu coba lagi.", "bahaya");
     try { await aktifkanPush(S.u.uid); render(); toast("Notifikasi aktif di perangkat ini: pengingat 09.00, 14.00, 17.00 dan deadline H-1."); } catch (err) { console.error(err); toast("Notifikasi belum aktif: " + e(err.message || err), "bahaya"); } return;
   }
-  if (a === "filter") return panelFilter();
-  if (a === "filter-reset") { S.fPic = ""; S.fKat = ""; S.periode = "bulan"; S.tampil = "perlu"; S.masalah = ""; if (S.kelola) S.fKel = ""; render(); return panelFilter(); }
+  if (a === "filter") return panelAktif();
+  if (a === "filter-reset") { S.fPic = ""; S.fKat = ""; S.periode = "bulan"; S.status = "aktif"; S.pDaftar = "semua"; S.masalah = ""; S.hal = 0; if (S.kelola) S.fKel = ""; render(); return panelAktif(); }
   if (a === "impor") return panelImpor();
   if (a === "impor-jalan") return jalankanImpor();
   if (a === "simpan") return simpanJob();
@@ -679,7 +687,7 @@ document.addEventListener("click", async (ev) => {
     try { await panggil("djAturAnggota", { uid: id, aksi: "hapus" }); toast("Akun dihapus."); muatTim(t.dataset.k); } catch (err) { toast(e(err.message), "bahaya"); } return; }
   if (a === "kel-baru" || a === "kel-ubah") {
     const k = S.kelompok.find((x) => x.id === id), nama = (prompt("Nama kelompok / divisi:", k ? k.nama : "") || "").trim(); if (!nama) return;
-    const kid = k ? k.id : uid(); try { await setDoc(doc(db, "dj_kelompok", kid), { nama, dibuat: k ? k.dibuat || H.hariIni() : H.hariIni(), kepala: k ? k.kepala || [] : [], ...(k && k.bawaan ? { bawaan: true } : {}) }); await muat(); toast("Kelompok tersimpan."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
+    const kid = k ? k.id : uid(); try { await setDoc(doc(db, "dj_kelompok", kid), { nama, dibuat: k ? k.dibuat || H.hariIni() : H.hariIni(), kepala: k ? k.kepala || [] : [], ...(k && k.bawaan ? { bawaan: true } : {}), ...(k && k.targetKategori ? { targetKategori: k.targetKategori } : {}) }); await muat(); toast("Kelompok tersimpan."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
   }
   if (a === "kel-hapus") {
     const k = S.kelompok.find((x) => x.id === id); if (S.jobs.some((j) => j.kelompokId === id)) return toast("Kelompok masih punya job. Pindahkan atau hapus jobnya dulu.", "bahaya");
@@ -687,25 +695,30 @@ document.addEventListener("click", async (ev) => {
     try { await deleteDoc(doc(db, "dj_kelompok", id)); await Promise.all(S.akun.filter((x) => x.kelompokDJ === id).map((x) => updateDoc(doc(db, "pengguna", x.id), { kelompokDJ: null }))); await muat(); toast("Kelompok dihapus."); } catch (err) { toast("Belum terhapus: " + e(err.message || err), "bahaya"); }
   }
 });
-document.addEventListener("keydown", (ev) => { if (window.__rute === "dailyjob" && (ev.key === "Enter" || ev.key === " ") && ev.target.matches?.('.dj-job[data-dj="buka"], .dj-tbl tr[data-dj]')) { ev.preventDefault(); ev.target.click(); } });
+document.addEventListener("keydown", (ev) => { if (window.__rute === "dailyjob" && (ev.key === "Enter" || ev.key === " ") && ev.target.matches?.('.dj-job2[data-dj="buka"], .dj-tb tr[data-dj]')) { ev.preventDefault(); ev.target.click(); } if (ev.key === "Escape" && S.menu) { S.menu = ""; render(); } });
 document.addEventListener("change", async (ev) => {
   if (window.__rute !== "dailyjob") return;
   const t = ev.target, a = t.dataset && t.dataset.dj;
   if (a === "b-hari") { if (t.value) ubahTautan(t.dataset.id, "hari", +t.value); return; }
   if (t.id === "dj-up") { const f = [...t.files]; t.value = ""; return unggahBerkas(f); }
-  const dalamPanel = !!t.closest("#mr-layer"), seg = () => { render(); if (dalamPanel) panelFilter(); };
+  const dalamPanel = !!t.closest("#mr-layer"), seg = () => { S.hal = 0; render(); if (dalamPanel) panelAktif(); };
   if (a === "f-kel") { S.fKel = t.value; S.fPic = ""; return seg(); }
   if (a === "f-pic") { S.fPic = t.value; return seg(); }
   if (a === "f-kat") { S.fKat = t.value; return seg(); }
+  if (t.id === "dj-pdari" || t.id === "dj-psampai") { S[t.id === "dj-pdari" ? "pDari" : "pSampai"] = t.value; return seg(); }
+  if (a === "cb") return togglePilih(t.dataset.id);
+  if (a === "cb-semua") return pilihHalaman();
+  if (a === "kel-atur") { S.kelAtur = t.value; return render(); }
+  if (a === "tgt-kat") return simpanTargetKat(t);
   if (t.id === "dj-dari" || t.id === "dj-sampai") { S[t.id === "dj-dari" ? "dari" : "sampai"] = t.value; return seg(); }
   if (a === "kep-akun") {
     const ak = S.akun.find((x) => x.id === t.dataset.id), kel = ak && S.kelompok.find((k) => k.id === ak.kelompokDJ); if (!kel) return;
     const kepala = t.checked ? [ak.id] : []; // satu kepala divisi per kelompok
-    try { await setDoc(doc(db, "dj_kelompok", kel.id), { nama: kel.nama, dibuat: kel.dibuat || H.hariIni(), kepala, ...(kel.bawaan ? { bawaan: true } : {}) }); kel.kepala = kepala; toast(t.checked ? "Ditetapkan sebagai kepala divisi (menggantikan yang lama)." : "Kepala divisi dikosongkan."); render(); } catch (err) { t.checked = !t.checked; toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
+    try { await setDoc(doc(db, "dj_kelompok", kel.id), { nama: kel.nama, dibuat: kel.dibuat || H.hariIni(), kepala, ...(kel.bawaan ? { bawaan: true } : {}), ...(kel.targetKategori ? { targetKategori: kel.targetKategori } : {}) }); kel.kepala = kepala; toast(t.checked ? "Ditetapkan sebagai kepala divisi (menggantikan yang lama)." : "Kepala divisi dikosongkan."); render(); } catch (err) { t.checked = !t.checked; toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
   }
   if (a === "kel-akun") { try { await updateDoc(doc(db, "pengguna", t.dataset.id), { kelompokDJ: t.value || null }); const ak = S.akun.find((x) => x.id === t.dataset.id); if (ak) ak.kelompokDJ = t.value || null; toast("Kelompok akun diperbarui."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } }
 });
-document.addEventListener("input", (ev) => { if (window.__rute === "dailyjob" && ev.target.id === "dj-cari") { S.cari = ev.target.value; const p = ev.target.selectionStart; render(); const n = $("#dj-cari"); if (n) { n.focus(); n.setSelectionRange(p, p); } } });
+document.addEventListener("input", (ev) => { if (window.__rute === "dailyjob" && ev.target.id === "dj-cari") { S.cari = ev.target.value; S.hal = 0; const p = ev.target.selectionStart; render(); const n = $("#dj-cari"); if (n) { n.focus(); n.setSelectionRange(p, p); } } });
 
 /* ---------- pintu masuk ---------- */
 export async function mulaiDailyJob(user, profil) {

@@ -87,4 +87,9 @@ eq("template: status, prioritas, bobot dibaca", tp.jobs.slice(0, 2).map((j) => [
 eq("template: tanpa status dan tanggal selesai = dikerjakan", [tp.jobs[2].status, tp.jobs[2].prioritas, tp.jobs[2].bobot], ["proses", "sedang", 2]);
 eq("template: peringatan deadline kosong, PIC kosong, status aneh", [tp.peringatan.some((x) => /deadline kosong/.test(x)), tp.peringatan.some((x) => /PIC kosong/.test(x)), tp.peringatan.some((x) => /tidak dikenal/.test(x))], [true, true, true]);
 eq("Status Waktu (Excel lama) tidak dianggap Status", H.petaExcel([["Tanggal Diberikan", "PIC", "Kategori Tugas", "Deskripsi Tugas", "Status Waktu"], ["2026-11-01", "A", "Quotation", "Tugas", "Terlambat"]]).jobs[0].status, "proses");
+eq("target kategori: masuk + hari kalender", H.targetKategori({ Quotation: 1, RFQ: 3 }, "RFQ", "2026-11-28"), "2026-12-01");
+eq("target kategori: belum diatur atau 0 = null", [H.targetKategori({ Quotation: 0 }, "Quotation", now), H.targetKategori({}, "RFQ", now), H.targetKategori(null, "RFQ", now)], [null, null, null]);
+eq("rentang daftar: semua = null, minggu lalu Senin-Minggu", [H.rentangDaftar("semua", now), H.rentangDaftar("mingguLalu", now)], [null, ["2026-11-02", "2026-11-08"]]);
+eq("rentang daftar: rentang butuh dua tanggal, bulan ini", [H.rentangDaftar("rentang", now, "2026-11-01", ""), H.rentangDaftar("rentang", now, "2026-11-01", "2026-11-05"), H.rentangDaftar("bulan", now)], [null, ["2026-11-01", "2026-11-05"], ["2026-11-01", "2026-11-30"]]);
+eq("dariDok: id dokumen menang atas field id (bug duplikat setelah edit job impor)", [H.dariDok("imp-k1-x12", { id: "x12", judul: "A" }).id, H.dariDok("abc", { judul: "B" }).id], ["imp-k1-x12", "abc"]);
 process.exit(gagal ? 1 : 0);
