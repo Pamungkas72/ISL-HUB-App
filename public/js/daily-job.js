@@ -10,12 +10,12 @@ import { e, $, toast, konfirmasi, konfirmasiKetik, bukaLayer, tutupLayer } from 
 import { ikon } from "./ikon.js";
 import { app, db } from "./firebase-config.js";
 import { unggahBlob } from "./app-store.js";
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 
-const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "performa", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", tampil: "perlu", masalah: "", kel: matchMedia("(min-width: 761px)").matches ? "tabel" : "pic", buka: {}, pilih: new Set(), modePilih: false, terbuka: "", detail: null, tim: {}, cari: "", muat: false, galat: "" };
+const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "performa", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", tampil: "perlu", masalah: "", kel: matchMedia("(min-width: 761px)").matches ? "tabel" : "pic", buka: {}, pilih: new Set(), modePilih: false, terbuka: "", detail: null, tim: {}, cari: "", muat: false, galat: "", kpi: {} };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 const namaKel = (id) => (S.kelompok.find((k) => k.id === id) || {}).nama || "–";
@@ -31,6 +31,7 @@ async function muat() {
     const q = S.kelola ? collection(db, "dj_job") : S.kelompokSaya ? query(collection(db, "dj_job"), where("kelompokId", "==", S.kelompokSaya)) : null;
     S.jobs = q ? (await getDocs(q)).docs.map((d) => ({ id: d.id, ...d.data() })) : [];
     if (S.kelola) S.akun = (await getDocs(collection(db, "pengguna"))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.status === "aktif").sort((a, b) => String(a.nama || a.email).localeCompare(String(b.nama || b.email), "id"));
+    if (S.kelola) { const k = await getDoc(doc(db, "dj_pengaturan", "kpi")); S.kpi = k.exists() ? k.data().hariSelesai || {} : {}; }
   } catch (err) { console.error(err); S.galat = "Data Daily Job belum bisa dibaca. Pemilik perlu memasang aturan Firestore terbaru (firebase deploy --only firestore:rules,storage)."; }
   S.muat = false; render();
 }
@@ -307,7 +308,12 @@ function htmlKelompokKelola() {
   return `<section class="mr-kartu dj-kartu"><h3>Kelompok</h3><p class="mr-sub">Anggota hanya melihat dan mengubah job kelompoknya. Master dan admin melihat semua.</p>
     ${S.kelompok.map((k) => `<div class="dj-org"><span><b>${e(k.nama)}</b> · ${hit(k.id)} anggota · ${S.jobs.filter((j) => j.kelompokId === k.id).length} job</span><span class="mr-ruang"></span><button class="mr-btn mr-btn--kecil" data-dj="kel-ubah" data-id="${e(k.id)}">Ubah</button><button class="mr-ikonbtn" data-dj="kel-hapus" data-id="${e(k.id)}" aria-label="Hapus kelompok">${ikon("tong", 15)}</button></div>`).join("") || `<p class="mr-sub">Belum ada kelompok.</p>`}
     <button class="mr-btn mr-btn--utama" data-dj="kel-baru">${ikon("plus", 14)} Kelompok baru</button></section>
-    <section class="mr-kartu dj-kartu"><h3>Kelompok tiap akun</h3>${S.akun.filter((a) => a.peran !== "dj").map((a) => `<div class="dj-org"><span>${e(a.nama || a.email)}<small> ${e(a.email)}</small></span>${a.kelompokDJ ? `<span class="dj-kep"><input type="checkbox" data-dj="kep-akun" data-id="${e(a.id)}" id="kep-${e(a.id)}" ${((S.kelompok.find((k) => k.id === a.kelompokDJ) || {}).kepala || []).includes(a.id) ? "checked" : ""}><label for="kep-${e(a.id)}">Kepala</label></span>` : ""}<select data-dj="kel-akun" data-id="${e(a.id)}" aria-label="Kelompok ${e(a.nama || a.email)}">${opsi(S.kelompok.map((k) => [k.id, k.nama]), a.kelompokDJ || "", "Tanpa kelompok")}</select></div>`).join("")}<p class="mr-sub">Satu kepala divisi per kelompok: menilai hasil kerja dan menentukan target (deadline) yang tidak bisa diubah anggota. Admin berada di atas kepala divisi, master di atas admin: tingkat lebih tinggi bisa mengubah target tingkat di bawahnya, tidak sebaliknya.</p></section>`;
+    <section class="mr-kartu dj-kartu"><h3>Kelompok tiap akun</h3>${S.akun.filter((a) => a.peran !== "dj").map((a) => `<div class="dj-org"><span>${e(a.nama || a.email)}<small> ${e(a.email)}</small></span>${a.kelompokDJ ? `<span class="dj-kep"><input type="checkbox" data-dj="kep-akun" data-id="${e(a.id)}" id="kep-${e(a.id)}" ${((S.kelompok.find((k) => k.id === a.kelompokDJ) || {}).kepala || []).includes(a.id) ? "checked" : ""}><label for="kep-${e(a.id)}">Kepala</label></span>` : ""}<select data-dj="kel-akun" data-id="${e(a.id)}" aria-label="Kelompok ${e(a.nama || a.email)}">${opsi(S.kelompok.map((k) => [k.id, k.nama]), a.kelompokDJ || "", "Tanpa kelompok")}</select></div>`).join("")}<p class="mr-sub">Satu kepala divisi per kelompok: menilai hasil kerja dan menentukan target (deadline) yang tidak bisa diubah anggota. Admin berada di atas kepala divisi, master di atas admin: tingkat lebih tinggi bisa mengubah target tingkat di bawahnya, tidak sebaliknya.</p></section>${htmlKpi()}`;
+}
+/* KPI: target hari selesai per kategori, dihitung dari tanggal masuk; dipakai sebagai usulan target job baru. */
+function htmlKpi() {
+  return `<section class="mr-kartu dj-kartu"><h3>KPI kategori</h3><p class="mr-sub">Target hari selesai per kategori, dihitung dari tanggal masuk. Berlaku untuk semua kelompok. Kosong = tanpa target.</p>
+    ${H.daftarKategori(S.jobs).map((k) => `<div class="dj-org"><span><b>${e(k)}</b></span><span class="mr-ruang"></span><label class="dj-kpi-hari"><input type="number" min="0" max="365" step="1" value="${e(S.kpi[k] ?? "")}" data-dj="kpi-hari" data-k="${e(k)}" aria-label="Target hari ${e(k)}"><small>hari</small></label></div>`).join("")}</section>`;
 }
 
 function htmlPengingat(now) {
@@ -448,7 +454,7 @@ function formJob(j) {
   </div></div>
   <footer class="mr-panel__kaki dj-kaki">${baru ? "" : `<button class="mr-btn dj-ib dj-bhy" data-dj="hapus" data-id="${e(d.id)}" title="Hapus job" aria-label="Hapus job">${ikon("tong", 16)}</button>`}<span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="simpan" id="dj-simpan">Simpan</button></footer>`);
   $("#dj-form")._d = d;
-  $("#djf-kat").onchange = (ev) => { const n = $("#djf-kat-baru"); n.hidden = ev.target.value !== "__baru"; if (!n.hidden) n.focus(); };
+  $("#djf-kat").onchange = (ev) => { const n = $("#djf-kat-baru"); n.hidden = ev.target.value !== "__baru"; if (!n.hidden) n.focus(); const hari = S.kpi[ev.target.value]; if (baru && hari != null) $("#djf-target").value = H.tambahHari($("#djf-masuk").value || H.hariIni(), hari); };
   $("#djf-status").onchange = (ev) => { $(".dj-tunda").hidden = ev.target.value !== "tunggu"; const s = $("#djf-selesai"); if (ev.target.value === "selesai" && !s.value) s.value = H.hariIni(); if (ev.target.value !== "selesai") s.value = ""; };
   $("#djf-target").oninput = (ev) => { const a = $(".dj-alasan"); if (a) a.hidden = !d.tglTarget || ev.target.value === d.tglTarget; };
   $("#djf-berkas").onchange = (ev) => { berkasBaru.push(...ev.target.files); ev.target.value = ""; tampilBaru(); };
@@ -703,6 +709,7 @@ document.addEventListener("change", async (ev) => {
     const kepala = t.checked ? [ak.id] : []; // satu kepala divisi per kelompok
     try { await setDoc(doc(db, "dj_kelompok", kel.id), { nama: kel.nama, dibuat: kel.dibuat || H.hariIni(), kepala, ...(kel.bawaan ? { bawaan: true } : {}) }); kel.kepala = kepala; toast(t.checked ? "Ditetapkan sebagai kepala divisi (menggantikan yang lama)." : "Kepala divisi dikosongkan."); render(); } catch (err) { t.checked = !t.checked; toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
   }
+  if (a === "kpi-hari") { const kpi = { ...S.kpi }, k = t.dataset.k; if (t.value === "") delete kpi[k]; else kpi[k] = Math.min(365, Math.max(0, Math.round(+t.value))); try { await setDoc(doc(db, "dj_pengaturan", "kpi"), { hariSelesai: kpi }); S.kpi = kpi; toast("Target KPI tersimpan."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return; }
   if (a === "kel-akun") { try { await updateDoc(doc(db, "pengguna", t.dataset.id), { kelompokDJ: t.value || null }); const ak = S.akun.find((x) => x.id === t.dataset.id); if (ak) ak.kelompokDJ = t.value || null; toast("Kelompok akun diperbarui."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } }
 });
 document.addEventListener("input", (ev) => { if (window.__rute === "dailyjob" && ev.target.id === "dj-cari") { S.cari = ev.target.value; const p = ev.target.selectionStart; render(); const n = $("#dj-cari"); if (n) { n.focus(); n.setSelectionRange(p, p); } } });

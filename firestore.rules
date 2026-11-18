@@ -401,6 +401,11 @@ service cloud.firestore {
       allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan']) && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool;
       allow delete: if isKelola();
     }
+    // Target hari selesai per kategori (KPI): diatur master dan admin, dibaca semua akun Daily Job.
+    match /dj_pengaturan/{id} {
+      allow read: if aktifDJ();
+      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['hariSelesai']) && request.resource.data.hariSelesai is map;
+    }
     match /dj_job/{id} {
       allow read: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
       allow create: if (isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
