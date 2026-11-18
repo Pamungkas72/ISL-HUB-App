@@ -3765,6 +3765,8 @@ function kumpulTL(semuaAll, semua) {
     const item = new Map();
     semuaAll.filter(x => R.hariGantung(x) !== null).forEach(x => item.set(x.id, { nama: namaQ(x), cust: namaCust(x), h: R.hariGantung(x), ket: `menggantung ${R.hariGantung(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="buka" data-id="${x.id}">perbarui</button>`, ...kirimFu(x, false) }));
     semua.filter(x => perluTL(x) !== null && !item.has(x.id)).forEach(x => item.set(x.id, { nama: namaQ(x), cust: namaCust(x), h: perluTL(x), ket: `tanpa kabar ${perluTL(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="buka" data-id="${x.id}">catat tindak lanjut</button>`, ...kirimFu(x, false) }));
+    /* Terkirim belum disetujui: masuk sejak hari dikirim untuk diminta persetujuannya */
+    semua.filter(x => R.hariTanpaKabar(x) !== null && !item.has(x.id)).forEach(x => item.set(x.id, { nama: namaQ(x), cust: namaCust(x), h: R.hariTanpaKabar(x), ket: `menunggu persetujuan ${R.hariTanpaKabar(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="buka" data-id="${x.id}">minta persetujuan</button>`, ...kirimFu(x, false) }));
     rwPerlu().forEach(x => item.set('rw:' + x.id, { nama: x.nomor, cust: x.customerNama, h: rwHari(x), ket: `riwayat PDF ${rwHari(x)} hari`, aksi: `<button type="button" class="qt-link" data-qt="rw-status" data-id="${x.id}">ubah status</button>`, ...kirimFu(x, true) }));
     return [...item.values()].sort((a, b) => b.h - a.h);
 }
