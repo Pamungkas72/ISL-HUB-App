@@ -251,7 +251,7 @@ export async function mulaiParallax(kanvas, { foto, depth, kurangiGerak = false,
   };
   // scroll/roda: maju-mundur (desktop). Tidak dicegat di atas form agar form tetap bisa digulir.
   const onWheel = (e) => {
-    if (e.target.closest && e.target.closest(".login-form-side, .mob-modul")) return;
+    if (e.target.closest && e.target.closest(".login-dock")) return;
     tz = Math.min(1, Math.max(0, tz + e.deltaY * -0.0006)); terakhirGerak = (performance.now() - t0) / 1000;
   };
   // HP: kemiringan perangkat menggeser pandangan (iOS meminta izin saat sentuhan pertama)

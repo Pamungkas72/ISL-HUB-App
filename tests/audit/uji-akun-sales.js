@@ -18,7 +18,7 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
 
   // 1. Form daftar: hanya sales, WhatsApp wajib
   let p = await buka('x@isl.test', 'index.html', null, true);
-  if (LAYAR.width > 760) { await p.click('#portal-masuk'); await p.waitForTimeout(1500); }
+  if (LAYAR.width > 760) { if (await p.isVisible('#portal-masuk')) await p.click('#portal-masuk'); await p.waitForTimeout(1500); }
   await p.evaluate(() => document.getElementById('tog-daftar').click());
   cek('form daftar tanpa pilihan status', await p.$('#df-peran') === null);
   cek('form daftar punya kolom WhatsApp', await p.$('#df-wa') !== null);

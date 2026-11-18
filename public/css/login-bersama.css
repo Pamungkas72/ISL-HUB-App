@@ -1,0 +1,32 @@
+/* Gaya login bersama (desktop dan HP): aurora di atas foto, panel kaca gelap berbingkai gradien berisi tab modul dan form.
+   Panel selalu gelap di kedua tema karena berada di atas foto; posisinya diatur di login-portal.css (desktop) dan login-mobile.css (HP). */
+.login-screen .login-dock { --bg: rgba(255, 255, 255, .1); --surface: transparent; --border: rgba(255, 255, 255, .28); --text: #fff; --muted: rgba(255, 255, 255, .72); --head: #fff; color: #fff; color-scheme: dark;
+  border: 1.5px solid transparent; border-radius: 26px;
+  background: linear-gradient(rgba(14, 24, 52, .64), rgba(14, 24, 52, .64)) padding-box, linear-gradient(135deg, #ffb347, #7aa7ff, #c77dff) border-box;
+  -webkit-backdrop-filter: blur(22px) saturate(1.4); backdrop-filter: blur(22px) saturate(1.4);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .5), 0 0 60px rgba(120, 120, 255, .25); }
+.login-screen .login-dock .login-form-side { position: static; display: block; width: auto; padding: 0; background: none; opacity: 1; visibility: visible; }
+.login-screen .login-dock .login-form-wrap { max-width: none; width: 100%; padding: 0; background: none; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; transform: none; max-height: none; overflow: visible; }
+.login-dock .login-mark { display: none; } /* merek sudah tampil di atas layar */
+.login-dock .login-error { background: rgba(255, 90, 90, .18); border-color: rgba(255, 130, 130, .5); color: #ffd6d6; }
+.login-dock .field input, .login-dock .field select { color: var(--text); }
+.login-dock a { color: inherit; }
+
+/* tab modul (chip kaca) */
+.login-screen .mob-modul { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 14px; }
+.mob-chip { all: unset; box-sizing: border-box; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; border-radius: 999px; cursor: pointer;
+  font: 700 13px Inter, system-ui, sans-serif; color: #fff; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .28); opacity: .8; transition: transform .25s var(--pt-ease), background-color .25s, opacity .25s; }
+.mob-chip i { width: 18px; height: 12px; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25), inset 5px 0 0 rgba(0, 0, 0, .14); }
+.mob-chip.is-pilih { opacity: 1; background: linear-gradient(135deg, rgba(255, 179, 71, .5), rgba(255, 255, 255, .18)); border-color: rgba(255, 190, 100, .9); }
+.mob-chip:hover { opacity: 1; }
+.mob-chip:active { transform: scale(.96); }
+.mob-chip:focus-visible { outline: 2px solid #ffd08a; outline-offset: 2px; }
+.login-screen .mob-info { display: block; margin: 0; padding: 0; max-height: 0; overflow: hidden; opacity: 0; color: #ffe2b0; font: 600 12.5px Inter, system-ui, sans-serif; transition: opacity .25s, max-height .25s; }
+.login-screen .mob-info.on { opacity: 1; max-height: 64px; padding-bottom: 10px; }
+
+/* aurora: cahaya ungu, biru, dan jingga yang bergeser pelan di atas foto */
+.portal-scrim::after { content: ""; position: absolute; inset: -12%; mix-blend-mode: screen; opacity: .6; animation: pt-aurora 22s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse 45% 38% at 12% 8%, rgba(140, 90, 255, .7), transparent 70%), radial-gradient(ellipse 42% 38% at 90% 88%, rgba(40, 170, 255, .6), transparent 70%), radial-gradient(ellipse 36% 28% at 72% 0, rgba(255, 140, 60, .65), transparent 70%); }
+@keyframes pt-aurora { from { transform: translate3d(-2%, -1%, 0) scale(1); } to { transform: translate3d(3%, 2%, 0) scale(1.08); } }
+.portal-judul h1 { background: linear-gradient(180deg, #fff 30%, #dce8ff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 14px rgba(4, 16, 36, .55)); }
+@media (prefers-reduced-motion: reduce) { .portal-scrim::after { animation: none; } .mob-chip, .mob-info { transition: none; } }
