@@ -283,7 +283,7 @@ function htmlKelompokKelola() {
 function render() {
   const el = $("#dj-root"); if (!el) return;
   const now = H.hariIni(), perlu = S.kelola || S.kelompokSaya;
-  const tabs = [["job", "Daftar job"], ...(S.kelola ? [["kelompok", "Kelompok"]] : [])];
+  const tabs = [["job", "Daftar job"], ...(S.kelola ? [["kelompok", "Pengaturan"]] : [])];
   const pushOn = statusPush(S.u.uid) === "aktif";
   const bukanBawaan = bukanBawaanDaftar();
   const ikb = (aksi, ikn, judul, kelas = "") => `<button type="button" class="mr-btn dj-ib ${kelas}" data-dj="${aksi}" title="${judul}" aria-label="${judul}">${ikn}</button>`;
@@ -430,7 +430,7 @@ async function simpanJob() {
   if (!kat) return toast("Isi nama kategori baru.", "bahaya");
   if (v("djf-status") === "tunggu" && !v("djf-tunda").trim()) return toast("Isi alasan job tertunda (menunggu apa).", "bahaya");
   if (!target) return toast("Isi target selesai.", "bahaya");
-  if (!kel) return toast("Pilih kelompok. Buat kelompok dulu di tab Kelompok.", "bahaya");
+  if (!kel) return toast("Pilih kelompok. Buat kelompok dulu di tab Pengaturan.", "bahaya");
   if (v("djf-masuk") && target < v("djf-masuk")) return toast("Target selesai tidak boleh sebelum tanggal masuk.", "bahaya");
   const tombol = $("#dj-simpan"); tombol.disabled = true; tombol.textContent = "Menyimpan…";
   try {
