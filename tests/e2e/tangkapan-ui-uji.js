@@ -21,7 +21,7 @@ fs.mkdirSync(out, { recursive: true });
   try {
     const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
     await p.goto(BASE + '/index.html', { waitUntil: 'load' });
-    await p.click('#portal-masuk');
+    if (await p.isVisible('#portal-masuk')) await p.click('#portal-masuk');
     await p.fill('#email', email);
     await p.fill('#password', pass);
     await p.click('#btn-submit');

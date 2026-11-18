@@ -54,9 +54,11 @@ vec3 alir(vec2 uv, vec2 geser, float T, int kanal, vec3 dasar){
 
 // satu truk di lajur: fase 0 = jauh di ujung jalan, fase 1 = sudah lewat kamera. Mengembalikan warna pra-kali alfa.
 vec4 truk(vec2 px, float fase, vec3 cat, out float s, out float bayang){
-  s = 1.0 / mix(9.0, 0.4, 1.0 - pow(1.0 - fase, 1.6));                 // melambat saat mendekati penyeberangan
+  s = 1.0 / mix(9.0, 0.4, 1.0 - pow(1.0 - fase, 1.6) * (1.0 + 0.04 * sin(fase * 18.85)));                 // melambat saat mendekati penyeberangan
   vec2 lokal = (px - (HILANG + LAJUR * s)) / s + vec2(270.0, 450.0);
-  lokal.y += 1.1 * sin(uTime * 8.0 + fase * 40.0);                     // getaran mesin
+  lokal.y += 1.1 * sin(uTime * 8.0 + fase * 40.0) + 2.2 * sin(uTime * 1.7 + fase * 23.0); // getaran mesin + ayunan suspensi
+  float sdt = 0.0035 * sin(uTime * 1.3 + fase * 31.0), cs = cos(sdt), sn = sin(sdt);          // body miring sedikit saat melaju
+  vec2 dp = lokal - vec2(270.0, 450.0); lokal = vec2(dp.x * cs - dp.y * sn, dp.x * sn + dp.y * cs) + vec2(270.0, 450.0);
   vec2 k = lokal / vec2(540.0, 580.0);
   // bayangan jatuh ke kanan-bawah seperti objek lain di foto: siluet truk digeser lalu dilunakkan
   vec2 kb = (lokal - vec2(62.0, 16.0)) / vec2(540.0, 580.0);
@@ -118,7 +120,10 @@ void main(){
     for (int i = 0; i < 4; i++) {
       float s, b; float fase = fract(uTime / 65.0 + float(i) / 4.0);
       vec3 cat = i == 0 ? vec3(1.0) : i == 1 ? vec3(0.30, 0.47, 0.80) : i == 2 ? vec3(0.78, 0.36, 0.30) : vec3(0.36, 0.62, 0.50);
+      vec2 arah = normalize(LAJUR) * 3.0;                                       // kabut gerak sepanjang arah laju
       vec4 c = truk(px, fase, cat, s, b); gelap = max(gelap, b);
+      float s2, b2; vec4 c1 = truk(px - arah * s, fase, cat, s2, b2), c2 = truk(px + arah * s, fase, cat, s2, b2);
+      c = c * 0.5 + c1 * 0.25 + c2 * 0.25;
       lap = s > sAtas ? c + lap * (1.0 - c.a) : lap + c * (1.0 - lap.a);
       sAtas = max(sAtas, s);
     }
@@ -129,6 +134,15 @@ void main(){
     float teduh = smoothstep(0.42, 0.78, derau(tanah * vec2(0.55, 0.22) + vec2(uTime * 0.035, uTime * 0.012)) * 0.65 + derau(tanah * 1.3 + uTime * 0.02) * 0.35);
     col *= 1.0 - 0.16 * teduh * (1.0 - tp.r);
   }
+
+  // ketajaman: tajamkan detail halus (gambar sumber agak lembut)
+  col += (col - textureLod(uImg, uv2, 1.6).rgb) * 0.55;
+  // warna sinematik senja: sorotan hangat, bayangan sejuk, kontras dan saturasi sedikit naik
+  float lum = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(lum), col, 1.14);
+  col = mix(col, col * vec3(1.08, 1.0, 0.9), smoothstep(0.35, 0.9, lum));
+  col = mix(col, col * vec3(0.92, 1.0, 1.1), (1.0 - smoothstep(0.1, 0.5, lum)) * 0.6);
+  col = clamp((col - 0.5) * 1.07 + 0.5, 0.0, 1.0);
 
   // kabut tipis di kejauhan untuk menambah kedalaman
   col = mix(col, vec3(0.64, 0.76, 0.92), (1.0 - d) * 0.07);
@@ -237,7 +251,7 @@ export async function mulaiParallax(kanvas, { foto, depth, kurangiGerak = false,
   };
   // scroll/roda: maju-mundur (desktop). Tidak dicegat di atas form agar form tetap bisa digulir.
   const onWheel = (e) => {
-    if (e.target.closest && e.target.closest(".login-form-side, .mob-modul")) return;
+    if (e.target.closest && e.target.closest(".login-dock")) return;
     tz = Math.min(1, Math.max(0, tz + e.deltaY * -0.0006)); terakhirGerak = (performance.now() - t0) / 1000;
   };
   // HP: kemiringan perangkat menggeser pandangan (iOS meminta izin saat sentuhan pertama)

@@ -29,7 +29,6 @@ async function konteks(browser, { email, awalData, mulai }) {
   // 1. halaman login
   { const { p } = await konteks(browser, { email: null, mulai: 'index.html' });
     await periksa(p, 'login');
-    if (LAYAR === 'desktop') { await klikTeks(p, 'masuk ke isl hub'); await tunggu(p, 600); await periksa(p, 'login: form masuk (pop-up)'); }
     for (const t of ['daftar', 'lupa']) { if (await klikTeks(p, t)) { await tunggu(p, 400); await periksa(p, 'login: ' + t); } }
     await p.close(); }
 
