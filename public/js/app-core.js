@@ -3773,29 +3773,22 @@ function kumpulTL(semuaAll, semua) {
 /* data kirim untuk satu item follow up: PIC quotation didahulukan, lalu PIC utama customer */
 const kirimFu = (x, rw) => {
   const kl = (cust(rw ? rwCid(x) : x.customerId) || {}).kontak || [], pic = rw ? '' : (x.picNama || ''), k = kl.find(z => norm(z.nama) === norm(pic)) || kl.find(z => z.utama) || kl[0] || {};
-  return { key: rw ? 'rw:' + x.id : x.id, pic: pic || k.nama || '', telp: (rw ? '' : x.picTelp) || k.telp || '', email: (rw ? '' : x.picEmail) || k.email || '', nomor: rw ? (x.nomor || '') : namaQ(x), judul: rw ? (x.perihal || '') : (x.judul || '') };
+  return { key: rw ? 'rw:' + x.id : x.id, pic: pic || k.nama || '', telp: (rw ? '' : x.picTelp) || k.telp || '', email: (rw ? '' : x.picEmail) || k.email || '', nomor: rw ? (x.nomor || '') : namaQ(x), judul: rw ? (x.perihal || '') : (x.judul || ''), tgl: tglTerbitQ(x, rw) };
 };
-/* tiga pilihan pesan tindak lanjut; isi dan sapaan sama untuk WhatsApp dan email */
-const FU_GAYA = [['formal', 'Formal'], ['ramah', 'Ramah'], ['singkat', 'Singkat']];
-function pesanFu(i, gaya) {
-  const sapa = i.pic ? `Bapak/Ibu ${i.pic}` : 'Bapak/Ibu', nama = (window.__ISL && window.__ISL.nama) || 'Tim ISL', no = i.nomor, ju = i.judul ? ` perihal ${i.judul}` : '';
-  return { formal: `Yth. ${sapa},\n\nSelamat siang. Kami ingin menindaklanjuti penawaran ${no}${ju}. Mohon informasinya apakah penawaran tersebut masih dipertimbangkan, atau ada hal yang perlu kami sesuaikan.\n\nTerima kasih atas perhatian Bapak/Ibu.\n\nHormat kami,\n${nama}\nPT Indo Sukses Logistik`,
-    ramah: `Halo ${sapa}, semoga kabarnya baik.\n\nKami ingin menanyakan kabar penawaran ${no}${ju}. Apakah masih sesuai dengan kebutuhan Bapak/Ibu, atau ada yang ingin kami diskusikan? Kami siap membantu kapan saja.\n\nTerima kasih.\n${nama}\nPT Indo Sukses Logistik`,
-    singkat: `Selamat siang ${sapa}, mohon izin menanyakan kelanjutan penawaran ${no}${ju}. Apakah sudah ada keputusan, atau masih perlu penyesuaian? Terima kasih.` }[gaya];
+/* deskripsi default per kanal: WhatsApp singkat dan hangat, email panjang dan formal; isi diambil dari data quotation */
+function pesanFu(i, kanal) {
+  const sapa = i.pic ? `Bapak/Ibu ${i.pic}` : 'Bapak/Ibu', nama = (window.__ISL && window.__ISL.nama) || 'Tim ISL', tg = i.tgl ? ` yang kami kirimkan pada ${tgl(i.tgl)}` : '', per = `${i.nomor}${i.judul ? ' perihal ' + i.judul : ''}`;
+  if (kanal === 'wa') return `Selamat siang ${sapa}, semoga kabarnya baik. Kami ingin menanyakan penawaran ${per}${tg}. Apakah sudah ada keputusan, atau masih ada yang perlu kami bantu? Terima kasih.`;
+  return `Yth. ${sapa},\n\nSelamat siang. Kami ingin menindaklanjuti penawaran ${per}${tg}. Mohon kiranya Bapak/Ibu berkenan memberikan persetujuan atau tanggapan atas penawaran tersebut. Apabila masih ada hal yang perlu disesuaikan atau didiskusikan, kami dengan senang hati membantu.\n\nDemikian permohonan kami. Atas perhatian dan kerja sama Bapak/Ibu, kami ucapkan terima kasih.\n\nHormat kami,\n${nama}\nPT Indo Sukses Logistik`;
 }
 const fuKanal = i => `<span class="qt-fu-kanal"><button type="button" class="mr-ikonbtn" data-qt="fu-kirim" data-k="wa" data-id="${esc(i.key)}" aria-label="Kirim WhatsApp ke ${esc(i.cust)}" title="Kirim WhatsApp">${ik('wa', 17)}</button><button type="button" class="mr-ikonbtn" data-qt="fu-kirim" data-k="email" data-id="${esc(i.key)}" aria-label="Kirim email ke ${esc(i.cust)}" title="Kirim email">${ik('surat', 17)}</button></span>`;
-/* klik ikon: buka sheet pilihan pesan; klik pilihan: WhatsApp atau email terbuka dengan teks itu */
-function sheetFu(i, k) {
-  const wa = k === 'wa', ket = wa ? (i.telp ? '' : 'PIC belum punya nomor telepon. WhatsApp akan meminta memilih kontak.') : (i.email ? '' : 'PIC belum punya email. Isi alamat penerima di aplikasi email.');
-  bukaSheet({ judul: wa ? 'Tindak lanjut lewat WhatsApp' : 'Tindak lanjut lewat email', sub: `${i.nomor} · ${i.cust}`, isi: FU_GAYA.map(([g, l]) => `<button type="button" class="qt-sheet__i qt-fu-pilih" data-qt="fu-pilih" data-k="${k}" data-g="${g}" data-id="${esc(i.key)}"><span><b>${l}</b><small>${esc(pesanFu(i, g))}</small></span></button>`).join('') + (ket ? `<p class="mr-sub">${ket}</p>` : '') });
-}
+/* klik ikon langsung membuka WhatsApp atau email dengan deskripsi default kanal itu */
 document.addEventListener('click', ev => {
-  const e = ev.target.closest('[data-qt="fu-kirim"],[data-qt="fu-pilih"]'); if (!e) return;
+  const e = ev.target.closest('[data-qt="fu-kirim"]'); if (!e) return;
   const sm = Repo.semua(), i = kumpulTL(sm, sm).find(z => z.key === e.dataset.id); if (!i) return;
-  if (e.dataset.qt === 'fu-kirim') return sheetFu(i, e.dataset.k);
-  if (e.dataset.k === 'wa') window.open(`https://wa.me/${nomorWa(i.telp)}?text=${encodeURIComponent(pesanFu(i, e.dataset.g))}`, '_blank');
-  else window.open(`mailto:${encodeURIComponent(i.email)}?subject=${encodeURIComponent(`Tindak lanjut penawaran ${i.nomor}${i.judul ? ' - ' + i.judul : ''}`)}&body=${encodeURIComponent(pesanFu(i, e.dataset.g))}`, '_blank');
-  tutupSheet();
+  if (e.dataset.k === 'wa') { window.open(`https://wa.me/${nomorWa(i.telp)}?text=${encodeURIComponent(pesanFu(i, 'wa'))}`, '_blank'); if (!i.telp) toast('PIC belum punya nomor telepon. Pilih kontaknya di WhatsApp.'); return; }
+  window.open(`mailto:${encodeURIComponent(i.email)}?subject=${encodeURIComponent(`Permohonan persetujuan penawaran ${i.nomor}${i.judul ? ' - ' + i.judul : ''}`)}&body=${encodeURIComponent(pesanFu(i, 'email'))}`, '_blank');
+  if (!i.email) toast('PIC belum punya email. Isi alamat penerima di aplikasi email.');
 });
 function viewDaftar() {
   const q = norm(Q.q), semuaAll = Repo.semua(), semua = semuaAll, nBelum = Repo.belumMaksimal().length, rw = rwSemua();
