@@ -83,7 +83,7 @@ const bolehHapusDrafCust = c => akunSales() && c.persetujuan === 'menunggu' && c
 /* ---------- data contoh ---------- */
 const S = {
   halaman: 'customer', view: 'list', id: null, tab: 'profil',
-  q: '', fStatus: '', fKat: '', rLini: '', rSemua: false,
+  q: '', fStatus: '', fKat: '', fLengkap: '', rLini: '', rSemua: false,
   customers: [],
   rates: [], paket: [], bukaPaket: new Set()
 };
@@ -327,26 +327,32 @@ const bilahPilihCu = list => {
     <div class="mr-pilihbar__aksi"><button type="button" class="mr-btn" data-cu="nonaktif-pilih">Nonaktifkan</button>${masterSaja() ? `<button type="button" class="mr-btn mr-btn--bahaya" data-cu="hapus-pilih">${ik('tong', 14)} Hapus permanen</button>` : ''}</div></div>`;
 };
 const bilahLengkap = pct => `<div class="mr-pf-skor" title="${pct}% data lengkap" style="margin-top:6px;max-width:260px"><span class="mr-pf-skor__bar"><i style="width:${pct}%" class="${pct >= 80 ? 'ok' : pct >= 50 ? 'sedang' : 'rendah'}"></i></span><small>${pct}% lengkap</small></div>`;
+// Filter daftar customer: dipakai tabel, centang massal, dan kartu KPI.
+const saringCust = () => { const q = norm(S.q); return S.customers.filter(c => (!S.fStatus || c.status === S.fStatus) && (!S.fKat || c.kategori === S.fKat) && (!S.fLengkap || kelengkapanCust(c) < 1) &&
+  (!q || norm(c.nama + ' ' + c.alias + ' ' + (c.kontak || []).map(k => k.nama).join(' ')).includes(q))).sort((a, b) => a.nama.localeCompare(b.nama)); };
+// Ubah langsung dari daftar: sama dengan izin tombol Ubah di detail.
+const bisaUbahCust = c => masterAtauAdmin() || (akunSales() && c.diajukanUid === window.__ISL.uid && c.persetujuan === 'menunggu');
+// Kartu KPI sebagai tombol: f kosong = semua customer; aktif = pilihan saring sedang dipakai.
+const kartuStat = (f, ikon, angka, teks, aktif, perhatian) => `<button type="button" class="mr-stat__kartu mr-stat__kartu--tombol ${perhatian ? 'is-perhatian' : ''}" data-cu="stat" data-f="${f}" aria-pressed="${aktif}" title="${f ? 'Saring daftar' : 'Tampilkan semua customer'}">${ikon}<span class="mr-stat__teks"><b>${angka}</b><small>${teks}</small></span></button>`;
 // Cincin kecil per customer: persentase kelengkapan di tengah, penuh hijau saat 100%.
 function viewDaftar() {
-  const q = norm(S.q);
-  const list = S.customers.filter(c => (!S.fStatus || c.status === S.fStatus) && (!S.fKat || c.kategori === S.fKat) &&
-    (!q || norm(c.nama + ' ' + c.alias + ' ' + (c.kontak || []).map(k => k.nama).join(' ')).includes(q)))
-    .sort((a, b) => a.nama.localeCompare(b.nama));
+  const list = saringCust();
   const total = S.customers.length, aktif = S.customers.filter(c => c.status === 'aktif').length, vip = S.customers.filter(c => c.kategori === 'vip').length;
   const belumLengkap = S.customers.filter(c => kelengkapanCust(c) < 1).length;
+  const semuaTanpaSaring = !S.fStatus && !S.fKat && !S.fLengkap;
   return `
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data bisa dilihat tanpa modal dan margin. Tambah, ubah, dan hapus hanya untuk akun master atau sales.</div></div>`}
   <div class="mr-stat">
-    <div class="mr-stat__kartu">${cincinLengkap(persenLengkapSemua(), 'users')}<div><b>${total}</b><small>Total customer · ${persenLengkapSemua()}% data lengkap</small></div></div>
-    <div class="mr-stat__kartu"><span class="mr-stat__ikon">${ik('cek')}</span><div><b>${aktif}</b><small>Customer aktif</small></div></div>
-    <div class="mr-stat__kartu"><span class="mr-stat__ikon">${ik('star')}</span><div><b>${vip}</b><small>Customer VIP</small></div></div>
-    <div class="mr-stat__kartu ${belumLengkap ? 'is-perhatian' : ''}"><span class="mr-stat__ikon">${ik('peringatan')}</span><div><b>${belumLengkap}</b><small>Customer belum lengkap</small></div></div>
+    ${kartuStat('', cincinLengkap(persenLengkapSemua(), 'users'), total, `Total customer · ${persenLengkapSemua()}% data lengkap`, semuaTanpaSaring)}
+    ${kartuStat('aktif', '<span class="mr-stat__ikon">' + ik('cek') + '</span>', aktif, 'Customer aktif', S.fStatus === 'aktif')}
+    ${kartuStat('vip', '<span class="mr-stat__ikon">' + ik('star') + '</span>', vip, 'Customer VIP', S.fKat === 'vip')}
+    ${kartuStat('belum', '<span class="mr-stat__ikon">' + ik('peringatan') + '</span>', belumLengkap, 'Customer belum lengkap', S.fLengkap === 'belum', !!belumLengkap)}
   </div>
   <div class="mr-toolbar">
     <label class="mr-cari">${ik('cari', 16)}<input id="cu-q" placeholder="Cari nama, alias, atau PIC" value="${esc(S.q)}" autocomplete="off"></label>
     <select class="mr-select" id="cu-fstatus"><option value="">Semua status</option>${Object.entries(ATURAN.statusCustomer).map(([k, v]) => `<option value="${k}" ${S.fStatus === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
     <select class="mr-select" id="cu-fkat"><option value="">Semua kategori</option>${Object.entries(ATURAN.kategori).map(([k, v]) => `<option value="${k}" ${S.fKat === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    <select class="mr-select" id="cu-flengkap" aria-label="Filter kelengkapan data"><option value="">Semua data</option><option value="belum" ${S.fLengkap === 'belum' ? 'selected' : ''}>Belum lengkap</option></select>
     <span class="mr-ruang"></span>
   </div>
   ${bisaEdit() ? `<button type="button" class="mr-fab fab-d fab--customer" data-cu="tambah-customer" aria-label="Tambah customer" title="Tambah customer">${ik('orang-plus', 24)}<span class="fab-teks">Tambah customer</span></button>` : ''}
@@ -360,7 +366,7 @@ ${bilahPilihCu(list)}
         <td data-label="PIC utama">${pic ? `${esc(pic.nama)}<div class="mr-sub">${esc(pic.jabatan)}</div>` : '—'}</td>
         <td data-label="Termin">${c.termin ? c.termin + ' hari' : '—'}</td>
         <td data-label="Rate aktif">${na}${sg ? ` <span class="cu-segera">${sg} segera berakhir</span>` : ''}</td>
-        <td class="mr-td-aksi"><button class="mr-btn mr-btn--kecil" data-cu="buka" data-id="${c.id}">Buka</button></td></tr>`; }).join('')}
+        <td class="mr-td-aksi"><button class="mr-btn mr-btn--kecil" data-cu="buka" data-id="${c.id}">Buka</button>${S.fLengkap && bisaUbahCust(c) ? ` <button class="mr-btn mr-btn--kecil mr-btn--utama" data-cu="ubah-cepat" data-id="${c.id}">${ik('edit', 14)} Lengkapi</button>` : ''}</td></tr>`; }).join('')}
     </tbody></table>` : `<div class="mr-kosong">${ik('users', 28)}<p>Tidak ada customer yang cocok dengan pencarian.</p></div>`}
   </div>`;
 }
@@ -706,7 +712,7 @@ async function simpanCustomer(btn) {
   } catch (e) { btn.disabled = false; btn.textContent = 'Simpan'; return galatPanel(`<b>GAGAL menyimpan.</b> Data belum tersimpan.<br>${esc(e.message)}`); }
   tutupPanel(); toast(`<b>${esc(d.nama)}</b> tersimpan dan terverifikasi dari database.`);
   /* Pencarian dan filter yang masih aktif bisa menyembunyikan customer yang baru disimpan (mis. status Prospek saat filter Aktif). Hapus dulu supaya hasil simpan langsung terlihat. */
-  S.q = ''; S.fStatus = ''; S.fKat = '';
+  S.q = ''; S.fStatus = ''; S.fKat = ''; S.fLengkap = '';
   if (!id) { S.view = 'detail'; S.id = nid; S.tab = 'profil'; }
   gambar();
 }
@@ -1277,6 +1283,15 @@ document.addEventListener('click', ev => {
   if (a === 'buka') { S.view = 'detail'; S.id = e.dataset.id; S.tab = 'profil'; S.rLini = ''; S.rSemua = false; gambar(); window.scrollTo(0, 0); }
   else if (a === 'kembali') { S.view = 'list'; S.id = null; gambar(); }
   else if (a === 'tab') { S.tab = e.dataset.tab; gambar(); }
+  else if (a === 'stat') { // kartu KPI: klik lagi untuk melepas saringan
+    const f = e.dataset.f;
+    if (!f) { S.q = ''; S.fStatus = ''; S.fKat = ''; S.fLengkap = ''; }
+    else if (f === 'aktif') S.fStatus = S.fStatus === 'aktif' ? '' : 'aktif';
+    else if (f === 'vip') S.fKat = S.fKat === 'vip' ? '' : 'vip';
+    else S.fLengkap = S.fLengkap ? '' : 'belum';
+    gambar();
+  }
+  else if (a === 'ubah-cepat') { const c = cust(e.dataset.id); if (c) formCustomer(c); }
   else if (a === 'pilih-batal') { PILIH_CU.clear(); gambar(); }
   else if (a === 'pilih-semua') { $$('[data-cu-pilih]').forEach(c => PILIH_CU.add(c.dataset.cuPilih)); gambar(); }
   else if (a === 'nonaktif-pilih') aksiPilihCu('nonaktif');
@@ -1323,8 +1338,9 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const t = ev.target;
   if (t.dataset && t.dataset.cuPilih !== undefined) { t.checked ? PILIH_CU.add(t.dataset.cuPilih) : PILIH_CU.delete(t.dataset.cuPilih); gambar(); return; }
-  if (t.dataset && t.hasAttribute('data-cu-pilih-semua')) { const lihat = S.customers.filter(c => (!S.fStatus || c.status === S.fStatus) && (!S.fKat || c.kategori === S.fKat) && (!norm(S.q) || norm(c.nama + ' ' + c.alias + ' ' + (c.kontak || []).map(k => k.nama).join(' ')).includes(norm(S.q)))); lihat.forEach(c => (t.checked ? PILIH_CU.add(c.id) : PILIH_CU.delete(c.id))); gambar(); return; }
+  if (t.dataset && t.hasAttribute('data-cu-pilih-semua')) { saringCust().forEach(c => (t.checked ? PILIH_CU.add(c.id) : PILIH_CU.delete(c.id))); gambar(); return; }
   if (t.id === 'cu-fstatus') { S.fStatus = t.value; gambar(); } else if (t.id === 'cu-fkat') { S.fKat = t.value; gambar(); }
+  else if (t.id === 'cu-flengkap') { S.fLengkap = t.value; gambar(); }
   else if (t.id === 'cu-rlini') { S.rLini = t.value; gambar(); } else if (t.id === 'cu-rsemua') { S.rSemua = t.checked; gambar(); }
 });
 /* tombol X / Batal / Tutup / area gelap pada semua panel di halaman ini */

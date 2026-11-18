@@ -2381,3 +2381,9 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 :root:not([data-theme="light"]) { --fab-navy: #0b1a30; }
 .mr-fab.fab-d, .qt-fab.fab-d { width: 56px; height: 56px; padding: 0; gap: 0; justify-content: center; border-radius: 50%; background: var(--fab-navy); color: #fff; box-shadow: 0 0 0 4px var(--fab-c, #2B6CB0), 0 10px 24px rgba(0, 0, 0, .3); }
 .fab--tarif { --fab-c: #0F8B8D; } .fab--quotation { --fab-c: #2B6CB0; } .fab--customer { --fab-c: #7A4FD0; } .fab--job { --fab-c: #2E9E5B; }
+/* Pengaturan: daftar bagian (desktop: menu kiri; HP: daftar baris lalu halaman bagian) */
+.st-dua { display: grid; grid-template-columns: 270px 1fr; gap: 16px; align-items: start; } .st-menu, .st-daftar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.st-bag { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text); font: 14px var(--font-body); text-align: left; cursor: pointer; width: 100%; } .st-bag:last-child { border-bottom: 0; }
+.st-bag:hover { background: var(--bg); } .st-bag.is-aktif { background: var(--sky-soft); } .st-bag:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
+.st-bag__ik { color: var(--head); display: inline-flex; } .st-bag__t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .st-bag__t b { font-weight: 600; } .st-bag__t small { color: var(--muted); font-size: 12.5px; } .st-bag__p { color: var(--muted); }
+.st-judul-hp:empty { display: none; } .st-judul-hp { margin-bottom: 10px; }

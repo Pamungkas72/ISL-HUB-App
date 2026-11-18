@@ -32,7 +32,7 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 6. **Selaraskan dengan gaya coding pemilik** (lihat aturan di atas dan kode yang ada): ringkas, komentar satu baris, variabel tema, Bahasa Indonesia.
 
 ## PR dan push (aturan pemilik, 9 Nov 2026)
-- **PR dibuat otomatis**, tanpa bertanya, setelah perubahan selesai (bila belum ada PR untuk branch itu).
+- **PR dibuat otomatis**, tanpa bertanya, setelah perubahan selesai (bila belum ada PR untuk branch itu). Dicatat ulang 18 Nov 2026 atas permintaan pemilik: sesi selalu membuat PR, dan catatan sesi bisa dibuat sebagian.
 - Tiap pembaruan: **commit dan push otomatis**, dan PR yang ada ikut terbarui.
 - **Penggabungan (merge) PR otomatis** setelah semua CI hijau. Tidak perlu menunggu persetujuan pemilik. Pemilik ingin langsung melihat hasilnya di aplikasi (dicatat 9 Nov 2026 atas permintaan pemilik). Bila CI merah, jangan digabung: perbaiki dulu.
 

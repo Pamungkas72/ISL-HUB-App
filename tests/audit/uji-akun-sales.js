@@ -62,6 +62,7 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   if (LAYAR.width > 760) cek('pop-up pendaftar baru muncul untuk master', await p.$('.ip-lapis[aria-label^="Sales baru"]') !== null);
   else cek('lonceng menandai pendaftar baru (HP)', Number(await p.textContent('#nf-lencana').catch(() => 0)) >= 1);
   await p.evaluate(() => document.querySelectorAll('.ip-lapis').forEach(x => x.remove()));
+  await p.click('[data-st=bag][data-v=akses]'); await p.waitForTimeout(500); // Pengaturan kini daftar bagian: buka "Akun sales dan akses"
   cek('tabel menunggu: kode terisi otomatis', await p.evaluate(() => { const i = document.querySelector('tr[data-uid="u-budi"] [data-akun=kode]'); return i && i.value === 'BUDI'; }));
   await p.evaluate(() => document.querySelectorAll('details.st-laci').forEach(d => d.open = true));
   await p.fill('#ta-nama', 'Siti Aminah');
