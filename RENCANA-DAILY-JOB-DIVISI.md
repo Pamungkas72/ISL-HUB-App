@@ -21,3 +21,12 @@ Urutan: selesaikan **Marketing dan BD** dulu, baru divisi lain.
 ## Usulan teknis (belum dikerjakan)
 - Tiap kelompok punya `jenisForm` (mis. `marketing`, `tracking`) yang memilih formulir, pemeta impor Excel, dan bagian PDF.
 - Dashboard memakai kolom umum (PIC, kategori, target, selesai); kolom khusus disimpan di `job.rinci`.
+
+## Filter dashboard performa (diputuskan 18 Nov 2026, untuk saat dashboard dipasang lagi)
+Dashboard adalah ringkasan laporan, jadi filternya filter laporan, bukan filter daftar.
+- **Periode** (selalu terlihat di atas dashboard): Bulan ini (bawaan), Tahun ini, Rentang. Pembanding otomatis ke periode sebelumnya. Dasar hitungan: job masuk, selesai, dan sisa (backlog) pada periode itu.
+- **Tombol Filter (panel)**: PIC, Kategori (satu atau beberapa), Kelompok (hanya master/admin).
+- **Tidak dipakai**: Status, Prioritas, Masalah (status adalah hasil yang diukur; menyaringnya merusak angka).
+- Ringkasan filter aktif tampil di bawah judul. PDF laporan memakai filter yang sama. Atur ulang = Bulan ini, semua PIC/kategori.
+- Tren per hari/minggu/bulan otomatis menurut panjang periode.
+- Status saat ini: tab Performa dihapus dari tampilan (PR #56); kode hitungan dan PDF masih ada.
