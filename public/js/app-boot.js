@@ -193,7 +193,7 @@ watchAuthState(
       const rute = () => {
         const id = location.hash.slice(1);
         if (MODUL[id]) {
-          if (sales && id !== "beranda" && id !== "dailyjob") { location.hash = "#quotation"; return; } // akun sales tidak punya menu ini
+          if (sales && id !== "beranda" && id !== "dailyjob" && id !== "pengaturan") { location.hash = "#quotation"; return; } // akun sales tidak punya menu ini
           if (id === "pemberitahuan" && !kelola) { location.hash = "#beranda"; return; } // halaman penuh hanya untuk master dan admin
           return tampilModul(id);
         }

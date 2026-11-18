@@ -39,3 +39,7 @@ Tiap divisi punya cara kerja dan karakter sendiri. Yang **sama** di semua kelomp
 3. **Dashboard Performa**: desain sama, tetapi konten (KPI, tabel, grafik) berbeda per divisi.
 4. **Laporan (PDF) dan impor Excel**: isi dan templatenya per divisi.
 Akun yang masuk memakai tampilan menurut `pengguna.kelompokDJ`; master dan admin bisa melihat semua kelompok. Usulan teknis: tiap kelompok punya `jenisForm` (mis. `marketing`, `tracking`) yang memilih formulir, kolom daftar, widget dashboard, pemeta impor, dan bagian PDF. Mulai dari Marketing dan BD, lalu divisi lain. Detail tiap divisi ditanyakan ke pemilik sebelum dikerjakan; jangan ditebak.
+
+## Dashboard Performa (halaman sales) disembunyikan (19 Nov 2026)
+- Menu dan rute `#performa` ditutup; kode (`sales.js`) dan data tetap ada.
+- Profil sales (nama, telepon, tanda tangan) dan Pengajuan hapus quotation **pindah ke Pengaturan** (desain D3: daftar bagian; menu kiri di desktop, daftar baris di HP). Akun sales kini punya Pengaturan dengan isi terbatas: Tampilan dan akun, Profil sales, Pengajuan hapus (status miliknya).

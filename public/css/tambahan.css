@@ -2381,3 +2381,10 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-im .cu-cek { margin-top: 10px; }
 /* tombol tambah Quotation: aksen oranye seperti Master Rate (di #qt-root aturan #mr-kontainer tidak berlaku) */
 .qt-fab { background: var(--mr-accent); color: #1b1307; }
+
+/* Pengaturan: daftar bagian (desktop: menu kiri; HP: daftar baris lalu halaman bagian) */
+.st-dua { display: grid; grid-template-columns: 270px 1fr; gap: 16px; align-items: start; } .st-menu, .st-daftar { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.st-bag { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text); font: 14px var(--font-body); text-align: left; cursor: pointer; width: 100%; } .st-bag:last-child { border-bottom: 0; }
+.st-bag:hover { background: var(--bg); } .st-bag.is-aktif { background: var(--sky-soft); } .st-bag:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
+.st-bag__ik { color: var(--head); display: inline-flex; } .st-bag__t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .st-bag__t b { font-weight: 600; } .st-bag__t small { color: var(--muted); font-size: 12.5px; } .st-bag__p { color: var(--muted); }
+.st-judul-hp:empty { display: none; } .st-judul-hp { margin-bottom: 10px; }
