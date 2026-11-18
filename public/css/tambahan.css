@@ -773,15 +773,13 @@ button.app-nav__brand:focus-visible { outline: 2px solid var(--accent); outline-
 .qt-ikonmata:hover, .qt-ikonmata:focus-visible { background: var(--mr-navy-soft); }
 
 /* ---------- tombol ke atas (semua halaman app) ---------- */
-.ke-atas { position: fixed; right: 20px; bottom: 20px; z-index: 55; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid rgba(10, 61, 102, 0.45); border-radius: 50%; background: transparent; color: rgba(10, 61, 102, 0.8); box-shadow: none; cursor: pointer; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
-.ke-atas.is-tampil { opacity: 1; transform: none; pointer-events: auto; }
-.ke-atas:hover { background: rgba(47, 143, 219, 0.12); color: #0A3D66; }
+.ke-atas { position: fixed; left: 50%; bottom: 20px; z-index: 55; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border: 1.5px solid var(--muted); border-radius: 50%; background: color-mix(in srgb, var(--surface) 35%, transparent); color: var(--muted); box-shadow: none; cursor: pointer; opacity: 0; transform: translate(-50%, 8px); pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+.ke-atas.is-tampil { opacity: .7; transform: translateX(-50%); pointer-events: auto; } .ke-atas.is-tampil:hover, .ke-atas.is-tampil:focus-visible { opacity: 1; }
+.ke-atas:hover { background: color-mix(in srgb, var(--sky) 14%, transparent); color: var(--head); }
 .ke-atas:focus-visible { outline: 3px solid #2F8FDB; outline-offset: 3px; }
-/* Tombol Tambah item (Master Rate) ada di pojok yang sama: ke atas naik di atasnya */
-body:has(.mr-fab, .qt-fab) .ke-atas { bottom: 80px; }
+/* Ke atas: tengah bawah, transparan, muncul saat digulir; tidak bentrok dengan tombol + di kanan */
 @media (max-width: 760px) {
-  .ke-atas { right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
-  body:has(.mr-fab) .ke-atas { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
+  .ke-atas { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ---------- pintasan lini: chip berukuran wajar, tidak melebar memenuhi kartu ---------- */
@@ -1203,7 +1201,6 @@ input, textarea, select, [contenteditable="true"] { -webkit-user-select: text; u
 .qt-fab:focus-visible { outline: 3px solid var(--mr-accent, #2F8FDB); outline-offset: 3px; }
 @media (max-width: 760px) {
   .qt-fab { display: inline-flex; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
-  body:has(.qt-fab) .ke-atas { bottom: calc(146px + env(safe-area-inset-bottom, 0px)); }
   .qt-bar-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; align-items: center; }
   .qt-bar-list > .mr-cari { grid-column: 1 / -1; width: 100%; }
   .qt-bar-list > #qt-fstatus, .qt-bar-list > #qt-fsumber { grid-column: span 3; width: 100%; max-width: none; min-width: 0; height: 40px; }

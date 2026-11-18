@@ -89,11 +89,17 @@ function htmlTabelJob(l, now) {
 }
 
 const WARNA_ST = { aktif: "var(--sky)", tunggu: "var(--accent)", selesai: "var(--success)", batal: "var(--muted)" };
+/** Nomor halaman: ‹ 1 … 4 5 6 … 12 ›; halaman aktif terisi, satu baris, tombol bulat besar. */
+function htmlPager(hal, jml) {
+  const ada = new Set([0, jml - 1, hal - 1, hal, hal + 1].filter((x) => x >= 0 && x < jml)), nomor = [...ada].sort((a, b) => a - b), isi = [];
+  nomor.forEach((x, i) => { if (i && x - nomor[i - 1] > 1) isi.push('<span class="dj-pg__t">…</span>'); isi.push(`<button type="button" class="dj-pg${x === hal ? " is-aktif" : ""}" data-dj="hal-ke" data-v="${x}" aria-label="Halaman ${x + 1}"${x === hal ? ' aria-current="page"' : ""}>${x + 1}</button>`); });
+  return `<nav class="dj-pgs" aria-label="Halaman"><button type="button" class="dj-pg" data-dj="hal" data-v="-1" aria-label="Halaman sebelumnya"${hal <= 0 ? " disabled" : ""}>‹</button>${isi.join("")}<button type="button" class="dj-pg" data-dj="hal" data-v="1" aria-label="Halaman berikutnya"${hal >= jml - 1 ? " disabled" : ""}>›</button></nav>`;
+}
 function htmlDaftar(now) {
   const { l, n, halaman, hal, jml } = dataDaftar(now), ada = pilihAktif(), awal = hal * PER_HAL;
   const chipStatus = `<div class="dj-chips" role="group" aria-label="Status job">${STATUS_DJ.map(([k, t]) => `<button type="button" class="mr-chip${S.status === k ? " is-aktif" : ""}" data-dj="st" data-v="${k}" aria-pressed="${S.status === k}"><i class="dj-st__t" style="background:${WARNA_ST[k]}"></i>${t} <span>${n[k]}</span></button>`).join("")}${S.masalah ? `<button type="button" class="mr-chip is-aktif" data-dj="masalah-hapus" aria-label="Hapus saringan">${e(Object.fromEntries(MASALAH)[S.masalah])} ${ikon("tutup", 12)}</button>` : ""}</div>`;
   const isi = !l.length ? `<div class="mr-kartu dj-kartu"><p class="mr-sub">Tidak ada job pada filter ini. Ketuk + untuk mencatat job baru.</p></div>` : layarHp() ? `<div class="dj-lst">${halaman.map((j, i) => barisJob(j, now, halaman.length > 3 && i >= halaman.length - 2)).join("")}</div>` : htmlTabelJob(halaman, now);
-  const nav = l.length ? `<div class="dj-hal"><span class="mr-sub">${awal + 1}–${awal + halaman.length} dari ${l.length} job · ${S.urut === "baru" ? "terbaru dulu" : "terlama dulu"}</span><span class="mr-ruang"></span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="-1"${hal <= 0 ? " disabled" : ""}>‹ Sebelumnya</button><span class="mr-sub">Halaman ${hal + 1} / ${jml}</span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="1"${hal >= jml - 1 ? " disabled" : ""}>Berikutnya ›</button></div>` : "";
+  const nav = l.length ? `<div class="dj-hal"><span class="mr-sub dj-hal__i">${awal + 1}–${awal + halaman.length} dari ${l.length} job · ${S.urut === "baru" ? "terbaru dulu" : "terlama dulu"}</span>${jml > 1 ? htmlPager(hal, jml) : ""}</div>` : "";
   return chipStatus + htmlBarPilih(halaman) + isi + nav;
 }
 
@@ -553,7 +559,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "baru") return formJob(null);
   if (a === "menu") { S.menu = S.menu === id ? "" : id; return render(); }
   if (a === "urut") { S.urut = S.urut === "baru" ? "lama" : "baru"; S.hal = 0; return render(); }
-  if (a === "hal") { S.hal = Math.max(0, S.hal + +v); render(); return window.scrollTo({ top: 0 }); }
+  if (a === "hal" || a === "hal-ke") { S.hal = Math.max(0, a === "hal" ? S.hal + +v : +v); render(); return window.scrollTo({ top: 0 }); }
   if (a === "pilih-mulai") return pilihAktif() ? selesaiPilih() : mulaiPilih();
   if (a === "buka") { if (pilihAktif()) return togglePilih(id); return bukaDetail(id); }
   if (a === "d-tutup") { S.detail = null; return render(); }
