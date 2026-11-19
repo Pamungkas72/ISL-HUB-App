@@ -298,6 +298,12 @@ describe("Legal: kontrak (master dan admin) dan MOM (pemilik; final terkunci)", 
     await assertFails(getDoc(doc(lihat(), "lg_kontrak/k1")));
     await assertFails(setDoc(doc(sales(), "lg_kontrak/k2"), { pihak: "PT B" }));
   });
+  it("perusahaan grup: hanya master dan admin", async () => {
+    await assertSucceeds(setDoc(doc(admin(), "lg_perusahaan/p1"), { nama: "PT ISL", tipe: "induk" }));
+    await assertSucceeds(getDoc(doc(master(), "lg_perusahaan/p1")));
+    await assertFails(getDoc(doc(sales(), "lg_perusahaan/p1")));
+    await assertFails(setDoc(doc(sales(), "lg_perusahaan/p2"), { nama: "X" }));
+  });
   it("MOM: sales membuat draf miliknya, tidak atas nama orang lain atau langsung final", async () => {
     await assertSucceeds(setDoc(doc(sales(), "lg_mom/m1"), mom("uid-sales")));
     await assertFails(setDoc(doc(sales(), "lg_mom/m2"), mom("uid-admin")));

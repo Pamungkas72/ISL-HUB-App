@@ -33,6 +33,7 @@ const P = {
   tong: '<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   koin: '<circle cx="12" cy="12" r="9"/><path d="M14.5 9.2c-.4-.8-1.3-1.2-2.5-1.2-1.4 0-2.5.7-2.5 1.8s1.1 1.6 2.5 1.8 2.5.7 2.5 1.8-1.1 1.8-2.5 1.8c-1.2 0-2.1-.4-2.5-1.2M12 6.5V8m0 8v1.5"/>',
   'berkas-plus': '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v6M9 15h6"/>',
+  'tameng-plus': '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/><path d="M12 9v6M9 12h6"/>',
   'orang-plus': '<circle cx="9" cy="8" r="4"/><path d="M3 20v-1a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v1M19 8v6M16 11h6"/>',
   'papan-plus': '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M12 10v6M9 13h6"/>',
 };
