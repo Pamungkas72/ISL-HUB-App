@@ -114,7 +114,7 @@ const bukanBawaanDaftar = () => S.pDaftar !== "semua" || !!S.fPic || !!S.fKat ||
 
 /** Daftar job: saring (status, PIC, kategori, periode job dibuat, cari), urut menurut target (terbaru dulu), lalu potong per halaman. */
 function dataDaftar(now) {
-  const cari = S.cari.trim().toLowerCase(), pr = H.rentangDaftar(S.pDaftar, now, S.pDari, S.pSampai), arah = S.urut === "baru" ? -1 : 1, kunci = (j) => (j.tglTarget || (arah < 0 ? "" : "9999")) + "|" + (j.tglMasuk || "");
+  const cari = S.cari.trim().toLowerCase(), pr = H.rentangDaftar(S.pDaftar, now, S.pDari, S.pSampai), arah = S.urut === "baru" ? -1 : 1, kunci = H.kunciTambah;
   const dasar = S.jobs.filter((j) => (!S.fPic || j.pic === S.fPic) && (!S.fKat || j.kategori === S.fKat) && (!pr || H.dalam(j.tglMasuk || j.dibuatPada, pr)));
   const n = Object.fromEntries(STATUS_DJ.map(([k]) => [k, dasar.filter(COCOK[k]).length]));
   const l = dasar.filter(COCOK[S.status] || COCOK.aktif).filter((j) => !S.masalah || H.masalahJob(j, now).includes(S.masalah))
@@ -537,6 +537,7 @@ async function simpanJob() {
     if (berubahTarget) { const x = { uid: S.u.uid, oleh: S.u.nama || S.u.email, peran: adalahKepala(d) ? "kepala" : "anggota", jenis: "target", dari: d.tglTarget, ke: target, alasan, waktu: Date.now() }; await setDoc(doc(db, "dj_job", id, "aktivitas", uid()), x).catch((err) => console.warn(err)); if (S.detail && S.detail.id === id) S.detail.aktivitas.push(x); }
     const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...(ada >= 0 ? S.jobs[ada] : {}), id, ...data, diubah: null };
     if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru); segarkanTautan(baru);
+    if (!d.id) { S.hal = 0; S.status = "aktif"; } // job baru langsung terlihat di paling atas
     tutupLayer(); render(); toast("Job tersimpan.");
   } catch (err) { console.error(err); toast("Job belum tersimpan: " + e(err.message || err), "bahaya"); tombol.disabled = false; tombol.textContent = "Simpan"; }
 }

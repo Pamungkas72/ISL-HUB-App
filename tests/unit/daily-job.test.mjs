@@ -92,4 +92,9 @@ eq("target kategori: belum diatur atau 0 = null", [H.targetKategori({ Quotation:
 eq("rentang daftar: semua = null, minggu lalu Senin-Minggu", [H.rentangDaftar("semua", now), H.rentangDaftar("mingguLalu", now)], [null, ["2026-11-02", "2026-11-08"]]);
 eq("rentang daftar: rentang butuh dua tanggal, bulan ini", [H.rentangDaftar("rentang", now, "2026-11-01", ""), H.rentangDaftar("rentang", now, "2026-11-01", "2026-11-05"), H.rentangDaftar("bulan", now)], [null, ["2026-11-01", "2026-11-05"], ["2026-11-01", "2026-11-30"]]);
 eq("dariDok: id dokumen menang atas field id (bug duplikat setelah edit job impor)", [H.dariDok("imp-k1-x12", { id: "x12", judul: "A" }).id, H.dariDok("abc", { judul: "B" }).id], ["imp-k1-x12", "abc"]);
+const urut = (l) => [...l].sort((a, b) => H.kunciTambah(b).localeCompare(H.kunciTambah(a))).map((j) => j.id);
+eq("urut ditambahkan: hari dibuat dulu, lalu jam catat dari id", urut([
+  { id: "dj" + (1763500000000).toString(36) + "aaaa", dibuatPada: "2026-11-19" }, { id: "dj" + (1763600000000).toString(36) + "bbbb", dibuatPada: "2026-11-19" },
+  { id: "dj" + (1763800000000).toString(36) + "cccc", dibuatPada: "2026-11-18" }, { id: "imp-k-x1", dibuatPada: "2026-11-19" }, { id: "lama", tglMasuk: "2026-11-01" }]).join(","),
+  ["dj" + (1763600000000).toString(36) + "bbbb", "dj" + (1763500000000).toString(36) + "aaaa", "imp-k-x1", "dj" + (1763800000000).toString(36) + "cccc", "lama"].join(","));
 process.exit(gagal ? 1 : 0);

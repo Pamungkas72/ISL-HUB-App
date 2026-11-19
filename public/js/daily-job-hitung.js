@@ -72,6 +72,9 @@ export function deret(jobs, r, periode) {
 /** Dokumen Firestore jadi objek job: id dokumen selalu menang atas field `id` di isi dokumen (impor lama menyimpan id "x12", yang membuat ubah/hapus menulis ke dokumen baru = duplikat). */
 export const dariDok = (id, data) => ({ ...data, id });
 
+/** Kunci urut "ditambahkan": hari job dicatat (dibuatPada, cadangan tglMasuk), lalu jam catat dari id buatan aplikasi ("dj" + waktu base36). Lebih besar = lebih baru. */
+export const kunciTambah = (j) => { const m = /^dj([0-9a-z]{8})/.exec((j && j.id) || ""); return String((j && (j.dibuatPada || j.tglMasuk)) || "").slice(0, 10) + "|" + String(m ? parseInt(m[1], 36) : 0).padStart(14, "0"); };
+
 /** Target otomatis job baru: tanggal masuk + hari kalender dari pengaturan kategori; null bila belum diatur. */
 export const targetKategori = (peta, kat, masuk) => { const n = Math.round(+(peta || {})[kat]); return n > 0 && masuk ? tambahHari(masuk, n) : null; };
 /** Rentang filter periode daftar job; null = semua periode. */
