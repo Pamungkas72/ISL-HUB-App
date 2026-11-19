@@ -2,6 +2,13 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-19 (Customer di HP dan desktop: daftar padat, desain A)
+
+- **Halaman Customer diseragamkan dengan Master Rate dan Quotation** (dipilih dari 3 desain, HP dan desktop). Satu baris ringkasan ("n customer · n% data lengkap"), pencarian, **tab status dengan jumlah** (Semua, Prospek, Aktif, Nonaktif), **chip cepat** (Semua, Belum lengkap, VIP, Rate segera berakhir).
+- **Dihapus karena dobel**: 4 kartu KPI (jadi ringkasan + chip), 3 dropdown status/kategori/kelengkapan (jadi tab dan chip), blok STATUS/TERMIN/PIC/RATE per kartu di HP (ada di detail).
+- **HP**: baris padat (inisial, nama, PIC, jumlah rate, cincin kelengkapan); status ditampilkan hanya bila bukan Aktif. Pilih banyak lewat tautan **Pilih** (ketuk baris = centang). **Desktop**: tabel tetap, dengan checkbox dan aksi seperti sebelumnya.
+- Teknis: `viewDaftar` dan `barisHP` di `app-core.js`; gaya `.cu-*` di akhir `tambahan.css`.
+
 ## 2026-11-18 (pengingat daily job di HP)
 
 - **Pengingat "catat daily job" kini pita tipis di atas konten** (dipilih dari 3 desain, opsi 1), bukan kartu yang menutupi layar. Satu baris: jam, jumlah terlambat dan jatuh tempo hari ini, tombol Catat, dan ✕. HP dan desktop (pita di kanan atas, 520 px). Isinya tetap sama, pengingat tetap muncul pukul 09.00, 14.00, 17.00.
