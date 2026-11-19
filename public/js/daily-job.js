@@ -496,28 +496,33 @@ async function jalankanTim(a, t) {
   } catch (err) { console.error(err); t.disabled = false; toast(e(err.message || err), "bahaya"); }
 }
 
-/* ---------- panel filter (HP dan desktop): periode cepat, kelompok, PIC, kategori ---------- */
-const chipF = (aksi, v, t, n, on) => `<button type="button" class="mr-chip${on ? " is-aktif" : ""}" data-dj="${aksi}" data-v="${v}">${t}${n != null ? ` <span>${n}</span>` : ""}</button>`;
-const kepalaPanel = (sub) => `<header class="mr-panel__kepala"><div><h2>Filter</h2><p class="mr-sub">${sub}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>`;
+/* ---------- filter: sheet dari bawah (HP dan desktop), seragam dengan Quotation ---------- */
 const selF = (aksi, lab, isi) => `<label class="mr-f"><span>${lab}</span><select data-dj="${aksi}">${isi}</select></label>`;
-const kakiPanel = (tombol) => `<footer class="mr-panel__kaki dj-kaki"><button class="mr-btn" data-dj="filter-reset">Atur ulang</button><span class="mr-ruang"></span><button class="mr-btn mr-btn--utama" data-aksi="tutup-layer">${tombol}</button></footer>`;
-const panelAktif = () => (S.tab === "job" ? panelFilterJob() : panelFilter());
-/** Filter dashboard performa (desain Q2): periode, PIC, kategori, kelompok (master/admin). Status tidak dipakai agar angka tetap utuh. */
-function panelFilter() {
-  bukaLayer(`${kepalaPanel("Berlaku untuk dashboard performa.")}<div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
-  <div class="mr-f"><span>Periode</span><div class="mr-seg dj-seg" role="group" aria-label="Periode">${[["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]].map(([k, t]) => chipF("periode", k, t, null, S.periode === k)).join("")}</div>
-  ${S.periode === "rentang" ? `<div class="dj-tgl"><input type="date" id="dj-dari" value="${e(S.dari)}" aria-label="Dari"><input type="date" id="dj-sampai" value="${e(S.sampai)}" aria-label="Sampai"></div>` : ""}</div>
-  <div class="mr-f"><span>PIC</span><div class="mr-seg dj-seg">${chipF("f-picchip", "", "Semua", null, !S.fPic)}${daftarPic().map((p) => `<button type="button" class="mr-chip${S.fPic === p ? " is-aktif" : ""}" data-dj="f-picchip" data-v="${e(p)}">${avatar(p)} ${e(p)}</button>`).join("")}</div></div>
-  ${selF("f-kat", "Kategori", opsi(kategoriAktif(), S.fKat, "Semua kategori"))}</div></div>${kakiPanel("Selesai")}`);
+const pilF = (aksi, v, t, on) => `<button type="button" class="dj-pil${on ? " is-on" : ""}" data-dj="${aksi}" data-v="${e(v)}" aria-pressed="${!!on}">${t}</button>`;
+const bagF = (judul, isi) => `<div class="dj-fs"><h4>${judul}</h4>${isi}</div>`;
+const tutupSheet = () => { const d = $("#dj-sheet"); if (d) d.remove(); if (!$("#mr-layer.is-open")) document.body.classList.remove("mr-kunci-scroll"); };
+function bukaSheet(sub, isi, tombol) {
+  const ada = !!$("#dj-sheet"); tutupSheet(); // isi diganti saat sheet terbuka: tanpa animasi ulang
+  const d = document.createElement("div"); d.id = "dj-sheet"; d.className = "dj-sheet" + (ada ? " is-buka" : "");
+  d.innerHTML = `<div class="dj-sheet__scrim" data-dj="sheet-tutup"></div><div class="dj-sheet__kotak" role="dialog" aria-modal="true" aria-label="Filter"><div class="dj-sheet__grip" aria-hidden="true"></div>
+    <div class="dj-sheet__h"><div><b>Filter</b><small>${sub}</small></div><button type="button" class="mr-ikonbtn" data-dj="sheet-tutup" aria-label="Tutup">${ikon("tutup", 18)}</button></div>
+    <div class="dj-sheet__isi">${isi}<div class="dj-fs__aksi"><button type="button" class="mr-btn" data-dj="filter-reset">Atur ulang</button><button type="button" class="mr-btn mr-btn--utama" data-dj="sheet-tutup">${tombol}</button></div></div></div>`;
+  document.body.appendChild(d); document.body.classList.add("mr-kunci-scroll");
+  if (!ada) requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add("is-buka")));
 }
-/** Filter daftar job: status, PIC, kategori, periode job dibuat (tglMasuk). Bawaan: job aktif, semua periode, terbaru dulu. */
+addEventListener("hashchange", tutupSheet); // pindah halaman: sheet ikut tertutup
+const panelAktif = () => (S.tab === "job" ? panelFilterJob() : panelFilter());
+const bagPic = () => bagF("PIC", `<div class="dj-pils">${pilF("f-picchip", "", "Semua", !S.fPic)}${daftarPic().map((p) => pilF("f-picchip", p, `${avatar(p)} ${e(p)}`, S.fPic === p)).join("")}</div>`);
+const bagKat = () => bagF("Kategori", `<div class="dj-pils">${pilF("f-katchip", "", "Semua", !S.fKat)}${kategoriAktif().map((k) => pilF("f-katchip", k, e(k), S.fKat === k)).join("")}</div>`);
+const bagTgl = (dari, sampai, vd, vs) => `<div class="dj-tgl"><input type="date" id="${dari}" value="${e(vd)}" aria-label="Dari"><input type="date" id="${sampai}" value="${e(vs)}" aria-label="Sampai"></div>`;
+/** Filter dashboard performa (desain Q2): periode, PIC, kategori. Status tidak dipakai agar angka tetap utuh. */
+function panelFilter() {
+  bukaSheet("Berlaku untuk dashboard performa.", `${bagF("Periode", `<div class="dj-pils">${[["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]].map(([k, t]) => pilF("periode", k, t, S.periode === k)).join("")}</div>${S.periode === "rentang" ? bagTgl("dj-dari", "dj-sampai", S.dari, S.sampai) : ""}`)}${bagPic()}${bagKat()}`, "Selesai");
+}
+/** Filter daftar job: PIC, kategori, periode job dibuat (tglMasuk). Status ada di halaman daftar. */
 function panelFilterJob() {
   const d = dataDaftar(H.hariIni());
-  bukaLayer(`${kepalaPanel("PIC, kategori, dan periode job dibuat. Status ada di halaman daftar.")}<div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr">
-  <div class="mr-f"><span>PIC</span><div class="mr-seg dj-seg">${chipF("f-picchip", "", "Semua", null, !S.fPic)}${daftarPic().map((p) => `<button type="button" class="mr-chip${S.fPic === p ? " is-aktif" : ""}" data-dj="f-picchip" data-v="${e(p)}">${avatar(p)} ${e(p)}</button>`).join("")}</div></div>
-  ${selF("f-kat", "Kategori", opsi(kategoriAktif(), S.fKat, "Semua kategori"))}
-  <div class="mr-f"><span>Periode job dibuat</span><div class="mr-seg dj-seg" role="group" aria-label="Periode job dibuat">${PERIODE_DJ.map(([k, t]) => chipF("pd", k, t, null, S.pDaftar === k)).join("")}</div>
-  ${S.pDaftar === "rentang" ? `<div class="dj-tgl"><input type="date" id="dj-pdari" value="${e(S.pDari)}" aria-label="Dari"><input type="date" id="dj-psampai" value="${e(S.pSampai)}" aria-label="Sampai"></div>` : ""}</div></div></div>${kakiPanel(`Tampilkan ${d.l.length} job`)}`);
+  bukaSheet("PIC, kategori, dan periode job dibuat.", `${bagPic()}${bagKat()}${bagF("Periode job dibuat", `<div class="dj-pils">${PERIODE_DJ.map(([k, t]) => pilF("pd", k, t, S.pDaftar === k)).join("")}</div>${S.pDaftar === "rentang" ? bagTgl("dj-pdari", "dj-psampai", S.pDari, S.pSampai) : ""}`)}`, `Tampilkan ${d.l.length} job`);
 }
 matchMedia("(max-width: 760px)").addEventListener("change", () => { if (window.__rute === "dailyjob") render(); });
 
@@ -794,7 +799,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "m-bagikan") return bagikanJob(idsAksi());
   if (a === "m-hapus") return hapusJob(idsAksi());
   if (a === "pic-simpan") { const pic = ($("#djp-pic") || {}).value.trim(); if (!pic) return toast("Isi nama PIC.", "bahaya"); tutupLayer(); return ubahBanyak(t.dataset.ids.split(","), { pic }, "PIC diperbarui."); }
-  if (a === "st") { S.status = v; S.hal = 0; S.pilih.clear(); render(); return t.closest("#mr-layer") ? panelFilterJob() : undefined; }
+  if (a === "st") { S.status = v; S.hal = 0; S.pilih.clear(); render(); return t.closest("#dj-sheet") ? panelFilterJob() : undefined; }
   if (a === "pd") { S.pDaftar = v; S.hal = 0; if (v === "rentang" && !S.pDari) [S.pDari, S.pSampai] = H.rentang("bulan"); render(); return panelFilterJob(); }
   if (a === "masalah-hapus") { S.masalah = ""; S.hal = 0; return render(); }
   if (a === "f-picchip") { S.fPic = v; S.hal = 0; render(); return panelAktif(); }
@@ -808,6 +813,8 @@ document.addEventListener("click", async (ev) => {
     try { await aktifkanPush(S.u.uid); render(); toast("Notifikasi aktif di perangkat ini: pengingat 09.00, 14.00, 17.00 dan deadline H-1."); } catch (err) { console.error(err); toast("Notifikasi belum aktif: " + e(err.message || err), "bahaya"); } return;
   }
   if (a === "filter") return panelAktif();
+  if (a === "sheet-tutup") return tutupSheet();
+  if (a === "f-katchip") { S.fKat = v; S.hal = 0; render(); return panelAktif(); }
   if (a === "filter-reset") { S.fPic = ""; S.fKat = ""; S.periode = "bulan"; S.pDaftar = "semua"; S.masalah = ""; S.hal = 0; if (S.kelola) S.fKel = ""; render(); return panelAktif(); }
   if (a === "impor") return panelImpor();
   if (a === "impor-jalan") return jalankanImpor();
@@ -842,13 +849,13 @@ document.addEventListener("click", async (ev) => {
     try { await deleteDoc(doc(db, "dj_kelompok", id)); await Promise.all(S.akun.filter((x) => x.kelompokDJ === id).map((x) => updateDoc(doc(db, "pengguna", x.id), { kelompokDJ: null }))); await muat(); toast("Kelompok dihapus."); } catch (err) { toast("Belum terhapus: " + e(err.message || err), "bahaya"); }
   }
 });
-document.addEventListener("keydown", (ev) => { if (window.__rute === "dailyjob" && (ev.key === "Enter" || ev.key === " ") && ev.target.matches?.('.dj-job2[data-dj="buka"], .dj-tb tr[data-dj]')) { ev.preventDefault(); ev.target.click(); } if (ev.key === "Escape" && S.menu) { S.menu = ""; render(); } });
+document.addEventListener("keydown", (ev) => { if (window.__rute === "dailyjob" && (ev.key === "Enter" || ev.key === " ") && ev.target.matches?.('.dj-job2[data-dj="buka"], .dj-tb tr[data-dj]')) { ev.preventDefault(); ev.target.click(); } if (ev.key === "Escape") { if ($("#dj-sheet")) tutupSheet(); else if (S.menu) { S.menu = ""; render(); } } });
 document.addEventListener("change", async (ev) => {
   if (window.__rute !== "dailyjob") return;
   const t = ev.target, a = t.dataset && t.dataset.dj;
   if (a === "b-hari") { if (t.value) ubahTautan(t.dataset.id, "hari", +t.value); return; }
   if (t.id === "dj-up") { const f = [...t.files]; t.value = ""; return unggahBerkas(f); }
-  const dalamPanel = !!t.closest("#mr-layer"), seg = () => { S.hal = 0; render(); if (dalamPanel) panelAktif(); };
+  const dalamPanel = !!t.closest("#dj-sheet"), seg = () => { S.hal = 0; render(); if (dalamPanel) panelAktif(); };
   if (a === "f-kat") { S.fKat = t.value; return seg(); }
   if (a === "f-kel") { S.fKel = t.value; S.fPic = ""; return seg(); }
   if (a === "f-pic") { S.fPic = t.value; return seg(); }
