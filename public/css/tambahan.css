@@ -2424,7 +2424,7 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .bd-top { margin-bottom: 14px; } .bd-top small { color: var(--muted); }
 .bd-hero { background: var(--grad); color: #fff; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 14px; }
 .bd-hero { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.bd-hero__b { background: #fff; color: var(--navy); border: 0; border-radius: var(--radius); padding: 7px 12px; font: 600 12px var(--font-body); cursor: pointer; }
+.bd-hero__b { background: var(--surface); color: var(--head); border: 0; border-radius: var(--radius); padding: 7px 12px; font: 600 12px var(--font-body); cursor: pointer; }
 .bd-hero h2 { margin: 0; font: 700 17px var(--font-head); color: #fff; } .bd-hero p { margin: 2px 0 0; opacity: .9; font-size: 13px; }
 .bd-tg { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin: 6px 0; } .bd-tg label { display: grid; gap: 3px; font-size: 12px; } .bd-tg input { padding: 7px 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); min-width: 170px; }
 .bd-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
