@@ -83,7 +83,7 @@ const bolehHapusDrafCust = c => akunSales() && c.persetujuan === 'menunggu' && c
 /* ---------- data contoh ---------- */
 const S = {
   halaman: 'customer', view: 'list', id: null, tab: 'profil',
-  q: '', fStatus: '', fKat: '', fLengkap: '', rLini: '', rSemua: false,
+  q: '', fStatus: '', fKat: '', fLengkap: '', fSegera: false, modePilih: false, rLini: '', rSemua: false,
   customers: [],
   rates: [], paket: [], bukaPaket: new Set()
 };
@@ -298,7 +298,6 @@ function kelengkapanCust(c) {
 }
 // Persentase rata-rata kelengkapan semua customer (0 kalau belum ada customer).
 const persenLengkapSemua = () => S.customers.length ? Math.round(S.customers.reduce((t, c) => t + kelengkapanCust(c), 0) / S.customers.length * 100) : 0;
-const cincinLengkap = (pct, ikon) => `<span class="cu-ring ${pct === 100 ? 'is-penuh' : ''}" role="img" aria-label="${pct}% data customer lengkap"><svg class="cu-ring__svg" viewBox="0 0 44 44" aria-hidden="true"><circle class="cu-ring__jejak" cx="22" cy="22" r="19"/>${pct ? `<circle class="cu-ring__isi" cx="22" cy="22" r="19" pathLength="100" stroke-dasharray="${pct} 100"/>` : ''}</svg><span class="cu-ring__ikon">${ik(ikon, 16)}</span></span>`;
 // Bilah kelengkapan seperti di halaman Lokasi: hijau 80% ke atas, kuning 50-79%, merah di bawah 50%.
 /* Pilih massal customer: kunci id yang dicentang. Dipakai bilah aksi massal di atas tabel. */
 const PILIH_CU = new Set();
@@ -308,14 +307,14 @@ async function aksiPilihCu(jenis) {
   if (jenis === 'nonaktif') {
     try { await tulisDB(() => { daftar.forEach(c => { c.status = 'nonaktif'; }); }, () => ids.every(id => (cust(id) || {}).status === 'nonaktif')); }
     catch (e) { return toast(`<b>GAGAL.</b> ${esc(e.message)}`, 'bahaya'); }
-    PILIH_CU.clear(); toast(`<b>${ids.length}</b> customer dijadikan Nonaktif dan terverifikasi.`); return gambar();
+    PILIH_CU.clear(); S.modePilih = false; toast(`<b>${ids.length}</b> customer dijadikan Nonaktif dan terverifikasi.`); return gambar();
   }
   const ok = await konfirmasi({ judul: `Hapus ${ids.length} customer permanen?`, bahaya: true, aksi: 'Hapus permanen', ketik: `HAPUS ${ids.length}`,
     isi: `Customer yang dipilih dihapus permanen, beserta rate disetujui dan paket project-nya. Tidak bisa dibatalkan.` });
   if (!ok) return;
   try { await tulisDB(() => { S.customers = S.customers.filter(x => !PILIH_CU.has(x.id)); S.rates = S.rates.filter(r => !PILIH_CU.has(r.cid)); S.paket = S.paket.filter(p => !PILIH_CU.has(p.cid)); }, () => ids.every(id => !cust(id))); }
   catch (e) { return toast(`<b>GAGAL.</b> ${esc(e.message)}`, 'bahaya'); }
-  PILIH_CU.clear(); toast(`<b>${ids.length}</b> customer terhapus dan terverifikasi.`); gambar();
+  PILIH_CU.clear(); S.modePilih = false; toast(`<b>${ids.length}</b> customer terhapus dan terverifikasi.`); gambar();
 }
 const bilahPilihCu = list => {
   if (!masterAtauAdmin() || !PILIH_CU.size) return '';
@@ -328,36 +327,36 @@ const bilahPilihCu = list => {
 };
 const bilahLengkap = pct => `<div class="mr-pf-skor" title="${pct}% data lengkap" style="margin-top:6px;max-width:260px"><span class="mr-pf-skor__bar"><i style="width:${pct}%" class="${pct >= 80 ? 'ok' : pct >= 50 ? 'sedang' : 'rendah'}"></i></span><small>${pct}% lengkap</small></div>`;
 // Filter daftar customer: dipakai tabel, centang massal, dan kartu KPI.
-const saringCust = () => { const q = norm(S.q); return S.customers.filter(c => (!S.fStatus || c.status === S.fStatus) && (!S.fKat || c.kategori === S.fKat) && (!S.fLengkap || kelengkapanCust(c) < 1) &&
+const saringCust = tanpaStatus => { const q = norm(S.q); return S.customers.filter(c => (tanpaStatus || !S.fStatus || c.status === S.fStatus) && (!S.fSegera || jumlahSegera(c.id) > 0) && (!S.fKat || c.kategori === S.fKat) && (!S.fLengkap || kelengkapanCust(c) < 1) &&
   (!q || norm(c.nama + ' ' + c.alias + ' ' + (c.kontak || []).map(k => k.nama).join(' ')).includes(q))).sort((a, b) => a.nama.localeCompare(b.nama)); };
 // Ubah langsung dari daftar: sama dengan izin tombol Ubah di detail.
 const bisaUbahCust = c => masterAtauAdmin() || (akunSales() && c.diajukanUid === window.__ISL.uid && c.persetujuan === 'menunggu');
-// Kartu KPI sebagai tombol: f kosong = semua customer; aktif = pilihan saring sedang dipakai.
-const kartuStat = (f, ikon, angka, teks, aktif, perhatian) => `<button type="button" class="mr-stat__kartu mr-stat__kartu--tombol ${perhatian ? 'is-perhatian' : ''}" data-cu="stat" data-f="${f}" aria-pressed="${aktif}" title="${f ? 'Saring daftar' : 'Tampilkan semua customer'}">${ikon}<span class="mr-stat__teks"><b>${angka}</b><small>${teks}</small></span></button>`;
 // Cincin kecil per customer: persentase kelengkapan di tengah, penuh hijau saat 100%.
+const cincinMini = p => `<span class="cu-mini" style="--p:${p}" data-n="${p >= 80 ? 'ok' : p >= 50 ? 'sedang' : 'rendah'}" role="img" aria-label="${p}% data lengkap"><b>${p}</b></span>`;
+// Baris padat HP (pola Master Rate): ketuk = buka; di mode Pilih ketuk = centang.
+const barisHP = c => {
+  const pic = c.kontak.find(k => k.utama) || c.kontak[0], p = Math.round(kelengkapanCust(c) * 100), pil = PILIH_CU.has(c.id), sg = jumlahSegera(c.id);
+  return `<div class="cu-hrow ${c.status === 'nonaktif' ? 'is-nonaktif' : ''} ${pil ? 'is-pilih' : ''}" data-cu="${S.modePilih ? 'pilih-baris' : 'buka'}" data-id="${c.id}" role="button" tabindex="0">
+    ${S.modePilih ? `<span class="cu-hcek ${pil ? 'is-on' : ''}">${pil ? ik('cek', 14) : ''}</span>` : `<span class="cu-hav">${esc(c.nama.replace(/^(PT|CV)\s+/i, '').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase())}</span>`}
+    <div class="cu-hisi"><div class="cu-hnama"><b>${esc(c.nama)}</b>${c.kategori === 'vip' ? ` <span class="cu-vip">${ik('star', 12)}</span>` : ''}${c.status !== 'aktif' ? ` ${tampilStatusC(c.status)}` : ''}${c.persetujuan === 'menunggu' ? ' <span class="mr-status cu-st--info">Baru</span>' : ''}</div>
+      <div class="mr-sub">${pic ? esc(pic.nama) + (pic.jabatan ? ' · ' + esc(pic.jabatan) : '') : 'Belum ada PIC'}</div></div>
+    <div class="cu-hkan"><span class="mr-sub">${jumlahAktif(c.id)} rate${sg ? ` · <span class="cu-segera">${sg} segera</span>` : ''}</span>${cincinMini(p)}</div></div>`;
+};
 function viewDaftar() {
-  const list = saringCust();
-  const total = S.customers.length, aktif = S.customers.filter(c => c.status === 'aktif').length, vip = S.customers.filter(c => c.kategori === 'vip').length;
-  const belumLengkap = S.customers.filter(c => kelengkapanCust(c) < 1).length;
-  const semuaTanpaSaring = !S.fStatus && !S.fKat && !S.fLengkap;
+  const list = saringCust(), total = S.customers.length, belumLengkap = S.customers.filter(c => kelengkapanCust(c) < 1).length;
+  const vip = S.customers.filter(c => c.kategori === 'vip').length, segera = S.customers.filter(c => jumlahSegera(c.id)).length;
+  const dasar = saringCust(true), jml = s => dasar.filter(c => !s || c.status === s).length;
+  const chip = (f, on, teks, n, warn) => `<button type="button" class="cu-chip ${on ? 'is-on' : ''} ${warn ? 'is-warn' : ''}" data-cu="chip" data-f="${f}" aria-pressed="${on}">${teks}${n !== '' ? ` <em>${n}</em>` : ''}</button>`;
   return `
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data bisa dilihat tanpa modal dan margin. Tambah, ubah, dan hapus hanya untuk akun master atau sales.</div></div>`}
-  <div class="mr-stat">
-    ${kartuStat('', cincinLengkap(persenLengkapSemua(), 'users'), total, `Total customer · ${persenLengkapSemua()}% data lengkap`, semuaTanpaSaring)}
-    ${kartuStat('aktif', '<span class="mr-stat__ikon">' + ik('cek') + '</span>', aktif, 'Customer aktif', S.fStatus === 'aktif')}
-    ${kartuStat('vip', '<span class="mr-stat__ikon">' + ik('star') + '</span>', vip, 'Customer VIP', S.fKat === 'vip')}
-    ${kartuStat('belum', '<span class="mr-stat__ikon">' + ik('peringatan') + '</span>', belumLengkap, 'Customer belum lengkap', S.fLengkap === 'belum', !!belumLengkap)}
-  </div>
-  <div class="mr-toolbar">
-    <label class="mr-cari">${ik('cari', 16)}<input id="cu-q" placeholder="Cari nama, alias, atau PIC" value="${esc(S.q)}" autocomplete="off"></label>
-    <select class="mr-select" id="cu-fstatus"><option value="">Semua status</option>${Object.entries(ATURAN.statusCustomer).map(([k, v]) => `<option value="${k}" ${S.fStatus === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
-    <select class="mr-select" id="cu-fkat"><option value="">Semua kategori</option>${Object.entries(ATURAN.kategori).map(([k, v]) => `<option value="${k}" ${S.fKat === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
-    <select class="mr-select" id="cu-flengkap" aria-label="Filter kelengkapan data"><option value="">Semua data</option><option value="belum" ${S.fLengkap === 'belum' ? 'selected' : ''}>Belum lengkap</option></select>
-    <span class="mr-ruang"></span>
-  </div>
+  <div class="cu-ringkas"><span><b>${total} customer</b> · ${persenLengkapSemua()}% data lengkap</span>${masterAtauAdmin() ? `<button type="button" class="mr-link cu-pilihhp" data-cu="mode-pilih">${S.modePilih ? 'Selesai pilih' : 'Pilih'}</button>` : ''}</div>
+  <div class="mr-toolbar"><label class="mr-cari">${ik('cari', 16)}<input id="cu-q" placeholder="Cari nama, alias, atau PIC" value="${esc(S.q)}" autocomplete="off"></label></div>
+  <div class="cu-tabs" role="tablist">${[['', 'Semua'], ...Object.entries(ATURAN.statusCustomer)].map(([k, n]) => `<button type="button" role="tab" class="cu-tab ${S.fStatus === k ? 'is-aktif' : ''}" data-cu="tab-status" data-v="${k}" aria-selected="${S.fStatus === k}">${n} <em>${jml(k)}</em></button>`).join('')}</div>
+  <div class="cu-chips">${chip('semua', !S.fKat && !S.fLengkap && !S.fSegera, 'Semua', '')}${chip('belum', !!S.fLengkap, ik('peringatan', 14) + ' Belum lengkap', belumLengkap, !!belumLengkap)}${chip('vip', S.fKat === 'vip', ik('star', 14) + ' VIP', vip)}${chip('segera', S.fSegera, 'Rate segera berakhir', segera)}</div>
   ${bisaEdit() ? `<button type="button" class="mr-fab fab-d fab--customer" data-cu="tambah-customer" aria-label="Tambah customer" title="Tambah customer">${ik('orang-plus', 24)}<span class="fab-teks">Tambah customer</span></button>` : ''}
 ${bilahPilihCu(list)}
-    <div class="mr-kartu mr-tabelkartu">
+    <div class="mr-kartu cu-hlist">${list.length ? list.map(barisHP).join('') : `<div class="mr-kosong">${ik('users', 28)}<p>Tidak ada customer yang cocok.</p></div>`}</div>
+    <div class="mr-kartu mr-tabelkartu cu-dtabel">
     ${list.length ? `<table class="mr-table"><thead><tr>${masterAtauAdmin() ? `<th class="cu-cek"><input type="checkbox" data-cu-pilih-semua aria-label="Pilih semua customer" ${list.length && list.every(c => PILIH_CU.has(c.id)) ? 'checked' : ''}></th>` : ''}<th>Customer</th><th>Status</th><th>PIC utama</th><th>Termin</th><th>Rate aktif</th><th></th></tr></thead><tbody>
     ${list.map(c => { const pic = c.kontak.find(k => k.utama) || c.kontak[0]; const na = jumlahAktif(c.id); const sg = jumlahSegera(c.id);
       return `<tr class="cu-baris ${c.status === 'nonaktif' ? 'is-nonaktif' : ''}" data-cu="buka" data-id="${c.id}">${masterAtauAdmin() ? `<td class="cu-cek"><input type="checkbox" data-cu-pilih="${c.id}" ${PILIH_CU.has(c.id) ? 'checked' : ''} aria-label="Pilih ${esc(c.nama)}"></td>` : ''}
@@ -1283,16 +1282,19 @@ document.addEventListener('click', ev => {
   if (a === 'buka') { S.view = 'detail'; S.id = e.dataset.id; S.tab = 'profil'; S.rLini = ''; S.rSemua = false; gambar(); window.scrollTo(0, 0); }
   else if (a === 'kembali') { S.view = 'list'; S.id = null; gambar(); }
   else if (a === 'tab') { S.tab = e.dataset.tab; gambar(); }
-  else if (a === 'stat') { // kartu KPI: klik lagi untuk melepas saringan
+  else if (a === 'tab-status') { S.fStatus = e.dataset.v; gambar(); }
+  else if (a === 'chip') { // chip cepat: klik lagi untuk melepas
     const f = e.dataset.f;
-    if (!f) { S.q = ''; S.fStatus = ''; S.fKat = ''; S.fLengkap = ''; }
-    else if (f === 'aktif') S.fStatus = S.fStatus === 'aktif' ? '' : 'aktif';
+    if (f === 'semua') { S.fKat = ''; S.fLengkap = ''; S.fSegera = false; }
     else if (f === 'vip') S.fKat = S.fKat === 'vip' ? '' : 'vip';
+    else if (f === 'segera') S.fSegera = !S.fSegera;
     else S.fLengkap = S.fLengkap ? '' : 'belum';
     gambar();
   }
+  else if (a === 'mode-pilih') { S.modePilih = !S.modePilih; if (!S.modePilih) PILIH_CU.clear(); gambar(); }
+  else if (a === 'pilih-baris') { const id = e.dataset.id; PILIH_CU.has(id) ? PILIH_CU.delete(id) : PILIH_CU.add(id); gambar(); }
   else if (a === 'ubah-cepat') { const c = cust(e.dataset.id); if (c) formCustomer(c); }
-  else if (a === 'pilih-batal') { PILIH_CU.clear(); gambar(); }
+  else if (a === 'pilih-batal') { PILIH_CU.clear(); S.modePilih = false; gambar(); }
   else if (a === 'pilih-semua') { $$('[data-cu-pilih]').forEach(c => PILIH_CU.add(c.dataset.cuPilih)); gambar(); }
   else if (a === 'nonaktif-pilih') aksiPilihCu('nonaktif');
   else if (a === 'hapus-pilih') aksiPilihCu('hapus');
@@ -1339,9 +1341,7 @@ document.addEventListener('change', ev => {
   const t = ev.target;
   if (t.dataset && t.dataset.cuPilih !== undefined) { t.checked ? PILIH_CU.add(t.dataset.cuPilih) : PILIH_CU.delete(t.dataset.cuPilih); gambar(); return; }
   if (t.dataset && t.hasAttribute('data-cu-pilih-semua')) { saringCust().forEach(c => (t.checked ? PILIH_CU.add(c.id) : PILIH_CU.delete(c.id))); gambar(); return; }
-  if (t.id === 'cu-fstatus') { S.fStatus = t.value; gambar(); } else if (t.id === 'cu-fkat') { S.fKat = t.value; gambar(); }
-  else if (t.id === 'cu-flengkap') { S.fLengkap = t.value; gambar(); }
-  else if (t.id === 'cu-rlini') { S.rLini = t.value; gambar(); } else if (t.id === 'cu-rsemua') { S.rSemua = t.checked; gambar(); }
+  if (t.id === 'cu-rlini') { S.rLini = t.value; gambar(); } else if (t.id === 'cu-rsemua') { S.rSemua = t.checked; gambar(); }
 });
 /* tombol X / Batal / Tutup / area gelap pada semua panel di halaman ini */
 document.addEventListener('click', ev => { const t = ev.target.closest && ev.target.closest('[data-aksi="tutup-layer"]'); if (t) { ev.preventDefault(); tutupPanel(); } });

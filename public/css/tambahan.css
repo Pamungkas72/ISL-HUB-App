@@ -2390,3 +2390,23 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .st-bag:hover { background: var(--bg); } .st-bag.is-aktif { background: var(--sky-soft); } .st-bag:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
 .st-bag__ik { color: var(--head); display: inline-flex; } .st-bag__t { flex: 1; min-width: 0; display: flex; flex-direction: column; } .st-bag__t b { font-weight: 600; } .st-bag__t small { color: var(--muted); font-size: 12.5px; } .st-bag__p { color: var(--muted); }
 .st-judul-hp:empty { display: none; } .st-judul-hp { margin-bottom: 10px; }
+
+/* ===== Customer: daftar padat (pola Master Rate). Tab status, chip cepat, baris padat HP, tabel desktop ===== */
+.cu-ringkas { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; font-size: 13.5px; color: var(--mr-muted); } .cu-ringkas b { color: var(--mr-ink); } .cu-ringkas .cu-pilihhp { margin-left: auto; }
+.cu-tabs { display: flex; gap: 2px; margin: 12px 0 10px; border-bottom: 1px solid var(--mr-border); overflow-x: auto; scrollbar-width: none; } .cu-tabs::-webkit-scrollbar { display: none; }
+.cu-tab { flex: 1 1 auto; justify-content: center; display: inline-flex; align-items: center; gap: 5px; padding: 10px 6px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; font: inherit; font-size: 14px; color: var(--mr-muted); cursor: pointer; white-space: nowrap; }
+.cu-tab em, .cu-chip em { font-style: normal; font-size: 11.5px; line-height: 18px; padding: 0 7px; border-radius: 999px; background: var(--mr-border); color: var(--mr-ink); }
+.cu-tab.is-aktif { color: var(--mr-ink); font-weight: 600; border-bottom-color: var(--orange, #f4a259); } .cu-tab.is-aktif em { background: var(--orange, #f4a259); color: #1a1205; }
+.cu-chips { display: flex; gap: 8px; margin: 0 0 12px; overflow-x: auto; scrollbar-width: none; } .cu-chips::-webkit-scrollbar { display: none; }
+.cu-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--mr-border); background: var(--mr-surface); font: inherit; font-size: 13.5px; color: var(--mr-muted); white-space: nowrap; cursor: pointer; }
+.cu-chip.is-warn { color: var(--mr-warn); } .cu-chip.is-on { border-color: var(--mr-navy); color: var(--mr-navy); background: var(--mr-info-bg, transparent); font-weight: 600; }
+.cu-hlist { padding: 0; overflow: hidden; }
+.cu-hrow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--mr-border); cursor: pointer; } .cu-hrow:last-child { border-bottom: 0; } .cu-hrow.is-nonaktif { opacity: .65; } .cu-hrow.is-pilih { background: var(--mr-info-bg, transparent); }
+.cu-hav { flex: 0 0 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--mr-border); background: var(--mr-bg); font-size: 13px; font-weight: 700; color: var(--mr-navy); }
+.cu-hcek { flex: 0 0 40px; height: 40px; display: grid; place-items: center; } .cu-hcek:before { content: ""; width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--mr-border); grid-area: 1/1; } .cu-hcek.is-on:before { background: var(--mr-navy); border-color: var(--mr-navy); } .cu-hcek svg { grid-area: 1/1; color: #fff; z-index: 1; }
+.cu-hisi { flex: 1; min-width: 0; } .cu-hnama { display: flex; align-items: center; gap: 6px; min-width: 0; } .cu-hnama b { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .cu-hnama > span { flex: none; } .cu-hisi .mr-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cu-hkan { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.cu-mini { --c: var(--mr-bahaya, #e5534b); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; position: relative; background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--mr-border) 0); } .cu-mini:before { content: ""; position: absolute; inset: 3.5px; border-radius: 50%; background: var(--mr-surface); } .cu-mini b { position: relative; font-size: 10.5px; }
+.cu-mini[data-n="sedang"] { --c: var(--mr-warn); } .cu-mini[data-n="ok"] { --c: var(--mr-ok); }
+.cu-dtabel { display: none; }
+@media (min-width: 761px) { .cu-tab { flex: 0 0 auto; padding: 10px 12px; } .cu-hlist, .cu-pilihhp { display: none; } .cu-dtabel { display: block; } .cu-tabs { margin-top: 4px; } }
