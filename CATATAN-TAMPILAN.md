@@ -2,6 +2,12 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-19 (pilih banyak HP seragam, geser Daily Job, petunjuk geser)
+
+- **Pilih banyak di HP seragam** di Master Rate, Quotation, dan Daily Job: masuk lewat tekan-tahan, centang bulat, dan menu ⋮ yang sama. Tombol "Pilih" di kepala list HP (Master Rate) dan tombol ✓ (Daily Job) dihapus di HP.
+- **Daily Job HP punya geser**: kiri = aksi (Selesai, Ubah PIC, Bagikan, Hapus), kanan = pilih. Sebelumnya hanya ⋯ per baris. ⋯ per baris tetap ada.
+- **Petunjuk geser** (animasi intip baris pertama, sekali per perangkat) kini juga di Daily Job, sama dengan Master Rate dan Quotation.
+
 ## 2026-11-19 (pilih banyak dipakai semua halaman)
 
 - **Satu bilah pilih untuk semua halaman**: `public/js/bilah-pilih.js`. Dipakai di Quotation, Customer, Satuan (Pengaturan), Master Rate (tarif, vendor, lokasi, lini, dan HP), dan Daily Job. Desain: HP bilah ringkas dengan ⋮, desktop pil melayang di bawah tengah.

@@ -2403,3 +2403,5 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .pbar--ds { position: fixed; left: calc(50% + 36px); bottom: 24px; transform: translateX(-50%); z-index: 40; height: 48px; padding: 0 8px 0 16px; border-radius: 14px; box-shadow: var(--shadow); max-width: calc(100vw - 120px); }
 .pbar--ds .pbar__n { margin-right: 4px; }
 body:has(.pbar--ds) { padding-bottom: 96px; }
+/* HP: masuk pilih banyak lewat tekan-tahan atau geser kanan (seragam dengan Daily Job); tombol "Pilih" di kepala dihapus */
+@media (max-width: 760px) { .mr-m-link[data-aksi="m-pilih-mode"] { display: none; } }

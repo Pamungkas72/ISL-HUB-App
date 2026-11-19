@@ -136,12 +136,19 @@ function menuJob(j, naik) {
 }
 
 /** Kartu job (HP): judul, customer dan kategori, PIC, target dan posisi; menu ⋯ di ujung. */
-function barisJob(j, now, naik) {
-  const ada = pilihAktif();
-  return `<div class="dj-job2${S.pilih.has(j.id) ? " is-pilih" : ""}${H.terlambat(j, now) ? " is-telat" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0" role="button">${ada ? cbx(S.pilih.has(j.id), "cb", j.id) : ""}
+/* baris HP (desain seragam Master Rate dan Quotation): geser kiri = aksi, geser kanan = pilih, tekan-tahan = pilih banyak */
+const SW_AKSI = [["selesai", "Selesai", "cek"], ["pic", "Ubah PIC", "orang"], ["bagikan", "Bagikan", "salin"], ["hapus", "Hapus", "tong"]];
+function barisJob(j, now, naik, intip) {
+  const ada = pilihAktif(), on = S.pilih.has(j.id);
+  const kiri = SW_AKSI.map(([k, l, ic]) => `<button type="button" class="dj-sw__a${k === "hapus" ? " is-hapus" : ""}" data-dj="sw-aksi" data-v="${k}" data-id="${e(j.id)}">${ikon(ic, 16)}<span>${l}</span></button>`).join("");
+  return `<div class="dj-sw${intip ? " is-intip" : ""}" data-id="${e(j.id)}"><div class="dj-sw__kiri">${kiri}</div>
+    <div class="dj-job2${on ? " is-pilih" : ""}${H.terlambat(j, now) ? " is-telat" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0" role="button">${ada ? `<span class="dj-m-cek${on ? " is-on" : ""}" aria-hidden="true">${on ? ikon("cek", 14) : ""}</span>` : ""}
     <div class="dj-job__isi"><b>${e(j.judul)}</b><small>${[j.customer, j.kategori].filter(Boolean).map(e).join(" · ")}${infoJob(j)}</small>
-    <div class="dj-job__kaki"><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span><span class="dj-job__t"><small>${tglPendek(j)}</small>${badgeTarget(j, now)}</span></div></div>${ada ? "" : menuJob(j, naik)}</div>`;
+    <div class="dj-job__kaki"><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span><span class="dj-job__t"><small>${tglPendek(j)}</small>${badgeTarget(j, now)}</span></div></div>${ada ? "" : menuJob(j, naik)}</div></div>`;
 }
+/* petunjuk geser: baris pertama bergeser sedikit sekali per perangkat (sama dengan Master Rate dan Quotation) */
+let intipDJ = null;
+const djIntipAktif = () => { if (intipDJ === null) { try { intipDJ = !localStorage.getItem("islDJ-geser"); } catch { intipDJ = false; } if (intipDJ) setTimeout(() => { intipDJ = false; try { localStorage.setItem("islDJ-geser", "1"); } catch { /* abaikan */ } }, 3500); } return intipDJ; };
 
 /** Tabel job (desktop): Job, Kategori, PIC, Target (tanggal + posisi), ⋯. Kotak centang hanya saat mode pilih. */
 function htmlTabelJob(l, now) {
@@ -155,7 +162,7 @@ function htmlTabelJob(l, now) {
 function htmlDaftar(now) {
   const { l, halaman, hal, jml } = dataDaftar(now), ada = pilihAktif(), awal = hal * PER_HAL;
   const chipMasalah = S.masalah ? `<div class="dj-chips"><button type="button" class="mr-chip is-aktif" data-dj="masalah-hapus" aria-label="Hapus saringan">${e(Object.fromEntries(MASALAH)[S.masalah])} ${ikon("tutup", 12)}</button></div>` : "";
-  const isi = !l.length ? `<div class="mr-kartu dj-kartu"><p class="mr-sub">Tidak ada job pada filter ini. Ketuk + untuk mencatat job baru.</p></div>` : layarHp() ? `<div class="dj-lst">${halaman.map((j, i) => barisJob(j, now, halaman.length > 3 && i >= halaman.length - 2)).join("")}</div>` : htmlTabelJob(halaman, now);
+  const isi = !l.length ? `<div class="mr-kartu dj-kartu"><p class="mr-sub">Tidak ada job pada filter ini. Ketuk + untuk mencatat job baru.</p></div>` : layarHp() ? `<div class="dj-lst">${halaman.map((j, i) => barisJob(j, now, halaman.length > 3 && i >= halaman.length - 2, i === 0 && !pilihAktif() && djIntipAktif())).join("")}</div>` : htmlTabelJob(halaman, now);
   const nav = l.length ? `<div class="dj-hal"><span class="mr-sub">${awal + 1}–${awal + halaman.length} dari ${l.length} job · ${S.urut === "baru" ? "terbaru dulu" : "terlama dulu"}</span><span class="mr-ruang"></span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="-1"${hal <= 0 ? " disabled" : ""}>‹ Sebelumnya</button><span class="mr-sub">Halaman ${hal + 1} / ${jml}</span><button type="button" class="mr-btn mr-btn--kecil" data-dj="hal" data-v="1"${hal >= jml - 1 ? " disabled" : ""}>Berikutnya ›</button></div>` : "";
   return chipMasalah + htmlBarPilih(halaman) + isi + nav;
 }
@@ -607,6 +614,54 @@ async function hapusJob(ids) {
   catch (err) { toast("Belum bisa dihapus: " + e(err.message || err), "bahaya"); }
 }
 
+/* geser baris job di HP: kiri membuka aksi, kanan memilih; tekan-tahan memulai pilih banyak. Saat pilih banyak aktif, geser dimatikan. */
+let tahanKlikDJ = 0;
+function pasangGeserDJ() {
+  let el = null, isi = null, x0 = 0, y0 = 0, dx = 0, arah = "", mulai = 0, timer = null, pending = "", awal = false;
+  const LEBAR = 272;
+  const batalTimer = () => { if (timer) { clearTimeout(timer); timer = null; } };
+  document.addEventListener("touchstart", (ev) => {
+    if (window.__rute !== "dailyjob" || !layarHp()) return;
+    const i = ev.target.closest && ev.target.closest(".dj-job2"), sw = i && i.parentElement;
+    if (!sw || !sw.classList.contains("dj-sw") || ev.touches.length !== 1) { el = null; return; }
+    el = sw; isi = i; const t = ev.touches[0]; x0 = t.clientX; y0 = t.clientY; dx = 0; arah = "";
+    awal = el.classList.contains("is-geser"); mulai = awal ? -LEBAR : 0;
+    document.querySelectorAll(".dj-sw.is-geser").forEach((x) => { if (x !== el) x.classList.remove("is-geser"); });
+    el.classList.remove("is-intip"); batalTimer(); pending = "";
+    if (!pilihAktif()) timer = setTimeout(() => { timer = null; pending = el.dataset.id; isi.classList.add("is-tahan"); try { navigator.vibrate && navigator.vibrate(15); } catch { /* abaikan */ } }, 520);
+  }, { passive: true });
+  document.addEventListener("touchmove", (ev) => {
+    if (!el) return; const t = ev.touches[0], mx = t.clientX - x0, my = t.clientY - y0;
+    if (Math.abs(mx) > 8 || Math.abs(my) > 8) batalTimer();
+    if (pending && (Math.abs(mx) > 14 || Math.abs(my) > 14)) { pending = ""; isi.classList.remove("is-tahan"); }
+    if (!arah) { if (Math.abs(mx) < 8 && Math.abs(my) < 8) return; arah = Math.abs(mx) > Math.abs(my) * 1.2 ? "x" : "y"; }
+    if (arah !== "x" || pilihAktif()) return;
+    dx = Math.max(-LEBAR - 20, Math.min(60, mulai + mx)); isi.style.transition = "none"; isi.style.transform = `translateX(${dx}px)`;
+  }, { passive: true });
+  const akhir = (batal) => {
+    batalTimer();
+    if (pending) { const id = pending; pending = ""; isi && isi.classList.remove("is-tahan"); el = null; isi = null; tahanKlikDJ = Date.now() + 400; return mulaiPilih(id); }
+    if (!el) return;
+    isi.style.transition = ""; isi.style.transform = "";
+    if (arah === "x" && !batal) {
+      tahanKlikDJ = Date.now() + 350;
+      if (dx > 50 && !awal) { el.classList.remove("is-geser"); const id = el.dataset.id; pilihAktif() ? togglePilih(id) : mulaiPilih(id); }
+      else el.classList.toggle("is-geser", dx < -LEBAR * 0.4);
+    }
+    el = null; isi = null;
+  };
+  document.addEventListener("touchend", () => akhir(false), { passive: true });
+  document.addEventListener("touchcancel", () => akhir(true), { passive: true });
+  /* klik susulan setelah geser atau tekan-tahan tidak membuka job; klik di luar baris menutup aksi */
+  document.addEventListener("click", (ev) => {
+    if (window.__rute !== "dailyjob") return;
+    const sw = ev.target.closest && ev.target.closest(".dj-sw"), aksi = ev.target.closest && ev.target.closest('[data-dj="sw-aksi"]');
+    if (sw && !aksi && Date.now() < tahanKlikDJ) { ev.stopPropagation(); ev.preventDefault(); return; }
+    if (sw && !aksi && sw.classList.contains("is-geser")) { document.querySelectorAll(".dj-sw.is-geser").forEach((x) => x.classList.remove("is-geser")); ev.stopPropagation(); ev.preventDefault(); return; }
+    if (!sw) document.querySelectorAll(".dj-sw.is-geser").forEach((x) => x.classList.remove("is-geser"));
+  }, true);
+}
+pasangGeserDJ();
 const periksa = (ev) => window.__rute === "dailyjob" || ev.target.closest("#mr-layer");
 document.addEventListener("click", async (ev) => {
   if (!periksa(ev)) return;
@@ -614,6 +669,7 @@ document.addEventListener("click", async (ev) => {
   const t = ev.target.closest("[data-dj]"); if (!t) return;
   const a = t.dataset.dj, id = t.dataset.id, v = t.dataset.v;
   if (t.tagName === "SELECT" || t.tagName === "INPUT") return;
+  if (a === "sw-aksi") { const k = { selesai: selesaikan, pic: panelPic, bagikan: bagikanJob, hapus: hapusJob }[v]; document.querySelectorAll(".dj-sw.is-geser").forEach((x) => x.classList.remove("is-geser")); return k([id]); }
   if (a === "tab") { S.tab = v; S.detail = null; render(); if (v === "kelompok") kepalaDi().forEach((k) => muatTim(k.id)); return; }
   if (a === "periode") { S.periode = v; if (v === "rentang" && !S.dari) [S.dari, S.sampai] = H.rentang("bulan"); render(); return t.closest("#mr-layer") ? panelFilter() : undefined; }
   if (a === "baru") return formJob(null);

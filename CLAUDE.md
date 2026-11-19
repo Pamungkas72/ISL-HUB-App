@@ -41,3 +41,5 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 - HP: bilah ringkas (✕, jumlah dipilih, Pilih semua, ⋮). Aksi lain dan **Hapus permanen** ada di menu ⋮, tidak sebagai tombol merah besar.
 - Desktop: pil melayang di bawah tengah dengan jumlah, Pilih semua, aksi, Batal, dan ikon hapus (dengan konfirmasi).
 - Hapus permanen tetap hanya untuk master dan tetap meminta konfirmasi.
+- HP: masuk pilih banyak lewat **tekan-tahan** (atau geser kanan). Tombol "Pilih" di kepala list dihapus di HP. Centang bulat.
+- HP list yang bisa digeser (Master Rate, Quotation, Daily Job): **geser kiri = aksi, geser kanan = pilih**. Baris pertama memberi petunjuk animasi intip sekali per perangkat (kunci localStorage per halaman).

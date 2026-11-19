@@ -218,3 +218,18 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-job2 > input[type=checkbox] { width: 16px; height: 16px; margin: 3px 0 0; flex: none; accent-color: var(--mr-navy, var(--navy)); cursor: pointer; }
 .dj-tb__c.mr-th-cek, .dj-tb__c.mr-td-cek { width: 38px; padding-right: 0; } .dj-tb__c input { width: 16px; height: 16px; accent-color: var(--mr-navy, var(--navy)); cursor: pointer; }
 .dj-job2 .dj-mw, .dj-tb .dj-mw { z-index: 1; }
+
+/* ---------- geser baris job di HP (seragam dengan Master Rate dan Quotation): kiri = aksi, kanan = pilih ---------- */
+.dj-sw { position: relative; overflow: hidden; border-radius: 12px; }
+.dj-sw__kiri { position: absolute; top: 0; bottom: 0; right: 0; width: 272px; display: flex; }
+.dj-sw__a { flex: 1 1 0; border: 0; background: var(--mr-navy, var(--navy)); color: #fff; font: inherit; font-size: 11.5px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; }
+.dj-sw__a.is-hapus { background: var(--danger); }
+.dj-sw > .dj-job2 { position: relative; transition: transform .25s ease; }
+.dj-sw.is-geser > .dj-job2 { transform: translateX(-272px); }
+@keyframes djIntip { 0%, 100% { transform: translateX(0); } 35%, 65% { transform: translateX(-46px); } }
+.dj-sw.is-intip > .dj-job2 { animation: djIntip 1.3s ease .9s 1; }
+@media (prefers-reduced-motion: reduce) { .dj-sw.is-intip > .dj-job2 { animation: none; } }
+.dj-job2.is-tahan { background: var(--sky-soft); }
+.dj-m-cek { width: 24px; height: 24px; flex-shrink: 0; margin: 0 7px 0 0; display: grid; place-items: center; border: 2px solid var(--border); border-radius: 50%; color: #fff; }
+.dj-m-cek.is-on { background: var(--mr-navy, var(--navy)); border-color: var(--mr-navy, var(--navy)); }
+@media (max-width: 760px) { .dj-ib[data-dj="pilih-mulai"] { display: none; } }
