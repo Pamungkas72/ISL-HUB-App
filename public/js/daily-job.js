@@ -249,13 +249,15 @@ async function kirimKomentar() {
     d.aktivitas.push(x); d.nilai = ""; segarkanKanan(); segarkanKop(); toast(nilai ? "Penilaian tersimpan." : "Komentar terkirim.");
   } catch (err) { console.error(err); toast("Belum terkirim: " + e(err.message || err), "bahaya"); }
 }
+/** Pesan galat unggah yang bisa ditindaklanjuti (kode Storage diterjemahkan). */
+const pesanUnggah = (err) => (err && err.code === "storage/unauthorized" ? "Tidak diizinkan mengunggah. Pastikan akun masuk kelompok Daily Job ini; file maks. 4 MB (gambar, PDF, Word, Excel, PowerPoint, CSV, ZIP)." : e((err && (err.message || err.code)) || err));
 async function unggahBerkas(files) {
   const j = jobDetail(); if (!j || !files.length) return; toast(`Mengunggah ${files.length} berkas…`, "info");
   try {
     const baru = [];
     for (const f of files) { const path = `dailyjob/${j.kelompokId}/${j.id}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`; baru.push({ nama: f.name, path, url: await unggahBlob(path, f, f.type || "application/octet-stream"), ukuran: f.size, tipe: f.type || "", oleh: S.u.nama || S.u.email, tgl: H.hariIni() }); }
     const file = [...(j.file || []), ...baru]; await updateDoc(doc(db, "dj_job", j.id), { file, diubah: serverTimestamp() }); j.file = file; S.detail.berkas = file.length - 1; segarkanTautan(j); render(); toast("Berkas tersimpan.");
-  } catch (err) { console.error(err); toast("Belum terunggah: " + e(err.message || err), "bahaya"); }
+  } catch (err) { console.error(err); toast("Belum terunggah: " + pesanUnggah(err), "bahaya"); }
 }
 function panelTarget(id) {
   const j = jobId(id); if (!j) return; const kep = adalahKepala(j);
@@ -539,7 +541,7 @@ async function simpanJob() {
     if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru); segarkanTautan(baru);
     if (!d.id) { S.hal = 0; S.status = "aktif"; } // job baru langsung terlihat di paling atas
     tutupLayer(); render(); toast("Job tersimpan.");
-  } catch (err) { console.error(err); toast("Job belum tersimpan: " + e(err.message || err), "bahaya"); tombol.disabled = false; tombol.textContent = "Simpan"; }
+  } catch (err) { console.error(err); toast("Job belum tersimpan: " + pesanUnggah(err), "bahaya"); tombol.disabled = false; tombol.textContent = "Simpan"; }
 }
 
 
@@ -796,6 +798,7 @@ export async function mulaiDailyJob(user, profil) {
 }
 
 /* ---------- pengingat catat job: 09.00, 14.00, 17.00 WIB ---------- */
+const TUTUP_PENGINGAT_MS = 30000; // pengingat 09.00, 14.00, 17.00 menutup sendiri setelah 30 detik
 export function pasangPengingat(user, profil) {
   const kelompok = (profil && profil.kelompokDJ) || null, kelola = !!window.__ISL_KELOLA;
   if (!kelompok && !kelola) return;
@@ -810,8 +813,9 @@ export function pasangPengingat(user, profil) {
     /* pita tipis di atas konten (desain 1): tidak menutupi isi di HP */
     kotak.innerHTML = `<span class="dj-ingat__teks"><b>Pengingat ${jam}</b> · ${p.terlambat.length} terlambat · ${p.hariIni.length} hari ini</span><button type="button" class="mr-btn mr-btn--utama dj-ingat__aksi" data-x="catat">Catat</button><button type="button" class="dj-ingat__x" data-x="nanti" aria-label="Tutup pengingat">✕</button>`;
     document.body.appendChild(kotak);
-    kotak.querySelector('[data-x="catat"]').onclick = () => { tandai(k); kotak.remove(); if (window.__rute === "dailyjob") { window.__djBukaForm = false; formJob(null); } else { window.__djBukaForm = true; location.hash = "#dailyjob"; } };
-    kotak.querySelector('[data-x="nanti"]').onclick = () => { tandai(k); kotak.remove(); };
+    const otomatis = setTimeout(() => { if (kotak.isConnected) { tandai(k); kotak.remove(); } }, TUTUP_PENGINGAT_MS); // tutup sendiri; dianggap "nanti"
+    kotak.querySelector('[data-x="catat"]').onclick = () => { clearTimeout(otomatis); tandai(k); kotak.remove(); if (window.__rute === "dailyjob") { window.__djBukaForm = false; formJob(null); } else { window.__djBukaForm = true; location.hash = "#dailyjob"; } };
+    kotak.querySelector('[data-x="nanti"]').onclick = () => { clearTimeout(otomatis); tandai(k); kotak.remove(); };
   };
   jagaPush(user.uid, (h) => toast(h)); // perbarui token notifikasi; pesan saat aplikasi terbuka jadi toast
   cek(); setInterval(cek, 60000);

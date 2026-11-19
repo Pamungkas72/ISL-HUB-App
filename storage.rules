@@ -66,12 +66,12 @@ service firebase.storage {
       return profilAktif() && firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.get('kelompokDJ', null) == k;
     }
     function djBoleh() { return request.resource.size <= 4 * 1024 * 1024
-      && (request.resource.contentType.matches('image/.*') || request.resource.contentType in ['application/pdf', 'text/csv', 'application/zip',
+      && (request.resource.contentType.matches('image/.*') || request.resource.contentType in ['application/pdf', 'text/csv', 'text/plain', 'application/zip', 'application/x-zip-compressed',
         'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']); }
     match /dailyjob/{kelompok}/{allPaths=**} {
-      allow read, delete: if isMaster() || (profilAktif() && (anggotaDJ(kelompok) || firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'admin'));
-      allow create, update: if folder != 'dailyjob' && (isMaster() || (profilAktif() && (anggotaDJ(kelompok) || firestore.get(/databases/(default)/documents/pengguna/$(request.auth.uid)).data.peran == 'admin'))) && djBoleh();
+      allow read, delete: if isMaster() || anggotaDJ(kelompok) || isAdmin();
+      allow create, update: if (isMaster() || anggotaDJ(kelompok) || isAdmin()) && djBoleh();
     }
 
     // Sales dan admin boleh mengunggah PDF dan lampiran quotation miliknya, tanda tangannya sendiri, dan foto galeri formulir.
