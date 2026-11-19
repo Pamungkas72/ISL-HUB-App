@@ -22,3 +22,19 @@
 ## Pertanyaan terbuka
 - Contoh MOM (PDF/gambar) dan logo/kop yang dipakai.
 - Daftar isi tiap template kontrak (pasal baku) dari pemilik/legal.
+
+## Keputusan lanjutan (19 Nov 2026)
+Tahap awal: **Kontrak berjalan (upload) + pengingat** dan **MOM**. Template kontrak ditunda (belum ada contoh).
+
+### MOM
+- **Desain UI**: B (satu halaman, bagian dilipat; pembahasan sebagai kartu). HP: bilah bawah Pratinjau + Buat PDF. Desktop: daftar bagian di kiri, editor di kanan.
+- **Desain PDF**: gaya quotation (kop ISL, huruf dan warna sama, kartu dan lencana A/B/C); semua PDF di sistem memakai karakter yang sama. Halaman 1 info, peserta, pembahasan, tindak lanjut, tanda tangan; halaman 2 Capaian Target (diisi manual) dan Dokumentasi foto.
+- **Fitur**: tanda tangan dari profil akun (alur sama dengan quotation; penyetuju opsional); tindak lanjut (PIC, tenggat, status); foto dokumentasi; nomor MOM otomatis (MOM/ISL/XI/2026/007); bahasa ID/English (aturan Bahasa dokumen); salin dari MOM lama; bagikan PDF (WhatsApp/email); kaitkan ke customer/kontrak; Draf -> Final (terkunci, revisi = versi baru).
+- **Peserta**: ketik bebas + saran dari nama yang pernah dipakai.
+- **Akses**: semua akun membuat MOM sendiri; admin/master melihat semua. Menu Legal tampil untuk semua peran, tetapi tab Kontrak dan Dokumen perusahaan hanya admin/master.
+- Bagian "Hasil Visit" dibuang; tiap topik bisa diberi label (Meeting/Visit).
+
+### Kontrak berjalan
+- Upload PDF kontrak customer/vendor. Data: nomor, pihak, jenis (kontrak/MOU/addendum), lini bisnis, tanggal mulai dan berakhir, nilai, PIC internal.
+- Tambahan: perpanjangan otomatis (penanda), catatan, riwayat perpanjangan (lampiran versi baru), status otomatis (aktif/segera habis/berakhir).
+- Pengingat: 60 dan 30 hari sebelum berakhir.
