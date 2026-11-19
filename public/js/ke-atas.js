@@ -17,6 +17,8 @@
   }
   function perbarui() {
     tombol.classList.toggle("is-tampil", posisi() > AMBANG_PX);
+    var di = document.documentElement, dasar = posisi() > 80 && posisi() + window.innerHeight >= di.scrollHeight - 24; // di dasar halaman: tombol + memudar
+    document.body.classList.toggle("di-dasar", dasar);
   }
   tombol.addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: "smooth" });
