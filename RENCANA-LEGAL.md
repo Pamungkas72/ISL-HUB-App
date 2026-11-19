@@ -49,3 +49,9 @@ Tahap awal: **Kontrak berjalan (upload) + pengingat** dan **MOM**. Template kont
 - Pencarian di paling atas; tombol Buat MOM dan Tambah dokumen di header dihapus; Ringkasan dan tab Semua dihapus (peringatan kontrak jadi banner di tab Kontrak dan tetap di lonceng).
 - Tiga tab: **Perusahaan** (kartu kelengkapan per perusahaan grup: induk dan anak, 8 jenis dokumen legalitas, cincin kelengkapan; ketuk untuk detail), **Kontrak** (customer, vendor, MOU; unggah file atau simpan draf), **MOM** (dikelompokkan per bulan).
 - Satu tombol + (FAB bulat, bahasa desain Master Rate dan Customer) dengan aksi menurut tab. Koleksi baru `lg_perusahaan` (master dan admin).
+
+## Daftar Kontrak dan MOM: geser dan pilih banyak (19 Nov 2026)
+- Pola sama dengan Daily Job. HP: **geser kanan** = Kontrak (Ubah, Perpanjang, File, Bagikan) atau MOM (Ubah/Buka, PDF, Bagikan, Salin); **geser kiri** = Hapus; **tekan lama** = pilih banyak. Desktop dan HP: tautan **Pilih** lalu **Pilih semua**.
+- Bilah aksi massal: Kontrak = Ubah status (jadikan aktif, auto-renew) dan Hapus; MOM = PDF gabungan (hanya yang final) dan Hapus. MOM final hanya bisa dihapus master/admin.
+- **Urutkan**: Kontrak (jatuh tempo, nama, terbaru), MOM (tanggal, judul, nomor).
+- **Pengingat tugas MOM** di lonceng: tugas yang lewat tenggat atau jatuh tempo dalam 2 hari, untuk pencatat MOM (master/admin melihat semua). PIC ditulis bebas, jadi belum ada push langsung ke akun PIC.
