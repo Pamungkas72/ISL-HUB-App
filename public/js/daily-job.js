@@ -15,7 +15,7 @@ import * as H from "./daily-job-hitung.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 
-const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", terbuka: "", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
+const S = { u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 const namaKel = (id) => (S.kelompok.find((k) => k.id === id) || {}).nama || "–";
@@ -135,12 +135,19 @@ function menuJob(j, naik) {
 }
 
 /** Kartu job (HP): judul, customer dan kategori, PIC, target dan posisi; menu ⋯ di ujung. */
+const svg = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IK_ST = { telat: svg('<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>'), hari: svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'), n: svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'), ok: svg('<path d="M5 12l5 5 9-10"/>'), mu: svg('<path d="M6 6l12 12M18 6L6 18"/>') };
+/** Kelas ikon status: telat, hari (jatuh tempo hari ini), ok (selesai), mu (batal), n (normal). */
+const kelasSt = (j, now) => (j.status === "selesai" ? "ok" : j.status === "batal" ? "mu" : H.terlambat(j, now) ? "telat" : H.aktif(j) && j.tglTarget === now ? "hari" : "n");
+const ikonSt = (j, now, kecil) => { const k = kelasSt(j, now); return `<span class="dj-ik dj-ik--${k}${kecil ? " dj-ik--k" : ""}" aria-hidden="true">${IK_ST[k]}</span>`; };
 function barisJob(j, now) {
-  const ada = pilihAktif(), tombol = [...(H.aktif(j) ? [["a-selesai", "cek", "Selesai", "ok"]] : []), ["a-ubah", "edit", "Ubah", "sky"], ["a-bagikan", "salin", "Bagikan", "info"], ["a-hapus", "tong", "Hapus", "bahaya"]];
-  const aksi = ada ? "" : `<div class="dj-sw">${tombol.map(([a, i, t, w]) => `<button type="button" class="dj-sw__${w}" data-dj="${a}" data-id="${e(j.id)}">${ikon(i, 18)}<span>${t}</span></button>`).join("")}</div>`;
-  return `<div class="dj-rw${S.terbuka === j.id ? " is-buka" : ""}" data-w="${ada ? 0 : tombol.length * 62}" style="--dj-w:${tombol.length * 62}px">${aksi}<div class="dj-job2${S.pilih.has(j.id) ? " is-pilih" : ""}${H.terlambat(j, now) ? " is-telat" : ""}${S.terbuka === j.id ? " is-geser" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0" role="button">${ada ? cbx(S.pilih.has(j.id), "cb", j.id) : ""}
-    <div class="dj-job__isi"><b>${e(j.judul)}</b><small>${[j.customer, j.kategori].filter(Boolean).map(e).join(" · ")}${infoJob(j)}</small>
-    <div class="dj-job__kaki"><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span><span class="dj-job__t"><small>${tglPendek(j)}</small>${badgeTarget(j, now)}</span></div></div></div></div>`;
+  const ada = pilihAktif(), akt = [...(H.aktif(j) ? [["a-selesai", "cek", "Selesai", "ok"]] : []), ["a-ubah", "edit", "Ubah", "sky"], ["a-bagikan", "salin", "Bagikan", "info"]];
+  const btn = ([a, i, t, w]) => `<button type="button" class="dj-sw__${w}" data-dj="${a}" data-id="${e(j.id)}">${ikon(i, 18)}<span>${t}</span></button>`;
+  const panel = ada ? "" : `<div class="dj-sw dj-sw--kiri">${akt.map(btn).join("")}</div><div class="dj-sw dj-sw--kanan">${btn(["a-hapus", "tong", "Hapus", "bahaya"])}</div>`;
+  const buka = S.terbuka === j.id ? ` is-geser-${S.sisi}` : "";
+  return `<div class="dj-rw${S.terbuka === j.id ? " is-buka" : ""}" data-wa="${ada ? 0 : akt.length * 62}" data-wh="${ada ? 0 : 80}" style="--dj-wa:${akt.length * 62}px">${panel}<div class="dj-job2${S.pilih.has(j.id) ? " is-pilih" : ""}${buka}" data-dj="buka" data-id="${e(j.id)}" tabindex="0" role="button">${ada ? cbx(S.pilih.has(j.id), "cb", j.id) : ikonSt(j, now)}
+    <div class="dj-job__isi"><b>${e(j.judul)}</b><small>${[j.customer, j.kategori].filter(Boolean).map(e).join(" · ")}</small><span class="dj-job__pic">${avatar(j.pic)}${e(j.pic || "–")}${infoJob(j)}</span></div>
+    <div class="dj-job__t"><b>${tglPendek(j)}</b>${badgeTarget(j, now)}</div></div></div>`;
 }
 
 /** Tabel job (desktop): Job, Kategori, PIC, Target (tanggal + posisi), ⋯. Kotak centang hanya saat mode pilih. */
@@ -148,7 +155,7 @@ function htmlTabelJob(l, now) {
   const ada = pilihAktif(), semua = l.length > 0 && l.every((j) => S.pilih.has(j.id));
   return `<div class="mr-kartu dj-kartu dj-tbw"><table class="dj-tb"><thead><tr>${ada ? `<th class="dj-tb__c mr-th-cek">${cbx(semua, "cb-semua")}</th>` : `<th class="dj-tb__c"></th>`}<th>Job</th><th>Kategori</th><th>PIC</th><th>Target</th><th class="dj-tb__m"></th></tr></thead><tbody>
   ${l.map((j, i) => `<tr class="${S.pilih.has(j.id) ? "is-pilih" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0">${ada ? `<td class="dj-tb__c mr-td-cek">${cbx(S.pilih.has(j.id), "cb", j.id)}</td>` : `<td class="dj-tb__c"><button type="button" class="dj-cb0" data-dj="cb0" data-id="${e(j.id)}" title="Pilih job" aria-label="Pilih job"></button></td>`}
-    <td><b>${e(j.judul)}</b><small>${e(j.customer || "")}${infoJob(j)}</small></td><td><span class="dj-chip dj-chip--info">${e(j.kategori || "–")}</span></td>
+    <td><div class="dj-tb__j">${ikonSt(j, now, true)}<div><b>${e(j.judul)}</b><small>${e(j.customer || "")}${infoJob(j)}</small></div></div></td><td><span class="dj-chip dj-chip--info">${e(j.kategori || "–")}</span></td>
     <td><span class="dj-pic">${avatar(j.pic)} ${e(j.pic || "–")}</span></td><td class="dj-tb__t"><span>${tglPendek(j)}</span>${badgeTarget(j, now)}</td><td class="dj-tb__m">${ada ? "" : menuJob(j, l.length > 3 && i >= l.length - 2)}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
@@ -625,31 +632,31 @@ async function hapusJob(ids) {
   catch (err) { toast("Belum bisa dihapus: " + e(err.message || err), "bahaya"); }
 }
 
-/* HP: geser kiri = aksi (Selesai, Ubah, Bagikan, Hapus), geser kanan = Pilih, tekan lama = pilih banyak (sama dengan Master Rate dan Quotation) */
+/* HP: geser kanan = aksi (Selesai, Ubah, Bagikan), geser kiri = Hapus, tekan lama = pilih banyak */
 let sw = null, blokKlik = 0;
-const tutupRw = (rw) => setTimeout(() => rw && !rw.querySelector(".is-geser") && rw.classList.remove("is-buka"), 260);
-const tutupGeser = () => { S.terbuka = ""; document.querySelectorAll(".dj-job2.is-geser").forEach((el) => { el.classList.remove("is-geser"); el.style.transform = ""; tutupRw(el.parentElement); }); };
+const tutupRw = (rw) => setTimeout(() => rw && !rw.querySelector(".is-geser-aksi, .is-geser-hapus") && rw.classList.remove("is-buka"), 260);
+const tutupGeser = () => { S.terbuka = ""; document.querySelectorAll(".dj-job2.is-geser-aksi, .dj-job2.is-geser-hapus").forEach((el) => { el.classList.remove("is-geser-aksi", "is-geser-hapus"); el.style.transform = ""; tutupRw(el.parentElement); }); };
 document.addEventListener("touchstart", (ev) => {
   if (window.__rute !== "dailyjob") return;
   const el = ev.target.closest(".dj-job2");
   if (S.terbuka && (!el || el.dataset.id !== S.terbuka) && !ev.target.closest(".dj-sw")) tutupGeser();
   if (!el || ev.target.closest("input")) { sw = null; return; }
-  const t = ev.touches[0], id = el.dataset.id, lebar = +el.parentElement.dataset.w || 0;
-  sw = { el, id, x: t.clientX, y: t.clientY, dx: 0, mode: "", lebar, dasar: S.terbuka === id ? -lebar : 0 };
+  const t = ev.touches[0], id = el.dataset.id, rw = el.parentElement, wa = +rw.dataset.wa || 0, wh = +rw.dataset.wh || 0;
+  sw = { el, id, x: t.clientX, y: t.clientY, dx: 0, mode: "", wa, wh, dasar: S.terbuka === id ? (S.sisi === "aksi" ? wa : -wh) : 0 };
   sw.lama = setTimeout(() => { if (sw && !sw.mode) { sw.mode = "tekan"; blokKlik = Date.now(); if (navigator.vibrate) navigator.vibrate(15); pilihAktif() ? togglePilih(sw.id) : mulaiPilih(sw.id); } }, 480);
 }, { passive: true });
 document.addEventListener("touchmove", (ev) => {
   if (!sw) return; const t = ev.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
   if (!sw.mode) { if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { clearTimeout(sw.lama); sw = null; return; } if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3 && !pilihAktif()) { clearTimeout(sw.lama); sw.mode = "geser"; sw.el.style.transition = "none"; sw.el.parentElement.classList.add("is-buka"); } else return; }
   if (sw.mode !== "geser") return; ev.preventDefault(); sw.dx = dx;
-  sw.el.style.transform = `translateX(${Math.max(-sw.lebar, Math.min(90, sw.dasar + dx))}px)`;
+  sw.el.style.transform = `translateX(${Math.max(-sw.wh, Math.min(sw.wa, sw.dasar + dx))}px)`;
 }, { passive: false });
 document.addEventListener("touchend", () => {
-  if (!sw) return; clearTimeout(sw.lama); const { el, id, dasar, dx, mode, lebar } = sw; sw = null; if (mode !== "geser") return;
-  blokKlik = Date.now(); el.style.transition = ""; const akhir = dasar + dx;
-  if (akhir < -lebar * 0.4) { tutupGeser(); S.terbuka = id; el.classList.add("is-geser"); el.style.transform = ""; }
-  else if (akhir > 60) { el.style.transform = ""; tutupRw(el.parentElement); mulaiPilih(id); }
-  else { el.style.transform = ""; if (S.terbuka === id) { S.terbuka = ""; el.classList.remove("is-geser"); } tutupRw(el.parentElement); }
+  if (!sw) return; clearTimeout(sw.lama); const { el, id, dasar, dx, mode, wa, wh } = sw; sw = null; if (mode !== "geser") return;
+  blokKlik = Date.now(); el.style.transition = ""; const akhir = dasar + dx; el.style.transform = "";
+  if (wa && akhir > wa * 0.4) { tutupGeser(); S.terbuka = id; S.sisi = "aksi"; el.classList.add("is-geser-aksi"); el.parentElement.classList.add("is-buka"); }
+  else if (wh && akhir < -wh * 0.4) { tutupGeser(); S.terbuka = id; S.sisi = "hapus"; el.classList.add("is-geser-hapus"); el.parentElement.classList.add("is-buka"); }
+  else { if (S.terbuka === id) { S.terbuka = ""; el.classList.remove("is-geser-aksi", "is-geser-hapus"); } tutupRw(el.parentElement); }
 });
 /* petunjuk sekali saja: kartu pertama bergeser sedikit supaya orang tahu bisa digeser */
 let sudahIntip = false;
