@@ -398,7 +398,7 @@ service cloud.firestore {
     }
     match /dj_kelompok/{id} {
       allow read: if aktifDJ();
-      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori']) && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map;
+      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori', 'profil']) && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map && request.resource.data.get('profil', 'marketing') in ['marketing', 'tracking'];
       allow delete: if isKelola();
     }
     match /dj_job/{id} {

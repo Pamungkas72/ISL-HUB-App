@@ -248,3 +248,11 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-sw button { width: 62px; border: 0; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: 700 10.5px var(--font-body); cursor: pointer; } .dj-sw--kanan button { width: 80px; }
 .dj-sw__ok { background: #2E9E6D; } .dj-sw__sky { background: #4B82C4; } .dj-sw__info { background: #2F8FDB; } .dj-sw__bahaya { background: #D64545; }
 .dj-tb__j { display: flex; align-items: center; gap: 10px; } .dj-tb td { padding: 7px 12px; }
+
+/* Profil Tracking: formulir berbagian (desktop) / tiga langkah (HP), pemilih kelompok, volume armada */
+.dj-lng { display: contents; } .dj-lng[hidden] { display: none; } .dj-lng__h { grid-column: 1 / -1; margin: 12px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--head); } .dj-lng:first-child .dj-lng__h { margin-top: 0; } .dj-sembunyi { display: none; }
+.dj-form--tr .dj-lebar { grid-column: 1 / -1; }
+.dj-kelbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; } .dj-kelsel { display: inline-flex; align-items: center; gap: 8px; } .dj-kelsel select { height: 38px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--head); font: 600 14px var(--font-body); padding: 0 14px; }
+.dj-vol { margin: 10px 0; font-size: 13px; } .dj-vol__b { height: 8px; margin-top: 4px; border-radius: 6px; background: var(--border); overflow: hidden; } .dj-vol__b i { display: block; height: 100%; background: var(--sky); }
+.dj-tb__sb { display: block; }
+.dj-t-prev[hidden], .dj-t-next[hidden], .dj-t-batal[hidden], #dj-simpan[hidden] { display: none !important; }
