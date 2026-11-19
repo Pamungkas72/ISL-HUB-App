@@ -2419,7 +2419,7 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 }
 
 /* ---------- Beranda (js/dashboard.js): revenue, tugas, pintasan. Warna lewat variabel tema. ---------- */
-.bd { max-width: 1180px; }
+.bd { max-width: 1180px; margin-inline: auto; width: 100%; }
 .bd h1 { font: 700 24px var(--font-head); color: var(--head); margin: 0; }
 .bd-top { margin-bottom: 14px; } .bd-top small { color: var(--muted); }
 .bd-hero { background: var(--grad); color: #fff; border-radius: var(--radius-lg); padding: 14px 18px; margin-bottom: 14px; }
@@ -2461,7 +2461,7 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .bd-pil { font: 600 11px var(--font-body); padding: 2px 8px; border-radius: 99px; background: var(--success-soft); color: var(--success); justify-self: start; } .bd-pil.is-bawah { background: var(--accent-soft); color: #b86a00; }
 .bd-spark { width: 84px; height: 26px; fill: none; stroke: var(--sky); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; } .bd-spark.is-bawah { stroke: var(--accent); }
 .bd-jud { margin: 18px 0 10px; font: 700 15px var(--font-head); color: var(--head); display: flex; justify-content: space-between; } .bd-jud a { font: 600 12px var(--font-body); color: var(--sky); text-decoration: none; }
-.bd-dj { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.bd-dj { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 14px; }
 .bd-djk { display: block; text-decoration: none; color: inherit; margin: 0 !important; } .bd-djk__h { display: flex; justify-content: space-between; } .bd-djk__h b { color: var(--head); } .bd-djk__h span { color: var(--sky); font: 600 12px var(--font-body); }
 .bd-djk__g { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; } .bd-djk__g small, .bd-djk small { color: var(--muted); font-size: 12px; } .bd-djk__g b { display: block; font: 700 18px var(--font-head); color: var(--head); } .bd-djk__g b.dn { color: var(--danger); }
 .bd-dua { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; align-items: start; margin-bottom: 14px; }
@@ -2473,3 +2473,13 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
   .bd-tabel__r > b { grid-column: 1; } .bd-tabel__r > .bd-rv { grid-column: 1; font-weight: 600; } .bd-tabel__r > .bd-bar { grid-column: 1 / -1; order: 5; }
   .bd-tabel__r > .bd-pil { grid-column: 1; } .bd-tabel__r > .bd-od { grid-column: 1; font-size: 12px; } .bd-tabel__r > .bd-spark { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
 }
+
+/* Proporsi: kolom kanan setinggi kolom kiri; pintasan mengisi kartu */
+.bd-dua > div { align-self: stretch; display: flex; flex-direction: column; } .bd-dua > div > .bd-kartu { flex: 1; }
+.bd-kol .bd-pin { flex: 1; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; } .bd-pin a { justify-content: center; padding: 18px 8px; font-size: 13px; }
+.bd-pin svg { width: 26px; height: 26px; }
+.bd-kpi { display: flex; flex-direction: column; justify-content: center; }
+@media (max-width: 1000px) { .bd-kpis { grid-template-columns: 1fr 1fr; } .bd-dua { grid-template-columns: 1fr; } .bd-tabel__h, .bd-tabel__r { grid-template-columns: 1.4fr 1fr 1.2fr .6fr .8fr 84px; gap: 8px; } }
+@media (max-width: 760px) { .bd-pin { grid-template-columns: 1fr 1fr !important; } .bd-kol .bd-pin a { padding: 14px 6px; } }
+.bd-kol > .bd-kartu { display: flex; flex-direction: column; } .bd-kol > .bd-kartu > h3 { flex: none; }
+@media (max-width: 760px) { .bd-tabel__r { grid-template-columns: 1fr 84px; gap: 4px 10px; } }
