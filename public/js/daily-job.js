@@ -798,6 +798,7 @@ export async function mulaiDailyJob(user, profil) {
 }
 
 /* ---------- pengingat catat job: 09.00, 14.00, 17.00 WIB ---------- */
+const TUTUP_PENGINGAT_MS = 30000; // pengingat 09.00, 14.00, 17.00 menutup sendiri setelah 30 detik
 export function pasangPengingat(user, profil) {
   const kelompok = (profil && profil.kelompokDJ) || null, kelola = !!window.__ISL_KELOLA;
   if (!kelompok && !kelola) return;
@@ -812,8 +813,9 @@ export function pasangPengingat(user, profil) {
     /* pita tipis di atas konten (desain 1): tidak menutupi isi di HP */
     kotak.innerHTML = `<span class="dj-ingat__teks"><b>Pengingat ${jam}</b> · ${p.terlambat.length} terlambat · ${p.hariIni.length} hari ini</span><button type="button" class="mr-btn mr-btn--utama dj-ingat__aksi" data-x="catat">Catat</button><button type="button" class="dj-ingat__x" data-x="nanti" aria-label="Tutup pengingat">✕</button>`;
     document.body.appendChild(kotak);
-    kotak.querySelector('[data-x="catat"]').onclick = () => { tandai(k); kotak.remove(); if (window.__rute === "dailyjob") { window.__djBukaForm = false; formJob(null); } else { window.__djBukaForm = true; location.hash = "#dailyjob"; } };
-    kotak.querySelector('[data-x="nanti"]').onclick = () => { tandai(k); kotak.remove(); };
+    const otomatis = setTimeout(() => { if (kotak.isConnected) { tandai(k); kotak.remove(); } }, TUTUP_PENGINGAT_MS); // tutup sendiri; dianggap "nanti"
+    kotak.querySelector('[data-x="catat"]').onclick = () => { clearTimeout(otomatis); tandai(k); kotak.remove(); if (window.__rute === "dailyjob") { window.__djBukaForm = false; formJob(null); } else { window.__djBukaForm = true; location.hash = "#dailyjob"; } };
+    kotak.querySelector('[data-x="nanti"]').onclick = () => { clearTimeout(otomatis); tandai(k); kotak.remove(); };
   };
   jagaPush(user.uid, (h) => toast(h)); // perbarui token notifikasi; pesan saat aplikasi terbuka jadi toast
   cek(); setInterval(cek, 60000);
