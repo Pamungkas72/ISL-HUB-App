@@ -2404,14 +2404,16 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .ik-hp { display: none; }
 @media (max-width: 760px) {
   .ik-d { display: none; } .ik-hp { display: block; } .app-nav .ik-hp:not(.ik-isi) { fill: none; stroke: currentColor; } .app-nav .ik-hp { width: 22px; height: 22px; }
-  .app-nav { left: 10px; right: 10px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: auto; height: 58px; min-height: 58px; max-height: 58px; padding: 6px; border-radius: 29px; box-shadow: 0 10px 26px rgba(0,0,0,.35); }
+  .app-nav { left: 10px; right: 10px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: auto; height: 58px; min-height: 58px; max-height: 58px; padding: 6px; border-radius: 29px; box-shadow: 0 10px 26px rgba(26,166,201,.4); }
+  :root:root:root .app-nav { background: linear-gradient(110deg, #0B8F8A, #1AA6C9 55%, #2F7BE0); } /* teal aurora, sama di tema terang dan gelap */
   .app-nav__list { justify-content: flex-start; gap: 4px; padding-right: 22px; scroll-behavior: smooth; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent); }
   .app-nav .app-nav__list > li { flex: 0 0 auto; }
-  .app-nav .app-nav__list .nav-item { flex-direction: row; gap: 7px; width: auto; padding: 0 14px; border-radius: 22px; font-size: 12.5px; white-space: nowrap; opacity: .85; }
+  .app-nav .app-nav__list .nav-item { flex-direction: row; gap: 7px; width: auto; padding: 0 14px; border-radius: 22px; font-size: 12.5px; white-space: nowrap; color: rgba(255,255,255,.82); }
+  .app-nav .app-nav__list .nav-item svg { color: inherit; }
   .app-nav .nav-item__teks, .app-nav .nav-item__badge { display: none; }
-  .app-nav .app-nav__list .nav-item.is-active { background: #fff; color: var(--navy); font-weight: 700; opacity: 1; box-shadow: none; }
+  .app-nav .app-nav__list .nav-item.is-active { background: #fff; color: #0B6F8F; font-weight: 700; box-shadow: none; }
   .app-nav .nav-item.is-active .nav-item__teks { display: inline; }
-  .app-nav .nav-item.is-active svg { color: var(--accent); }
+  .app-nav .app-nav__list .nav-item.is-active svg { color: #0FB5AE; }
   .app-main { padding-bottom: 88px; }
   .ke-atas { bottom: calc(98px + env(safe-area-inset-bottom, 0px)); }
 }
