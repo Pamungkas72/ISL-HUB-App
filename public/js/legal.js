@@ -68,13 +68,12 @@ function tabPerusahaan() {
   const ps = S.pers.filter((p) => cocok([p.nama, ...docsPt(p).map((k) => [k.pihak, k.nomor, k.jenisDok].join(" "))].join(" ")));
   return `<div class="lg-grid">${ps.map(kartuPt).join("")}${S.cari ? "" : `<button type="button" class="lg-pt lg-pt--baru" data-lg="pt-baru">${ikon("plus", 16)} Tambah perusahaan</button>`}</div>${!ps.length && S.cari ? kosong("Tidak ada perusahaan atau dokumen yang cocok.") : ""}`;
 }
+const chipL = (v, on, label, n, warn) => `<button type="button" class="cu-chip${on ? " is-on" : ""}${warn && n ? " is-warn" : ""}" data-lg-fj="${v}">${label}${n != null ? ` <em>${n}</em>` : ""}</button>`; // sama dengan chip cepat halaman Customer
 function tabKontrak() {
-  const nonPt = S.kontrak.filter((k) => k.jenis !== "perusahaan"), ab = akanBerakhir().filter((k) => k.jenis !== "perusahaan"), ber = sudahBerakhir().filter((k) => k.jenis !== "perusahaan");
-  const f = { "": () => true, customer: (k) => k.jenis === "customer", vendor: (k) => k.jenis === "vendor", lain: (k) => ["mou", "addendum"].includes(k.jenis), draf: (k) => k.draf, segera: (k) => ["segera", "mendesak"].includes(statusKontrak(k).kode) }[S.fJenis] || (() => true);
-  const tampil = nonPt.filter((k) => f(k) && cocok([k.pihak, k.nomor, k.lini].join(" "))).sort(urut);
-  const chips = [["", "Semua"], ["customer", "Customer"], ["vendor", "Vendor"], ["lain", "MOU dan lainnya"], ["draf", "Draf"], ["segera", "Segera habis"]];
-  return `<div class="mr-chips lg-chips">${chips.map(([v, l]) => `<button type="button" class="mr-chip${S.fJenis === v ? " is-aktif" : ""}" data-lg-fj="${v}">${l}${v === "draf" ? ` <span>${nonPt.filter((k) => k.draf).length}</span>` : v === "segera" ? ` <span>${ab.length}</span>` : ""}</button>`).join("")}</div>
-    ${ab.length || ber.length ? `<button type="button" class="lg-alert" data-lg-fj="segera"><b>${ikon("peringatan", 16)} ${ab.length} kontrak habis dalam ${BATAS_HARI.segera} hari${ber.length ? " · " + ber.length + " sudah berakhir" : ""}</b><span>Lihat</span></button>` : ""}
+  const nonPt = S.kontrak.filter((k) => k.jenis !== "perusahaan"), kode = (k) => statusKontrak(k).kode, n = (fn) => nonPt.filter(fn).length;
+  const F = { "": () => true, customer: (k) => k.jenis === "customer", vendor: (k) => k.jenis === "vendor", lain: (k) => ["mou", "addendum"].includes(k.jenis), draf: (k) => k.draf, segera: (k) => ["segera", "mendesak"].includes(kode(k)), berakhir: (k) => kode(k) === "berakhir" }, f = F[S.fJenis] || (() => true);
+  const tampil = nonPt.filter((k) => f(k) && cocok([k.pihak, k.nomor, k.lini].join(" "))).sort(urut), c = (v, l, fn, warn) => chipL(v, S.fJenis === v, l, v === "" ? null : n(fn), warn);
+  return `<div class="cu-chips">${chipL("", !S.fJenis, "Semua", null)}${c("customer", "Customer", F.customer)}${c("vendor", "Vendor", F.vendor)}${c("lain", "MOU", F.lain)}${c("segera", ikon("peringatan", 14) + " Segera habis", F.segera, true)}${c("draf", "Draf", F.draf)}${c("berakhir", "Berakhir", F.berakhir)}</div>
     <div class="mr-kartu lg-daftar">${tampil.map(barisKontrak).join("") || kosong("Belum ada kontrak. Ketuk tombol + untuk mengunggah kontrak yang sedang berjalan atau menyimpan draf.")}</div>`;
 }
 function tabMom() {
@@ -82,7 +81,7 @@ function tabMom() {
   const tampil = S.mom.filter((m) => f(m) && cocok([m.judul, m.nomor, m.customerNama, m.pemilikNama].join(" "))).sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
   let bln = "", isi = "";
   tampil.forEach((m) => { const b = m.tanggal ? new Date(m.tanggal + "T00:00:00Z").toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).toUpperCase() : "TANPA TANGGAL"; if (b !== bln) { bln = b; isi += `<div class="lg-bln">${e(b)}</div>`; } isi += barisMom(m); });
-  return `<div class="mr-chips lg-chips">${[["", "Semua"], ["draf", "Draf"], ["final", "Final"]].map(([v, l]) => `<button type="button" class="mr-chip${S.fJenis === v ? " is-aktif" : ""}" data-lg-fj="${v}">${l}${v === "draf" ? ` <span>${S.mom.filter((m) => m.status !== "final").length}</span>` : ""}</button>`).join("")}</div><div class="mr-kartu lg-daftar">${isi || kosong("Belum ada MOM. Ketuk tombol + untuk mencatat rapat pertama.")}</div>`;
+  return `<div class="cu-chips">${[["", "Semua"], ["draf", "Draf"], ["final", "Final"]].map(([v, l]) => chipL(v, S.fJenis === v, l, v === "draf" ? S.mom.filter((m) => m.status !== "final").length : v === "final" ? S.mom.filter((m) => m.status === "final").length : null)).join("")}</div><div class="mr-kartu lg-daftar">${isi || kosong("Belum ada MOM. Ketuk tombol + untuk mencatat rapat pertama.")}</div>`;
 }
 const FAB = { perusahaan: ["tameng-plus", "Tambah perusahaan atau dokumen"], kontrak: ["berkas-plus", "Tambah kontrak"], mom: ["papan-plus", "Buat MOM"] };
 function gambar() {
