@@ -8171,6 +8171,29 @@ window.__qt = {
   buka: bukaId, baru: mulaiBaru, _Q: Q, _R: R, _Repo: Repo, _riwayatQ: rwSeperQ, _AQ: AQ, _renderDok: renderDok, _renderFit: renderDokFit, unduhRatePdf, _buatDocx: buatDocx, _namaFileWord: namaFileWord, _f: { barisDariLayanan, mrLayananLini, layananByKunci, modalTertinggiDepo, templateBaris, templateKunci, liniPunyaTemplate, liniBerTemplate, kolomLini, kolomBawaan, kolomTersimpan, cariMirip, terkaitCustomer, orderTerkait, cariCustomer, periodeAtur, periodeBaru, periodeTerakhir, statusPeriode, rkBangun, versiRatePeriode, LAP, imTgl, imNum, angkaRp, fmtRpIn, imCariCust, imCocok, belumDipakai, realisasiQ, rateBerlakuPada, senin, tambahHariIso, akhirBulan, DB, pastikanCustomer, kunciGrup }, _util: { senin, tambahHariIso, akhirBulan, hariAntara, periodeBaru, periodeAtur, periodeSebelumnya, periodeTerakhir, imTgl, imNum, angkaRp, angkaDok, versiRatePeriode }, _taruh: taruhPratinjau, _PENG: PENG, _buatPdf: buatPdf, _tungguGambar: tungguGambar
 };
 
+/* ---------- data Beranda: revenue, tren, per lini, customer teratas, hitungan quotation ----------
+   Master/admin: dari order (qt_orders). Sales: dari quotation disetujui miliknya (order tidak terbaca akun sales). Target bulanan: PENG.targetRevenue.bulanan (hanya master yang mengubah). */
+window.__islBeranda = {
+  target: () => Number((PENG.targetRevenue || {}).bulanan) || 0,
+  simpanTarget: async n => { PENG.targetRevenue = { bulanan: Math.max(0, Math.round(Number(n) || 0)) }; await Repo.simpanPengaturan(PENG); },
+  ringkas(per) {
+    const hi = HARI_INI(), y = +hi.slice(0, 4), m = +hi.slice(5, 7), dariOrder = masterAtauAdmin();
+    const tglLog = (q, ke) => { const l = (q.log || []).slice().reverse().find(x => x.ke === ke); return l && l.waktu ? l.waktu.slice(0, 10) : (q.dibuat || ''); };
+    const semua = dariOrder ? DB.orders.flatMap(o => LAP.garisDari(o))
+      : DB.list.filter(q => q.status === 'disetujui').flatMap(q => (q.baris || []).map(b => ({ oid: q.id, cid: q.customerId, cust: q.customerNama || (cust(q.customerId) || {}).nama || 'Tanpa customer', tanggal: tglLog(q, 'disetujui'), liniKey: b.liniKey, lini: b.liniNama || namaLini(b.liniKey), omzet: Math.round((Number(b.jual) || 0) * (Number(b.qty) || 0)), modal: null, laba: null })));
+    const [a, b] = LAP.rentang(per, '', ''), L = semua.filter(l => l.tanggal >= a && l.tanggal <= b), A = LAP.agg(L);
+    const lalu = per === 'bulan' ? LAP.agg(semua.filter(l => { const [c, d] = LAP.rentang('bulan-lalu', '', ''); return l.tanggal >= c && l.tanggal <= d; })).omzet : null;
+    const tren = Array.from({ length: 6 }, (_, i) => { const d = new Date(y, m - 1 - (5 - i), 1), k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; return { k, label: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][d.getMonth()], omzet: semua.filter(l => bulanKey(l.tanggal) === k).reduce((t, l) => t + l.omzet, 0) }; });
+    const urut = g => g.sort((x, z) => z.omzet - x.omzet);
+    const lini = urut(LAP.kelompok(L, 'lini')).slice(0, 8).map(g => ({ nama: g.nama, omzet: g.omzet, margin: g.marginPct, order: g.order, bawahTarget: g.poin !== null && g.poin < 0, tren: tren.map(t => semua.filter(l => (l.liniKey || '-') === g.id && bulanKey(l.tanggal) === t.k).reduce((z, l) => z + l.omzet, 0)) }));
+    const top = urut(LAP.kelompok(L, 'customer')).slice(0, 3).map(g => ({ nama: g.nama, omzet: g.omzet }));
+    const aktif = DB.list.filter(q => !q.digantikanOleh && !q.arsip), setuju = DB.list.filter(q => q.status === 'disetujui' && tglLog(q, 'disetujui') >= a && tglLog(q, 'disetujui') <= b).length, tolak = DB.list.filter(q => q.status === 'ditolak' && tglLog(q, 'ditolak') >= a && tglLog(q, 'ditolak') <= b).length;
+    const kali = per === 'bulan' ? 1 : per === '3bulan' ? 3 : 12, sisaHari = new Date(y, m, 0).getDate() - +hi.slice(8, 10);
+    return { dariOrder, margin: masterSaja() ? A.marginPct : null, omzet: A.omzet, order: A.order, lalu, tren, lini, top, target: (Number((PENG.targetRevenue || {}).bulanan) || 0) * kali,
+      aktif: aktif.filter(q => ['draf', 'terkirim'].includes(q.status)).length, draf: aktif.filter(q => q.status === 'draf').length, menunggu: aktif.filter(q => q.status === 'terkirim').length, setuju, tolak, sisaHari: per === 'bulan' ? sisaHari : null };
+  }
+};
+
 /* ---------- dokumen umum bergaya quotation untuk modul lain (MOM di Legal): blok HTML mengalir ke halaman A4 berkop ---------- */
 async function renderDokUmum(blok, { judul, lanjut, footer, hal, watermark = '' }) {
   pasangCssDok(); await siapkanFont();
