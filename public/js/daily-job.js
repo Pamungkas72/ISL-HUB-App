@@ -249,13 +249,15 @@ async function kirimKomentar() {
     d.aktivitas.push(x); d.nilai = ""; segarkanKanan(); segarkanKop(); toast(nilai ? "Penilaian tersimpan." : "Komentar terkirim.");
   } catch (err) { console.error(err); toast("Belum terkirim: " + e(err.message || err), "bahaya"); }
 }
+/** Pesan galat unggah yang bisa ditindaklanjuti (kode Storage diterjemahkan). */
+const pesanUnggah = (err) => (err && err.code === "storage/unauthorized" ? "Tidak diizinkan mengunggah. Pastikan akun masuk kelompok Daily Job ini; file maks. 4 MB (gambar, PDF, Word, Excel, PowerPoint, CSV, ZIP)." : e((err && (err.message || err.code)) || err));
 async function unggahBerkas(files) {
   const j = jobDetail(); if (!j || !files.length) return; toast(`Mengunggah ${files.length} berkas…`, "info");
   try {
     const baru = [];
     for (const f of files) { const path = `dailyjob/${j.kelompokId}/${j.id}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`; baru.push({ nama: f.name, path, url: await unggahBlob(path, f, f.type || "application/octet-stream"), ukuran: f.size, tipe: f.type || "", oleh: S.u.nama || S.u.email, tgl: H.hariIni() }); }
     const file = [...(j.file || []), ...baru]; await updateDoc(doc(db, "dj_job", j.id), { file, diubah: serverTimestamp() }); j.file = file; S.detail.berkas = file.length - 1; segarkanTautan(j); render(); toast("Berkas tersimpan.");
-  } catch (err) { console.error(err); toast("Belum terunggah: " + e(err.message || err), "bahaya"); }
+  } catch (err) { console.error(err); toast("Belum terunggah: " + pesanUnggah(err), "bahaya"); }
 }
 function panelTarget(id) {
   const j = jobId(id); if (!j) return; const kep = adalahKepala(j);
@@ -539,7 +541,7 @@ async function simpanJob() {
     if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru); segarkanTautan(baru);
     if (!d.id) { S.hal = 0; S.status = "aktif"; } // job baru langsung terlihat di paling atas
     tutupLayer(); render(); toast("Job tersimpan.");
-  } catch (err) { console.error(err); toast("Job belum tersimpan: " + e(err.message || err), "bahaya"); tombol.disabled = false; tombol.textContent = "Simpan"; }
+  } catch (err) { console.error(err); toast("Job belum tersimpan: " + pesanUnggah(err), "bahaya"); tombol.disabled = false; tombol.textContent = "Simpan"; }
 }
 
 
