@@ -661,9 +661,9 @@ button.mr-stat__kartu:focus-visible { outline: 2px solid var(--mr-navy); outline
 @media (max-width: 760px) {
   .mr-fab { right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
-/* ruang di bawah isi agar tombol Tambah item tidak menutupi baris terakhir */
-.app-content.mr { padding-bottom: 96px; }
-@media (max-width: 760px) { .app-content.mr { padding-bottom: 150px; } }
+/* ruang bawah tipis: scroll berakhir di baris terakhir; tombol + memudar saat halaman di dasar (body.di-dasar, lihat ke-atas.js) */
+.app-content.mr { padding-bottom: 24px; }
+@media (max-width: 760px) { .app-content.mr { padding-bottom: 12px; } }
 /* Lipat semua tarif dan Alat lain berdampingan dengan tinggi sama */
 .mr-bar__aksi > .mr-btn, .mr-alat > summary.mr-btn { height: 40px; }
 

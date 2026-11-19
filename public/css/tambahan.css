@@ -1485,7 +1485,7 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
    Satu baris ringkasan + Follow up, cari + filter, tab status, baris padat dengan ikon status.
    Geser baris ke kiri = aksi cepat; tekan-tahan (master) = pilih massal. Hanya HP; PC tidak memakai kelas ini. */
 @media (max-width: 760px) {
-  .qt-m { padding-bottom: 92px; --qt-n: rgba(127, 145, 170, .18); }
+  .qt-m { padding-bottom: 12px; --qt-n: rgba(127, 145, 170, .18); }
   .qt-m-top { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 4px 0 6px; margin-bottom: 10px; border: 1px solid var(--mr-border); border-radius: 12px; background: var(--mr-surface); }
   .qt-m-ring { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 6px; border: 0; background: none; font: inherit; color: var(--mr-ink); text-align: left; white-space: nowrap; overflow: hidden; cursor: pointer; }
   .qt-m-ring b { font-size: 14px; font-weight: 700; }
@@ -1592,7 +1592,7 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
    Ketuk baris = panel aksi; geser kiri = pintasan; tombol Pilih / tekan-tahan = pilih banyak. Hanya HP. */
 .mr-form__sec { display: none; }
 @media (max-width: 760px) {
-  .mr-m { --qt-n: rgba(127, 145, 170, .18); padding-bottom: 96px; }
+  .mr-m { --qt-n: rgba(127, 145, 170, .18); padding-bottom: 12px; }
   .mr-m > .mr-banner { margin-bottom: 10px; }
   .mr-m-top { display: flex; align-items: center; gap: 4px; min-height: 48px; padding: 0 4px 0 8px; margin-bottom: 4px; border: 1px solid var(--mr-border); border-radius: 12px; background: var(--mr-surface); }
   .mr-m-ring { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 4px; border: 0; background: none; font: inherit; color: var(--mr-ink); text-align: left; cursor: pointer; overflow: hidden; white-space: nowrap; }
@@ -2410,3 +2410,8 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .cu-mini[data-n="sedang"] { --c: var(--mr-warn); } .cu-mini[data-n="ok"] { --c: var(--mr-ok); }
 .cu-dtabel { display: none; }
 @media (min-width: 761px) { .cu-tab { flex: 0 0 auto; padding: 10px 12px; } .cu-hlist, .cu-pilihhp { display: none; } .cu-dtabel { display: block; } .cu-tabs { margin-top: 4px; } }
+
+/* Di dasar halaman tombol + (FAB) dan Ke atas memudar supaya tidak menutupi baris terakhir; scroll berakhir tepat di isi, tanpa ruang kosong */
+.mr-fab, .qt-fab { transition: opacity .18s ease, transform .18s ease; }
+body.di-dasar .mr-fab, body.di-dasar .qt-fab { opacity: 0; transform: translateY(8px); pointer-events: none; }
+body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di dasar tidak menutupi nomor halaman; muncul lagi begitu digulir naik */

@@ -122,7 +122,7 @@ label.dj-org select { max-width: 55%; }
 .dj-tb td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; } .dj-tb tbody tr { cursor: pointer; } .dj-tb tbody tr:hover { background: var(--sky-soft); } .dj-tb tr.is-pilih { background: var(--sky-soft); }
 .dj-tb td b { display: block; } .dj-tb td { padding: 10px; } .dj-tb td small { color: var(--muted); font-size: 11.5px; } .dj-tb__c { width: 34px; } .dj-tb__t { font-weight: 700; white-space: nowrap; } .dj-tb__t.is-telat { color: var(--danger); } .dj-tb__t.is-hari { color: var(--dj-tx-aksen); }
 .dj-pic { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-@media (max-width: 760px) { .dj-hanya-desktop { display: none; } #dj-root { padding-bottom: 150px; } }
+@media (max-width: 760px) { .dj-hanya-desktop { display: none; } }
 #dj-root .dj-seg .mr-chip, #mr-layer .dj-seg .mr-chip { white-space: nowrap; }
 
 /* ---------- Tombol aksi ringkas di dasar panel (14 Nov 2026) ---------- */

@@ -41,3 +41,4 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 
 ## Tombol "Ke atas" (aturan pemilik, 18 Nov 2026)
 - Satu tombol global (`js/ke-atas.js`, gaya `.ke-atas` di `tambahan.css`): **tengah bawah, melayang, transparan, muncul hanya setelah halaman digulir**. Berlaku di semua halaman; halaman atau fitur baru yang punya daftar/gulir otomatis memakainya. Jangan membuat tombol ke atas sendiri atau memindahkan posisinya per halaman.
+- Di dasar halaman (`body.di-dasar`, ditandai `ke-atas.js`) tombol Ke atas dan tombol + (FAB) memudar, dan ruang bawah halaman tipis (menu bawah + 16 px, lewat `app-main`): **scroll harus berakhir tepat di baris terakhir tanpa ruang kosong** (aturan pemilik, 19 Nov 2026). Halaman baru tidak boleh menambah `padding-bottom` besar untuk menghindari tombol melayang.
