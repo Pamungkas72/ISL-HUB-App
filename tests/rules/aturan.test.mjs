@@ -287,3 +287,44 @@ describe("Daily Job: tingkat penetap target (master > admin > kepala > anggota)"
   it("kepala divisi tidak bisa mengubah target admin", async () => { await baru("tg11", 3); await assertFails(updateDoc(doc(kep(), "dj_job/tg11"), { tglTarget: "2026-12-06", targetTingkat: 2 })); });
   it("hanya satu kepala divisi per kelompok", async () => { await assertFails(setDoc(doc(adm(), "dj_kelompok/kx"), { nama: "X", dibuat: "2026-11-14", kepala: ["a", "b"] })); await assertSucceeds(setDoc(doc(adm(), "dj_kelompok/ky"), { nama: "Y", dibuat: "2026-11-14", kepala: ["a"], bawaan: true })); });
 });
+
+describe("Legal: kontrak (master dan admin) dan MOM (pemilik; final terkunci)", () => {
+  const mom = (pemilik, status = "draf") => ({ pemilikUid: pemilik, status, judul: "Rapat", tanggal: "2026-11-19" });
+  const seed = (path, data) => env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), path), data));
+  it("kontrak: admin dan master boleh, sales dan lihat tidak", async () => {
+    await assertSucceeds(setDoc(doc(admin(), "lg_kontrak/k1"), { pihak: "PT A", jenis: "customer" }));
+    await assertSucceeds(getDoc(doc(master(), "lg_kontrak/k1")));
+    await assertFails(getDoc(doc(sales(), "lg_kontrak/k1")));
+    await assertFails(getDoc(doc(lihat(), "lg_kontrak/k1")));
+    await assertFails(setDoc(doc(sales(), "lg_kontrak/k2"), { pihak: "PT B" }));
+  });
+  it("MOM: sales membuat draf miliknya, tidak atas nama orang lain atau langsung final", async () => {
+    await assertSucceeds(setDoc(doc(sales(), "lg_mom/m1"), mom("uid-sales")));
+    await assertFails(setDoc(doc(sales(), "lg_mom/m2"), mom("uid-admin")));
+    await assertFails(setDoc(doc(sales(), "lg_mom/m3"), mom("uid-sales", "final")));
+  });
+  it("MOM: sales hanya membaca miliknya; admin membaca semua; lihat tidak", async () => {
+    await seed("lg_mom/m-admin", mom("uid-admin"));
+    await assertSucceeds(getDoc(doc(sales(), "lg_mom/m1")));
+    await assertFails(getDoc(doc(sales(), "lg_mom/m-admin")));
+    await assertSucceeds(getDoc(doc(admin(), "lg_mom/m1")));
+    await assertFails(getDoc(doc(lihat(), "lg_mom/m1")));
+  });
+  it("MOM: draf bisa difinalkan pemiliknya, lalu terkunci dari pemilik", async () => {
+    await assertSucceeds(updateDoc(doc(sales(), "lg_mom/m1"), { status: "final", nomor: "MOM/ISL/XI/2026/001" }));
+    await assertFails(updateDoc(doc(sales(), "lg_mom/m1"), { judul: "Diubah" }));
+    await assertFails(deleteDoc(doc(sales(), "lg_mom/m1")));
+    await assertSucceeds(updateDoc(doc(admin(), "lg_mom/m1"), { judul: "Koreksi admin" }));
+  });
+  it("MOM: draf boleh dihapus pemiliknya, bukan sales lain", async () => {
+    await seed("lg_mom/m-del", mom("uid-sales"));
+    await assertFails(deleteDoc(doc(sales2(), "lg_mom/m-del")));
+    await assertSucceeds(deleteDoc(doc(sales(), "lg_mom/m-del")));
+  });
+  it("penghitung nomor MOM tidak bisa turun; saran peserta milik sendiri", async () => {
+    await assertSucceeds(setDoc(doc(sales(), "lg_counters/mom-2026"), { nilai: 5 }));
+    await assertFails(setDoc(doc(sales(), "lg_counters/mom-2026"), { nilai: 2 }));
+    await assertSucceeds(setDoc(doc(sales(), "lg_peserta/uid-sales"), { nama: ["Pak Iwan"] }));
+    await assertFails(getDoc(doc(admin(), "lg_peserta/uid-sales")));
+  });
+});

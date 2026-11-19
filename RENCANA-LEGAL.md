@@ -38,3 +38,9 @@ Tahap awal: **Kontrak berjalan (upload) + pengingat** dan **MOM**. Template kont
 - Upload PDF kontrak customer/vendor. Data: nomor, pihak, jenis (kontrak/MOU/addendum), lini bisnis, tanggal mulai dan berakhir, nilai, PIC internal.
 - Tambahan: perpanjangan otomatis (penanda), catatan, riwayat perpanjangan (lampiran versi baru), status otomatis (aktif/segera habis/berakhir).
 - Pengingat: 60 dan 30 hari sebelum berakhir.
+
+## Status pembangunan (19 Nov 2026)
+- Terbangun: menu Legal (master, admin, sales), kontrak berjalan (upload PDF, perpanjang, riwayat, pengingat 60/30 hari di banner dan lonceng), MOM (editor, PDF bergaya quotation ID/English, final terkunci, revisi, salin, bagikan, foto), aturan Firestore dan Storage, uji aturan, adegan audit tema.
+- File: `js/legal.js`, `js/legal-mom.js`, `js/legal-hitung.js`, `css/legal.css`; hook PDF `window.__islDok` di `app-core.js`.
+- Belum: template kontrak (menunggu contoh), pengingat tindak lanjut MOM ke PIC (push), penyetuju MOM dari akun (kini nama + tanda tangan basah).
+- Deploy aturan: `firebase deploy --only firestore:rules,storage` (otomatis lewat deploy-firebase.yml saat merge).

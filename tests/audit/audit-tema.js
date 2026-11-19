@@ -1,6 +1,6 @@
 // Audit konsistensi tema (terang/gelap) pada aplikasi ASLI dengan Firebase tiruan, di layar HP dan desktop.
 // Menjalankan banyak tampilan (halaman, panel, formulir, dialog) lalu memindai area yang warnanya tidak mengikuti tema.
-// Jalankan: NODE_PATH=<folder node_modules berisi playwright> node tests/audit/audit-tema.js [gelap|terang] [hp|desktop] [--gambar]
+// Jalankan: NODE_PATH=<folder node_modules berisi playwright> node tests/audit/audit-tema.js [gelap|terang] [hp|desktop] [--gambar] [--adegan=teks]
 // Keluaran: daftar temuan per tampilan. Kode keluar 1 bila ada temuan (jadi bisa dipakai di CI).
 const { chromium } = require('playwright');
 const path = require('path');
@@ -31,6 +31,12 @@ const buatTerkirim = p => p.evaluate(async () => {
 });
 const ADEGAN = [
   ['beranda', async p => { await pindah(p, 'beranda'); }],
+  ['legal: ringkasan (desktop) atau Semua (HP)', async p => { await pindah(p, 'legal'); }],
+  ['legal: daftar kontrak', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="kontrak"]'); await tunggu(p, 300); }],
+  ['legal: panel detail kontrak', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="kontrak"]'); await klikSel(p, '[data-lg-kontrak="k1"]'); await tunggu(p, 400); }],
+  ['legal: panel tambah dokumen', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg="tambah"]'); await tunggu(p, 400); }],
+  ['legal: MOM editor (draf)', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="mom"]'); await klikSel(p, '[data-lg-mom="m2"]'); await tunggu(p, 500); await klikSel(p, '[data-mm-acc="peserta"]'); await klikSel(p, '[data-mm-acc="topik"]'); await tunggu(p, 200); }],
+  ['legal: MOM final (pratinjau PDF)', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="mom"]'); await klikSel(p, '[data-lg-mom="m1"]'); await tunggu(p, 3000); }],
   ['quotation: daftar', async p => { await pindah(p, 'quotation'); await p.evaluate(() => { window.__qt._Q.view = 'list'; window.__qt.gambar(); }); }],
   ['quotation: ringkasan', async p => { await pindah(p, 'quotation'); await p.evaluate(() => { const q = window.__qt._Q; q.view = 'list'; q.sub = 'ringkasan'; window.__qt.gambar(); }); }],
   ['quotation: follow up', async p => { await pindah(p, 'quotation'); await p.evaluate(() => { const q = window.__qt._Q; q.view = 'list'; q.sub = 'follow'; window.__qt.gambar(); }); }],
@@ -163,7 +169,9 @@ const ADEGAN = [
   const semua = [];
   let jmlAdegan = 0;
   const periksa = async label => { jmlAdegan++; const temuan = await p.evaluate(pindai, { tema: TEMA, ketat: KETAT }); temuan.forEach(t => semua.push({ adegan: label, ...t })); if (GAMBAR) await p.screenshot({ path: `${OUT}${TEMA}-${LAYAR}-${label.replace(/[^a-z0-9]+/gi, '_')}.png`, fullPage: false }); };
+  const SARING = (argv.find(a => a.startsWith('--adegan=')) || '').slice(9); // mis. --adegan=legal: hanya adegan yang namanya memuat teks itu
   for (const [nama, fn] of ADEGAN) {
+    if (SARING && !nama.includes(SARING)) continue;
     let r; try { await tutupLapisan(p); r = await fn(p, periksa); } catch (e) { semua.push({ adegan: nama, jenis: 'adegan-gagal', el: String(e.message).slice(0, 100) }); continue; }
     if (r !== 'sudah') await periksa(nama);
   }
