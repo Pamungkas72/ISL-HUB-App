@@ -2,6 +2,12 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-19 (Quotation: pilih banyak / select all)
+
+- **HP (desain 1, bilah ringkas):** saat ada yang dipilih, muncul satu baris: ✕ (batal), jumlah dipilih, **Pilih semua (n)**, dan ⋮. **Hapus permanen** tidak lagi tombol merah besar; ia ada di menu ⋮ dan tetap meminta konfirmasi.
+- **Desktop (desain 2, bilah melayang):** pil kecil di bawah tengah konten berisi jumlah, Pilih semua, Batal, dan ikon hapus (dengan konfirmasi). Kotak pilih di header tabel tidak berubah.
+- Kelas baru `qt-pbar` (tidak menyentuh `mr-pilihbar` di halaman lain). Alur pilih, hapus, dan batal tidak berubah.
+
 ## 2026-11-18 (pengingat daily job di HP)
 
 - **Pengingat "catat daily job" kini pita tipis di atas konten** (dipilih dari 3 desain, opsi 1), bukan kartu yang menutupi layar. Satu baris: jam, jumlah terlambat dan jatuh tempo hari ini, tombol Catat, dan ✕. HP dan desktop (pita di kanan atas, 520 px). Isinya tetap sama, pengingat tetap muncul pukul 09.00, 14.00, 17.00.

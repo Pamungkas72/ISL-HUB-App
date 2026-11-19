@@ -3726,12 +3726,18 @@ const PILIH_QT = new Set();
 const cekQt = id => masterSaja() ? `<td class="qt-cek"><input type="checkbox" data-qt-pilih="${esc(id)}" ${PILIH_QT.has(id) ? 'checked' : ''} aria-label="Pilih quotation"></td>` : '';
 const bilahPilihQt = list => {
   if (!masterSaja() || !PILIH_QT.size) return '';
-  const semua = list.length && list.every(({ x }) => PILIH_QT.has(x.id));
-  return `<div class="mr-pilihbar" role="region" aria-label="Quotation terpilih">
-    <div class="mr-pilihbar__atas"><span class="mr-pilihbar__jml"><b>${PILIH_QT.size}</b> dipilih</span>
-      ${!semua ? `<button type="button" class="mr-link" data-qt="qt-pilih-semua">Pilih semua (${list.length})</button>` : ''}
-      <span class="mr-ruang"></span><button type="button" class="mr-link" data-qt="qt-pilih-batal">Batal</button></div>
-    <div class="mr-pilihbar__aksi"><button type="button" class="mr-btn mr-btn--bahaya" data-qt="qt-hapus-pilih">${ik('tong', 14)} Hapus permanen</button></div></div>`;
+  const semua = list.length && list.every(({ x }) => PILIH_QT.has(x.id)), n = PILIH_QT.size;
+  const pilihSemua = !semua ? `<button type="button" class="qt-pbar__l" data-qt="qt-pilih-semua">Pilih semua (${list.length})</button>` : '';
+  /* HP (desain 1): bilah ringkas, Hapus hanya di menu ⋮. Desktop (desain 2): bilah melayang kecil di bawah, ikon hapus dengan konfirmasi */
+  if (HP()) return `<div class="qt-pbar qt-pbar--hp" role="region" aria-label="Quotation terpilih">
+    <button type="button" class="qt-pbar__x" data-qt="qt-pilih-batal" aria-label="Batal pilih">${ik('tutup', 16)}</button>
+    <b class="qt-pbar__n">${n} dipilih</b><span class="qt-pbar__r"></span>${pilihSemua}
+    <details class="qt-pbar__menu"><summary class="qt-pbar__ic" aria-label="Lainnya">⋮</summary>
+      <div class="qt-pbar__list"><button type="button" data-qt="qt-pilih-semua">Pilih semua (${list.length})</button><button type="button" data-qt="qt-pilih-batal">Batal pilih</button><button type="button" class="qt-pbar__bahaya" data-qt="qt-hapus-pilih">${ik('tong', 14)} Hapus permanen…</button></div></details></div>`;
+  return `<div class="qt-pbar qt-pbar--ds" role="region" aria-label="Quotation terpilih">
+    <b class="qt-pbar__n">${n} dipilih</b>${pilihSemua}
+    <button type="button" class="qt-pbar__l" data-qt="qt-pilih-batal">Batal</button>
+    <button type="button" class="qt-pbar__ic qt-pbar__ic--bahaya" data-qt="qt-hapus-pilih" aria-label="Hapus permanen" title="Hapus permanen">${ik('tong', 16)}</button></div>`;
 };
 async function aksiPilihQt() {
   const sistem = DB.list.filter(x => PILIH_QT.has(x.id)), rw = (DB.riwayat || []).filter(x => PILIH_QT.has(x.id));

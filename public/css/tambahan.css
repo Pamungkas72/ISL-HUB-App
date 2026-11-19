@@ -2383,3 +2383,22 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-im .cu-cek { margin-top: 10px; }
 /* tombol tambah Quotation: aksen oranye seperti Master Rate (di #qt-root aturan #mr-kontainer tidak berlaku) */
 .qt-fab { background: var(--mr-accent); color: #1b1307; }
+
+/* ---------- Pilih banyak Quotation (desain HP 1: bilah ringkas; desktop 2: bilah melayang kecil), dipilih 18 Nov 2026 ---------- */
+.qt-pbar { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--mr-ink); background: var(--mr-surface); border: 1px solid var(--mr-border); }
+.qt-pbar__n { font-weight: 700; white-space: nowrap; }
+.qt-pbar__r { flex: 1; }
+.qt-pbar__l { border: 0; background: none; color: var(--mr-accent); font: inherit; font-weight: 600; padding: 6px 4px; cursor: pointer; white-space: nowrap; }
+.qt-pbar__x, .qt-pbar__ic { flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--mr-border); border-radius: 10px; background: var(--mr-surface); color: var(--mr-ink); font: inherit; font-size: 18px; cursor: pointer; list-style: none; }
+.qt-pbar__x { border: 0; background: none; color: var(--mr-muted); }
+.qt-pbar__ic--bahaya { color: var(--mr-bahaya); border-color: var(--mr-bahaya-garis, var(--mr-border)); }
+.qt-pbar--hp { position: relative; margin: 0 0 12px; padding: 8px 10px; border-radius: var(--mr-r); border-left: 4px solid var(--mr-accent); }
+.qt-pbar__menu { position: relative; }
+.qt-pbar__menu > summary::-webkit-details-marker { display: none; }
+.qt-pbar__list { position: absolute; right: 0; top: 42px; z-index: 20; min-width: 200px; display: grid; padding: 6px; background: var(--mr-surface); border: 1px solid var(--mr-border); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); }
+.qt-pbar__list button { text-align: left; padding: 10px 12px; border: 0; border-radius: 8px; background: none; color: var(--mr-ink); font: inherit; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.qt-pbar__list button:hover { background: var(--mr-bg); }
+.qt-pbar__list .qt-pbar__bahaya { color: var(--mr-bahaya); border-top: 1px solid var(--mr-border); border-radius: 0 0 8px 8px; margin-top: 4px; }
+.qt-pbar--ds { position: fixed; left: calc(50% + 36px); bottom: 24px; transform: translateX(-50%); z-index: 40; height: 48px; padding: 0 8px 0 16px; border-radius: 14px; box-shadow: var(--shadow); }
+.qt-pbar--ds .qt-pbar__n { margin-right: 4px; }
+body:has(.qt-pbar--ds) { padding-bottom: 96px; }
