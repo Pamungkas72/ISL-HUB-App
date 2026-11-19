@@ -43,3 +43,13 @@ Akun yang masuk memakai tampilan menurut `pengguna.kelompokDJ`; master dan admin
 ## Dashboard Performa (halaman sales) disembunyikan (19 Nov 2026)
 - Menu dan rute `#performa` ditutup; kode (`sales.js`) dan data tetap ada.
 - Profil sales (nama, telepon, tanda tangan) dan Pengajuan hapus quotation **pindah ke Pengaturan** (desain D3: daftar bagian; menu kiri di desktop, daftar baris di HP). Akun sales kini punya Pengaturan dengan isi terbatas: Tampilan dan akun, Profil sales, Pengajuan hapus (status miliknya).
+
+## Divisi Tracking (keputusan 19 Nov 2026, belum dikode)
+- **Struktur:** satu kelompok **Tracking** dengan dua subdivisi. **Mobil kecil**: CDE, CDD, Fuso, Tronton, Grand Max Blind Van. **Mobil besar**: Trailer (ekspor, impor, domestik).
+- **Pencatatan:** satu baris per pengiriman (DO/surat jalan). Field: customer, asal, tujuan, no. DO, kategori armada, tanggal kirim, target tiba, vendor, driver (nama, telepon), plat nomor, pembayaran (cash/TOP), cost, status POD (belum/sudah kembali + tanggal), status tagihan vendor (belum dikirim/dikirim/dikonfirmasi), catatan. Info tambahan dari pemilik menyusul.
+- **Formulir:** desktop = F1 (satu form berbagian), HP = F2 (tiga langkah: Pengiriman, Armada dan vendor, Biaya dan status).
+- **Vendor:** tersambung ke Master Rate. Vendor belum ada: dibuat sebagai vendor **Draf** dengan data minimal (nama, alamat, telepon); legalitas dilengkapi admin di Master Rate.
+- **KPI Performa Tracking:** volume pengiriman per hari dan per kategori armada; ketepatan (pengiriman tepat waktu, POD kembali tepat waktu); tagihan vendor (dikirim, belum dikonfirmasi, cash lawan TOP); beban per PIC dan backlog (belum POD, terlambat); order masuk terlaksana atau tidak; rute dengan volume terbanyak. Margin rute: **tidak dihitung dulu** (tidak ada harga ke customer).
+- **Cost vendor:** semua anggota Tracking bisa melihat dan mengisi cost. Cost masuk ke Master Rate untuk rute dan vendor itu. Bila rute dengan vendor yang sama pernah dipakai, sistem merekomendasikan tarif sebelumnya; bila berubah, tarif terbaru tercatat sebagai rate terbaru.
+- **Unit internal:** cost = uang jalan, tercatat di Master Rate sebagai vendor internal dengan pengelompokan "Uang Jalan". Dasar hitung: kalkulator Uang Jalan yang sudah ada (`uang-jalan.js`: BBM, tol, TKBM, operasional).
+- **Pemilih kelompok:** master dan admin berpindah tampilan dan performa antar kelompok; Pengaturan tetap khusus master dan admin.
