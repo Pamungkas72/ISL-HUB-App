@@ -3698,8 +3698,8 @@ function viewRingkasan() {
   const nm = r.kat === 'fu' ? 'Perlu follow up' : r.kat ? RG_KAT[r.kat] : 'Semua terbit';
   return `${tabHalaman()}
   <div class="qt-rg">
-    <div class="qt-rg-bar">${RG_PER.map(([v, l]) => `<button type="button" class="qt-rg-pil ${r.per === v ? 'is-on' : ''}" data-qt="rg-per" data-v="${v}" aria-pressed="${r.per === v}">${l}</button>`).join('')}
-      ${r.per === 'rentang' ? `<input type="date" class="mr-select" id="rg-dari" value="${esc(r.dari)}" aria-label="Dari tanggal"><span class="mr-sub">s/d</span><input type="date" class="mr-select" id="rg-sampai" value="${esc(r.sampai)}" aria-label="Sampai tanggal">` : ''}</div>
+    <div class="qt-rg-bar"><div class="qt-rg-tw"><div class="qt-rg-tabs" role="group" aria-label="Periode">${RG_PER.map(([v, l]) => `<button type="button" class="qt-rg-tab ${r.per === v ? 'is-on' : ''}" data-qt="rg-per" data-v="${v}" aria-pressed="${r.per === v}">${l}</button>`).join('')}</div></div>
+      ${r.per === 'rentang' ? `<div class="qt-rg-dt"><input type="date" class="mr-select" id="rg-dari" value="${esc(r.dari)}" aria-label="Dari tanggal"><span class="mr-sub">s/d</span><input type="date" class="mr-select" id="rg-sampai" value="${esc(r.sampai)}" aria-label="Sampai tanggal"></div>` : ''}</div>
     <div class="qt-rg2">
       <section class="mr-kartu qt-rg-hero" style="grid-area:hero">
         <div class="mr-sub">Terbit ${a || b ? `${a ? tgl(a) : 'awal'} s/d ${b ? tgl(b) : 'kini'}` : 'dari awal sampai kini'}</div>
@@ -3731,11 +3731,13 @@ function rgEkspor(jenis) {
   const d = new window.jspdf.jsPDF({ orientation: 'landscape' }), [a, b] = rgPeriode(); d.setFontSize(14); d.text(`Ringkasan Quotation — ${a || 'awal'} s/d ${b || HARI_INI()}`, 14, 16);
   d.autoTable({ head: [RG_KOLOM], body: baris.map(r => r.map((v, k) => k === 7 ? rp(v) : v)), startY: 22, styles: { fontSize: 8 } }); d.save(rgNamaFile() + '.pdf');
 }
+/* tab periode yang aktif digeser ke tengah supaya selalu terlihat */
+const pusatTabPeriode = () => { const sc = document.querySelector('.qt-rg-tabs'), on = sc && sc.querySelector('.is-on'); if (sc && on) sc.scrollLeft = on.offsetLeft - (sc.clientWidth - on.offsetWidth) / 2; };
 document.addEventListener('click', ev => {
   const e = ev.target.closest('[data-qt^="rg-"]'); if (!e) return; const a = e.dataset.qt, v = e.dataset.v;
   if (a === 'rg-excel') return rgEkspor('excel'); if (a === 'rg-pdf') return rgEkspor('pdf');
   if (a === 'rg-tab') Q.sub = v; else if (a === 'rg-per') Q.rg.per = v; else if (a === 'rg-kat') Q.rg.kat = v; else if (a === 'rg-an') Q.rg.an = !(Q.rg.an === undefined ? !HP() : Q.rg.an); else if (a === 'rg-grup') Q.rg.grup = v;
-  gambar();
+  gambar(); pusatTabPeriode();
 });
 document.addEventListener('change', ev => { const t = ev.target, m = { 'rg-dari': 'dari', 'rg-sampai': 'sampai', 'rg-sales': 'sales', 'rg-lini': 'lini' }[t.id]; if (m) { Q.rg[m] = t.value; gambar(); } });
 document.addEventListener('input', ev => { if (ev.target.id === 'rg-cari') { Q.rg.q = ev.target.value; gambar(); } });
