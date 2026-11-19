@@ -168,6 +168,9 @@ service cloud.firestore {
     match /lg_kontrak/{id} {
       allow read, write: if isStaf();
     }
+    match /lg_perusahaan/{id} {
+      allow read, write: if isStaf();
+    }
     match /lg_mom/{id} {
       allow read: if isStaf() || (isSales() && milikSaya(resource.data));
       allow create: if (isStaf() || isSales()) && request.resource.data.pemilikUid == request.auth.uid && request.resource.data.status == 'draf';

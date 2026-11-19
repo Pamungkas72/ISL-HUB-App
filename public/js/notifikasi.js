@@ -144,7 +144,7 @@ async function dariKontrak() {
   try {
     const now = window.__ISL && window.__ISL.hariIni ? window.__ISL.hariIni() : hariIni(), snap = await getDocs(collection(db, "lg_kontrak"));
     return snap.docs.map((d) => ({ id: d.id, ...d.data() })).flatMap((k) => {
-      const st = statusKontrak(k, now); if (st.kode === "aktif") return [];
+      const st = statusKontrak(k, now); if (st.kode === "aktif" || st.kode === "draf") return [];
       const habis = st.kode === "berakhir";
       return [{ id: "kt:" + k.id, jenis: "halaman", grup: "legal", level: habis || st.kode === "mendesak" ? "bahaya" : "warn", judul: habis ? `Kontrak ${k.pihak || ""} sudah berakhir` : `Kontrak ${k.pihak || ""} berakhir ${st.sisa} hari lagi`,
         ket: `${k.nomor ? k.nomor + " · " : ""}berakhir ${k.berakhir}${k.autoRenew ? " · perpanjangan otomatis" : " · perpanjang atau akhiri"}`, tujuan: { jenis: "halaman", hash: "#legal" } }];
