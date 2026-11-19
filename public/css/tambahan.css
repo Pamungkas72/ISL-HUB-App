@@ -2188,7 +2188,7 @@ body:has(.mr-pilihbar) { padding-bottom: 150px; }
 .qt-rg-tw { position: relative; } .qt-rg-tw::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 32px; background: linear-gradient(90deg, transparent, var(--mr-bg)); pointer-events: none; }
 .qt-rg-tabs { display: flex; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--mr-border); } .qt-rg-tabs::-webkit-scrollbar { display: none; }
 .qt-rg-tab { flex: none; background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--mr-muted); font: inherit; font-size: 14.5px; padding: 10px 14px; white-space: nowrap; cursor: pointer; } .qt-rg-tab:hover { color: var(--mr-ink); }
-.qt-rg-tab.is-on { color: var(--mr-accent); border-bottom-color: var(--mr-accent); font-weight: 600; } .qt-rg-tab:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
+.qt-rg-tab.is-on { color: var(--mr-ink); border-bottom-color: var(--mr-accent); font-weight: 700; } /* teks gelap: oranye di latar terang kontrasnya rendah */ .qt-rg-tab:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
 .qt-rg-dt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .qt-rg-cari { min-width: 200px; }
 .qt-rg-ket { margin: 0 0 12px; }
