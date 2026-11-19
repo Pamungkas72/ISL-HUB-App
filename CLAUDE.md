@@ -35,3 +35,9 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 - **PR dibuat otomatis**, tanpa bertanya, setelah perubahan selesai (bila belum ada PR untuk branch itu).
 - Tiap pembaruan: **commit dan push otomatis**, dan PR yang ada ikut terbarui.
 - **Penggabungan (merge) PR otomatis** setelah semua CI hijau. Tidak perlu menunggu persetujuan pemilik. Pemilik ingin langsung melihat hasilnya di aplikasi (dicatat 9 Nov 2026 atas permintaan pemilik). Bila CI merah, jangan digabung: perbaiki dulu.
+
+## Pilih banyak (aturan pemilik, 19 Nov 2026)
+- Semua halaman dengan pilih banyak (sudah ada dan yang akan datang) **wajib** memakai `bilahPilih()` dari `public/js/bilah-pilih.js` (`window.bilahPilih` untuk app-core.js). Jangan membuat bilah pilih baru.
+- HP: bilah ringkas (✕, jumlah dipilih, Pilih semua, ⋮). Aksi lain dan **Hapus permanen** ada di menu ⋮, tidak sebagai tombol merah besar.
+- Desktop: pil melayang di bawah tengah dengan jumlah, Pilih semua, aksi, Batal, dan ikon hapus (dengan konfirmasi).
+- Hapus permanen tetap hanya untuk master dan tetap meminta konfirmasi.

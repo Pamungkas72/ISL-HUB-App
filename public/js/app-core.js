@@ -314,15 +314,9 @@ async function aksiPilihCu(jenis) {
   catch (e) { return toast(`<b>GAGAL.</b> ${esc(e.message)}`, 'bahaya'); }
   PILIH_CU.clear(); toast(`<b>${ids.length}</b> customer terhapus dan terverifikasi.`); gambar();
 }
-const bilahPilihCu = list => {
-  if (!masterAtauAdmin() || !PILIH_CU.size) return '';
-  const semua = list.length && list.every(c => PILIH_CU.has(c.id));
-  return `<div class="mr-pilihbar" role="region" aria-label="Customer terpilih">
-    <div class="mr-pilihbar__atas"><span class="mr-pilihbar__jml"><b>${PILIH_CU.size}</b> dipilih</span>
-      ${!semua ? `<button type="button" class="mr-link" data-cu="pilih-semua">Pilih semua (${list.length})</button>` : ''}
-      <span class="mr-ruang"></span><button type="button" class="mr-link" data-cu="pilih-batal">Batal</button></div>
-    <div class="mr-pilihbar__aksi"><button type="button" class="mr-btn" data-cu="nonaktif-pilih">Nonaktifkan</button>${masterSaja() ? `<button type="button" class="mr-btn mr-btn--bahaya" data-cu="hapus-pilih">${ik('tong', 14)} Hapus permanen</button>` : ''}</div></div>`;
-};
+const bilahPilihCu = list => masterAtauAdmin() ? window.bilahPilih({ nama: 'Customer', n: PILIH_CU.size, total: list.length,
+  semua: list.length && list.every(c => PILIH_CU.has(c.id)) ? null : 'data-cu="pilih-semua"', batal: 'data-cu="pilih-batal"',
+  aksi: [{ attr: 'data-cu="nonaktif-pilih"', label: 'Nonaktifkan' }], hapus: masterSaja() ? { attr: 'data-cu="hapus-pilih"', label: 'Hapus permanen' } : null }) : '';
 const bilahLengkap = pct => `<div class="mr-pf-skor" title="${pct}% data lengkap" style="margin-top:6px;max-width:260px"><span class="mr-pf-skor__bar"><i style="width:${pct}%" class="${pct >= 80 ? 'ok' : pct >= 50 ? 'sedang' : 'rendah'}"></i></span><small>${pct}% lengkap</small></div>`;
 // Cincin kecil per customer: persentase kelengkapan di tengah, penuh hijau saat 100%.
 function viewDaftar() {
@@ -3724,21 +3718,9 @@ document.addEventListener('input', ev => { if (ev.target.id === 'rg-cari') { Q.r
 /* Pilih massal quotation (master saja): kunci id yang dicentang, untuk quotation sistem dan riwayat PDF. */
 const PILIH_QT = new Set();
 const cekQt = id => masterSaja() ? `<td class="qt-cek"><input type="checkbox" data-qt-pilih="${esc(id)}" ${PILIH_QT.has(id) ? 'checked' : ''} aria-label="Pilih quotation"></td>` : '';
-const bilahPilihQt = list => {
-  if (!masterSaja() || !PILIH_QT.size) return '';
-  const semua = list.length && list.every(({ x }) => PILIH_QT.has(x.id)), n = PILIH_QT.size;
-  const pilihSemua = !semua ? `<button type="button" class="qt-pbar__l" data-qt="qt-pilih-semua">Pilih semua (${list.length})</button>` : '';
-  /* HP (desain 1): bilah ringkas, Hapus hanya di menu ⋮. Desktop (desain 2): bilah melayang kecil di bawah, ikon hapus dengan konfirmasi */
-  if (HP()) return `<div class="qt-pbar qt-pbar--hp" role="region" aria-label="Quotation terpilih">
-    <button type="button" class="qt-pbar__x" data-qt="qt-pilih-batal" aria-label="Batal pilih">${ik('tutup', 16)}</button>
-    <b class="qt-pbar__n">${n} dipilih</b><span class="qt-pbar__r"></span>${pilihSemua}
-    <details class="qt-pbar__menu"><summary class="qt-pbar__ic" aria-label="Lainnya">⋮</summary>
-      <div class="qt-pbar__list"><button type="button" data-qt="qt-pilih-semua">Pilih semua (${list.length})</button><button type="button" data-qt="qt-pilih-batal">Batal pilih</button><button type="button" class="qt-pbar__bahaya" data-qt="qt-hapus-pilih">${ik('tong', 14)} Hapus permanen…</button></div></details></div>`;
-  return `<div class="qt-pbar qt-pbar--ds" role="region" aria-label="Quotation terpilih">
-    <b class="qt-pbar__n">${n} dipilih</b>${pilihSemua}
-    <button type="button" class="qt-pbar__l" data-qt="qt-pilih-batal">Batal</button>
-    <button type="button" class="qt-pbar__ic qt-pbar__ic--bahaya" data-qt="qt-hapus-pilih" aria-label="Hapus permanen" title="Hapus permanen">${ik('tong', 16)}</button></div>`;
-};
+const bilahPilihQt = list => masterSaja() && PILIH_QT.size ? window.bilahPilih({ nama: 'Quotation', n: PILIH_QT.size, total: list.length,
+  semua: list.length && list.every(({ x }) => PILIH_QT.has(x.id)) ? null : 'data-qt="qt-pilih-semua"', batal: 'data-qt="qt-pilih-batal"',
+  aksi: [], hapus: { attr: 'data-qt="qt-hapus-pilih"', label: 'Hapus permanen' } }) : '';
 async function aksiPilihQt() {
   const sistem = DB.list.filter(x => PILIH_QT.has(x.id)), rw = (DB.riwayat || []).filter(x => PILIH_QT.has(x.id));
   const lewati = sistem.filter(x => alasanHapusPermanen(x)), hapusSis = sistem.filter(x => !alasanHapusPermanen(x));
@@ -5081,7 +5063,8 @@ function satuanQuotationHtml() {
     form = `<div class="qt-satuan-form is-hapus"><div class="qt-satuan-form__judul"><b>Hapus satuan “${esc(x.nama)}”?</b>${isi}${blokir ? '<small class="mr-galat-kecil">Tambahkan satuan lain dulu sebagai pengganti.</small>' : ''}</div>
       <div class="qt-satuan-form__aksi"><button type="button" class="mr-btn" data-qt="satuan-batal">Batal</button><button type="button" class="mr-btn mr-btn--bahaya" data-qt="satuan-hapus-ok" data-v="${esc(k)}" ${blokir ? 'disabled' : ''}>${ik('tong', 14)} Hapus</button></div></div>`;
   }
-  const pilihBar = bisa && satuanPilih.size ? `<div class="mr-pilihbar" role="region" aria-label="Satuan terpilih"><div class="mr-pilihbar__atas"><span class="mr-pilihbar__jml"><b>${satuanPilih.size}</b> dipilih</span></div><div class="mr-pilihbar__aksi"><button type="button" class="mr-btn" data-qt="satuan-pilih-batal">Batal pilih</button>${masterSaja() ? `<button type="button" class="mr-btn mr-btn--bahaya" data-qt="satuan-hapus-pilih">${ik('tong', 14)} Hapus ${satuanPilih.size} satuan</button>` : ''}</div></div>` : '';
+  const pilihBar = bisa && satuanPilih.size ? window.bilahPilih({ nama: 'Satuan', n: satuanPilih.size, total: 0, semua: null, batal: 'data-qt="satuan-pilih-batal"',
+    aksi: [], hapus: masterSaja() ? { attr: 'data-qt="satuan-hapus-pilih"', label: `Hapus ${satuanPilih.size} satuan` } : null }) : '';
   if (!daftarSemua.length) return `${bar}${form}<p class="mr-sub qt-ket">Belum ada satuan.</p>`;
   const baris = daftar.map(x => {
     const k = x.kode || x.id, n = pakai[k] || 0;

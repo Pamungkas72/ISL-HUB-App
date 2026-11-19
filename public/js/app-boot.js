@@ -4,6 +4,7 @@
 // Data Master Rate dibaca lewat db.js yang sama dengan halaman Master Rate.
 // ===========================================================
 import * as SatuanKelola from "./satuan-kelola.js";
+import "./bilah-pilih.js"; // pasang window.bilahPilih untuk app-core.js (Customer, Quotation, Satuan)
 window.ISLSatuanKelola = SatuanKelola;
 import { watchAuthState, logoutUser } from "./auth.js";
 import { auth, db } from "./firebase-config.js";

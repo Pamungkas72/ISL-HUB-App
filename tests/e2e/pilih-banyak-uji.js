@@ -34,7 +34,7 @@ const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
     await p.click(`[data-aksi="tab"][data-v="${tab}"]`);
     await p.waitForTimeout(1500);
   };
-  const jumlahDipilih = () => p.evaluate(() => { const el = document.querySelector('.mr-pilihbar__jml'); return el ? Number(el.textContent.replace(/\D/g, '')) : 0; });
+  const jumlahDipilih = () => p.evaluate(() => { const el = document.querySelector('.pbar__n'); return el ? Number(el.textContent.replace(/\D/g, '')) : 0; });
   const konfirmasiOk = async () => { await p.waitForSelector('.mr-konfirm [data-x="ok"]', { timeout: 10000 }); await p.click('.mr-konfirm [data-x="ok"]'); await p.waitForTimeout(3000); };
 
   const idVendor = 'uji-v-' + stamp;
@@ -87,7 +87,7 @@ const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
       cek('pilih semua vendor: jumlah sama dengan baris tampil', jml > 1, `dipilih ${jml}`);
       await p.click('[data-aksi="tab-batal"]');
       await p.waitForTimeout(800);
-      cek('batal membersihkan pilihan vendor', (await p.$('.mr-pilihbar')) === null);
+      cek('batal membersihkan pilihan vendor', (await p.$('.pbar')) === null);
     }
 
     // 4. Lokasi: pilih, nonaktifkan, periksa status.

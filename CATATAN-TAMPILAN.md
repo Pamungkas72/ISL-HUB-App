@@ -2,6 +2,13 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-19 (pilih banyak dipakai semua halaman)
+
+- **Satu bilah pilih untuk semua halaman**: `public/js/bilah-pilih.js`. Dipakai di Quotation, Customer, Satuan (Pengaturan), Master Rate (tarif, vendor, lokasi, lini, dan HP), dan Daily Job. Desain: HP bilah ringkas dengan ⋮, desktop pil melayang di bawah tengah.
+- **Hapus permanen** tidak lagi tombol merah besar di mana pun; di HP ada di menu ⋮, di desktop ikon dengan konfirmasi.
+- Aturan tercatat di `CLAUDE.md` (bagian Pilih banyak): halaman baru wajib memakai `bilahPilih()`.
+- Tes e2e `pilih-banyak-uji.js` memakai selector baru (`.pbar__n`, `.pbar`). Belum dijalankan di sini (perlu emulator Firebase).
+
 ## 2026-11-19 (Quotation: pilih banyak / select all)
 
 - **HP (desain 1, bilah ringkas):** saat ada yang dipilih, muncul satu baris: ✕ (batal), jumlah dipilih, **Pilih semua (n)**, dan ⋮. **Hapus permanen** tidak lagi tombol merah besar; ia ada di menu ⋮ dan tetap meminta konfirmasi.

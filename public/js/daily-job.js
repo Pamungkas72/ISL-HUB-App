@@ -8,6 +8,7 @@ import { renderNav } from "./nav.js";
 import { labelAkun } from "./config-akses.js";
 import { e, $, toast, konfirmasi, konfirmasiKetik, bukaLayer, tutupLayer } from "./ui.js";
 import { ikon } from "./ikon.js";
+import { bilahPilih } from "./bilah-pilih.js";
 import { app, db } from "./firebase-config.js";
 import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
@@ -163,8 +164,9 @@ function htmlDaftar(now) {
 function htmlBarPilih(halaman) {
   if (!pilihAktif()) return "";
   const n = S.pilih.size, semua = halaman.length > 0 && halaman.every((j) => S.pilih.has(j.id));
-  return `<div class="mr-pilihbar" role="region" aria-label="Job terpilih"><div class="mr-pilihbar__atas"><span class="mr-pilihbar__jml"><b>${n}</b> dipilih</span>${semua ? "" : `<button type="button" class="mr-link" data-dj="cb-semua">Pilih semua di halaman ini</button>`}<span class="mr-ruang"></span><button type="button" class="mr-link" data-dj="pilih-batal">Batal</button></div>
-    ${n ? `<div class="mr-pilihbar__aksi"><button type="button" class="mr-btn" data-dj="m-selesai">${ikon("cek", 14)}Selesai</button><button type="button" class="mr-btn" data-dj="m-pic">${ikon("orang", 14)}Ubah PIC</button><button type="button" class="mr-btn" data-dj="m-bagikan">${ikon("salin", 14)}Bagikan</button><button type="button" class="mr-btn mr-btn--hapus" data-dj="m-hapus">${ikon("tong", 14)}Hapus</button></div>` : ""}</div>`;
+  return bilahPilih({ nama: "Job", n, total: halaman.length, semua: semua ? null : 'data-dj="cb-semua"', batal: 'data-dj="pilih-batal"',
+    aksi: [{ attr: 'data-dj="m-selesai"', label: "Selesai", icon: ikon("cek", 14) }, { attr: 'data-dj="m-pic"', label: "Ubah PIC", icon: ikon("orang", 14) }, { attr: 'data-dj="m-bagikan"', label: "Bagikan", icon: ikon("salin", 14) }],
+    hapus: { attr: 'data-dj="m-hapus"', label: "Hapus" } });
 }
 
 /* ---------- detail job (desain B): berkas dan pratinjau jadi fokus, review kepala divisi, ubah target, tautan bagikan ---------- */

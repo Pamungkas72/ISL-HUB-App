@@ -6,6 +6,7 @@
 // ===========================================================
 import { renderNav } from "./nav.js";
 import * as DB from "./db.js";
+import { bilahPilih } from "./bilah-pilih.js";
 import { ambilSalinan, simpanSalinan, bannerSinkron } from "./cache-lokal.js";
 import { adalahMaster, emailMasterBelumDiisi, labelAkun } from "./config-akses.js";
 import { adalahKelola } from "./akses.js";
@@ -314,19 +315,9 @@ function htmlTarif() {
   // Bar tarif terpilih: ringkasan di atas, aksi di bawah. Hanya aksi yang dipakai.
   const pilihBar =
     S.kelola && S.pilih.size
-      ? `<div class="mr-pilihbar" role="region" aria-label="Tarif terpilih">
-          <div class="mr-pilihbar__atas">
-            <span class="mr-pilihbar__jml"><b>${angka(S.pilih.size)}</b> dipilih</span>
-            ${S.pilih.size < daftar.length ? `<button type="button" class="mr-link" data-aksi="pilih-semua">Pilih semua (${angka(daftar.length)})</button>` : ""}
-            <span class="mr-ruang"></span>
-            <button type="button" class="mr-link" data-aksi="pilih-batal">Batal</button>
-          </div>
-          <div class="mr-pilihbar__aksi">
-            <button type="button" class="mr-btn" data-aksi="duplikat-pilih">${ikon("plus", 14)}Duplikat</button>
-            <button type="button" class="mr-btn" data-aksi="salin-vendor">${ikon("vendor", 14)}Salin ke vendor lain</button>
-            ${S.master ? `<button type="button" class="mr-btn mr-btn--hapus" data-aksi="hapus-pilih">${ikon("tong", 14)}Hapus permanen</button>` : ""}
-          </div>
-        </div>`
+      ? bilahPilih({ nama: "Tarif", n: S.pilih.size, total: daftar.length, semua: S.pilih.size < daftar.length ? 'data-aksi="pilih-semua"' : null, batal: 'data-aksi="pilih-batal"',
+          aksi: [{ attr: 'data-aksi="duplikat-pilih"', label: "Duplikat", icon: ikon("plus", 14) }, { attr: 'data-aksi="salin-vendor"', label: "Salin ke vendor lain", icon: ikon("vendor", 14) }],
+          hapus: S.master ? { attr: 'data-aksi="hapus-pilih"', label: "Hapus permanen" } : null })
       : "";
 
   const cacahLini = {};
@@ -421,18 +412,8 @@ function idTabTampil() {
 function barPilihTab(n, total) {
   if (!S.kelola || !n) return "";
   const master = S.master;
-  return `<div class="mr-pilihbar" role="region" aria-label="Pilihan terpilih">
-    <div class="mr-pilihbar__atas">
-      <span class="mr-pilihbar__jml"><b>${angka(n)}</b> dipilih</span>
-      ${n < total ? `<button type="button" class="mr-link" data-aksi="tab-semua">Pilih semua (${angka(total)})</button>` : ""}
-      <span class="mr-ruang"></span>
-      <button type="button" class="mr-link" data-aksi="tab-batal">Batal</button>
-    </div>
-    <div class="mr-pilihbar__aksi">
-      <button type="button" class="mr-btn" data-aksi="tab-nonaktif">${ikon("tutup", 14)}Nonaktifkan</button>
-      ${master ? `<button type="button" class="mr-btn mr-btn--hapus" data-aksi="tab-hapus">${ikon("tong", 14)}Hapus permanen</button>` : ""}
-    </div>
-  </div>`;
+  return bilahPilih({ nama: "Pilihan", n, total, semua: n < total ? 'data-aksi="tab-semua"' : null, batal: 'data-aksi="tab-batal"',
+    aksi: [{ attr: 'data-aksi="tab-nonaktif"', label: "Nonaktifkan", icon: ikon("tutup", 14) }], hapus: master ? { attr: 'data-aksi="tab-hapus"', label: "Hapus permanen" } : null });
 }
 // Tarif, vendor, atau lokasi yang masih dipakai tarif atau quotation tidak boleh dihapus
 function terpakaiTab(id) {
@@ -1684,10 +1665,11 @@ const chipHP = (aktif, teks, n, aksi, v = "", warn = false) => `<button type="bu
 const pilihBarHP = (n, total, tipe) => {
   if (!pilihAktif()) return "";
   const tarif = tipe === "tarif";
-  return `<div class="mr-m-pb" role="region" aria-label="Pilih banyak"><div class="mr-m-pb__a"><span><b>${angka(n)}</b> dipilih</span>${n < total ? `<button type="button" class="mr-m-link" data-aksi="${tarif ? "pilih-semua" : "tab-semua"}">Pilih semua (${angka(total)})</button>` : ""}<span class="mr-ruang"></span><button type="button" class="mr-m-link" data-aksi="m-batal">Batal</button></div>
-    ${n ? `<div class="mr-m-pb__b">${tarif
-      ? `<button type="button" class="mr-btn" data-aksi="duplikat-pilih">${ikon("salin", 15)}Duplikat</button><button type="button" class="mr-btn" data-aksi="salin-vendor">${ikon("tukar", 15)}Salin ke vendor lain</button>${S.master ? `<button type="button" class="mr-btn mr-btn--hapus" data-aksi="hapus-pilih">${ikon("tong", 15)}Hapus permanen</button>` : ""}`
-      : `<button type="button" class="mr-btn" data-aksi="tab-nonaktif">${ikon("tutup", 15)}Nonaktifkan</button>${S.master ? `<button type="button" class="mr-btn mr-btn--hapus" data-aksi="tab-hapus">${ikon("tong", 15)}Hapus permanen</button>` : ""}`}</div>` : `<p class="mr-m-pb__h">Ketuk untuk memilih. Tombol aksi muncul di sini.</p>`}</div>`;
+  if (!n) return `<div class="mr-m-pb" role="region" aria-label="Pilih banyak"><p class="mr-m-pb__h">Ketuk untuk memilih. Tombol aksi muncul di sini.</p></div>`;
+  return bilahPilih({ nama: tarif ? "Tarif" : "Pilihan", n, total, semua: n < total ? `data-aksi="${tarif ? "pilih-semua" : "tab-semua"}"` : null, batal: 'data-aksi="m-batal"',
+    aksi: tarif ? [{ attr: 'data-aksi="duplikat-pilih"', label: "Duplikat", icon: ikon("salin", 15) }, { attr: 'data-aksi="salin-vendor"', label: "Salin ke vendor lain", icon: ikon("tukar", 15) }]
+      : [{ attr: 'data-aksi="tab-nonaktif"', label: "Nonaktifkan", icon: ikon("tutup", 15) }],
+    hapus: S.master ? { attr: tarif ? 'data-aksi="hapus-pilih"' : 'data-aksi="tab-hapus"', label: "Hapus permanen" } : null });
 };
 const fabHP = () => {
   if (!S.kelola || pilihAktif()) return "";
