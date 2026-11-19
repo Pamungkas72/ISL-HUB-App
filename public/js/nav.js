@@ -27,6 +27,17 @@ function aturSidebar(lipat) {
   tombol.title = lipat ? "Buka menu" : "Lipat menu";
   tombol.setAttribute("aria-label", tombol.title);
 }
+// Ikon garis untuk bilah bawah HP (desktop tetap memakai ikon isi dari nav-config).
+const IKON_HP = {
+  beranda: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  "master-rate": '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+  quotation: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  customer: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 5a3.2 3.2 0 0 1 0 6M18 14c2 .6 3 2.6 3 6"/>',
+  dailyjob: '<rect x="8" y="3" width="8" height="4" rx="1"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m1 9 2 2 4-4"/>',
+  pengaturan: '<path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10"/><circle cx="15" cy="6" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/>',
+};
+const ikonGanda = (item) => `<svg class="ik-d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>` +
+  (IKON_HP[item.id] ? `<svg class="ik-hp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IKON_HP[item.id]}</svg>` : `<svg class="ik-hp ik-isi" viewBox="0 0 24 24">${item.icon}</svg>`);
 const NAMA_TEMA = { otomatis: "Tema: ikut perangkat", terang: "Tema: terang", gelap: "Tema: gelap" };
 const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 
@@ -77,14 +88,14 @@ export function renderNav(activeId) {
         : "";
 
       if (isDisabled) {
-        return `<li class="nav-li--lain"><span class="${classes}" title="Belum tersedia — menyusul di fase berikutnya">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>
+        return `<li><span class="${classes}" title="Belum tersedia — menyusul di fase berikutnya">
+          ${ikonGanda(item)}
           <span class="nav-item__teks">${item.label}</span>${badge}
         </span></li>`;
       }
 
-      return `<li${item.utama ? "" : ' class="nav-li--lain"'}><a class="${classes}" href="${item.href}" title="${item.label}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${item.icon}</svg>
+      return `<li><a class="${classes}" href="${item.href}" title="${item.label}" aria-label="${item.label}"${isActive ? ' aria-current="page"' : ""}>
+        ${ikonGanda(item)}
         <span class="nav-item__teks">${item.label}</span>
       </a></li>`;
     })
@@ -97,27 +108,17 @@ export function renderNav(activeId) {
     </button>
   </div>`;
 
-  // HP: bilah bawah berisi 4 tab utama + "Lainnya". Sisanya (Lembar Rekap, Laporan, Pengaturan) ada di lembar Lainnya.
-  const lain = navItems.filter((i) => !i.utama);
-  const lainAktif = lain.some((i) => i.id === activeId);
-  const IKON_LAIN = '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>';
-  const tombolLain = `<li class="nav-li--lainnya"><button type="button" class="nav-item${lainAktif ? " is-active" : ""}" id="btn-lainnya" aria-expanded="false" aria-controls="nav-lain">${svg(IKON_LAIN)}Lainnya</button></li>`;
-  const lembarLain = `<div class="nav-lain" id="nav-lain" hidden>${lain.map((i) => i.status === "coming-soon"
-    ? `<span class="nav-lain__i is-disabled">${svg(i.icon)}${i.label}<em>Segera</em></span>`
-    : `<a class="nav-lain__i${i.id === activeId ? " is-active" : ""}" href="${i.href}">${svg(i.icon)}${i.label}</a>`).join("")}</div>`;
-
-  nav.innerHTML = `${brand}<ul class="app-nav__list">${items}${tombolLain}</ul>${footer}${lembarLain}`;
+  // HP: bilah bawah melayang berisi semua halaman, digeser kanan-kiri; tab aktif menampilkan nama.
+  nav.innerHTML = `${brand}<ul class="app-nav__list">${items}</ul>${footer}`;
   aturSidebar(lipat);
   // Halaman tujuan menu di-prefetch supaya pindah halaman di HP tidak mulai dari nol.
   for (const h of new Set(navItems.map((i) => i.href).filter((h) => h && h !== "#").map((h) => h.split("#")[0]))) {
     if (!document.querySelector(`link[rel="prefetch"][href="${h}"]`)) { const l = document.createElement("link"); l.rel = "prefetch"; l.href = h; document.head.appendChild(l); }
   }
   document.getElementById("btn-sidebar").addEventListener("click", () => { const baru = !sidebarLipat(); simpanSidebar(baru); aturSidebar(baru); });
-  const tutupLain = () => { const l = document.getElementById("nav-lain"), b = document.getElementById("btn-lainnya"); if (l) l.hidden = true; if (b) b.setAttribute("aria-expanded", "false"); };
-  document.getElementById("btn-lainnya").addEventListener("click", (ev) => { ev.stopPropagation(); const l = document.getElementById("nav-lain"); l.hidden = !l.hidden; ev.currentTarget.setAttribute("aria-expanded", String(!l.hidden)); });
-  document.addEventListener("click", (ev) => { if (!ev.target.closest("#nav-lain, #btn-lainnya")) tutupLain(); });
-  document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") tutupLain(); });
-  document.querySelectorAll("#nav-lain a").forEach((a) => a.addEventListener("click", tutupLain));
+  // tab aktif digeser ke tengah bilah (HP)
+  const list = nav.querySelector(".app-nav__list"), aktif = list.querySelector(".is-active");
+  if (aktif && list.scrollWidth > list.clientWidth) list.scrollLeft = aktif.offsetLeft - (list.clientWidth - aktif.offsetWidth) / 2;
 
   document.getElementById("btn-logout").addEventListener("click", keluar);
   pasangTombolAtas();

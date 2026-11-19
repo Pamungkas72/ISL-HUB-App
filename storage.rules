@@ -9,6 +9,8 @@
 //  - dokumen/          dokumen bertanda tangan, foto galeri formulir lini : akun aktif boleh melihat, master dan sales mengunggah
 //  - quotation_riwayat/ PDF quotation terkirim di luar sistem (riwayat) : akun aktif boleh melihat, master dan sales mengunggah
 //  - dailyjob/{kelompok}/  lampiran Daily Job : anggota kelompok itu, master, dan admin (maks 4 MB; gambar, PDF, Office, CSV, ZIP)
+//  - legal/            PDF kontrak berjalan   : hanya master dan admin (baca, tulis, hapus)
+//  - mom/{uid}/        foto dokumentasi MOM   : pemilik, master, dan admin
 //  - open_yard/, vendor_dokumen/  seperti sebelumnya
 // ===========================================================
 rules_version = '2';
@@ -74,13 +76,23 @@ service firebase.storage {
       allow create, update: if (isMaster() || anggotaDJ(kelompok) || isAdmin()) && djBoleh();
     }
 
+    // Legal: PDF kontrak berjalan hanya untuk master dan admin; foto dokumentasi MOM untuk pemiliknya, master, dan admin.
+    match /legal/{allPaths=**} {
+      allow read, delete: if isMaster() || isAdmin();
+      allow create, update: if (isMaster() || isAdmin()) && fileBolehDiunggah(4 * 1024 * 1024);
+    }
+    match /mom/{uid}/{allPaths=**} {
+      allow read, delete: if isMaster() || isAdmin() || (profilAktif() && request.auth.uid == uid);
+      allow create, update: if (isMaster() || isAdmin() || ((isSales()) && request.auth.uid == uid)) && fileBolehDiunggah(4 * 1024 * 1024);
+    }
+
     // Sales dan admin boleh mengunggah PDF dan lampiran quotation miliknya, tanda tangannya sendiri, dan foto galeri formulir.
     match /{folder}/{allPaths=**} {
-      allow read: if aktif() && folder != 'vendor_rahasia' && folder != 'rahasia' && folder != 'dailyjob';
+      allow read: if aktif() && folder != 'vendor_rahasia' && folder != 'rahasia' && folder != 'dailyjob' && folder != 'legal' && folder != 'mom';
       allow create, update: if (isMaster() || ((isSales() || isAdmin()) && folder in ['quotation_pdf', 'dokumen', 'quotation_riwayat'])
           || (isAdmin() && folder in ['open_yard', 'vendor_dokumen', 'profil_fasilitas']))
-        && folder != 'vendor_rahasia' && folder != 'rahasia' && fileBolehDiunggah(4 * 1024 * 1024);
-      allow delete: if isMaster() && folder != 'vendor_rahasia' && folder != 'rahasia' && folder != 'dailyjob';
+        && folder != 'vendor_rahasia' && folder != 'rahasia' && folder != 'legal' && folder != 'mom' && fileBolehDiunggah(4 * 1024 * 1024);
+      allow delete: if isMaster() && folder != 'vendor_rahasia' && folder != 'rahasia' && folder != 'dailyjob' && folder != 'legal' && folder != 'mom';
     }
   }
 }

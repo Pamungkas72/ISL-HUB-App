@@ -177,6 +177,7 @@ watchAuthState(
         "master-rate": { kontainer: "mr-kontainer", muat: () => import("./master-rate.js"), mulai: "mulaiMR", judul: "Master Rate" },
         pemberitahuan: { kontainer: "nf-halaman", muat: () => import("./pemberitahuan.js"), mulai: "mulaiPemberitahuan", judul: "Pemberitahuan" },
         dailyjob: { kontainer: "dj-root", muat: () => import("./daily-job.js"), mulai: "mulaiDailyJob", judul: "Daily Job" },
+        legal: { kontainer: "lg-root", muat: () => import("./legal.js"), mulai: "mulaiLegal", judul: "Legal" },
         pengaturan: { kontainer: "st-root", muat: () => import("./pengaturan.js"), mulai: "mulaiPengaturan", judul: "Pengaturan" },
       };
       const KONTAINER_CUSTOMER = ["cu-root", "qt-root", "lp-root", "lr-root", "pf-root"];
@@ -193,7 +194,8 @@ watchAuthState(
       const rute = () => {
         const id = location.hash.slice(1);
         if (MODUL[id]) {
-          if (sales && id !== "beranda" && id !== "dailyjob" && id !== "pengaturan") { location.hash = "#quotation"; return; } // akun sales tidak punya menu ini
+          if (sales && id !== "beranda" && id !== "dailyjob" && id !== "pengaturan" && id !== "legal") { location.hash = "#quotation"; return; } // akun sales tidak punya menu ini
+          if (id === "legal" && !kelola && !sales) { location.hash = "#beranda"; return; } // Legal: master, admin, dan sales (MOM)
           if (id === "pemberitahuan" && !kelola) { location.hash = "#beranda"; return; } // halaman penuh hanya untuk master dan admin
           return tampilModul(id);
         }

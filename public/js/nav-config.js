@@ -19,6 +19,7 @@ const icons = {
   setelan: `<path d="M3 5h18v2H3z M3 11h18v2H3z M3 17h18v2H3z"/><path fill-rule="evenodd" d="M5.2 6a2.8 2.8 0 1 0 5.6 0a2.8 2.8 0 1 0 -5.6 0zM6.9 6a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0z"/><path fill-rule="evenodd" d="M13.2 12a2.8 2.8 0 1 0 5.6 0a2.8 2.8 0 1 0 -5.6 0zM14.9 12a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0z"/><path fill-rule="evenodd" d="M7.2 18a2.8 2.8 0 1 0 5.6 0a2.8 2.8 0 1 0 -5.6 0zM8.9 18a1.1 1.1 0 1 1 2.2 0a1.1 1.1 0 1 1 -2.2 0z"/>`,
   uangjalan: `<path fill-rule="evenodd" d="M3 6h18v12H3z M5.5 8.5v7h13v-7z M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 1 0 0-5z"/>`,
   dailyjob: `<path fill-rule="evenodd" d="M5 3h14a1 1 0 0 1 1 1v17a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z M7 7h2v2H7z M11 7.5h6v1.2h-6z M7 11h2v2H7z M11 11.5h6v1.2h-6z M7 15h2v2H7z M11 15.5h4v1.2h-4z"/>`,
+  legal: `<path fill-rule="evenodd" d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z M10.6 15.4 7.8 12.6l1.2-1.2 1.6 1.6 4.4-4.4 1.2 1.2z"/>`,
   logout: `<path d="M9 21H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" />`,
 };
 
@@ -64,6 +65,13 @@ export const navItems = [
     status: "active",
   },
   {
+    id: "legal",
+    label: "Legal",
+    href: "app.html#legal",
+    icon: icons.legal,
+    status: "active",
+  },
+  {
     id: "pengaturan",
     label: "Pengaturan",
     href: "app.html#pengaturan",
@@ -74,5 +82,5 @@ export const navItems = [
 ];
 
 // Menu yang disembunyikan per peran (aturan sebenarnya ada di firestore.rules; ini hanya merapikan tampilan).
-export const SEMBUNYI_PERAN = { sales: ["master-rate"], lihat: ["performa"], admin: [], dj: ["beranda", "master-rate", "quotation", "customer", "pengaturan", "performa"] }; // dj = anggota tim Daily Job: hanya Daily Job
+export const SEMBUNYI_PERAN = { sales: ["master-rate"], lihat: ["performa", "legal"], admin: [], dj: ["beranda", "master-rate", "quotation", "customer", "pengaturan", "performa", "legal"] }; // dj = anggota tim Daily Job: hanya Daily Job
 export const logoutIcon = icons.logout;
