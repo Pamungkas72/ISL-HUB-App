@@ -498,31 +498,34 @@ async function jalankanTim(a, t) {
 
 /* ---------- filter: sheet dari bawah (HP dan desktop), seragam dengan Quotation ---------- */
 const selF = (aksi, lab, isi) => `<label class="mr-f"><span>${lab}</span><select data-dj="${aksi}">${isi}</select></label>`;
-const pilF = (aksi, v, t, on) => `<button type="button" class="dj-pil${on ? " is-on" : ""}" data-dj="${aksi}" data-v="${e(v)}" aria-pressed="${!!on}">${t}</button>`;
+const segF = (aksi, daftar, aktif) => `<div class="dj-sg" role="group">${daftar.map(([k, t]) => `<button type="button" class="${aktif === k ? "is-on" : ""}" data-dj="${aksi}" data-v="${e(k)}" aria-pressed="${aktif === k}">${t}</button>`).join("")}</div>`;
 const bagF = (judul, isi) => `<div class="dj-fs"><h4>${judul}</h4>${isi}</div>`;
 const tutupSheet = () => { const d = $("#dj-sheet"); if (d) d.remove(); if (!$("#mr-layer.is-open")) document.body.classList.remove("mr-kunci-scroll"); };
-function bukaSheet(sub, isi, tombol) {
-  const ada = !!$("#dj-sheet"); tutupSheet(); // isi diganti saat sheet terbuka: tanpa animasi ulang
-  const d = document.createElement("div"); d.id = "dj-sheet"; d.className = "dj-sheet" + (ada ? " is-buka" : "");
+/** HP: sheet dari bawah. Desktop: popover kecil di bawah tombol Filter. */
+function bukaSheet(isi, tombol) {
+  const ada = !!$("#dj-sheet"), hp = layarHp(), jangkar = hp ? null : $('[data-dj="filter"]'); tutupSheet(); // isi diganti saat terbuka: tanpa animasi ulang
+  const d = document.createElement("div"); d.id = "dj-sheet"; d.className = "dj-sheet" + (hp ? "" : " dj-sheet--pop") + (ada ? " is-buka" : "");
   d.innerHTML = `<div class="dj-sheet__scrim" data-dj="sheet-tutup"></div><div class="dj-sheet__kotak" role="dialog" aria-modal="true" aria-label="Filter"><div class="dj-sheet__grip" aria-hidden="true"></div>
-    <div class="dj-sheet__h"><div><b>Filter</b><small>${sub}</small></div><button type="button" class="mr-ikonbtn" data-dj="sheet-tutup" aria-label="Tutup">${ikon("tutup", 18)}</button></div>
-    <div class="dj-sheet__isi">${isi}<div class="dj-fs__aksi"><button type="button" class="mr-btn" data-dj="filter-reset">Atur ulang</button><button type="button" class="mr-btn mr-btn--utama" data-dj="sheet-tutup">${tombol}</button></div></div></div>`;
-  document.body.appendChild(d); document.body.classList.add("mr-kunci-scroll");
+    <div class="dj-sheet__h"><b>Filter</b><button type="button" class="mr-ikonbtn" data-dj="sheet-tutup" aria-label="Tutup">${ikon("tutup", 18)}</button></div>${isi}
+    <div class="dj-fs__aksi"><button type="button" class="mr-btn" data-dj="filter-reset">Atur ulang</button><button type="button" class="mr-btn mr-btn--utama" data-dj="sheet-tutup">${tombol}</button></div></div>`;
+  document.body.appendChild(d);
+  if (jangkar) { const r = jangkar.getBoundingClientRect(), k = d.querySelector(".dj-sheet__kotak"); k.style.top = r.bottom + 8 + "px"; k.style.right = Math.max(12, innerWidth - r.right) + "px"; }
+  document.body.classList.add("mr-kunci-scroll");
   if (!ada) requestAnimationFrame(() => requestAnimationFrame(() => d.classList.add("is-buka")));
 }
 addEventListener("hashchange", tutupSheet); // pindah halaman: sheet ikut tertutup
 const panelAktif = () => (S.tab === "job" ? panelFilterJob() : panelFilter());
-const bagPic = () => bagF("PIC", `<div class="dj-pils">${pilF("f-picchip", "", "Semua", !S.fPic)}${daftarPic().map((p) => pilF("f-picchip", p, `${avatar(p)} ${e(p)}`, S.fPic === p)).join("")}</div>`);
-const bagKat = () => bagF("Kategori", `<div class="dj-pils">${pilF("f-katchip", "", "Semua", !S.fKat)}${kategoriAktif().map((k) => pilF("f-katchip", k, e(k), S.fKat === k)).join("")}</div>`);
+const bagPic = () => bagF("PIC", `<select class="dj-sel" data-dj="f-pic" aria-label="PIC">${opsi(daftarPic(), S.fPic, "Semua PIC")}</select>`);
+const bagKat = () => bagF("Kategori", `<select class="dj-sel" data-dj="f-kat" aria-label="Kategori">${opsi(kategoriAktif(), S.fKat, "Semua kategori")}</select>`);
 const bagTgl = (dari, sampai, vd, vs) => `<div class="dj-tgl"><input type="date" id="${dari}" value="${e(vd)}" aria-label="Dari"><input type="date" id="${sampai}" value="${e(vs)}" aria-label="Sampai"></div>`;
 /** Filter dashboard performa (desain Q2): periode, PIC, kategori. Status tidak dipakai agar angka tetap utuh. */
 function panelFilter() {
-  bukaSheet("Berlaku untuk dashboard performa.", `${bagF("Periode", `<div class="dj-pils">${[["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]].map(([k, t]) => pilF("periode", k, t, S.periode === k)).join("")}</div>${S.periode === "rentang" ? bagTgl("dj-dari", "dj-sampai", S.dari, S.sampai) : ""}`)}${bagPic()}${bagKat()}`, "Selesai");
+  bukaSheet(`${bagF("Periode", segF("periode", [["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]], S.periode) + (S.periode === "rentang" ? bagTgl("dj-dari", "dj-sampai", S.dari, S.sampai) : ""))}${bagPic()}${bagKat()}`, "Selesai");
 }
-/** Filter daftar job: PIC, kategori, periode job dibuat (tglMasuk). Status ada di halaman daftar. */
+/** Filter daftar job: periode job dibuat (tglMasuk), PIC, kategori. Status ada di halaman daftar. */
 function panelFilterJob() {
   const d = dataDaftar(H.hariIni());
-  bukaSheet("PIC, kategori, dan periode job dibuat.", `${bagPic()}${bagKat()}${bagF("Periode job dibuat", `<div class="dj-pils">${PERIODE_DJ.map(([k, t]) => pilF("pd", k, t, S.pDaftar === k)).join("")}</div>${S.pDaftar === "rentang" ? bagTgl("dj-pdari", "dj-psampai", S.pDari, S.pSampai) : ""}`)}`, `Tampilkan ${d.l.length} job`);
+  bukaSheet(`${bagF("Periode", segF("pd", PERIODE_DJ, S.pDaftar) + (S.pDaftar === "rentang" ? bagTgl("dj-pdari", "dj-psampai", S.pDari, S.pSampai) : ""))}${bagPic()}${bagKat()}`, `Tampilkan ${d.l.length} job`);
 }
 matchMedia("(max-width: 760px)").addEventListener("change", () => { if (window.__rute === "dailyjob") render(); });
 
@@ -814,7 +817,6 @@ document.addEventListener("click", async (ev) => {
   }
   if (a === "filter") return panelAktif();
   if (a === "sheet-tutup") return tutupSheet();
-  if (a === "f-katchip") { S.fKat = v; S.hal = 0; render(); return panelAktif(); }
   if (a === "filter-reset") { S.fPic = ""; S.fKat = ""; S.periode = "bulan"; S.pDaftar = "semua"; S.masalah = ""; S.hal = 0; if (S.kelola) S.fKel = ""; render(); return panelAktif(); }
   if (a === "impor") return panelImpor();
   if (a === "impor-jalan") return jalankanImpor();
