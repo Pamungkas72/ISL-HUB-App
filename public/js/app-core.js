@@ -8185,7 +8185,7 @@ window.__islBeranda = {
     const lalu = per === 'bulan' ? LAP.agg(semua.filter(l => { const [c, d] = LAP.rentang('bulan-lalu', '', ''); return l.tanggal >= c && l.tanggal <= d; })).omzet : null;
     const tren = Array.from({ length: 6 }, (_, i) => { const d = new Date(y, m - 1 - (5 - i), 1), k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; return { k, label: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][d.getMonth()], omzet: semua.filter(l => bulanKey(l.tanggal) === k).reduce((t, l) => t + l.omzet, 0) }; });
     const urut = g => g.sort((x, z) => z.omzet - x.omzet);
-    const lini = urut(LAP.kelompok(L, 'lini')).slice(0, 5).map(g => ({ nama: g.nama, omzet: g.omzet, margin: g.marginPct, bawahTarget: g.poin !== null && g.poin < 0 }));
+    const lini = urut(LAP.kelompok(L, 'lini')).slice(0, 8).map(g => ({ nama: g.nama, omzet: g.omzet, margin: g.marginPct, order: g.order, bawahTarget: g.poin !== null && g.poin < 0, tren: tren.map(t => semua.filter(l => (l.liniKey || '-') === g.id && bulanKey(l.tanggal) === t.k).reduce((z, l) => z + l.omzet, 0)) }));
     const top = urut(LAP.kelompok(L, 'customer')).slice(0, 3).map(g => ({ nama: g.nama, omzet: g.omzet }));
     const aktif = DB.list.filter(q => !q.digantikanOleh && !q.arsip), setuju = DB.list.filter(q => q.status === 'disetujui' && tglLog(q, 'disetujui') >= a && tglLog(q, 'disetujui') <= b).length, tolak = DB.list.filter(q => q.status === 'ditolak' && tglLog(q, 'ditolak') >= a && tglLog(q, 'ditolak') <= b).length;
     const kali = per === 'bulan' ? 1 : per === '3bulan' ? 3 : 12, sisaHari = new Date(y, m, 0).getDate() - +hi.slice(8, 10);
