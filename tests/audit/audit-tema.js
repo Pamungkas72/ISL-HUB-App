@@ -31,10 +31,13 @@ const buatTerkirim = p => p.evaluate(async () => {
 });
 const ADEGAN = [
   ['beranda', async p => { await pindah(p, 'beranda'); }],
-  ['legal: ringkasan (desktop) atau Semua (HP)', async p => { await pindah(p, 'legal'); }],
+  ['legal: tab Perusahaan (kartu kelengkapan)', async p => { await pindah(p, 'legal'); }],
+  ['legal: detail perusahaan', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-pt="p1"]'); await tunggu(p, 400); }],
+  ['legal: pilihan tambah (FAB Perusahaan)', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg="fab"]'); await tunggu(p, 400); }],
   ['legal: daftar kontrak', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="kontrak"]'); await tunggu(p, 300); }],
   ['legal: panel detail kontrak', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="kontrak"]'); await klikSel(p, '[data-lg-kontrak="k1"]'); await tunggu(p, 400); }],
-  ['legal: panel tambah dokumen', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg="tambah"]'); await tunggu(p, 400); }],
+  ['legal: panel tambah kontrak', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="kontrak"]'); await klikSel(p, '[data-lg="fab"]'); await tunggu(p, 400); }],
+  ['legal: daftar MOM', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="mom"]'); await tunggu(p, 300); }],
   ['legal: MOM editor (draf)', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="mom"]'); await klikSel(p, '[data-lg-mom="m2"]'); await tunggu(p, 500); await klikSel(p, '[data-mm-acc="peserta"]'); await klikSel(p, '[data-mm-acc="topik"]'); await tunggu(p, 200); }],
   ['legal: MOM final (pratinjau PDF)', async p => { await pindah(p, 'legal'); await klikSel(p, '[data-lg-tab="mom"]'); await klikSel(p, '[data-lg-mom="m1"]'); await tunggu(p, 3000); }],
   ['quotation: daftar', async p => { await pindah(p, 'quotation'); await p.evaluate(() => { window.__qt._Q.view = 'list'; window.__qt.gambar(); }); }],

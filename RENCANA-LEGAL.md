@@ -44,3 +44,8 @@ Tahap awal: **Kontrak berjalan (upload) + pengingat** dan **MOM**. Template kont
 - File: `js/legal.js`, `js/legal-mom.js`, `js/legal-hitung.js`, `css/legal.css`; hook PDF `window.__islDok` di `app-core.js`.
 - Belum: template kontrak (menunggu contoh), pengingat tindak lanjut MOM ke PIC (push), penyetuju MOM dari akun (kini nama + tanda tangan basah).
 - Deploy aturan: `firebase deploy --only firestore:rules,storage` (otomatis lewat deploy-firebase.yml saat merge).
+
+## Revisi tata letak (19 Nov 2026)
+- Pencarian di paling atas; tombol Buat MOM dan Tambah dokumen di header dihapus; Ringkasan dan tab Semua dihapus (peringatan kontrak jadi banner di tab Kontrak dan tetap di lonceng).
+- Tiga tab: **Perusahaan** (kartu kelengkapan per perusahaan grup: induk dan anak, 8 jenis dokumen legalitas, cincin kelengkapan; ketuk untuk detail), **Kontrak** (customer, vendor, MOU; unggah file atau simpan draf), **MOM** (dikelompokkan per bulan).
+- Satu tombol + (FAB bulat, bahasa desain Master Rate dan Customer) dengan aksi menurut tab. Koleksi baru `lg_perusahaan` (master dan admin).
