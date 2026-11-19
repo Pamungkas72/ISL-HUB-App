@@ -8,6 +8,7 @@ import { quotationGantung, tarifPerluVerifikasi, riwayatPerluTindak, labelUmur, 
 import { muatSemua as muatMaster, muatReferensi } from "./db.js";
 import { muatSemua as muatApp } from "./app-store.js";
 import { adalahMaster } from "./config-akses.js";
+import { statusKontrak, BATAS_HARI } from "./legal-hitung.js";
 import { auth, db } from "./firebase-config.js";
 import { bukaPendaftarAksi } from "./pendaftar-aksi.js";
 import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
@@ -137,6 +138,20 @@ async function pendaftarMenunggu() {
   } catch (e) { console.warn("Pendaftar sales tidak termuat:", e && e.code); return []; }
 }
 
+/* Legal: kontrak yang berakhir dalam 60 hari (pengingat 60 dan 30 hari) atau sudah berakhir. Hanya master dan admin (aturan Firestore lg_kontrak). */
+async function dariKontrak() {
+  const u = auth.currentUser; if (!u || !(window.__ISL_KELOLA ?? adalahMaster(u.email))) return [];
+  try {
+    const now = window.__ISL && window.__ISL.hariIni ? window.__ISL.hariIni() : hariIni(), snap = await getDocs(collection(db, "lg_kontrak"));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).flatMap((k) => {
+      const st = statusKontrak(k, now); if (st.kode === "aktif") return [];
+      const habis = st.kode === "berakhir";
+      return [{ id: "kt:" + k.id, jenis: "halaman", grup: "legal", level: habis || st.kode === "mendesak" ? "bahaya" : "warn", judul: habis ? `Kontrak ${k.pihak || ""} sudah berakhir` : `Kontrak ${k.pihak || ""} berakhir ${st.sisa} hari lagi`,
+        ket: `${k.nomor ? k.nomor + " · " : ""}berakhir ${k.berakhir}${k.autoRenew ? " · perpanjangan otomatis" : " · perpanjang atau akhiri"}`, tujuan: { jenis: "halaman", hash: "#legal" } }];
+    });
+  } catch (e) { console.warn("Kontrak Legal tidak termuat:", e && e.code); return []; }
+}
+
 export async function kumpulkan({ paksa = false } = {}) {
   const c = baca(K_CACHE, null);
   let semua = c && !paksa && Date.now() - c.t < UMUR_CACHE_MS ? c.items : null;
@@ -148,7 +163,7 @@ export async function kumpulkan({ paksa = false } = {}) {
   }
   const urut = { bahaya: 0, warn: 1, info: 2 }, t = ditutup();
   const items = semua.filter((i) => true).sort((a, b) => urut[a.level] - urut[b.level]);
-  return { semua: [...items, ...dariCadangan(), ...(await pendaftarMenunggu()), ...pwTerkumpul()], t };
+  return { semua: [...items, ...dariCadangan(), ...(await pendaftarMenunggu()), ...(await dariKontrak()), ...pwTerkumpul()], t };
 }
 
 // ---------- tujuan: buka sumber masalahnya ----------
@@ -202,7 +217,7 @@ export const tersembunyi = () => terakhir.semua.filter(sembunyi);
 
 let terakhir = { semua: [], t: new Set() };
 // Kategori tampilan (halaman Pemberitahuan). Item boleh membawa `grup` sendiri.
-export const GRUP = [["tarif", "Master Rate · Tarif"], ["vendor", "Master Rate · Vendor"], ["lokasi", "Master Rate · Lokasi"], ["quotation", "Quotation"], ["sistem", "Sistem"]];
+export const GRUP = [["tarif", "Master Rate · Tarif"], ["vendor", "Master Rate · Vendor"], ["lokasi", "Master Rate · Lokasi"], ["quotation", "Quotation"], ["legal", "Legal · Kontrak"], ["sistem", "Sistem"]];
 const GRUP_JENIS = { quotation: "quotation", riwayat: "quotation", tarif: "tarif", vendor: "vendor", lokasi: "lokasi" };
 export const grupDari = (i) => i.grup || GRUP_JENIS[i.jenis] || "sistem";
 export const semuaItem = () => terlihat();

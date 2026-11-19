@@ -3279,17 +3279,20 @@ function perbaikiRowspan(tabel) {
   });
 }
 
+/* Kop surat quotation (logo, nama, deskripsi berikon, garis). Dipakai dokumen quotation dan dokumen lain (MOM). */
+const KOP_IKON = { pin: '<path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.6"/>', tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/>', mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>', web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>', npwp: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4M7 14h6M15 10h2"/>' };
+const kopItem = (k, v, kelas = '') => String(v || '').trim() ? `<span class="it${kelas}"><svg viewBox="0 0 24 24" aria-hidden="true">${KOP_IKON[k]}</svg><span>${esc(String(v).trim())}</span></span>` : '';
+const kopSuratHtml = (kop, logo) => {
+  const kopRinci = kopItem('pin', kop.alamat, ' al') + kopItem('tel', kop.telp) + kopItem('mail', kop.email) + kopItem('web', kop.web) + kopItem('npwp', kop.npwp);
+  return `<div class="isl-kopA"><img class="lg" src="${logo}" alt=""><span class="dv"></span><div class="ki"><b>PT INDO SUKSES LOGISTIK</b>${kop.tagline ? `<span class="tg">${esc(kop.tagline)}</span>` : ''}<div class="kk">${kopRinci}</div></div></div><div class="isl-kopA-garis"></div>`;
+};
 async function renderDok(m, aset, o = {}) {
   pasangCssDok(); await siapkanFont();
   const L = LBL[m.bahasa], proj = m.tipe === 'project', uni = m.uni, subOn = m.subTampil !== false, kop = m.kop;
   const host = document.createElement('div'); host.className = 'isl-host'; host.style.cssText = 'position:absolute;left:-12000px;top:0;width:794px;pointer-events:none';
   document.body.appendChild(host);
   const pages = []; let body = null, tabel = null;
-  /* deskripsi kop: ikon sebagai penanda (alamat, telepon, email, web, NPWP); baris yang kosong hilang, sisanya berpasangan dua kolom */
-  const KOP_IKON = { pin: '<path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.6"/>', tel: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/>', mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>', web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>', npwp: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4M7 14h6M15 10h2"/>' };
-  const kopItem = (k, v, kelas = '') => String(v || '').trim() ? `<span class="it${kelas}"><svg viewBox="0 0 24 24" aria-hidden="true">${KOP_IKON[k]}</svg><span>${esc(String(v).trim())}</span></span>` : '';
-  const kopRinci = kopItem('pin', kop.alamat, ' al') + kopItem('tel', kop.telp) + kopItem('mail', kop.email) + kopItem('web', kop.web) + kopItem('npwp', kop.npwp);
-  const kopFull = `<div class="isl-kopA"><img class="lg" src="${aset.logo}" alt=""><span class="dv"></span><div class="ki"><b>PT INDO SUKSES LOGISTIK</b>${kop.tagline ? `<span class="tg">${esc(kop.tagline)}</span>` : ''}<div class="kk">${kopRinci}</div></div></div><div class="isl-kopA-garis"></div>`;
+  const kopFull = kopSuratHtml(kop, aset.logo);
   const kopRingkas = `<div class="isl-kop2"><img class="lg2" src="${aset.logo}" alt=""><div class="k2"><b>${esc(m.judulDok)} No. ${esc(m.nomor)}</b><span>${esc(m.kepada.nama)} · ${esc(L.lanjut)}</span></div></div>`;
   /* Kop dikunci: bila deskripsi kop lebih tinggi dari ruang kop (alamat panjang, ada web dan NPWP), tulisannya diperkecil sampai muat. Tinggi kop dan posisi garis tidak berubah. */
   const kunciKop = pg => {
@@ -8167,6 +8170,39 @@ window.__qt = {
   terkaitCustomer, orderTerkait, gambar, tabCustomer, tabOrder, jumlahOrder, laporanGambar, lembarGambar, panelTambahRate: cid => panelTambahRate(cid), jumlahCust: cid => DB.list.filter(q => q.customerId === cid).length,
   buka: bukaId, baru: mulaiBaru, _Q: Q, _R: R, _Repo: Repo, _riwayatQ: rwSeperQ, _AQ: AQ, _renderDok: renderDok, _renderFit: renderDokFit, unduhRatePdf, _buatDocx: buatDocx, _namaFileWord: namaFileWord, _f: { barisDariLayanan, mrLayananLini, layananByKunci, modalTertinggiDepo, templateBaris, templateKunci, liniPunyaTemplate, liniBerTemplate, kolomLini, kolomBawaan, kolomTersimpan, cariMirip, terkaitCustomer, orderTerkait, cariCustomer, periodeAtur, periodeBaru, periodeTerakhir, statusPeriode, rkBangun, versiRatePeriode, LAP, imTgl, imNum, angkaRp, fmtRpIn, imCariCust, imCocok, belumDipakai, realisasiQ, rateBerlakuPada, senin, tambahHariIso, akhirBulan, DB, pastikanCustomer, kunciGrup }, _util: { senin, tambahHariIso, akhirBulan, hariAntara, periodeBaru, periodeAtur, periodeSebelumnya, periodeTerakhir, imTgl, imNum, angkaRp, angkaDok, versiRatePeriode }, _taruh: taruhPratinjau, _PENG: PENG, _buatPdf: buatPdf, _tungguGambar: tungguGambar
 };
+
+/* ---------- dokumen umum bergaya quotation untuk modul lain (MOM di Legal): blok HTML mengalir ke halaman A4 berkop ---------- */
+async function renderDokUmum(blok, { judul, lanjut, footer, hal, watermark = '' }) {
+  pasangCssDok(); await siapkanFont();
+  const aset = asetSekarang(), host = document.createElement('div'); host.className = 'isl-host'; host.style.cssText = 'position:absolute;left:-12000px;top:0;width:794px;pointer-events:none'; document.body.appendChild(host);
+  const pages = []; let body = null;
+  const baru = () => {
+    const pg = htmlEl(`<div class="isl-page d0 tema-b${pages.length ? ' isl-lanjut' : ''}"><div class="isl-top"></div><div class="isl-wm">${esc(watermark)}</div><div class="isl-body"></div><div class="isl-foot"></div><div class="isl-bot"></div></div>`);
+    host.appendChild(pg); pages.push(pg); body = pg.querySelector('.isl-body');
+    body.insertAdjacentHTML('beforeend', pages.length === 1 ? kopSuratHtml(PENG.kop, aset.logo) : `<div class="isl-kop2"><img class="lg2" src="${aset.logo}" alt=""><div class="k2"><b>${esc(judul)}</b><span>${esc(lanjut)}</span></div></div>`);
+    if (pages.length === 1) { const kop = body.querySelector('.isl-kopA'), ki = kop.querySelector('.ki'), ruang = kop.clientHeight - 4, h = ki.offsetHeight; if (h > ruang && h > 0) ki.style.transform = `scale(${Math.max(0.62, ruang / h).toFixed(3)})`; }
+  };
+  const lewat = () => { const last = body.lastElementChild; return !!last && last.getBoundingClientRect().bottom > body.getBoundingClientRect().bottom + 0.5; };
+  baru();
+  blok.forEach(h => {
+    const n = htmlEl(h); body.appendChild(n);
+    if (lewat() && body.children.length > (pages.length > 1 ? 1 : 0)) { n.remove(); baru(); body.appendChild(n); }
+  });
+  pages.forEach((pg, i) => { pg.querySelector('.isl-foot').innerHTML = `<span>${esc(footer)}</span><span>${esc(hal(i + 1, pages.length))}</span>`; });
+  await tungguGambar(host);
+  return { host, pages, n: pages.length };
+}
+/* jsPDF dari halaman hasil renderDokUmum (tangkapan seperti PDF quotation) */
+async function pdfDariHalaman(pages) {
+  const { jsPDF } = window.jspdf || {}; if (!jsPDF || !window.html2canvas) throw new Error('Pustaka PDF tidak termuat.');
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'p', compress: true });
+  for (let i = 0; i < pages.length; i++) {
+    const cv = await window.html2canvas(pages[i], { scale: 2.2, backgroundColor: '#ffffff', logging: false, useCORS: true, windowWidth: 794, scrollX: 0, scrollY: 0 });
+    if (i) pdf.addPage('a4', 'p'); pdf.addImage(cv.toDataURL('image/jpeg', 0.93), 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+  }
+  return pdf;
+}
+window.__islDok = { render: renderDokUmum, pdf: pdfDariHalaman, ttdSaya: () => ttdPenerbit() || '', cap: () => PENG.aset.cap || '', namaSaya: () => (window.__ISL && window.__ISL.nama) || '', kopTersedia: () => !!PENG && !!PENG.kop };
 
 /* ---------- buka sumber masalah dari pemberitahuan (lonceng / Beranda) ---------- */
 setInterval(() => { if (layarSisa() <= 0) document.querySelectorAll('.qt-tl').forEach(b => { if (!b.classList.contains('nf-hilang')) { b.classList.add('nf-hilang'); setTimeout(() => b.remove(), 300); } }); }, 3000);

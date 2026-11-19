@@ -164,6 +164,28 @@ service cloud.firestore {
     match /uj_slip/{id}       { allow read, write: if isKelola(); }
     match /uj_pengaturan/{id} { allow read, write: if isKelola(); }
 
+    // ---------------- Legal: kontrak berjalan (master dan admin) dan MOM (tiap akun mencatat miliknya) ----------------
+    match /lg_kontrak/{id} {
+      allow read, write: if isStaf();
+    }
+    match /lg_mom/{id} {
+      allow read: if isStaf() || (isSales() && milikSaya(resource.data));
+      allow create: if (isStaf() || isSales()) && request.resource.data.pemilikUid == request.auth.uid && request.resource.data.status == 'draf';
+      // draf boleh diubah pemiliknya; MOM final terkunci (hanya staf yang boleh mengubah atau menghapus)
+      allow update: if isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf' && request.resource.data.pemilikUid == request.auth.uid);
+      allow delete: if isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf');
+    }
+    match /lg_counters/{id} {
+      allow read: if isStaf() || isSales();
+      allow create: if isStaf() || isSales();
+      allow update: if ((isStaf() || isSales()) && request.resource.data.nilai >= resource.data.nilai) || isKelola();
+      allow delete: if false;
+    }
+    // Saran nama peserta MOM: milik tiap akun
+    match /lg_peserta/{uid} {
+      allow read, write: if sesiBerlaku() && request.auth.uid == uid && (isStaf() || isSales());
+    }
+
     // ---------------- Quotation ----------------
     match /qt_quotations/{id} {
       // Sales hanya membaca miliknya (query WAJIB memakai where pemilikUid == uid).
