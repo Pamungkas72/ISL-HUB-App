@@ -12,7 +12,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
+import { MODUL, BATAS_PERAN, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
@@ -20,7 +20,7 @@ import { pasangPembersihan } from "./pembersihan-qt.js";
 import { isiAkunDivisi } from "./akun-divisi.js";
 import { bukaPanelAkses } from "./akses-panel.js";
 
-const S = { bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, cari: "", filter: "semua", pilih: null, tab: "anggota", masuk: null, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
+const S = { peranLihat: "sales", bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, cari: "", filter: "semua", pilih: null, tab: "anggota", masuk: null, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
 const IKON_BAG = { umum: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', profil: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/></svg>', ajuan: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>', cad: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a8 3 0 0 1 16 0v10a8 3 0 0 1-16 0zM4 12a8 3 0 0 0 16 0"/></svg>', akses: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' };
 const kb = (n) => (n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(2) + " MB");
 const wkt = (t) => new Date(t).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
@@ -145,10 +145,16 @@ function panelAkun(a, hp) {
     <div class="ak-aksi">${aktif ? `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-simpan">Simpan</button><button class="mr-btn mr-btn--kecil" data-st="akun-akses">Akses</button>${S.master ? `<button class="mr-btn mr-btn--kecil" data-st="akun-ubah">Ubah data</button><button class="mr-btn mr-btn--kecil" data-st="akun-sandi">Kata sandi</button>` : ""}` : `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-aktif"${kunciModal()}>Aktifkan lagi</button>`}</div>
     <div class="ak-aksi ak-bahaya">${aktif ? `<button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-nonaktif">Nonaktifkan</button>` : ""}${hapus}</div>`}</div>`;
 }
+/* Tab Peran (desain C): pilih peran, lalu daftar hak per modul. Batas tertinggi tiap peran sama dengan BATAS_PERAN (akses.js). */
+const PERAN_INFO = { sales: ["Sales", "Sales", "SLS", "Membuat quotation sendiri dan memakai data customer."], admin: ["Admin", "Admin", "ADM", "Mengelola data, akun sales, dan persetujuan."], lihat: ["Lihat saja", "Lihat saja", "LHT", "Hanya membaca data, tanpa modal."], dj: ["Anggota divisi", "Divisi", "STR / AGR", "Hanya membuka Daily Job kelompoknya."] };
+const KET_MODUL = { mr: "Tarif, vendor, lokasi, uang jalan", qt: "Buat dan kirim penawaran", cu: "Data customer", dj: "Job harian kelompok", lg: "Kontrak dan MOM" };
+const NAMA_LV = ["Tidak", "Lihat", "Kelola"], KLS_LV = ["x", "l", "k"];
 const htmlPeranAkses = () => {
-  const ck = (x) => (x ? `<span class="ak-ya" aria-label="Boleh">✓</span>` : `<span class="mr-sub" aria-label="Tidak">—</span>`);
-  const baris = [["Buat dan ubah quotation", 1, 1, 0], ["Lihat quotation orang lain", 0, 1, 1], ["Lihat modal dan margin", 0, 1, 0], ["Kelola akun sales", 0, 1, 0], ["Setujui pendaftaran", 0, 1, 0]];
-  return `<table class="st-tabel ak-matriks"><thead><tr><th>Boleh</th><th>Sales</th><th>Admin</th><th>Lihat</th></tr></thead><tbody>${baris.map((r) => `<tr><td>${r[0]}</td><td>${ck(r[1])}</td><td>${ck(r[2])}</td><td>${ck(r[3])}</td></tr>`).join("")}</tbody></table><p class="mr-sub" style="margin:8px 0 0">Kode unit: SLS (Sales), ADM (Admin), LHT (Lihat saja), diikuti nomor urut. Anggota divisi Daily Job punya kode unit per kelompok.</p>`;
+  const k = PERAN_INFO[S.peranLihat] ? S.peranLihat : "sales", [nama, , kode, ket] = PERAN_INFO[k], batas = BATAS_PERAN[k] || {};
+  const jml = (x) => (x === "dj" ? "per kelompok" : `${S.akun.filter((a) => a.peran === x).length} akun`);
+  const nav = Object.entries(PERAN_INFO).map(([x, [n, pendek]]) => `<button type="button" data-st="peran-pilih" data-v="${x}" class="${x === k ? "is-aktif" : ""}" aria-pressed="${x === k}"><span class="pr-n">${e(n)}<small>${jml(x)}</small></span><span class="pr-s">${e(pendek)}</span></button>`).join("");
+  const baris = MODUL.map(([m, n]) => `<div class="pr-m"><span><b>${n}</b><small>${KET_MODUL[m]}</small></span><span class="pr-lv pr-lv--${KLS_LV[batas[m] || 0]}">${NAMA_LV[batas[m] || 0]}</span></div>`).join("");
+  return `<div class="pr"><nav class="pr-nav" aria-label="Pilih peran">${nav}</nav><div class="pr-kartu"><div class="pr-h"><h4>${e(nama)}</h4><span class="ak-kode">${kode}</span></div><p class="mr-sub" style="margin:0 0 4px">${ket}</p>${baris}</div></div><p class="mr-sub" style="margin:10px 0 0">Ini batas tertinggi tiap peran. Per akun, batasnya bisa dipersempit lewat tombol Akses. Kode unit memakai awalan peran lalu nomor urut.</p>`;
 };
 function htmlAkun() {
   const hp = matchMedia("(max-width: 760px)").matches;
@@ -384,6 +390,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "akun-tambah") return tambahAkunManual();
   if (a === "ak-pilih") { S.pilih = t.dataset.uid || (t.closest("[data-uid]") || {}).dataset.uid; render(); return; }
   if (a === "ak-tutup") { S.pilih = null; render(); return; }
+  if (a === "peran-pilih") { S.peranLihat = t.dataset.v; render(); return; }
   if (a === "ak-filter") { S.filter = t.dataset.v; render(); return; }
   if (a === "ak-tab") { S.tab = t.dataset.v; S.pilih = null; render(); return; }
   if (a === "cek-firebase") {
