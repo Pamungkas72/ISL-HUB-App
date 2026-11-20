@@ -271,12 +271,10 @@ async function aksiAkun(a, tr) {
       await updateDoc(doc(db, "pengguna", uid), { status: "nonaktif" }); await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
       await catatLogAkun({ uid, email: ak.email }, "nonaktifkan", { status: ak.status }, { status: "nonaktif" }); toast("Akun dinonaktifkan.");
     } else if (a === "akun-hapus") {
-      // Hanya profil di aplikasi yang bisa dihapus dari sini. Login di Firebase Authentication harus dihapus di Firebase Console.
-      if (!(await konfirmasi("Hapus akun ini?", `<b>${e(ak.email)}</b> dihapus dari daftar aplikasi. Quotation dan riwayatnya tetap tersimpan atas namanya.<br><br>Login-nya masih ada di Firebase Authentication. Kalau orangnya masih punya akun itu, ia akan muncul lagi sebagai <i>menunggu</i> saat masuk. Untuk menutup akses sepenuhnya, hapus juga akun loginnya di Firebase Console &gt; Authentication.`, "Hapus akun"))) return;
-      await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
-      await deleteDoc(doc(db, "pengguna", uid));
-      await catatLogAkun({ uid, email: ak.email }, "hapus", { peran: ak.peran ?? null, status: ak.status }, null);
-      toast("Akun dihapus dari daftar aplikasi.");
+      // Fungsi server menghapus profil dan login Firebase Authentication sekaligus (browser tidak bisa menghapus login orang lain); log dicatat di sana.
+      if (!(await konfirmasi("Hapus akun ini?", `<b>${e(ak.email)}</b> dihapus permanen dari aplikasi dan dari login Firebase. Quotation dan riwayatnya tetap tersimpan atas namanya. Tidak bisa dibatalkan.`, "Hapus akun"))) return;
+      await httpsCallable(getFunctions(app, "asia-southeast2"), "hapusAkun")({ uid });
+      toast("Akun dihapus permanen.");
     } else if (a === "akun-tolak") {
       // Ditolak = nonaktif, bukan dihapus. Akun tetap terlihat di daftar dan bisa diaktifkan lagi.
       // (Menghapus dokumen membuat profil "menunggu" muncul lagi saat orangnya masuk, dan email yang sama tidak bisa didaftar ulang.)

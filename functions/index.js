@@ -21,5 +21,21 @@ exports.aturKataSandi = onCall({ region: "asia-southeast2" }, async (req) => {
   await admin.firestore().collection("pengguna_log").add({ uid, email, aksi: "atur-sandi", dari: null, ke: null, oleh: a.token.email, waktu: admin.firestore.FieldValue.serverTimestamp() });
   return { ok: true };
 });
+// Master menghapus akun permanen: profil, sales_publik, dan login Firebase Authentication sekaligus.
+exports.hapusAkun = onCall({ region: "asia-southeast2" }, async (req) => {
+  const a = req.auth;
+  if (!a || String(a.token.email || "").toLowerCase() !== EMAIL_MASTER || Date.now() / 1000 - a.token.auth_time > BATAS_SESI_DETIK)
+    throw new HttpsError("permission-denied", "Hanya master.");
+  const uid = String((req.data && req.data.uid) || "");
+  if (!uid) throw new HttpsError("invalid-argument", "uid kosong.");
+  const ref = admin.firestore().doc(`pengguna/${uid}`), profil = await ref.get();
+  const email = String(profil.get("email") || "").toLowerCase();
+  if (email === EMAIL_MASTER || uid === a.uid) throw new HttpsError("permission-denied", "Akun master tidak bisa dihapus.");
+  await admin.auth().deleteUser(uid).catch((err) => { if (err.code !== "auth/user-not-found") throw err; });
+  await admin.firestore().doc(`sales_publik/${uid}`).delete();
+  await ref.delete();
+  await admin.firestore().collection("pengguna_log").add({ uid, email, aksi: "hapus", dari: { peran: profil.get("peran") ?? null, status: profil.get("status") ?? null }, ke: null, oleh: a.token.email, waktu: admin.firestore.FieldValue.serverTimestamp() });
+  return { ok: true };
+});
 exports.notifDailyJob = require("./dailyjob").notifDailyJob;
 Object.assign(exports, require("./dailyjob-akun"));
