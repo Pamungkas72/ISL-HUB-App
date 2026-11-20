@@ -17,7 +17,7 @@ import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
 import { pasangPembersihan } from "./pembersihan-qt.js";
-import { isiAkunDivisi } from "./akun-divisi.js";
+import { isiAkunDivisi, bukaBuatDivisi } from "./akun-divisi.js";
 import { bukaPanelAkses } from "./akses-panel.js";
 
 const S = { peranLihat: "sales", bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, cari: "", filter: "semua", pilih: null, tab: "anggota", masuk: null, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
@@ -194,9 +194,14 @@ const HURUF_SANDI = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const sandiAcak = (n = 24) => { const b = new Uint8Array(n); crypto.getRandomValues(b); return Array.from(b, (x) => HURUF_SANDI[x % HURUF_SANDI.length]).join(""); };
 document.addEventListener("change", (ev) => {
   const t = ev.target; if (!t) return;
-  if (t.id === "ta-peran") { const k = $("#ta-kode"); if (k) k.textContent = kodeUnit(t.value, kodeTerpakai()); }
+  if (t.id === "ta-peran") {
+    const k = $("#ta-kode"), dv = t.value === "divisi"; if (k && !dv) k.textContent = kodeUnit(t.value, kodeTerpakai());
+    $("#ta-info-divisi").hidden = !dv; $("#ta-info-staf").hidden = dv; $("#ta-ok").textContent = dv ? "Lanjut" : "Buat akun";
+    ["#ta-nama", "#ta-email", "#ta-wa"].forEach((i) => { $(i).disabled = dv; });
+  }
   if (t.dataset && t.dataset.akun === "peran") { const p = t.closest(".ak-tunggu"), k = p && p.querySelector('[data-ak="prev"]'); if (k) k.textContent = kodeUnit(t.value, kodeTerpakai()); }
 });
+document.addEventListener("ak-buka-tambah", () => dialogTambah());
 document.addEventListener("input", (ev) => {
   if (ev.target && ev.target.id === "ak-cari") { S.cari = ev.target.value; const p = ev.target.selectionStart; render(); const el = $("#ak-cari"); if (el) { el.focus(); el.setSelectionRange(p, p); } }
 });
@@ -206,9 +211,10 @@ function dialogTambah() {
     <label class="ak-lbl">Nama lengkap</label><input id="ta-nama" autocomplete="off" style="width:100%;box-sizing:border-box">
     <label class="ak-lbl">Email</label><input id="ta-email" type="email" autocomplete="off" style="width:100%;box-sizing:border-box">
     <label class="ak-lbl">WhatsApp (opsional)</label><input id="ta-wa" type="tel" inputmode="tel" autocomplete="off" style="width:100%;box-sizing:border-box">
-    <label class="ak-lbl">Peran</label><select id="ta-peran" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option></select>
-    <p class="mr-sub" style="margin:10px 0 0">Kode unit <span class="ak-kode" id="ta-kode">${e(kodeUnit("sales", kodeTerpakai()))}</span> dibuat otomatis. Akun langsung aktif dengan kata sandi sementara yang tampil sekali untuk disalin atau dikirim lewat WhatsApp.</p></div>
-    <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="batal">Batal</button><button class="mr-btn mr-btn--utama" data-st="akun-tambah">Buat akun</button></div></div>`;
+    <label class="ak-lbl">Peran</label><select id="ta-peran" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option><option value="divisi">Kepala / anggota divisi (Daily Job)</option></select>
+    <p class="mr-sub" id="ta-info-divisi" hidden style="margin:10px 0 0">Nama, username, kelompok, dan jabatan (kepala divisi atau anggota) diisi di langkah berikutnya.</p>
+    <p class="mr-sub" id="ta-info-staf" style="margin:10px 0 0">Kode unit <span class="ak-kode" id="ta-kode">${e(kodeUnit("sales", kodeTerpakai()))}</span> dibuat otomatis. Akun langsung aktif dengan kata sandi sementara yang tampil sekali untuk disalin atau dikirim lewat WhatsApp.</p></div>
+    <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="batal">Batal</button><button class="mr-btn mr-btn--utama" data-st="akun-tambah" id="ta-ok">Buat akun</button></div></div>`;
   document.body.appendChild(lapis); lapis.querySelector('[data-x="batal"]').onclick = () => lapis.remove(); lapis.querySelector("#ta-nama").focus();
 }
 /* Sandi sementara tampil sekali: salin atau kirim lewat WhatsApp. */
@@ -228,6 +234,7 @@ function dialogAkunBaru(d) {
 }
 async function tambahAkunManual() {
   if (!S.master && !S.admin) return;
+  if ($("#ta-peran").value === "divisi") { $("#ak-tambah").remove(); return bukaBuatDivisi(); } // kepala dan anggota divisi dibuat lewat fungsi server akun divisi
   const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), peran = $("#ta-peran").value, kode = kodeUnit(peran, kodeTerpakai()), telepon = normalisasiWa($("#ta-wa").value);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi email yang valid.", "bahaya");
   if (!nama) return toast("Isi nama lengkap.", "bahaya");
