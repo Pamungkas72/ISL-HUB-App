@@ -20,6 +20,7 @@ export const doc = (a, ...p) => a && a.type === 'col' ? { type: 'doc', kol: a.ko
 export const where = (f, op, v) => ({ t: 'where', f, op, v }); export const orderBy = () => ({ t: 'order' }); export const limit = n => ({ t: 'limit', n });
 export const query = (c, ...k) => ({ ...c, filt: k });
 export const getDocs = async q => snapKol(q.kol, q.filt);
+export const getCountFromServer = async q => ({ data: () => ({ count: snapKol(q.kol, q.filt).size }) });
 export const getDoc = async r => snapDoc(r.kol, r.id, (S()[r.kol] || {})[r.id]); export const getDocFromServer = getDoc;
 export const setDoc = async (r, d, o) => { const s = S(); s[r.kol] = s[r.kol] || {}; s[r.kol][r.id] = o && o.merge ? { ...(s[r.kol][r.id] || {}), ...d } : d; };
 export const updateDoc = async (r, d) => { const s = S(); s[r.kol] = s[r.kol] || {}; s[r.kol][r.id] = { ...(s[r.kol][r.id] || {}), ...d }; };

@@ -2621,3 +2621,42 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .ak-pre { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; }
 .ak-pre span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ak-pre small { color: var(--muted); }
+
+/* Kelompok divisi (Pengaturan > Akun dan akses): desktop daftar + detail, HP chip + detail */
+.kd-sync { color: var(--success); font-size: 12px; white-space: nowrap; }
+.kd-dua { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 12px; }
+.kd-list { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.kd-list button { display: flex; width: 100%; gap: 10px; align-items: center; justify-content: space-between; text-align: left; border: 0; border-left: 3px solid transparent; background: none; color: var(--text); padding: 12px 14px; font: inherit; cursor: pointer; }
+.kd-list button + button { border-top: 1px solid var(--border); }
+.kd-list button.is-aktif { background: var(--navy-soft); border-left-color: var(--navy); }
+.kd-list span { display: flex; flex-direction: column; min-width: 0; }
+.kd-list small { color: var(--muted); font-size: 12px; }
+.kd-list i { font-style: normal; font-size: 12px; font-weight: 700; background: var(--bg); border-radius: 999px; padding: 2px 9px; }
+.kd-kanan { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.kd-detail { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.kd-judul { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.kd-judul h3 { margin: 0; font-size: 18px; }
+.kd-mini { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; color: var(--muted); font-size: 13px; }
+.kd-mini b { color: var(--text); }
+.kd-judul__a { display: flex; gap: 8px; flex-wrap: wrap; }
+.kd-redup { opacity: .5; }
+.kd-stat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.kd-stat > div { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.kd-stat b { display: block; margin-top: 4px; font-size: 16px; overflow-wrap: anywhere; }
+.kd-ang-kepala { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kd-ang-kepala h4 { margin: 0; }
+.kd-daftar { margin-top: 6px; }
+.kd-ang { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); }
+.kd-ang .ad-t { flex: 1; min-width: 0; }
+.kd-aksi { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.kd-ars { display: flex; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); }
+.kd-ars span { flex: 1; display: flex; flex-direction: column; }
+.kd-ars small { color: var(--muted); }
+@media (max-width: 760px) {
+  .kd-chip { margin: 10px 0; flex-wrap: nowrap; overflow-x: auto; }
+  .kd-detail { padding: 14px; }
+  .kd-stat { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .kd-stat > div { padding: 8px 10px; }
+  .kd-ang { flex-wrap: wrap; }
+  .kd-aksi { flex-basis: 100%; justify-content: flex-start; }
+}

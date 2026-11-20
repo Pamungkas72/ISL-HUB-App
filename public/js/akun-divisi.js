@@ -3,10 +3,10 @@
 import { e, $, toast, konfirmasi, bukaLayer, tutupLayer } from "./ui.js";
 import { ikon } from "./ikon.js";
 import { app, db } from "./firebase-config.js";
-import { collection, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { collection, getDocs, getDoc, doc, query, where, setDoc, updateDoc, deleteDoc, onSnapshot, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 
-const A = { kel: [], akun: [], siap: false, galat: "", root: null, filter: "", edit: null, userOk: true };
+const A = { kel: [], akun: [], jobN: {}, pilihKel: "", unsub: null, siap: false, galat: "", root: null, filter: "", edit: null, userOk: true };
 const WARNA = ["#6c5ce7", "#2e9e6e", "#d9822b", "#2c7be5", "#c0392b", "#7f8c8d"];
 const avatar = (n, i) => `<span class="ad-av" style="background:${WARNA[i % 6]}">${e((n || "?")[0].toUpperCase())}</span>`;
 const kelById = (id) => A.kel.find((k) => k.id === id);
@@ -22,40 +22,64 @@ async function muat() {
     A.kel = (await getDocs(collection(db, "dj_kelompok"))).docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
     A.akun = (await getDocs(query(collection(db, "pengguna"), where("peran", "==", "dj")))).docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
     A.galat = "";
+    await Promise.all(A.kel.map(async (k) => { try { A.jobN[k.id] = (await getCountFromServer(query(collection(db, "dj_job"), where("kelompokId", "==", k.id)))).data().count; } catch (_) {} }));
   } catch (err) { console.error(err); A.galat = "Daftar akun divisi belum bisa dibaca."; }
   A.siap = true;
 }
+const urutKel = (l) => l.sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
+/* Kelompok disinkronkan langsung dari Firestore: kelompok yang dibuat atau diubah di Daily Job muncul di sini tanpa muat ulang. */
+function langganKelompok() {
+  if (A.unsub) return;
+  A.unsub = onSnapshot(collection(db, "dj_kelompok"), (snap) => { A.kel = urutKel(snap.docs.map((d) => ({ id: d.id, ...d.data() }))); if (A.siap) gambar(); }, () => {});
+}
 const baris = (a, i) => `<div class="ad-baris">${avatar(a.nama, i)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${a.kodeUnit ? `<b>${e(a.kodeUnit)}</b> · ` : ""}@${e(a.username || "")}${a.telepon ? ` · ${e(a.telepon)}` : ""}</small></span>${a.status === "nonaktif" ? `<span class="ad-bd">Nonaktif</span>` : ""}${a.akses && a.akses.dj === 1 ? `<span class="ad-bd">Lihat saja</span>` : ""}<span class="ad-bd${jabatanKepala(a) ? " ad-bd--k" : ""}">${jabatanKepala(a) ? "Kepala divisi" : "Anggota"}</span><button type="button" class="mr-ikonbtn" data-ad="kelola" data-id="${e(a.id)}" aria-label="Kelola ${e(a.nama)}">${ikon("titik", 18)}</button></div>`;
 const urut = (l) => [...l].sort((x, y) => jabatanKepala(y) - jabatanKepala(x) || String(x.nama).localeCompare(String(y.nama), "id"));
-function kartuKel(k) {
-  const l = urut(A.akun.filter((a) => a.kelompokDJ === k.id));
-  return `<div class="ad-kartu"><div class="ad-kh"><span><b>${e(k.nama)}</b><small>Profil ${e(k.profil === "tracking" ? "Tracking" : "Marketing")} · ${l.length} akun</small></span><button type="button" class="mr-btn mr-btn--kecil" data-ad="baru" data-k="${e(k.id)}">${ikon("plus", 14)} Anggota</button></div>${l.map(baris).join("") || `<p class="mr-sub" style="margin:8px 0">Belum ada anggota.</p>`}</div>`;
+const awalanKel = (k) => k.awalan || H.awalanKelompok(k.nama);
+const kelAktif = () => A.kel.filter((k) => !k.arsip);
+const anggotaKel = (id) => urut(A.akun.filter((a) => a.kelompokDJ === id));
+const namaKepala = (k) => { const a = A.akun.find((x) => x.id === (k.kepala || [])[0]); return a ? a.nama : "—"; };
+const profilNama = (k) => (k.profil === "tracking" ? "Tracking" : "Marketing");
+function detailKel(k, hp) {
+  const l = anggotaKel(k.id), kosong = !l.length && !(A.jobN[k.id] > 0);
+  const baris2 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${a.kodeUnit ? `<span class="ak-kode">${e(a.kodeUnit)}</span> · ` : ""}@${e(a.username || "")}${a.status === "nonaktif" ? " · Nonaktif" : ""}</small></span>${jabatanKepala(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
+    <span class="kd-aksi"><button type="button" class="mr-btn mr-btn--kecil" data-ad="pindah" data-id="${e(a.id)}">Pindah ▾</button>${hp ? "" : `<button type="button" class="mr-btn mr-btn--kecil" data-ad="kepala-cepat" data-id="${e(a.id)}">${jabatanKepala(a) ? "Lepas kepala" : "Jadikan kepala"}</button>`}<button type="button" class="mr-ikonbtn" data-ad="kelola" data-id="${e(a.id)}" aria-label="Atur ${e(a.nama || "akun")}">⋯</button></span></div>`;
+  return `<div class="kd-detail" data-k="${e(k.id)}"><div class="kd-judul"><div class="kd-judul__t"><h3>${e(k.nama)}</h3><div class="kd-mini"><span>Profil <b>${profilNama(k)}</b></span><span>Awalan <span class="ak-kode">${e(awalanKel(k))}</span></span>${k.dibuat ? `<span>Dibuat <b>${e(k.dibuat)}</b></span>` : ""}</div></div>
+    <div class="kd-judul__a"><button type="button" class="mr-btn mr-btn--kecil" data-ad="kel-ubah" data-k="${e(k.id)}">Ubah</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="kel-arsip" data-k="${e(k.id)}">Arsipkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya${kosong ? "" : " kd-redup"}" data-ad="kel-hapus" data-k="${e(k.id)}" title="${kosong ? "" : "Pindahkan anggota dan job dulu, atau arsipkan"}">Hapus</button></div></div>
+    <div class="kd-stat"><div><span class="st-badge st-badge--warn">Kepala divisi</span><b>${e(namaKepala(k))}</b></div><div><span class="st-badge">Anggota</span><b>${l.length}</b></div><div><span class="st-badge st-badge--ok">Job</span><b>${A.jobN[k.id] ?? "–"}</b></div></div>
+    <div class="kd-ang-kepala"><h4>Anggota</h4><span><button type="button" class="mr-btn mr-btn--kecil" data-ad="baru" data-k="${e(k.id)}" data-jab="kepala">${ikon("plus", 14)} Kepala</button> <button type="button" class="mr-btn mr-btn--kecil mr-btn--utama" data-ad="baru" data-k="${e(k.id)}">${ikon("plus", 14)} Anggota</button></span></div>
+    <div class="kd-daftar">${l.map(baris2).join("") || `<p class="mr-sub" style="margin:10px 0">Belum ada anggota.</p>`}</div></div>`;
 }
 function html() {
-  if (!A.siap) return `<p class="mr-sub">Memuat akun divisi…</p>`;
+  if (!A.siap) return `<p class="mr-sub">Memuat kelompok divisi…</p>`;
   if (A.galat) return `<p class="mr-sub">${e(A.galat)}</p>`;
+  const hp = matchMedia("(max-width: 760px)").matches, ak = kelAktif(), ar = A.kel.filter((k) => k.arsip);
+  const kid = ak.some((k) => k.id === A.pilihKel) ? A.pilihKel : (ak[0] || {}).id || "", k = ak.find((x) => x.id === kid);
   const tanpa = A.akun.filter((a) => !kelById(a.kelompokDJ));
-  return `<div class="ad-kepala"><div><h4>Akun divisi Daily Job</h4><p class="mr-sub">Tiap kelompok punya satu kepala divisi yang menilai hasil dan menetapkan target. Anggota hanya membuka Daily Job kelompoknya.</p></div><button type="button" class="mr-btn mr-btn--utama" data-ad="baru">${ikon("plus", 14)} Buat akun</button></div>
-    <div class="ad-grid">${A.kel.map(kartuKel).join("") || `<p class="mr-sub">Belum ada kelompok. Buat kelompok dulu di Daily Job > Pengaturan.</p>`}${tanpa.length ? `<div class="ad-kartu"><div class="ad-kh"><span><b>Tanpa kelompok</b><small>${tanpa.length} akun</small></span></div>${tanpa.map(baris).join("")}</div>` : ""}</div>`;
+  const kepala = `<div class="ad-kepala"><div><h4>Kelompok divisi</h4><p class="mr-sub">Tiap kelompok punya satu kepala divisi yang menilai hasil dan menetapkan target. Dibuat di sini atau di Daily Job, datanya sama. <span class="kd-sync">● Tersinkron</span></p></div><button type="button" class="mr-btn mr-btn--utama" data-ad="kel-baru">${ikon("plus", 14)} Kelompok baru</button></div>`;
+  const arsipHtml = ar.length ? `<details class="st-laci"><summary><span>Diarsipkan</span><span class="st-laci-jml">${ar.length} kelompok</span></summary><div class="st-laci-isi">${ar.map((x) => `<div class="kd-ars"><span><b>${e(x.nama)}</b><small>${anggotaKel(x.id).length} anggota · ${A.jobN[x.id] ?? 0} job</small></span><button type="button" class="mr-btn mr-btn--kecil" data-ad="kel-pulih" data-k="${e(x.id)}">Pulihkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya" data-ad="kel-hapus" data-k="${e(x.id)}">Hapus</button></div>`).join("")}</div></details>` : "";
+  const tanpaHtml = tanpa.length ? `<div class="kd-detail"><div class="kd-judul"><div class="kd-judul__t"><h3>Tanpa kelompok</h3><div class="kd-mini"><span>${tanpa.length} akun</span></div></div></div><div class="kd-daftar">${tanpa.map((a, i) => `<div class="kd-ang">${avatar(a.nama, i)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>@${e(a.username || "")}</small></span><span class="kd-aksi"><button type="button" class="mr-btn mr-btn--kecil" data-ad="pindah" data-id="${e(a.id)}">Pindah ▾</button></span></div>`).join("")}</div></div>` : "";
+  if (!ak.length) return `${kepala}<div class="st-stat">Belum ada kelompok. Tekan <b>＋ Kelompok baru</b> untuk membuat yang pertama.</div>${arsipHtml}`;
+  if (hp) return `${kepala}<div class="ak-chip kd-chip" role="tablist">${ak.map((x) => `<button type="button" role="tab" data-ad="kel-pilih" data-k="${e(x.id)}" class="${x.id === kid ? "is-aktif" : ""}">${e(x.nama)} ${anggotaKel(x.id).length}</button>`).join("")}</div>${detailKel(k, true)}${tanpaHtml}${arsipHtml}`;
+  return `${kepala}<div class="kd-dua"><nav class="kd-list" aria-label="Kelompok">${ak.map((x) => `<button type="button" data-ad="kel-pilih" data-k="${e(x.id)}" class="${x.id === kid ? "is-aktif" : ""}"><span><b>${e(x.nama)}</b><small>${profilNama(x)} · ${e(awalanKel(x))}</small></span><i>${anggotaKel(x.id).length}</i></button>`).join("")}</nav><div class="kd-kanan">${detailKel(k, false)}${tanpaHtml}</div></div>${arsipHtml}`;
 }
 const gambar = () => { if (A.root && A.root.isConnected) A.root.innerHTML = html(); };
 export const bukaBuatDivisi = () => panelBuat(); // dipanggil dialog Tambah akun (Pengaturan) untuk kepala atau anggota divisi
-export async function isiAkunDivisi(root) { A.root = root; gambar(); if (!A.siap) { await muat(); gambar(); } }
+export async function isiAkunDivisi(root) { A.root = root; gambar(); langganKelompok(); if (!A.siap) { await muat(); gambar(); } }
 const segJabatan = (j) => `<div class="ad-seg" data-ad-jab="${j}"><button type="button" data-ad="jab" data-v="anggota" class="${j === "anggota" ? "is-on" : ""}">Anggota</button><button type="button" data-ad="jab" data-v="kepala" class="${j === "kepala" ? "is-on" : ""}">Kepala divisi</button></div>`;
 const kepalaPanel = (judul, sub) => `<header class="mr-panel__kepala"><div><h2>${judul}</h2>${sub ? `<p class="mr-sub">${sub}</p>` : ""}</div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>`;
-const opsiKel = (pilih) => A.kel.map((k) => `<option value="${e(k.id)}"${k.id === pilih ? " selected" : ""}>${e(k.nama)}</option>`).join("");
+const opsiKel = (pilih) => A.kel.filter((k) => !k.arsip || k.id === pilih).map((k) => `<option value="${e(k.id)}"${k.id === pilih ? " selected" : ""}>${e(k.nama)}</option>`).join("");
 const fld = (lab, isi) => `<label class="mr-f"><span>${lab}</span>${isi}</label>`;
 
-function panelBuat(kid) {
-  if (!A.kel.length) return toast("Buat kelompok dulu di Daily Job > Pengaturan.", "bahaya");
-  bukaLayer(`${kepalaPanel("Buat akun")}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="ad-buat" data-jab="anggota">
+function panelBuat(kid, jab = "anggota") {
+  if (!kelAktif().length) return toast("Buat kelompok dulu dengan tombol ＋ Kelompok baru.", "bahaya");
+  bukaLayer(`${kepalaPanel("Buat akun")}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="ad-buat" data-jab="${jab}">
     <div class="ad-seg"><button type="button" data-ad="jenis" data-v="divisi" class="is-on">Anggota divisi</button><button type="button" data-ad="jenis" data-v="staf">Sales, admin, lihat saja</button></div>
     <div id="ad-staf" hidden><p class="mr-sub">Akun sales, admin, dan lihat saja dibuat lewat tombol + Tambah akun di bagian atas.</p><button type="button" class="mr-btn mr-btn--utama" data-ad="ke-staf">Buka form staf</button></div>
     <div id="ad-divisi" class="mr-form" style="grid-template-columns:1fr">
       ${fld("Nama lengkap", `<input id="ad-nama" maxlength="80" autocomplete="off">`)}${fld("Username <small>huruf kecil, angka, titik, garis bawah, strip</small>", `<input id="ad-user" maxlength="30" autocomplete="off" autocapitalize="none">`)}
       ${fld("Telepon <small>opsional, bisa dipakai masuk</small>", `<input id="ad-tel" type="tel" autocomplete="off">`)}${fld("Email kontak <small>opsional, bisa dipakai masuk</small>", `<input id="ad-mail" type="email" autocomplete="off">`)}
       ${fld("Kata sandi sementara", `<div class="ad-sandi"><input id="ad-sandi" value="${e(H.sandiAcak())}" autocomplete="off" spellcheck="false"><button type="button" class="mr-btn" data-ad="acak">Acak</button></div>`)}
-      ${fld("Kelompok", `<select id="ad-kel">${opsiKel(kid || A.kel[0].id)}</select>`)}${fld("Jabatan", segJabatan("anggota"))}
+      ${fld("Kelompok", `<select id="ad-kel">${opsiKel(kid || kelAktif()[0].id)}</select>`)}${fld("Jabatan", segJabatan(jab))}
       <p class="mr-sub" id="ad-jab-info"></p></div></div></div>
     <footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-ad="buat-ok" id="ad-buat-ok">Buat akun</button></footer>`);
 }
@@ -145,10 +169,57 @@ async function jalan(t, kerja, pesan) {
   t.disabled = true;
   try { await kerja(); await muat(); gambar(); if (pesan) toast(pesan); return true; } catch (err) { toast(e(err.message || err), "bahaya"); return false; } finally { t.disabled = false; }
 }
+/* Form kelompok (dipakai Pengaturan dan Daily Job): nama, profil, awalan kode unit. */
+let formKel = { k: null, sesudah: null, manual: false };
+export function bukaFormKelompok(k, { sesudah } = {}) {
+  formKel = { k, sesudah: sesudah || null, manual: !!(k && k.awalan) };
+  bukaLayer(`${kepalaPanel(k ? "Ubah kelompok" : "Kelompok baru", "Dipakai bersama di Pengaturan dan Daily Job.")}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="kf">
+    ${fld("Nama kelompok", `<input id="kf-nama" maxlength="40" value="${e(k ? k.nama : "")}" autocomplete="off">`)}
+    ${fld("Profil isian <small>menentukan formulir catat dan dashboard</small>", `<select id="kf-profil"><option value="marketing"${!k || k.profil !== "tracking" ? " selected" : ""}>Marketing</option><option value="tracking"${k && k.profil === "tracking" ? " selected" : ""}>Tracking</option></select>`)}
+    ${fld("Awalan kode unit <small>2 sampai 4 huruf</small>", `<input id="kf-awalan" maxlength="4" value="${e(k ? awalanKel(k) : "")}" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase">`)}
+    <p class="mr-sub" id="kf-info">Kode anggota: ${e(k ? awalanKel(k) : "XXX")}-01, ${e(k ? awalanKel(k) : "XXX")}-02, … nomor tidak dipakai ulang.</p></div></div>
+    <footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-ad="kel-simpan">${k ? "Simpan" : "Buat kelompok"}</button></footer>`);
+}
+async function simpanFormKelompok(t) {
+  const k = formKel.k, nama = nilai("kf-nama"), profil = ($("#kf-profil") || {}).value || "marketing", awalan = nilai("kf-awalan").toUpperCase().replace(/[^A-Z]/g, "");
+  if (nama.length < 2) return toast("Isi nama kelompok (minimal 2 huruf).", "bahaya");
+  if (!/^[A-Z]{2,4}$/.test(awalan)) return toast("Awalan kode 2 sampai 4 huruf (A-Z).", "bahaya");
+  if (A.kel.some((x) => x.id !== (k && k.id) && String(x.nama).toLowerCase() === nama.toLowerCase())) return toast("Nama kelompok ini sudah ada.", "bahaya");
+  if (A.kel.some((x) => x.id !== (k && k.id) && awalanKel(x) === awalan)) return toast(`Awalan ${e(awalan)} sudah dipakai kelompok lain.`, "bahaya");
+  const id = k ? k.id : "k" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  t.disabled = true;
+  try {
+    await setDoc(doc(db, "dj_kelompok", id), { nama, profil, awalan, ...(k ? {} : { dibuat: H.hariIni(), kepala: [] }) }, { merge: true });
+    A.pilihKel = id; await muat(); gambar(); tutupLayer(); toast(k ? "Kelompok diperbarui." : "Kelompok dibuat."); if (formKel.sesudah) await formKel.sesudah();
+  } catch (err) { t.disabled = false; toast(`<b>Belum tersimpan.</b> ${e(err.code || err.message)}`, "bahaya"); }
+}
+/** Hapus kelompok hanya bila tanpa anggota dan job; selain itu arahkan ke pindah atau arsip. */
+export async function hapusKelompok(k) {
+  let ang = 0, job = 0;
+  try {
+    ang = (await getCountFromServer(query(collection(db, "pengguna"), where("kelompokDJ", "==", k.id)))).data().count;
+    job = (await getCountFromServer(query(collection(db, "dj_job"), where("kelompokId", "==", k.id)))).data().count;
+  } catch (err) { toast(`<b>Belum bisa memeriksa isi kelompok.</b> ${e(err.code || err.message)}`, "bahaya"); return false; }
+  if (ang || job) { toast(`<b>${e(k.nama)}</b> masih punya ${ang} anggota dan ${job} job. Pindahkan dulu, atau pakai <b>Arsipkan</b>.`, "bahaya"); return false; }
+  if (!(await konfirmasi("Hapus kelompok?", `Kelompok <b>${e(k.nama)}</b> kosong dan dihapus permanen.`, "Hapus"))) return false;
+  try { await deleteDoc(doc(db, "dj_kelompok", k.id)); toast("Kelompok dihapus."); return true; } catch (err) { toast(`<b>Belum terhapus.</b> ${e(err.code || err.message)}`, "bahaya"); return false; }
+}
 const nilai = (id) => (($("#" + id) || {}).value || "").trim();
 async function aksi(t) {
   const a = t.dataset.ad, uid = ($("#ad-kelola") || {}).dataset && $("#ad-kelola").dataset.id, akun = A.akun.find((x) => x.id === uid);
-  if (a === "baru") return panelBuat(t.dataset.k);
+  if (a === "baru") return panelBuat(t.dataset.k, t.dataset.jab);
+  if (a === "kel-pilih") { A.pilihKel = t.dataset.k; return gambar(); }
+  if (a === "kel-baru") return bukaFormKelompok(null);
+  if (a === "kel-ubah") return bukaFormKelompok(kelById(t.dataset.k));
+  if (a === "kel-simpan") return simpanFormKelompok(t);
+  if (a === "kel-arsip" || a === "kel-pulih") { const k = kelById(t.dataset.k); if (!k) return; const arsip = a === "kel-arsip";
+    if (arsip && !(await konfirmasi("Arsipkan kelompok?", `<b>${e(k.nama)}</b> tidak muncul lagi di pilihan, tetapi anggota dan job tetap tersimpan. Bisa dipulihkan kapan saja.`, "Arsipkan"))) return;
+    try { await updateDoc(doc(db, "dj_kelompok", k.id), { arsip }); if (arsip && A.pilihKel === k.id) A.pilihKel = ""; await muat(); gambar(); toast(arsip ? "Kelompok diarsipkan." : "Kelompok dipulihkan."); } catch (err) { toast(e(err.message || err), "bahaya"); } return; }
+  if (a === "kel-hapus") { const k = kelById(t.dataset.k); if (k && await hapusKelompok(k)) { A.pilihKel = ""; gambar(); } return; }
+  if (a === "pindah") return panelKelola(t.dataset.id, "peran");
+  if (a === "kepala-cepat") { const x = A.akun.find((u) => u.id === t.dataset.id); if (!x) return; const jadi = !jabatanKepala(x);
+    if (!(await konfirmasi(jadi ? "Jadikan kepala divisi?" : "Lepas jabatan kepala?", jadi ? `<b>${e(x.nama)}</b> menjadi kepala ${e((kelById(x.kelompokDJ) || {}).nama || "kelompok ini")}; kepala lama menjadi anggota biasa.` : `<b>${e(x.nama)}</b> menjadi anggota biasa.`, jadi ? "Jadikan kepala" : "Lepas"))) return;
+    await jalan(t, () => panggil("djAturAnggota", { uid: x.id, aksi: jadi ? "kepala" : "anggota" }), jadi ? "Kepala divisi ditetapkan." : "Jabatan kepala dilepas."); return; }
   if (a === "kelola") return panelKelola(t.dataset.id);
   if (a === "jenis") { document.querySelectorAll('[data-ad="jenis"]').forEach((b) => b.classList.toggle("is-on", b === t)); $("#ad-staf").hidden = t.dataset.v !== "staf"; $("#ad-divisi").hidden = t.dataset.v === "staf"; $("#ad-buat-ok").hidden = t.dataset.v === "staf"; return; }
   if (a === "ke-staf") { tutupLayer(); document.dispatchEvent(new CustomEvent("ak-buka-tambah")); return; }
@@ -173,3 +244,9 @@ async function aksi(t) {
 document.addEventListener("click", (ev) => { const t = ev.target.closest("[data-ad]"); if (t && !t.disabled) aksi(t); });
 document.addEventListener("change", (ev) => { if (ev.target && ev.target.id === "ad-kel") infoJabatan(); if (ev.target && ev.target.closest && ev.target.closest("#ad-kelola")) hitung(); });
 document.addEventListener("input", (ev) => { const t = ev.target; if (!t || !t.closest || !t.closest("#ad-kelola")) return; if (t.id === "ad-e-user") return cekUsername(); hitung(); });
+document.addEventListener("input", (ev) => {
+  const t = ev.target; if (!t || !t.closest || !t.closest("#kf")) return;
+  if (t.id === "kf-awalan") { formKel.manual = true; t.value = t.value.toUpperCase().replace(/[^A-Z]/g, ""); }
+  if (t.id === "kf-nama" && !formKel.manual) { const a = $("#kf-awalan"); if (a) a.value = H.awalanKelompok(t.value); }
+  const aw = ($("#kf-awalan") || {}).value || "XXX", i = $("#kf-info"); if (i) i.textContent = `Kode anggota: ${aw}-01, ${aw}-02, … nomor tidak dipakai ulang.`;
+});

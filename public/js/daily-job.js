@@ -16,11 +16,12 @@ import * as TR from "./daily-job-tracking-hitung.js";
 import { htmlFormTracking, chipPil, dataFormTracking } from "./daily-job-tracking.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
+import { bukaFormKelompok, hapusKelompok } from "./akun-divisi.js";
 
 const S = { lihatSaja: false, ajuanKat: [], u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAktif: "", sub: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
-const namaKel = (id) => (S.kelompok.find((k) => k.id === id) || {}).nama || "–";
+const namaKel = (id) => ((S.kelompokSemua || S.kelompok).find((k) => k.id === id) || {}).nama || "–";
 const aman = (u) => (/^https?:\/\//i.test(String(u || "")) ? e(u) : "#"); // hanya tautan http(s) yang dibuka
 
 /* ---------- data ---------- */
@@ -28,7 +29,8 @@ async function muat() {
   S.muat = true; S.galat = ""; render();
   try {
     const ks = await getDocs(collection(db, "dj_kelompok"));
-    S.kelompok = ks.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
+    S.kelompokSemua = ks.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
+    S.kelompok = S.kelompokSemua.filter((k) => !k.arsip); // kelompok diarsipkan tidak muncul di pilihan; job lamanya tetap terbaca lewat kelompokSemua
     const q = S.kelola ? collection(db, "dj_job") : S.kelompokSaya ? query(collection(db, "dj_job"), where("kelompokId", "==", S.kelompokSaya)) : null;
     S.jobs = q ? (await getDocs(q)).docs.map((d) => H.dariDok(d.id, d.data())) : [];
     if (!S.kelompok.some((k) => k.id === S.kelAktif)) { let simpan = ""; try { simpan = localStorage.getItem("dj-kel") || ""; } catch (_) {} S.kelAktif = S.kelola ? (S.kelompok.some((k) => k.id === simpan) ? simpan : (S.kelompok[0] || {}).id || "") : S.kelompokSaya || ""; }
@@ -42,7 +44,7 @@ const profilKel = (id) => (S.kelompok.find((k) => k.id === id) || {}).profil || 
 const profilAktif = () => profilKel(S.kelAktif);
 /** Job kelompok yang sedang dilihat (master memilih kelompok; anggota hanya kelompoknya) dan subdivisi Tracking. */
 const jobsKel = () => S.jobs.filter((j) => (!S.kelAktif || j.kelompokId === S.kelAktif) && (profilAktif() !== "tracking" || !S.sub || TR.subdivisiDari(j.kategori) === S.sub));
-const kelById = (id) => S.kelompok.find((k) => k.id === id);
+const kelById = (id) => (S.kelompokSemua || S.kelompok).find((k) => k.id === id);
 const katDari = (kid) => H.kategoriKel(kelById(kid), S.jobs.filter((j) => j.kelompokId === kid));
 const kategoriAktif = () => (profilAktif() === "tracking" ? [...TR.SUBDIVISI.kecil.kategori, ...TR.SUBDIVISI.besar.kategori] : S.kelAktif ? katDari(S.kelAktif) : H.kategoriKel(null, jobsKel()));
 const katJob = (j) => (j.kategori || "") + (j.kategoriAjuan ? " (menunggu)" : "");
@@ -908,15 +910,8 @@ document.addEventListener("click", async (ev) => {
     try { await panggil("djAturAnggota", { uid: id, aksi: "hapus" }); toast("Akun dihapus."); muatTim(t.dataset.k); } catch (err) { toast(e(err.message), "bahaya"); } return; }
   if (a === "subkel") { S.subKel = v; render(); return; }
   if (a === "kel-pilih") { S.pilihKel = id; render(); return; }
-  if (a === "kel-baru" || a === "kel-ubah") {
-    const k = S.kelompok.find((x) => x.id === id), nama = (prompt("Nama kelompok / divisi:", k ? k.nama : "") || "").trim(); if (!nama) return;
-    const kid = k ? k.id : uid(); try { await setDoc(doc(db, "dj_kelompok", kid), { nama, dibuat: k ? k.dibuat || H.hariIni() : H.hariIni(), kepala: k ? k.kepala || [] : [], ...(k && k.bawaan ? { bawaan: true } : {}), ...(k && k.targetKategori ? { targetKategori: k.targetKategori } : {}), ...(k && k.profil ? { profil: k.profil } : {}) }); await muat(); toast("Kelompok tersimpan."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
-  }
-  if (a === "kel-hapus") {
-    const k = S.kelompok.find((x) => x.id === id); if (S.jobs.some((j) => j.kelompokId === id)) return toast("Kelompok masih punya job. Pindahkan atau hapus jobnya dulu.", "bahaya");
-    if (!(await konfirmasi("Hapus kelompok?", `Kelompok <b>${e(k.nama)}</b> dihapus. Akun anggotanya menjadi tanpa kelompok.`, "Hapus"))) return;
-    try { await deleteDoc(doc(db, "dj_kelompok", id)); await Promise.all(S.akun.filter((x) => x.kelompokDJ === id).map((x) => updateDoc(doc(db, "pengguna", x.id), { kelompokDJ: null }))); await muat(); toast("Kelompok dihapus."); } catch (err) { toast("Belum terhapus: " + e(err.message || err), "bahaya"); }
-  }
+  if (a === "kel-baru" || a === "kel-ubah") return bukaFormKelompok(a === "kel-ubah" ? S.kelompok.find((x) => x.id === id) : null, { sesudah: muat }); // form sama dengan Pengaturan > Akun dan akses
+  if (a === "kel-hapus") { const k = S.kelompok.find((x) => x.id === id); if (k && await hapusKelompok(k)) await muat(); } // hanya bila kosong (anggota dan job)
 });
 document.addEventListener("keydown", (ev) => { if (window.__rute === "dailyjob" && (ev.key === "Enter" || ev.key === " ") && ev.target.matches?.('.dj-job2[data-dj="buka"], .dj-tb tr[data-dj]')) { ev.preventDefault(); ev.target.click(); } if (ev.key === "Escape") { if ($("#dj-sheet")) tutupSheet(); else if (S.menu) { S.menu = ""; render(); } } });
 document.addEventListener("change", async (ev) => {
@@ -939,7 +934,7 @@ document.addEventListener("change", async (ev) => {
   if (a === "kep-akun") {
     const ak = S.akun.find((x) => x.id === t.dataset.id), kel = ak && S.kelompok.find((k) => k.id === ak.kelompokDJ); if (!kel) return;
     const kepala = t.checked ? [ak.id] : []; // satu kepala divisi per kelompok
-    try { await setDoc(doc(db, "dj_kelompok", kel.id), { nama: kel.nama, dibuat: kel.dibuat || H.hariIni(), kepala, ...(kel.bawaan ? { bawaan: true } : {}), ...(kel.targetKategori ? { targetKategori: kel.targetKategori } : {}), ...(kel.profil ? { profil: kel.profil } : {}) }); kel.kepala = kepala; toast(t.checked ? "Ditetapkan sebagai kepala divisi (menggantikan yang lama)." : "Kepala divisi dikosongkan."); render(); } catch (err) { t.checked = !t.checked; toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
+    try { await setDoc(doc(db, "dj_kelompok", kel.id), { kepala }, { merge: true }); kel.kepala = kepala; toast(t.checked ? "Ditetapkan sebagai kepala divisi (menggantikan yang lama)." : "Kepala divisi dikosongkan."); render(); } catch (err) { t.checked = !t.checked; toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } return;
   }
   if (a === "kel-akun") { try { await updateDoc(doc(db, "pengguna", t.dataset.id), { kelompokDJ: t.value || null }); const ak = S.akun.find((x) => x.id === t.dataset.id); if (ak) ak.kelompokDJ = t.value || null; toast("Kelompok akun diperbarui."); } catch (err) { toast("Belum tersimpan: " + e(err.message || err), "bahaya"); } }
 });

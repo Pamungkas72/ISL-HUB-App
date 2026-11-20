@@ -251,6 +251,8 @@ describe("Daily Job: komentar, penilaian kepala divisi, tautan bagikan", () => {
   it("anggota kelompok membuat tautan", () => assertSucceeds(setDoc(doc(dj1(), "dj_bagikan/tokenBaru0000000000000001"), { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: true, berlakuSampai: Date.now() + 864e5, unduh: false, snapshot: { judul: "x" }, diubah: Date.now() })));
   it("kelompok lain tidak membuat tautan untuk job k1", () => assertFails(setDoc(doc(dj2(), "dj_bagikan/tokenBaru0000000000000002"), { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj2", aktif: true, berlakuSampai: Date.now() + 864e5, unduh: false, snapshot: { judul: "x" } })));
   it("anggota mencabut tautan kelompoknya", () => assertSucceeds(updateDoc(doc(dj1(), "dj_bagikan/tokenAktif00000000000001"), { aktif: false })));
+  it("admin membuat kelompok dengan awalan kode dan arsip", () => assertSucceeds(setDoc(doc(admin(), "dj_kelompok/k5"), { nama: "Star", dibuat: "2026-11-20", awalan: "STR", arsip: false })));
+  it("awalan kode kelompok harus 2-4 huruf besar", async () => { await assertFails(setDoc(doc(admin(), "dj_kelompok/k6"), { nama: "X", dibuat: "2026-11-20", awalan: "str1" })); await assertFails(setDoc(doc(admin(), "dj_kelompok/k6"), { nama: "X", dibuat: "2026-11-20", arsip: "ya" })); });
   it("admin menetapkan kepala divisi", () => assertSucceeds(setDoc(doc(admin(), "dj_kelompok/k4"), { nama: "X", dibuat: "2026-11-14", kepala: ["uid-dj1"] })));
 });
 
