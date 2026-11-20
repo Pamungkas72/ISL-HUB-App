@@ -275,3 +275,7 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-sheet--pop .dj-sheet__kotak { position: fixed; width: 400px; max-width: calc(100vw - 24px); padding: 8px 20px 20px; border-radius: 16px; border: 1px solid var(--mr-border); box-shadow: 0 18px 50px rgba(0, 0, 0, .25); transform: translateY(-6px); opacity: 0; transition: transform .16s ease, opacity .16s ease; }
 .dj-sheet--pop.is-buka .dj-sheet__kotak { transform: none; opacity: 1; } .dj-sheet--pop .dj-sheet__grip { display: none; }
 @media (prefers-reduced-motion: reduce) { .dj-sheet__kotak, .dj-sheet__scrim { transition: none !important; } }
+
+/* kategori: baris ubah/hapus, tambah, lencana ajuan */
+.dj-tgtk__r .mr-ikonbtn { flex: none; width: 32px; height: 32px; } .dj-katbaru { display: flex; gap: 8px; margin-top: 14px; } .dj-katbaru input { flex: 1; height: 40px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0 10px; }
+.dj-bdg { display: inline-block; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; text-align: center; vertical-align: middle; }
