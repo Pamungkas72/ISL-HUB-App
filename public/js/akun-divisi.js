@@ -39,6 +39,7 @@ function html() {
     <div class="ad-grid">${A.kel.map(kartuKel).join("") || `<p class="mr-sub">Belum ada kelompok. Buat kelompok dulu di Daily Job > Pengaturan.</p>`}${tanpa.length ? `<div class="ad-kartu"><div class="ad-kh"><span><b>Tanpa kelompok</b><small>${tanpa.length} akun</small></span></div>${tanpa.map(baris).join("")}</div>` : ""}</div>`;
 }
 const gambar = () => { if (A.root && A.root.isConnected) A.root.innerHTML = html(); };
+export const bukaBuatDivisi = () => panelBuat(); // dipanggil dialog Tambah akun (Pengaturan) untuk kepala atau anggota divisi
 export async function isiAkunDivisi(root) { A.root = root; gambar(); if (!A.siap) { await muat(); gambar(); } }
 const segJabatan = (j) => `<div class="ad-seg" data-ad-jab="${j}"><button type="button" data-ad="jab" data-v="anggota" class="${j === "anggota" ? "is-on" : ""}">Anggota</button><button type="button" data-ad="jab" data-v="kepala" class="${j === "kepala" ? "is-on" : ""}">Kepala divisi</button></div>`;
 const kepalaPanel = (judul, sub) => `<header class="mr-panel__kepala"><div><h2>${judul}</h2>${sub ? `<p class="mr-sub">${sub}</p>` : ""}</div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>`;
@@ -49,7 +50,7 @@ function panelBuat(kid) {
   if (!A.kel.length) return toast("Buat kelompok dulu di Daily Job > Pengaturan.", "bahaya");
   bukaLayer(`${kepalaPanel("Buat akun")}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="ad-buat" data-jab="anggota">
     <div class="ad-seg"><button type="button" data-ad="jenis" data-v="divisi" class="is-on">Anggota divisi</button><button type="button" data-ad="jenis" data-v="staf">Sales, admin, lihat saja</button></div>
-    <div id="ad-staf" hidden><p class="mr-sub">Akun sales, admin, dan lihat saja dibuat dari kartu Tambah akun manual di bawah.</p><button type="button" class="mr-btn mr-btn--utama" data-ad="ke-staf">Buka form staf</button></div>
+    <div id="ad-staf" hidden><p class="mr-sub">Akun sales, admin, dan lihat saja dibuat lewat tombol + Tambah akun di bagian atas.</p><button type="button" class="mr-btn mr-btn--utama" data-ad="ke-staf">Buka form staf</button></div>
     <div id="ad-divisi" class="mr-form" style="grid-template-columns:1fr">
       ${fld("Nama lengkap", `<input id="ad-nama" maxlength="80" autocomplete="off">`)}${fld("Username <small>huruf kecil, angka, titik, garis bawah, strip</small>", `<input id="ad-user" maxlength="30" autocomplete="off" autocapitalize="none">`)}
       ${fld("Telepon <small>opsional, bisa dipakai masuk</small>", `<input id="ad-tel" type="tel" autocomplete="off">`)}${fld("Email kontak <small>opsional, bisa dipakai masuk</small>", `<input id="ad-mail" type="email" autocomplete="off">`)}
@@ -150,7 +151,7 @@ async function aksi(t) {
   if (a === "baru") return panelBuat(t.dataset.k);
   if (a === "kelola") return panelKelola(t.dataset.id);
   if (a === "jenis") { document.querySelectorAll('[data-ad="jenis"]').forEach((b) => b.classList.toggle("is-on", b === t)); $("#ad-staf").hidden = t.dataset.v !== "staf"; $("#ad-divisi").hidden = t.dataset.v === "staf"; $("#ad-buat-ok").hidden = t.dataset.v === "staf"; return; }
-  if (a === "ke-staf") { tutupLayer(); const l = document.querySelector("details.st-laci:has(#ta-nama)"); if (l) { l.open = true; l.scrollIntoView({ behavior: "smooth", block: "center" }); } return; }
+  if (a === "ke-staf") { tutupLayer(); document.dispatchEvent(new CustomEvent("ak-buka-tambah")); return; }
   if (a === "jab") { const s = t.closest(".ad-seg"); s.dataset.adJab = t.dataset.v; s.querySelectorAll("button").forEach((b) => b.classList.toggle("is-on", b === t)); const f = $("#ad-buat"); if (f) { f.dataset.jab = t.dataset.v; infoJabatan(); } else hitung(); return; }
   if (a === "tab") { document.querySelectorAll("#ad-kelola .ad-tab button").forEach((b) => b.classList.toggle("is-on", b === t)); document.querySelectorAll("#ad-kelola [data-tab]").forEach((x) => { x.hidden = x.dataset.tab !== t.dataset.v; }); $("#ad-kaki").hidden = !["profil", "peran"].includes(t.dataset.v); if (t.dataset.v === "riwayat") muatRiwayat($("#ad-kelola").dataset.id); return; }
   if (a === "simpan-ok") return simpanEdit(t);
