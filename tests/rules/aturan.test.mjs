@@ -334,3 +334,44 @@ describe("Legal: kontrak (master dan admin) dan MOM (pemilik; final terkunci)", 
     await assertFails(getDoc(doc(admin(), "lg_peserta/uid-sales")));
   });
 });
+
+describe("Izin per modul (pengguna.akses): hanya membatasi", () => {
+  const atur = (uid, akses) => env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), "pengguna/" + uid), { akses }));
+  const hapusAkses = (uid) => env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), "pengguna/" + uid), { akses: {} }));
+  const draf = { pemilikUid: "uid-sales", status: "draf", customerId: "c1", baris: [] };
+  after(async () => { for (const u of ["uid-sales", "uid-lihat", "uid-admin", "uid-dj1"]) await hapusAkses(u); });
+
+  it("tanpa akses: perilaku lama (sales membaca quotation miliknya)", async () => { await hapusAkses("uid-sales"); await assertSucceeds(getDoc(doc(sales(), "qt_quotations/q-sales"))); });
+  it("sales qt=1 membaca tapi tidak membuat quotation", async () => {
+    await atur("uid-sales", { qt: 1 });
+    await assertSucceeds(getDoc(doc(sales(), "qt_quotations/q-sales")));
+    await assertFails(setDoc(doc(sales(), "qt_quotations/q-baru-1"), draf));
+  });
+  it("sales qt=0 tidak membaca quotation miliknya", async () => { await atur("uid-sales", { qt: 0 }); await assertFails(getDoc(doc(sales(), "qt_quotations/q-sales"))); });
+  it("sales qt=2 tetap bisa membuat quotation", async () => { await atur("uid-sales", { qt: 2 }); await assertSucceeds(setDoc(doc(sales(), "qt_quotations/q-baru-2"), draf)); });
+  it("lihat mr=0 qt=0: tidak membaca master_tarif; qt=1: membaca (dipakai quotation)", async () => {
+    await atur("uid-lihat", { mr: 0, qt: 0 }); await assertFails(getDoc(doc(lihat(), "master_tarif/t1")));
+    await atur("uid-lihat", { mr: 0, qt: 1 }); await assertSucceeds(getDoc(doc(lihat(), "master_tarif/t1")));
+  });
+  it("lihat cu=0 qt=0: tidak membaca customer", async () => { await atur("uid-lihat", { cu: 0, qt: 0 }); await assertFails(getDoc(doc(lihat(), "cu_customers/c1"))); });
+  it("admin mr=1: membaca tetapi tidak mengubah master_tarif", async () => {
+    await atur("uid-admin", { mr: 1 });
+    await assertSucceeds(getDoc(doc(admin(), "master_tarif/t1")));
+    await assertFails(setDoc(doc(admin(), "master_tarif/t-baru"), { nama: "x" }));
+    await hapusAkses("uid-admin"); await assertSucceeds(setDoc(doc(admin(), "master_tarif/t-baru"), { nama: "x" }));
+  });
+  it("admin lg=0: tidak membaca kontrak legal", async () => { await atur("uid-admin", { lg: 0 }); await assertFails(getDoc(doc(admin(), "lg_kontrak/k1"))); await hapusAkses("uid-admin"); });
+  it("daily job dj=1: membaca job kelompoknya tetapi tidak mengubah; dj=0: tidak membaca", async () => {
+    await atur("uid-dj1", { dj: 1 });
+    await assertSucceeds(getDoc(doc(dj1(), "dj_job/j-k1")));
+    await assertFails(updateDoc(doc(dj1(), "dj_job/j-k1"), { judul: "Ubah" }));
+    await atur("uid-dj1", { dj: 0 }); await assertFails(getDoc(doc(dj1(), "dj_job/j-k1")));
+  });
+  it("master tidak pernah dibatasi", async () => { await assertSucceeds(updateDoc(doc(master(), "dj_job/j-k1"), { tglTarget: "2026-12-31", targetTingkat: 4 })); });
+  it("admin mengatur akses sales; tidak mengatur akses admin lain; sales tidak mengubah aksesnya sendiri", async () => {
+    await assertSucceeds(updateDoc(doc(admin(), "pengguna/uid-sales"), { akses: { qt: 2 } }));
+    await assertFails(updateDoc(doc(sales(), "pengguna/uid-sales"), { akses: { qt: 2, mr: 2 } }));
+    await assertFails(updateDoc(doc(sales(), "pengguna/uid-lihat"), { akses: {} }));
+    await assertSucceeds(updateDoc(doc(master(), "pengguna/uid-admin"), { akses: { mr: 1 } }));
+  });
+});

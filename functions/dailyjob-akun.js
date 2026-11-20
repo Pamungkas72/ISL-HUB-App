@@ -116,6 +116,10 @@ exports.djAturAnggota = onCall(OPSI, async (req) => {
     await ref.update({ nama, username, email: emailBaru, telepon: telepon || null, emailKontak: emailKontak || null, alias: baru }); await admin.auth().updateUser(uid, { displayName: nama });
     if (gantiUser) await admin.auth().revokeRefreshTokens(uid); // username berubah: sesi lama berakhir, masuk lagi dengan data baru
     await catat(c, uid, emailBaru, "dj-ubah", dari, ke);
+  } else if (aksi === "akses") {
+    if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin yang mengatur akses.");
+    const dj = Number(d.dj); if (![1, 2].includes(dj)) throw new HttpsError("invalid-argument", "Akses Daily Job: 1 (lihat saja) atau 2 (kelola).");
+    await ref.update({ akses: { dj } }); await catat(c, uid, email, "dj-akses", { dj: s.get("akses") ? s.get("akses").dj ?? 2 : 2 }, { dj });
   } else if (aksi === "keluar") {
     await admin.auth().revokeRefreshTokens(uid); await catat(c, uid, email, "dj-keluar");
   } else if (aksi === "info") {

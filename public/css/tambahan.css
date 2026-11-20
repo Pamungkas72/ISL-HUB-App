@@ -2589,3 +2589,4 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .ak-stat__k .st-badge { white-space: nowrap; }
 .ak-dua { grid-template-columns: minmax(0, 1fr) 320px; }
 .ak-tb td, .ak-tb th { padding-left: 12px; padding-right: 12px; }
+.ad-akses { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--mr-border); } .ad-akses:first-child { border-top: 0; } .ad-akses b { display: block; font-size: 14.5px; } .ad-akses small { display: block; color: var(--mr-muted); font-size: 12.5px; max-width: 220px; } .ad-akses .ad-seg { flex: 0 0 auto; min-width: 190px; } .ad-akses--mati { opacity: .55; } .ad-seg button:disabled { opacity: .35; cursor: not-allowed; }

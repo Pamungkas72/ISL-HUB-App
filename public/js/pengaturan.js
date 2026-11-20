@@ -18,6 +18,7 @@ import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
 import { pasangPembersihan } from "./pembersihan-qt.js";
 import { isiAkunDivisi } from "./akun-divisi.js";
+import { bukaPanelAkses } from "./akses-panel.js";
 
 const S = { bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, cari: "", filter: "semua", pilih: null, tab: "anggota", masuk: null, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
 const IKON_BAG = { umum: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', profil: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/></svg>', ajuan: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>', cad: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a8 3 0 0 1 16 0v10a8 3 0 0 1-16 0zM4 12a8 3 0 0 0 16 0"/></svg>', akses: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' };
@@ -104,12 +105,12 @@ function htmlCekFirebase() {
 
 /* ---------- kelola akun (master) ---------- */
 const warna = { menunggu: "st-badge", aktif: "st-badge st-badge--ok", nonaktif: "st-badge" };
-const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "dj-tambah": "Akun divisi dibuat", "dj-ubah": "Akun divisi diubah", "dj-sandi": "Kata sandi akun divisi direset", "dj-keluar": "Semua sesi akun divisi diakhiri", "dj-nonaktif": "Akun divisi dinonaktifkan", "dj-aktif": "Akun divisi diaktifkan lagi", "dj-hapus": "Akun divisi dihapus", "dj-kepala": "Ditetapkan kepala divisi", "dj-anggota": "Jabatan kepala dilepas", "dj-kelompok": "Pindah kelompok", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
+const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "dj-tambah": "Akun divisi dibuat", "dj-ubah": "Akun divisi diubah", "dj-sandi": "Kata sandi akun divisi direset", "dj-keluar": "Semua sesi akun divisi diakhiri", "dj-nonaktif": "Akun divisi dinonaktifkan", "dj-aktif": "Akun divisi diaktifkan lagi", "dj-hapus": "Akun divisi dihapus", "dj-kepala": "Ditetapkan kepala divisi", "dj-anggota": "Jabatan kepala dilepas", "dj-kelompok": "Pindah kelompok", "dj-akses": "Akses Daily Job diubah", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
 const waktuLog = (v) => { const t = v && typeof v.toDate === "function" ? v.toDate() : v; return t ? wkt(t) : "-"; };
 /* Hanya bagian yang berubah yang ditampilkan: peran, status, kode sales, dan target. */
 const ringkasLog = (dari, ke) => {
   const bagian = [];
-  ["peran", "status", "kode", "target"].forEach((f) => { const a = dari ? dari[f] : null, b = ke ? ke[f] : null; if (String(a ?? "") !== String(b ?? "")) bagian.push(`${f}: ${a ?? "-"} → ${b ?? "-"}`); });
+  ["peran", "status", "kode", "target", "akses"].forEach((f) => { const a = dari ? dari[f] : null, b = ke ? ke[f] : null; if (String(a ?? "") !== String(b ?? "")) bagian.push(`${f}: ${a ?? "-"} → ${b ?? "-"}`); });
   return bagian.join("; ") || "tanpa perubahan";
 };
 const htmlLog = () => S.log.length
@@ -141,7 +142,7 @@ function panelAkun(a, hp) {
     <div class="ak-meta"><span class="${warna[a.status] || "st-badge"}">${e(STATUS_AKUN[a.status] || a.status)}</span><span class="mr-sub">Login terakhir: ${e(loginTxt(a.id))}</span></div>
     ${dikunci(a) ? `<p class="mr-sub">Akun ini dikelola pemilik.</p>` : `<label class="ak-lbl">Peran</label>${opsiPeran(peranPilih(a), aktif ? "" : "disabled")}
     <label class="ak-lbl">Kode unit (otomatis oleh sistem)</label><div class="ak-kodebox">${kodeTampil(a)}<span class="mr-sub">${a.kodeSales ? "Tidak bisa diubah" : "Dibuat saat akun disetujui"}</span></div>
-    <div class="ak-aksi">${aktif ? `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-simpan">Simpan</button>${S.master ? `<button class="mr-btn mr-btn--kecil" data-st="akun-ubah">Ubah data</button><button class="mr-btn mr-btn--kecil" data-st="akun-sandi">Kata sandi</button>` : ""}` : `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-aktif"${kunciModal()}>Aktifkan lagi</button>`}</div>
+    <div class="ak-aksi">${aktif ? `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-simpan">Simpan</button><button class="mr-btn mr-btn--kecil" data-st="akun-akses">Akses</button>${S.master ? `<button class="mr-btn mr-btn--kecil" data-st="akun-ubah">Ubah data</button><button class="mr-btn mr-btn--kecil" data-st="akun-sandi">Kata sandi</button>` : ""}` : `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-aktif"${kunciModal()}>Aktifkan lagi</button>`}</div>
     <div class="ak-aksi ak-bahaya">${aktif ? `<button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-nonaktif">Nonaktifkan</button>` : ""}${hapus}</div>`}</div>`;
 }
 const htmlPeranAkses = () => {
@@ -317,6 +318,7 @@ function dialogUbah(ak, uid) {
 }
 async function aksiAkun(a, tr) {
   const uid = tr && tr.dataset.uid, ak = S.akun.find((x) => x.id === uid); if (!ak) return;
+  if (a === "akun-akses") return ak.peran && ak.peran !== "master" ? bukaPanelAkses(ak, { sesudah: render }) : undefined;
   if (a === "akun-hapus" && !S.master) return; // hanya pemilik
   const sel = tr.querySelector("[data-akun=peran]"), peranBaru = sel ? sel.value : peranPilih(ak);
   const baca = () => ({ peran: peranBaru, kodeSales: ak.kodeSales || kodeUnit(peranBaru, kodeTerpakai()) }); // kode unit dibuat sistem; akun lama mempertahankan kodenya

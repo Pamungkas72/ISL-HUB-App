@@ -61,6 +61,15 @@ service cloud.firestore {
     function isStaf() {
       return isMaster() || isAdmin();
     }
+    // Izin per modul (pengguna.akses = { mr, qt, cu, dj, lg } bernilai 0 tidak, 1 lihat, 2 kelola). Hanya MEMBATASI izin peran:
+    // kunci yang tidak ada = tanpa batas tambahan (perilaku lama), master tidak pernah dibatasi. Akun tidak bisa mengubah akses miliknya sendiri.
+    // Dibuat ringkas (batas 1000 ekspresi per aturan); sesi dan status akun sudah diperiksa oleh syarat peran di sampingnya.
+    function lvl(m) {
+      return request.auth.token.email == "codcodan1@gmail.com" ? 2
+        : get(/databases/$(database)/documents/pengguna/$(request.auth.uid)).data.get('akses', {}).get(m, 2);
+    }
+    function baca(m) { return lvl(m) >= 1; }
+    function kelola(m) { return lvl(m) >= 2; }
     function milikSaya(data) {
       return data.pemilikUid == request.auth.uid;
     }
@@ -68,133 +77,142 @@ service cloud.firestore {
     // ---------------- Master Rate ----------------
     // Modal tarif: HANYA master (sales membaca master_tarif.hargaMin saja)
     match /master_modal/{id} {
-      allow read, write: if isKelola();
+      allow read: if baca('mr') && (isKelola());
+      allow write: if kelola('mr') && (isKelola());
     }
     match /master_tarif/{id} {
-      allow read: if aktif();
-      allow create, update, delete: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create, update, delete: if kelola('mr') && (isKelola());
     }
     match /master_tarif_riwayat/{id} {
-      allow read: if isKelola();
-      allow create: if isKelola();
+      allow read: if baca('mr') && (isKelola());
+      allow create: if kelola('mr') && (isKelola());
       allow update, delete: if false;
     }
     match /vendor/{id} {
-      allow read: if aktif();
-      allow create, update, delete: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create, update, delete: if kelola('mr') && (isKelola());
     }
     match /vendor_rahasia/{id} {
       allow read, write: if isMaster();
     }
     match /lini_bisnis/{id} {
-      allow read: if aktif();
-      allow create, update, delete: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create, update, delete: if kelola('mr') && (isKelola());
     }
     match /satuan_baku/{id} {
-      allow read: if aktif();
-      allow create, update: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create, update: if kelola('mr') && (isKelola());
       allow delete: if isMaster();   // admin boleh menambah dan mengubah nama satuan, tidak menghapus (3 Nov 2026)
     }
     match /trucking_trailer_zona/{id} {
-      allow read: if aktif();
-      allow create: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create: if kelola('mr') && (isKelola());
       allow update, delete: if false;
     }
     match /distribusi_kecil_lokasi/{id} {
-      allow read: if aktif();
-      allow create: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create: if kelola('mr') && (isKelola());
       allow update, delete: if false;
     }
     match /open_yard_lokasi/{id} {
-      allow read: if aktif();
-      allow create, update, delete: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create, update, delete: if kelola('mr') && (isKelola());
     }
     // Profil fasilitas (Master Rate > Lokasi): depo, open yard, gudang dry, chiller, cold room, frozen
     match /profil_fasilitas/{id} {
-      allow read: if aktif();
-      allow create, update, delete: if isKelola();
+      allow read: if (baca('mr') || baca('qt')) && (aktif());
+      allow create, update, delete: if kelola('mr') && (isKelola());
     }
-    match /depo_lokasi/{id}         { allow read: if aktif(); }
-    match /warehouse_fasilitas/{id} { allow read: if aktif(); }
+    match /depo_lokasi/{id}         { allow read: if (baca('mr') || baca('qt')) && (aktif()); }
+    match /warehouse_fasilitas/{id} { allow read: if (baca('mr') || baca('qt')) && (aktif()); }
 
     // ---------------- Customer dan Rate Disetujui ----------------
     // Customer baru dari sales masuk sebagai draf (persetujuan == 'menunggu') dan terlihat semua sales sampai master menyetujui.
     // Sales boleh mengubah status customer (prospek menjadi aktif) saat quotation disetujui, dan mengubah draf miliknya sendiri.
     match /cu_customers/{id} {
-      allow read: if aktif();
-      allow create: if isStaf()
-        || (isSales() && request.resource.data.persetujuan == 'menunggu' && request.resource.data.diajukanUid == request.auth.uid);
-      allow update: if isStaf()
+      allow read: if (baca('cu') || baca('qt')) && (aktif());
+      allow create: if (kelola('cu') || kelola('qt')) && (isStaf()
+        || (isSales() && request.resource.data.persetujuan == 'menunggu' && request.resource.data.diajukanUid == request.auth.uid));
+      allow update: if (kelola('cu') || kelola('qt')) && (isStaf()
         || (isSales() && (
               (resource.data.diajukanUid == request.auth.uid && resource.data.persetujuan == 'menunggu'
                  && request.resource.data.persetujuan == 'menunggu' && request.resource.data.diajukanUid == request.auth.uid)
               // customer yang sudah disetujui: sales hanya boleh menaikkan status prospek menjadi aktif (saat quotation disetujui)
               || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'belumMaksimal', 'diubahPada'])
                   && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
-                      || (resource.data.status == 'prospek' && request.resource.data.status == 'aktif')))));
+                      || (resource.data.status == 'prospek' && request.resource.data.status == 'aktif'))))));
       // Sales boleh menghapus draf customer yang diajukannya sendiri dan belum disetujui; selebihnya master.
-      allow delete: if isMaster() || (isSales() && resource.data.persetujuan == 'menunggu' && resource.data.diajukanUid == request.auth.uid);
+      allow delete: if (kelola('cu') || kelola('qt')) && (isMaster() || (isSales() && resource.data.persetujuan == 'menunggu' && resource.data.diajukanUid == request.auth.uid));
     }
     // Rate dan paket: sales hanya membaca miliknya (query WAJIB memakai where pemilikUid == uid; harga negosiasi sales lain tertutup).
     match /cu_rates/{id} {
-      allow read: if isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data));
-      allow create: if isStaf()
+      allow read: if baca('qt') && (isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data)));
+      allow create: if kelola('qt') && (isStaf()
         || (isSales() && exists(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId))
-            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid);
-      allow update: if isStaf()
-        || (isSales() && milikSaya(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['digantikanOleh']));
-      allow delete: if isMaster();
+            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid));
+      allow update: if kelola('qt') && (isStaf()
+        || (isSales() && milikSaya(resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['digantikanOleh'])));
+      allow delete: if kelola('qt') && (isMaster());
     }
     match /cu_paket/{id} {
-      allow read: if isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data));
-      allow create: if isStaf()
+      allow read: if baca('qt') && (isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data)));
+      allow create: if kelola('qt') && (isStaf()
         || (isSales() && exists(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId))
-            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid);
-      allow update: if isStaf();
-      allow delete: if isMaster();
+            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid));
+      allow update: if kelola('qt') && (isStaf());
+      allow delete: if kelola('qt') && (isMaster());
     }
     // Modal dokumen Fase 2 (kembaran koleksi di atas): master dan admin
     match /{kol}/{id} {
-      allow read, write: if isStaf() && kol in ['cu_rates_modal', 'cu_paket_modal', 'qt_quotations_modal', 'qt_templates_modal', 'layanan_tambahan_modal'];
+      allow read: if baca('qt') && (isStaf() && kol in ['cu_rates_modal', 'cu_paket_modal', 'qt_quotations_modal', 'qt_templates_modal', 'layanan_tambahan_modal']);
+      allow write: if kelola('qt') && (isStaf() && kol in ['cu_rates_modal', 'cu_paket_modal', 'qt_quotations_modal', 'qt_templates_modal', 'layanan_tambahan_modal']);
     }
 
     // ---------------- Uang Jalan (biaya internal armada sendiri): master dan admin ----------------
-    match /uj_rute/{id}       { allow read, write: if isKelola(); }
-    match /uj_driver/{id}     { allow read, write: if isKelola(); }
-    match /uj_slip/{id}       { allow read, write: if isKelola(); }
-    match /uj_pengaturan/{id} { allow read, write: if isKelola(); }
+    match /uj_rute/{id}       { allow read: if baca('mr') && (isKelola());
+      allow write: if kelola('mr') && (isKelola()); }
+    match /uj_driver/{id}     { allow read: if baca('mr') && (isKelola());
+      allow write: if kelola('mr') && (isKelola()); }
+    match /uj_slip/{id}       { allow read: if baca('mr') && (isKelola());
+      allow write: if kelola('mr') && (isKelola()); }
+    match /uj_pengaturan/{id} { allow read: if baca('mr') && (isKelola());
+      allow write: if kelola('mr') && (isKelola()); }
 
     // ---------------- Legal: kontrak berjalan (master dan admin) dan MOM (tiap akun mencatat miliknya) ----------------
     match /lg_kontrak/{id} {
-      allow read, write: if isStaf();
+      allow read: if baca('lg') && (isStaf());
+      allow write: if kelola('lg') && (isStaf());
     }
     match /lg_perusahaan/{id} {
-      allow read, write: if isStaf();
+      allow read: if baca('lg') && (isStaf());
+      allow write: if kelola('lg') && (isStaf());
     }
     match /lg_mom/{id} {
-      allow read: if isStaf() || (isSales() && milikSaya(resource.data));
-      allow create: if (isStaf() || isSales()) && request.resource.data.pemilikUid == request.auth.uid && request.resource.data.status == 'draf';
+      allow read: if baca('lg') && (isStaf() || (isSales() && milikSaya(resource.data)));
+      allow create: if kelola('lg') && ((isStaf() || isSales()) && request.resource.data.pemilikUid == request.auth.uid && request.resource.data.status == 'draf');
       // draf boleh diubah pemiliknya; MOM final terkunci (hanya staf yang boleh mengubah atau menghapus)
-      allow update: if isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf' && request.resource.data.pemilikUid == request.auth.uid);
-      allow delete: if isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf');
+      allow update: if kelola('lg') && (isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf' && request.resource.data.pemilikUid == request.auth.uid));
+      allow delete: if kelola('lg') && (isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf'));
     }
     match /lg_counters/{id} {
-      allow read: if isStaf() || isSales();
-      allow create: if isStaf() || isSales();
-      allow update: if ((isStaf() || isSales()) && request.resource.data.nilai >= resource.data.nilai) || isKelola();
+      allow read: if baca('lg') && (isStaf() || isSales());
+      allow create: if kelola('lg') && (isStaf() || isSales());
+      allow update: if kelola('lg') && (((isStaf() || isSales()) && request.resource.data.nilai >= resource.data.nilai) || isKelola());
       allow delete: if false;
     }
     // Saran nama peserta MOM: milik tiap akun
     match /lg_peserta/{uid} {
-      allow read, write: if sesiBerlaku() && request.auth.uid == uid && (isStaf() || isSales());
+      allow read: if baca('lg') && (sesiBerlaku() && request.auth.uid == uid && (isStaf() || isSales()));
+      allow write: if kelola('lg') && (sesiBerlaku() && request.auth.uid == uid && (isStaf() || isSales()));
     }
 
     // ---------------- Quotation ----------------
     match /qt_quotations/{id} {
       // Sales hanya membaca miliknya (query WAJIB memakai where pemilikUid == uid).
-      allow read: if isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data));
-      allow create: if isStaf()
-        || (isSales() && milikSaya(request.resource.data) && request.resource.data.status in ['draf', 'terkirim']);
+      allow read: if baca('qt') && (isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data)));
+      allow create: if kelola('qt') && (isStaf()
+        || (isSales() && milikSaya(request.resource.data) && request.resource.data.status in ['draf', 'terkirim']));
       // Ganti nomor (master, mis. bentrok dengan quotation manual): nomor lama wajib tercatat di nomorLama
       // dan isi dokumen yang dibekukan hanya boleh berubah di nomornya.
       function gantiNomorSah() {
@@ -208,104 +226,105 @@ service cloud.firestore {
                   && request.resource.data.dokumenModel.diff(resource.data.dokumenModel).affectedKeys().hasOnly(['nomor'])));
       }
       // Admin hanya membersihkan: quotation terkirim yang diabaikan ditandai 'tidak_dipakai'. Isi dan nomornya tidak berubah.
-      allow update: if isAdmin() && resource.data.status == 'terkirim' && request.resource.data.status == 'tidak_dipakai'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'ditandaiPada', 'ditandaiOleh']);
+      allow update: if kelola('qt') && (isAdmin() && resource.data.status == 'terkirim' && request.resource.data.status == 'tidak_dipakai'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'ditandaiPada', 'ditandaiOleh']));
       // Draf bebas diubah. Setelah terbit: nomor dan isi dokumen dibekukan (status, riwayat, dan dokumen persetujuan tetap bisa bertambah).
-      allow update: if (isStaf() || (isSales() && milikSaya(resource.data) && milikSaya(request.resource.data)))
+      allow update: if kelola('qt') && ((isStaf() || (isSales() && milikSaya(resource.data) && milikSaya(request.resource.data)))
         && (resource.data.status == 'draf'
             || (request.resource.data.nomor == resource.data.nomor
                 && request.resource.data.dokumenModel == resource.data.dokumenModel)
-            || (isStaf() && gantiNomorSah()));
+            || (isStaf() && gantiNomorSah())));
       // Hapus permanen: master untuk semua status kecuali disetujui (punya Rate Disetujui). Sales hanya boleh menghapus DRAF miliknya.
       // Admin TIDAK boleh menghapus (kesepakatan 3 Nov 2026: akun admin dipakai staf; penghapusan hanya lewat master). Admin tetap boleh mengubah.
-      allow delete: if (isMaster() && resource.data.status != 'disetujui')
-        || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf');
+      allow delete: if kelola('qt') && ((isMaster() && resource.data.status != 'disetujui')
+        || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf'));
     }
     // Sales mengajukan hapus quotation terbit; master menyetujui.
     match /qt_ajuan_hapus/{id} {
-      allow read: if isKelola() || (isSales() && milikSaya(resource.data));
-      allow create: if isSales() && milikSaya(request.resource.data) && request.resource.data.status == 'menunggu';
-      allow update, delete: if isMaster();
+      allow read: if baca('qt') && (isKelola() || (isSales() && milikSaya(resource.data)));
+      allow create: if kelola('qt') && (isSales() && milikSaya(request.resource.data) && request.resource.data.status == 'menunggu');
+      allow update, delete: if kelola('qt') && (isMaster());
     }
     // Catatan kegiatan per quotation yang sudah disetujui. Admin dan sales hanya untuk quotation miliknya; tanpa data modal.
     match /qt_kegiatan/{id} {
-      allow read: if isStaf() || isLihat() || (isSales() && milikSaya(resource.data));
-      allow create: if sesiBerlaku()
+      allow read: if baca('qt') && (isStaf() || isLihat() || (isSales() && milikSaya(resource.data)));
+      allow create: if kelola('qt') && (sesiBerlaku()
         && request.resource.data.keys().hasOnly(['quotationId', 'pemilikUid', 'tanggal', 'jenis', 'omzet', 'catatan', 'oleh', 'dibuat'])
         && (isMaster() || (isAdmin() && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.status == 'disetujui')
             || (isSales() && milikSaya(request.resource.data)
             && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid
-            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.status == 'disetujui'));
+            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.status == 'disetujui')));
       // Pemilik (admin atau sales) boleh mengubah dan menghapus catatannya sendiri; pemilik dan quotation tidak boleh berpindah.
-      allow update: if isStaf() || ((isAdmin() || isSales()) && milikSaya(resource.data) && milikSaya(request.resource.data)
+      allow update: if kelola('qt') && (isStaf() || ((isAdmin() || isSales()) && milikSaya(resource.data) && milikSaya(request.resource.data)
         && request.resource.data.quotationId == resource.data.quotationId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tanggal', 'jenis', 'omzet', 'catatan', 'oleh', 'diubah']));
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tanggal', 'jenis', 'omzet', 'catatan', 'oleh', 'diubah'])));
       // Penghapusan: master, atau sales untuk catatannya sendiri. Admin tidak boleh menghapus (3 Nov 2026).
-      allow delete: if isMaster() || (isSales() && milikSaya(resource.data));
+      allow delete: if kelola('qt') && (isMaster() || (isSales() && milikSaya(resource.data)));
     }
     // Volume per baris tarif yang sudah disetujui, per periode. Admin dan sales hanya untuk quotation miliknya; tanpa modal.
     match /qt_volume/{id} {
-      allow read: if isStaf() || isLihat() || (isSales() && milikSaya(resource.data));
-      allow create: if sesiBerlaku()
+      allow read: if baca('qt') && (isStaf() || isLihat() || (isSales() && milikSaya(resource.data)));
+      allow create: if kelola('qt') && (sesiBerlaku()
         && request.resource.data.keys().hasOnly(['quotationId', 'barisId', 'pemilikUid', 'customerId', 'customerNama', 'liniKey', 'liniNama', 'item', 'satuan', 'jual', 'volume', 'tanggal', 'catatan', 'oleh', 'dibuat'])
         && (isMaster() || (isAdmin() && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.status == 'disetujui')
             || (isSales() && milikSaya(request.resource.data)
             && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.pemilikUid == request.auth.uid
-            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.status == 'disetujui'));
-      allow update: if isStaf();
+            && get(/databases/$(database)/documents/qt_quotations/$(request.resource.data.quotationId)).data.status == 'disetujui')));
+      allow update: if kelola('qt') && (isStaf());
       // Penghapusan: master, atau sales untuk catatannya sendiri. Admin tidak boleh menghapus (3 Nov 2026).
-      allow delete: if isMaster() || (isSales() && milikSaya(resource.data));
+      allow delete: if kelola('qt') && (isMaster() || (isSales() && milikSaya(resource.data)));
     }
     match /qt_counters/{id} {
-      allow read: if aktif();
-      allow create: if isStaf() || isSales();
-      allow update: if ((isStaf() || isSales()) && request.resource.data.nilai >= resource.data.nilai) || isKelola();
+      allow read: if baca('qt') && (aktif());
+      allow create: if kelola('qt') && (isStaf() || isSales());
+      allow update: if kelola('qt') && (((isStaf() || isSales()) && request.resource.data.nilai >= resource.data.nilai) || isKelola());
       allow delete: if false;
     }
     // Order dan laba: hanya master
     match /qt_orders/{id} {
-      allow read, create, update: if isStaf();
-      allow delete: if isMaster();
+      allow read: if baca('qt') && (isStaf());
+      allow create, update: if kelola('qt') && (isStaf());
+      allow delete: if kelola('qt') && (isMaster());
     }
     // Template milik pembuatnya: master untuk semua. Admin membaca semua (untuk memeriksa modal sebelum menyetujui sales), tetapi hanya mengubah miliknya; sales hanya miliknya.
     match /qt_templates/{id} {
-      allow read: if isMaster() || isAdmin() || (aktif() && milikSaya(resource.data));
-      allow create: if isMaster() || ((isAdmin() || isSales()) && milikSaya(request.resource.data));
-      allow update: if isMaster() || ((isAdmin() || isSales()) && milikSaya(resource.data) && milikSaya(request.resource.data));
+      allow read: if baca('qt') && (isMaster() || isAdmin() || (aktif() && milikSaya(resource.data)));
+      allow create: if kelola('qt') && (isMaster() || ((isAdmin() || isSales()) && milikSaya(request.resource.data)));
+      allow update: if kelola('qt') && (isMaster() || ((isAdmin() || isSales()) && milikSaya(resource.data) && milikSaya(request.resource.data)));
       // Admin boleh membuat dan mengubah template miliknya, tetapi tidak menghapus (3 Nov 2026); sales hanya miliknya.
-      allow delete: if isMaster() || (isSales() && milikSaya(resource.data));
+      allow delete: if kelola('qt') && (isMaster() || (isSales() && milikSaya(resource.data)));
     }
     match /qt_pengaturan/{id} {
-      allow read: if aktif();
-      allow create, update: if isKelola();
-      allow delete: if isMaster();
+      allow read: if baca('qt') && (aktif());
+      allow create, update: if kelola('qt') && (isKelola());
+      allow delete: if kelola('qt') && (isMaster());
     }
 
     // ---------------- Tambahan Okt 2026 ----------------
     // Katalog layanan tambahan dari formulir penawaran per lini (dipakai lagi di penawaran berikutnya)
     match /layanan_tambahan/{id} {
-      allow read: if aktif();
-      allow create, update: if isKelola();
-      allow delete: if isMaster();
+      allow read: if baca('qt') && (aktif());
+      allow create, update: if kelola('qt') && (isKelola());
+      allow delete: if kelola('qt') && (isMaster());
     }
     // Format lini bisnis buatan sendiri (definisi tabel dan kolom)
     match /format_lini/{id} {
-      allow read: if aktif();
-      allow create, update: if isKelola();
-      allow delete: if isMaster();
+      allow read: if baca('qt') && (aktif());
+      allow create, update: if kelola('qt') && (isKelola());
+      allow delete: if kelola('qt') && (isMaster());
     }
     // Riwayat quotation PDF yang dikirim di luar sistem (status dan pengingat 3 hari).
     // Sales boleh menghapus riwayat miliknya sendiri (tombol "Hapus dari riwayat" di halaman Riwayat).
     match /qt_riwayat/{id} {
-      allow read: if isStaf() || isLihat() || (isSales() && milikSaya(resource.data));
-      allow create, update: if isStaf() || (isSales() && milikSaya(request.resource.data));
+      allow read: if baca('qt') && (isStaf() || isLihat() || (isSales() && milikSaya(resource.data)));
+      allow create, update: if kelola('qt') && (isStaf() || (isSales() && milikSaya(request.resource.data)));
       // Hapus: master, atau sales untuk riwayat miliknya. Admin tidak boleh menghapus (3 Nov 2026).
-      allow delete: if isMaster() || (isSales() && milikSaya(resource.data));
+      allow delete: if kelola('qt') && (isMaster() || (isSales() && milikSaya(resource.data)));
     }
     // Pola pengenalan S&K vendor (global)
     match /sk_pola/{id} {
-      allow read: if aktif();
-      allow create, update: if isStaf();
+      allow read: if baca('qt') && (aktif());
+      allow create, update: if kelola('qt') && (isStaf());
       allow delete: if false;
     }
 
@@ -333,7 +352,8 @@ service cloud.firestore {
         || (isAdmin() && uid != request.auth.uid
             && resource.data.peran in ['sales', 'lihat', null] && request.resource.data.peran in ['sales', 'lihat', null]
             && request.resource.data.status in ['aktif', 'nonaktif']
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['peran', 'kodeSales', 'status', 'targetBulanan', 'disetujuiPada', 'ditolakPada', 'kelompokDJ'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['peran', 'kodeSales', 'status', 'targetBulanan', 'disetujuiPada', 'ditolakPada', 'kelompokDJ', 'akses'])
+            && request.resource.data.get('akses', {}) is map
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['targetBulanan']) || request.resource.data.targetBulanan == null))
         || (sesiBerlaku() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'telepon', 'ttd']))
         || (sesiBerlaku() && (isSales() || isAdmin()) && request.auth.uid == uid
@@ -391,11 +411,11 @@ service cloud.firestore {
     match /dj_bagikan/{token} {
       allow get: if resource.data.aktif == true && resource.data.berlakuSampai > request.time.toMillis();
       allow list: if false;
-      allow create: if (isKelola() || djAnggota(request.resource.data.get('kelompokId', null))) && token.size() >= 20 && token.size() <= 40
-        && request.resource.data.keys().hasOnly(['jobId', 'kelompokId', 'dibuatOleh', 'aktif', 'berlakuSampai', 'unduh', 'snapshot', 'diubah']) && request.resource.data.dibuatOleh == request.auth.uid;
-      allow update: if (isKelola() || djAnggota(resource.data.get('kelompokId', null))) && request.resource.data.get('kelompokId', null) == resource.data.get('kelompokId', null)
-        && request.resource.data.keys().hasOnly(['jobId', 'kelompokId', 'dibuatOleh', 'aktif', 'berlakuSampai', 'unduh', 'snapshot', 'diubah']);
-      allow delete: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
+      allow create: if kelola('dj') && ((isKelola() || djAnggota(request.resource.data.get('kelompokId', null))) && token.size() >= 20 && token.size() <= 40
+        && request.resource.data.keys().hasOnly(['jobId', 'kelompokId', 'dibuatOleh', 'aktif', 'berlakuSampai', 'unduh', 'snapshot', 'diubah']) && request.resource.data.dibuatOleh == request.auth.uid);
+      allow update: if kelola('dj') && ((isKelola() || djAnggota(resource.data.get('kelompokId', null))) && request.resource.data.get('kelompokId', null) == resource.data.get('kelompokId', null)
+        && request.resource.data.keys().hasOnly(['jobId', 'kelompokId', 'dibuatOleh', 'aktif', 'berlakuSampai', 'unduh', 'snapshot', 'diubah']));
+      allow delete: if kelola('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
     }
 
     // Token notifikasi push Daily Job: tiap perangkat mendaftarkan tokennya sendiri; hanya server (Cloud Function) yang membaca semuanya.
@@ -415,35 +435,42 @@ service cloud.firestore {
     function djKepalaDesig(k) { return k is string && djAnggota(k) && request.auth.uid in get(/databases/$(database)/documents/dj_kelompok/$(k)).data.get('kepala', []); }
     function djKepala(k) { return isKelola() || djKepalaDesig(k); }
     // Tingkat penetap target (deadline): master 4 > admin 3 > kepala divisi 2 > anggota 1. Yang lebih rendah tidak bisa mengubah target yang sudah ditetapkan tingkat lebih tinggi.
-    function djTingkat(k) { return isMaster() ? 4 : (isAdmin() ? 3 : (djKepalaDesig(k) ? 2 : 1)); }
+    // Non-master: satu pembacaan profil (let) supaya hemat ekspresi; hasilnya sama dengan isAdmin() / djKepalaDesig().
+    // Master (email, tanpa dokumen profil) tidak boleh membaca profil, jadi dipisah supaya let tidak dievaluasi untuknya.
+    function djTingkatLain(k) {
+      let p = get(/databases/$(database)/documents/pengguna/$(request.auth.uid)).data;
+      return p.get('status', '') == 'aktif' && p.get('peran', null) == 'admin' ? 3
+        : (p.get('status', '') == 'aktif' && k is string && p.get('kelompokDJ', null) == k && request.auth.uid in get(/databases/$(database)/documents/dj_kelompok/$(k)).data.get('kepala', []) ? 2 : 1);
+    }
+    function djTingkat(k) { return isMaster() ? 4 : djTingkatLain(k); }
     // Alias login anggota tim (username, telepon, email -> email sintetis). Hanya dibaca per kunci (tanpa daftar) oleh halaman masuk; ditulis Cloud Function.
     match /dj_login/{kunci} {
       allow get: if true;
       allow list, write: if false;
     }
     match /dj_kelompok/{id} {
-      allow read: if aktifDJ();
-      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori', 'profil', 'kategori']) && request.resource.data.get('kategori', []) is list && request.resource.data.get('kategori', []).size() <= 60 && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map && request.resource.data.get('profil', 'marketing') in ['marketing', 'tracking'];
-      allow delete: if isKelola();
+      allow read: if baca('dj') && (aktifDJ());
+      allow create, update: if kelola('dj') && (isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori', 'profil', 'kategori']) && request.resource.data.get('kategori', []) is list && request.resource.data.get('kategori', []).size() <= 60 && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map && request.resource.data.get('profil', 'marketing') in ['marketing', 'tracking']);
+      allow delete: if kelola('dj') && (isKelola());
     }
     // Ajuan kategori baru dari anggota; master/admin yang menyetujui (menambah ke dj_kelompok.kategori) atau menolak.
     match /dj_kategori_ajuan/{id} {
-      allow read: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
-      allow create: if djAnggota(request.resource.data.get('kelompokId', null)) && request.resource.data.keys().hasOnly(['kelompokId', 'nama', 'oleh', 'olehNama', 'dibuat'])
-        && request.resource.data.oleh == request.auth.uid && request.resource.data.nama is string && request.resource.data.nama.size() > 0 && request.resource.data.nama.size() <= 40;
-      allow update, delete: if isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && resource.data.oleh == request.auth.uid);
+      allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
+      allow create: if kelola('dj') && (djAnggota(request.resource.data.get('kelompokId', null)) && request.resource.data.keys().hasOnly(['kelompokId', 'nama', 'oleh', 'olehNama', 'dibuat'])
+        && request.resource.data.oleh == request.auth.uid && request.resource.data.nama is string && request.resource.data.nama.size() > 0 && request.resource.data.nama.size() <= 40);
+      allow update, delete: if kelola('dj') && (isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && resource.data.oleh == request.auth.uid));
     }
     match /dj_job/{id} {
-      allow read: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
-      allow create: if (isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
+      allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
+      allow create: if kelola('dj') && ((isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
         && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200
-        && request.resource.data.get('targetTingkat', 1) <= djTingkat(request.resource.data.get('kelompokId', null));
-      allow update: if (isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && djAnggota(request.resource.data.get('kelompokId', null))))
+        && request.resource.data.get('targetTingkat', 1) <= djTingkat(request.resource.data.get('kelompokId', null)));
+      allow update: if kelola('dj') && ((isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && djAnggota(request.resource.data.get('kelompokId', null))))
         && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['review']) || djKepala(resource.data.get('kelompokId', null)))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['tglTarget', 'targetTingkat'])
-            || (djTingkat(resource.data.get('kelompokId', null)) >= resource.data.get('targetTingkat', 1) && request.resource.data.get('targetTingkat', 1) == djTingkat(resource.data.get('kelompokId', null))));
-      allow delete: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
+            || (djTingkat(resource.data.get('kelompokId', null)) >= resource.data.get('targetTingkat', 1) && request.resource.data.get('targetTingkat', 1) == djTingkat(resource.data.get('kelompokId', null)))));
+      allow delete: if kelola('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
     }
 
     // Selain daftar di atas: ditutup. (Aturan umum lama dihapus supaya tidak membuka celah lewat "ATAU".)

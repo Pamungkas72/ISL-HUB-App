@@ -117,3 +117,23 @@ export async function muatSemuaKegiatan() {
   const s = await getDocs(collection(db, "qt_kegiatan"));
   return s.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
+
+/* ---------- Izin per modul (pengguna.akses): 0 tidak, 1 lihat, 2 kelola. Hanya MEMBATASI izin peran (ditegakkan di firestore.rules). ---------- */
+export const MODUL = [["mr", "Master Rate"], ["qt", "Quotation"], ["cu", "Customer"], ["dj", "Daily Job"], ["lg", "Legal"]];
+export const MODUL_NAV = { "master-rate": "mr", quotation: "qt", customer: "cu", dailyjob: "dj", legal: "lg" };
+export const NAMA_LEVEL = ["Tidak", "Lihat", "Kelola"];
+/* Batas tertinggi tiap peran (sama dengan perilaku lama). 0 = modul tidak tersedia untuk peran itu. */
+export const BATAS_PERAN = {
+  admin: { mr: 2, qt: 2, cu: 2, dj: 2, lg: 2 },
+  sales: { mr: 0, qt: 2, cu: 2, dj: 2, lg: 2 },
+  lihat: { mr: 1, qt: 1, cu: 1, dj: 2, lg: 0 },
+  dj: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 },
+};
+/** Level efektif satu modul: nilai di pengguna.akses (bila ada) dibatasi oleh batas peran. */
+export function levelAkses(p, m) {
+  if (!p || p.peran === "master") return 2;
+  const batas = (BATAS_PERAN[p.peran] || {})[m] ?? 0, v = p.akses && typeof p.akses[m] === "number" ? p.akses[m] : batas;
+  return Math.max(0, Math.min(v, batas));
+}
+/** Modul yang sengaja dimatikan master/admin lewat pengguna.akses (menu disembunyikan; data juga ditolak server). */
+export const modulDimatikan = (p, m) => !!p && p.peran !== "master" && !!p.akses && p.akses[m] === 0;
