@@ -137,3 +137,22 @@ export function levelAkses(p, m) {
 }
 /** Modul yang sengaja dimatikan master/admin lewat pengguna.akses (menu disembunyikan; data juga ditolak server). */
 export const modulDimatikan = (p, m) => !!p && p.peran !== "master" && !!p.akses && p.akses[m] === 0;
+
+/* ---------- Peran siap pakai (preset): nama + peran dasar + batas hak per modul. Disimpan di pengguna.peran (dasar), pengguna.akses (batas) dan akses.jabatan (nama).
+   Hanya MEMBATASI peran dasar, jadi aturan Firestore tidak berubah. Preset buatan sendiri ada di sistem/peran_preset. ---------- */
+export const PRESET_BAWAAN = [
+  { id: "finance", nama: "Finance", ket: "Melihat quotation dan customer untuk penagihan; tanpa Master Rate (modal) dan Legal.", peran: "lihat", akses: { mr: 0, qt: 1, cu: 1, dj: 0, lg: 0 } },
+  { id: "ops", nama: "Operasional / CS", ket: "Melihat quotation dan customer, mengelola Daily Job.", peran: "lihat", akses: { mr: 0, qt: 1, cu: 1, dj: 2, lg: 0 } },
+  { id: "spv", nama: "Supervisor Sales", ket: "Mengelola quotation, customer, dan Daily Job; melihat Legal; tanpa Master Rate.", peran: "sales", akses: { mr: 0, qt: 2, cu: 2, dj: 2, lg: 1 } },
+  { id: "bd", nama: "Marketing / BD", ket: "Mengelola quotation, customer, dan Daily Job; tanpa Master Rate dan Legal.", peran: "sales", akses: { mr: 0, qt: 2, cu: 2, dj: 2, lg: 0 } },
+  { id: "legal", nama: "Legal Officer", ket: "Mengelola Legal; hanya melihat quotation dan customer.", peran: "sales", akses: { mr: 0, qt: 1, cu: 1, dj: 0, lg: 2 } },
+  { id: "auditor", nama: "Auditor", ket: "Hanya melihat semua modul yang tersedia untuk Lihat saja.", peran: "lihat", akses: { mr: 1, qt: 1, cu: 1, dj: 1, lg: 0 } },
+  { id: "pantau-mr", nama: "Pengamat Master Rate", ket: "Melihat tarif, vendor, dan quotation; tanpa Daily Job dan Legal.", peran: "lihat", akses: { mr: 1, qt: 1, cu: 1, dj: 0, lg: 0 } },
+];
+/** Bentuk pengguna.akses dari satu preset, dipangkas oleh batas peran dasarnya; akses.jabatan membawa nama preset. */
+export function aksesPreset(pr) {
+  const b = BATAS_PERAN[pr.peran] || {}, a = {};
+  MODUL.forEach(([m]) => { if (b[m] > 0) a[m] = Math.max(0, Math.min(pr.akses && typeof pr.akses[m] === "number" ? pr.akses[m] : b[m], b[m])); });
+  a.jabatan = pr.nama;
+  return a;
+}
