@@ -53,3 +53,8 @@ Akun yang masuk memakai tampilan menurut `pengguna.kelompokDJ`; master dan admin
 - **Cost vendor:** semua anggota Tracking bisa melihat dan mengisi cost. Cost masuk ke Master Rate untuk rute dan vendor itu. Bila rute dengan vendor yang sama pernah dipakai, sistem merekomendasikan tarif sebelumnya; bila berubah, tarif terbaru tercatat sebagai rate terbaru.
 - **Unit internal:** cost = uang jalan, tercatat di Master Rate sebagai vendor internal dengan pengelompokan "Uang Jalan". Dasar hitung: kalkulator Uang Jalan yang sudah ada (`uang-jalan.js`: BBM, tol, TKBM, operasional).
 - **Pemilih kelompok:** master dan admin berpindah tampilan dan performa antar kelompok; Pengaturan tetap khusus master dan admin.
+
+## Akun dan akses (20 Nov 2026)
+Keputusan pemilik: satu direktori akun di Pengaturan > Akun dan akses, desain B (per kelompok: kepala divisi di baris pertama, anggota di bawahnya, tombol + Anggota per kelompok, menu ⋯ per akun). Satu kepala per kelompok.
+- **Tahap 1 (selesai):** buat akun anggota divisi dengan jabatan, jadikan kepala atau anggota, pindah kelompok, ubah data, reset sandi, nonaktifkan, hapus (`public/js/akun-divisi.js`, Cloud Functions `djBuatAnggota` dan `djAturAnggota`: aksi `kepala`, `anggota`, `kelompok`). Sales, admin, dan lihat saja masih lewat Tambah akun manual di bagian Staf dan sales.
+- **Tahap 2 (berikutnya):** akses per modul (Master Rate, Quotation, Customer, Daily Job, Legal) dengan tiga level (tidak tampil, lihat, kelola) dan preset per peran, disimpan di `pengguna.akses` dan ditegakkan di `firestore.rules` (bukan hanya menu). Setelah itu, satu formulir Buat akun untuk semua peran.

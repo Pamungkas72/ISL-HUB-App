@@ -17,6 +17,7 @@ import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
 import { pasangPembersihan } from "./pembersihan-qt.js";
+import { isiAkunDivisi } from "./akun-divisi.js";
 
 const S = { bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, perf: { targetDefault: 0 }, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
 const IKON_BAG = { umum: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', profil: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/></svg>', ajuan: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>', cad: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a8 3 0 0 1 16 0v10a8 3 0 0 1-16 0zM4 12a8 3 0 0 0 16 0"/></svg>', akses: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' };
@@ -66,13 +67,14 @@ function render() {
     ...(S.sales ? [{ id: "profil", label: "Profil sales", ket: "Nama, telepon, tanda tangan", ikon: "profil", isi: `<section class="st-kartu"><h3>Profil sales</h3>${window.ISLSales ? window.ISLSales.kontenProfil() : ""}</section>` }] : []),
     ...(S.sales || S.kelola ? [{ id: "ajuan", label: "Pengajuan hapus quotation", ket: S.master ? (jmlAj ? `${jmlAj} menunggu keputusan` : "Tidak ada yang menunggu") : S.sales ? (jmlAj ? `${jmlAj} menunggu master` : "Status pengajuan milikmu") : "Daftar pengajuan sales", badge: jmlAj, ikon: "ajuan", isi: `<section class="st-kartu"><h3>Pengajuan hapus quotation${jmlAj ? ` <span class="cu-jml">${jmlAj}</span>` : ""}</h3><p>${S.master ? "Keputusan ada di tangan pemilik. Quotation yang sudah disetujui customer tidak bisa dihapus dari sini." : S.sales ? "Status pengajuan hapus yang kamu kirim. Master yang memutuskan." : "Pengajuan hapus dari sales. Keputusan ada di tangan pemilik."}</p>${window.ISLSales ? window.ISLSales.kontenAjuan() : ""}</section>` }] : []),
     ...(!S.sales ? [{ id: "cadangan", label: "Cadangan data", ket: "Unduh dan pulihkan", ikon: "cad", isi: kCad }] : []),
-    ...(S.kelola ? [{ id: "akses", label: "Akun sales dan akses", ket: "Persetujuan, target, pemeriksaan", ikon: "akses", isi: kAkses }] : []),
+    ...(S.kelola ? [{ id: "akses", label: "Akun dan akses", ket: "Divisi, sales, persetujuan", ikon: "akses", isi: kAkses }] : []),
   ];
   const hp = matchMedia("(max-width: 760px)").matches, aktif = BAG.find((x) => x.id === S.bag) || (hp ? null : BAG[0]);
   const lencana = (x) => (x.badge ? `<span class="cu-jml">${x.badge}</span>` : "");
   const baris = (x, kls) => `<button type="button" class="${kls}${aktif && aktif.id === x.id ? " is-aktif" : ""}" data-st="bag" data-v="${x.id}"><span class="st-bag__ik">${IKON_BAG[x.ikon]}</span><span class="st-bag__t"><b>${x.label}</b>${hp ? `<small>${x.ket}</small>` : ""}</span>${lencana(x)}<span class="st-bag__p">›</span></button>`;
   $("#st-root").innerHTML = `<div class="st-judul-hp">${hp && aktif ? `<button type="button" class="mr-link" data-st="bag-kembali">‹ Pengaturan</button>` : ""}</div>` + (hp ? (aktif ? `<div class="st-grid">${aktif.isi}</div>` : `<div class="st-daftar">${BAG.map((x) => baris(x, "st-bag")).join("")}</div>`)
     : `<div class="st-dua"><nav class="st-menu" aria-label="Bagian pengaturan">${BAG.map((x) => baris(x, "st-bag")).join("")}</nav><div class="st-isi"><div class="st-grid" style="grid-template-columns:1fr">${aktif.isi}</div></div></div>`);
+  if (S.kelola && document.getElementById("ad-root")) isiAkunDivisi(document.getElementById("ad-root"));
   if (S.kelola && document.getElementById("st-bersih")) pasangPembersihan(document.getElementById("st-bersih"), { master: S.master });
 }
 
@@ -87,7 +89,7 @@ function htmlCekFirebase() {
 
 /* ---------- kelola akun (master) ---------- */
 const warna = { menunggu: "st-badge", aktif: "st-badge st-badge--ok", nonaktif: "st-badge" };
-const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
+const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "dj-tambah": "Akun divisi dibuat", "dj-ubah": "Akun divisi diubah", "dj-sandi": "Kata sandi akun divisi direset", "dj-nonaktif": "Akun divisi dinonaktifkan", "dj-aktif": "Akun divisi diaktifkan lagi", "dj-hapus": "Akun divisi dihapus", "dj-kepala": "Ditetapkan kepala divisi", "dj-anggota": "Jabatan kepala dilepas", "dj-kelompok": "Pindah kelompok", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
 const waktuLog = (v) => { const t = v && typeof v.toDate === "function" ? v.toDate() : v; return t ? wkt(t) : "-"; };
 /* Hanya bagian yang berubah yang ditampilkan: peran, status, kode sales, dan target. */
 const ringkasLog = (dari, ke) => {
@@ -118,7 +120,8 @@ function htmlAkun() {
   const modalPeringatan = (x) => S.master ? `<b>Modal belum dipisah.</b> ${x.tarif} tarif dan ${x.fase2} dokumen quotation/rate masih menyimpan modal di dokumen biasa. Pisahkan dulu sebelum menyetujui akun sales. Prosesnya sekali jalan, otomatis, dan bisa diulang.`
     : x.tarif > 0 ? `<b>Modal Master Rate belum dipisah.</b> ${x.tarif} tarif masih menyimpan modal di dokumen biasa. Admin bisa memisahkannya sekarang. Modal quotation dan rate hanya bisa dipisah pemilik, dan akun sales baru bisa disetujui setelah itu.`
     : `<b>Menunggu pemilik.</b> Modal quotation dan rate hanya bisa dipisah dan diperiksa pemilik. Akun sales baru bisa disetujui setelah pemilik memastikan semuanya terpisah.`;
-  return `<section class="st-kartu" style="grid-column:1/-1"><h3>Akun sales dan akses</h3>
+  return `<section class="st-kartu" style="grid-column:1/-1"><div id="ad-root" class="ad-root"></div></section>
+  <section class="st-kartu" style="grid-column:1/-1"><h3>Staf dan sales</h3>
     <p>Sales mendaftar sendiri dari halaman login dan baru bisa masuk setelah kamu setujui di sini. Akun yang ditolak tetap terdaftar sebagai Nonaktif dan bisa diaktifkan lagi. Akun yang pendaftarannya gagal tersimpan bisa diperbaiki dengan meminta orangnya masuk sekali lagi. Sales hanya melihat quotation miliknya, tanpa modal. Akun yang keluar dinonaktifkan, datanya tetap atas namanya. Akun lama (mis. Fathur) otomatis muncul di sini saat pertama login: setujui sebagai <b>Lihat saja</b>.</p>
     ${m == null ? `<div class="st-stat">Memeriksa keamanan modal…</div>` : m.siap ? `<div class="st-stat"><span class="st-badge st-badge--ok">Modal sudah dipisah</span> Modal hanya tersimpan di koleksi khusus master.</div>`
       : `<div class="mr-banner mr-banner--peringatan"><div>${modalPeringatan(m)}${S.master || m.tarif > 0 ? `<div class="st-baris" style="margin-top:8px"><button class="mr-btn mr-btn--utama" data-st="modal-pisah" ${S.sibuk ? "disabled" : ""}>Pisahkan modal sekarang</button></div>` : ""}<div class="st-stat" id="st-modal-prog"></div></div></div>`}
