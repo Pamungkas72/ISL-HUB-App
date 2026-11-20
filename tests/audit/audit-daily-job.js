@@ -37,6 +37,7 @@ const ADEGAN = [
   ['akun divisi: Pengaturan > Akun dan akses', async (p) => { await p.evaluate(() => { location.hash = '#pengaturan'; }); await tunggu(p, 900); await klikSel(p, '[data-st="bag"][data-v="akses"]'); await tunggu(p, 800); await p.evaluate(() => document.getElementById('ad-root')?.scrollIntoView()); }],
   ['akun divisi: panel buat akun', async (p) => { await klikSel(p, '[data-ad="baru"]'); await tunggu(p, 400); }],
   ['akun divisi: panel kelola akun', async (p) => { await klikSel(p, '.mr-panel__kepala [data-aksi="tutup-layer"]'); await tunggu(p, 200); await klikSel(p, '[data-ad="kelola"]'); await tunggu(p, 400); }],
+  ['akun divisi: edit akun, tab peran', async (p) => { await klikSel(p, '[data-ad="tab"][data-v="peran"]'); await tunggu(p, 300); }],
   ['dj: daftar, status selesai (chip di halaman)', async (p) => { await p.evaluate(() => { location.hash = '#dailyjob'; }); await tunggu(p, 900); await klikSel(p, '[data-aksi="tutup-layer"]'); await klikSel(p, '[data-dj="tab"][data-v="job"]'); await klikSel(p, '[data-dj="st"][data-v="selesai"]'); await tunggu(p, 300); }],
 ];
 

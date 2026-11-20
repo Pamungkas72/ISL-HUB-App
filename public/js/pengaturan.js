@@ -89,7 +89,7 @@ function htmlCekFirebase() {
 
 /* ---------- kelola akun (master) ---------- */
 const warna = { menunggu: "st-badge", aktif: "st-badge st-badge--ok", nonaktif: "st-badge" };
-const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "dj-tambah": "Akun divisi dibuat", "dj-ubah": "Akun divisi diubah", "dj-sandi": "Kata sandi akun divisi direset", "dj-nonaktif": "Akun divisi dinonaktifkan", "dj-aktif": "Akun divisi diaktifkan lagi", "dj-hapus": "Akun divisi dihapus", "dj-kepala": "Ditetapkan kepala divisi", "dj-anggota": "Jabatan kepala dilepas", "dj-kelompok": "Pindah kelompok", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
+const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "dj-tambah": "Akun divisi dibuat", "dj-ubah": "Akun divisi diubah", "dj-sandi": "Kata sandi akun divisi direset", "dj-keluar": "Semua sesi akun divisi diakhiri", "dj-nonaktif": "Akun divisi dinonaktifkan", "dj-aktif": "Akun divisi diaktifkan lagi", "dj-hapus": "Akun divisi dihapus", "dj-kepala": "Ditetapkan kepala divisi", "dj-anggota": "Jabatan kepala dilepas", "dj-kelompok": "Pindah kelompok", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
 const waktuLog = (v) => { const t = v && typeof v.toDate === "function" ? v.toDate() : v; return t ? wkt(t) : "-"; };
 /* Hanya bagian yang berubah yang ditampilkan: peran, status, kode sales, dan target. */
 const ringkasLog = (dari, ke) => {
