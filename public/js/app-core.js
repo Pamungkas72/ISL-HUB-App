@@ -83,7 +83,7 @@ const bolehHapusDrafCust = c => akunSales() && c.persetujuan === 'menunggu' && c
 /* ---------- data contoh ---------- */
 const S = {
   halaman: 'customer', view: 'list', id: null, tab: 'profil',
-  q: '', fStatus: '', fKat: '', fLengkap: '', fSegera: false, modePilih: false, rLini: '', rSemua: false,
+  q: '', fStatus: '', fKat: '', fLengkap: '', fSegera: false, modePilih: false, folder: '', rLini: '', rSemua: false,
   customers: [],
   rates: [], paket: [], bukaPaket: new Set()
 };
@@ -375,7 +375,7 @@ function viewDetail() {
   const c = cust(S.id); if (!c) { S.view = 'list'; return viewDaftar(); }
   const nRate = rateCust(c.id).length;
   /* Order dan laba hanya untuk pemilik (sales, lihat saja, dan admin tidak melihat laba). */
-  const tabs = [['profil', 'Profil', ''], ['rate', 'Rate Disetujui', jumlahAktif(c.id)], ['quot', 'Riwayat Quotation', window.__qt ? window.__qt.jumlahCust(c.id) : ''], ['kontrak', 'Kontrak', (c.kontrakDok || []).length || ''], ['order', 'Order dan Laba', window.__qt ? window.__qt.jumlahOrder(c.id) : '']].filter(([k]) => k !== 'order' || masterSaja());
+  const tabs = [['profil', 'Profil', ''], ['rate', 'Rate Disetujui', jumlahAktif(c.id)], ['dokumen', 'Dokumen', itemDok(c).length || ''], ['order', 'Order dan Laba', window.__qt ? window.__qt.jumlahOrder(c.id) : '']].filter(([k]) => k !== 'order' || masterSaja());
   return `
   <div class="cu-kepala">
     <button class="mr-btn mr-btn--kecil" data-cu="kembali">${ik('kembali', 14)} Semua customer</button>
@@ -383,10 +383,10 @@ function viewDetail() {
     ${(masterAtauAdmin() && c.persetujuan === 'menunggu') ? `<button class="mr-btn mr-btn--utama" data-cu="setujui-customer">${ik('cek', 16)} Setujui customer baru</button>` : ''}
     ${(masterAtauAdmin() || akunAdmin() || (akunSales() && c.diajukanUid === window.__ISL.uid && c.persetujuan === 'menunggu')) ? `<button class="mr-btn" data-cu="edit-customer">${ik('edit', 16)} Ubah</button>` : ''}${(masterSaja() || bolehHapusDrafCust(c)) ? `<button class="mr-btn mr-btn--bahaya" data-cu="hapus-customer">${ik('tong', 16)} Hapus</button>` : ''}
   </div>
-  <div class="cu-judul"><h2>${esc(c.nama)}</h2><div class="cu-judul__tag">${tagKat(c.kategori)} ${tampilStatusC(c.status)}${c.persetujuan === 'menunggu' ? `<span class="mr-status cu-st--info" title="Diajukan ${esc(c.diajukanOleh || '')}; menunggu tinjauan master atau admin">Baru dari sales</span>` : ''}<span class="mr-sub">${esc(c.alias)}</span></div></div>
+  <div class="cu-judul"><h2>${esc(c.nama)}</h2><div class="cu-judul__tag">${tagKat(c.kategori)} ${tampilStatusC(c.status)}${vendorSama(c) ? ` <button type="button" class="cu-vend" data-cu="ke-vendor" data-vid="${esc(vendorSama(c).id)}" title="Buka profil vendor di Master Rate">Juga vendor ${ik('panah', 12)}</button>` : ''}${c.persetujuan === 'menunggu' ? `<span class="mr-status cu-st--info" title="Diajukan ${esc(c.diajukanOleh || '')}; menunggu tinjauan master atau admin">Baru dari sales</span>` : ''}<span class="mr-sub">${esc(c.alias)}</span></div></div>
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Hanya master atau sales yang bisa mengubah.</div></div>`}
   <div class="mr-tabs">${tabs.map(([k, n, j]) => `<button class="mr-tab ${S.tab === k ? 'is-aktif' : ''}" data-cu="tab" data-tab="${k}">${n}${j !== '' ? ` <span class="cu-jml">${j}</span>` : ''}</button>`).join('')}</div>
-  <div id="cu-tab">${S.tab === 'profil' ? tabProfil(c) : S.tab === 'rate' ? tabRate(c) : S.tab === 'kontrak' ? tabKontrak(c) : S.tab === 'order' && window.__qt ? window.__qt.tabOrder(c) : tabQuot(c)}</div>`;
+  <div id="cu-tab">${S.tab === 'profil' ? tabProfil(c) : S.tab === 'rate' ? tabRate(c) : S.tab === 'dokumen' ? tabDokumen(c) : S.tab === 'order' && window.__qt ? window.__qt.tabOrder(c) : tabDokumen(c)}</div>`;
 }
 const dl = (pairs) => `<dl class="cu-dl">${pairs.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v || '<span class="cu-kosong">—</span>'}</dd></div>`).join('')}</dl>`;
 function kartuLegal(c) {
@@ -507,6 +507,69 @@ function tabKontrak(c) {
   </div>` : ''}
   ${daftar.length ? `<div class="mr-kartu mr-tabelkartu"><table class="mr-table"><thead><tr><th>Nomor kontrak</th><th>Tanggal</th><th>Berkas</th><th></th></tr></thead><tbody>${daftar.map((k, i) => `<tr><td data-label="Nomor kontrak"><b>${esc(k.nomor)}</b></td><td data-label="Tanggal">${k.tanggal ? esc(k.tanggal) : '<span class="cu-kosong">—</span>'}</td><td data-label="Berkas"><a href="${esc(k.file.url)}" target="_blank" rel="noopener">${ik('file', 14)}${esc(k.file.nama)}</a></td><td class="mr-td-aksi">${bisaUbah ? `<button class="mr-ikonbtn mr-ikonbtn--bahaya" data-cu="hapus-kontrak" data-i="${i}" aria-label="Hapus kontrak">${ik('tong', 16)}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
     : `<div class="mr-kosong">${ik('file', 28)}<p>Belum ada kontrak untuk customer ini.</p></div>`}`;
+}
+
+/* ---------- tab Dokumen: arsip per jenis (Legalitas, Kontrak, Quotation, MOM, Lainnya) ---------- */
+const FOLDER_DOK = [['legalitas', 'Legalitas', 'lg'], ['kontrak', 'Kontrak', 'kt'], ['quotation', 'Quotation', 'qt'], ['mom', 'MOM', 'mm'], ['lain', 'Lainnya', 'ln']];
+// Vendor dengan nama sama (atau tautan vendorId): satu PT bisa customer sekaligus vendor.
+const vendorSama = c => { const n = norm(c.nama), nl = norm(c.namaLengkap); return mrVendors().find(v => v.id === c.vendorId || (n && (norm(v.nama) === n || norm(v.namaLengkap) === n)) || (nl && (norm(v.namaLengkap) === nl || norm(v.nama) === nl))); };
+const itemDok = c => [
+  ...legalDari(c).filter(l => l.file).map(l => ({ f: 'legalitas', judul: l.jenis + (l.nomor ? ' ' + l.nomor : ''), tgl: '', info: l.berlakuSampai ? 's/d ' + l.berlakuSampai : '', url: l.file.url, oto: true })),
+  ...(c.kontrakDok || []).map(k => ({ f: 'kontrak', judul: k.nomor, tgl: k.tanggal || '', info: '', url: k.file.url })),
+  ...(window.__qt ? window.__qt.daftarCust(c.id) : []).map(q => ({ f: 'quotation', judul: q.nama + (q.judul ? ' · ' + q.judul : ''), tgl: q.tgl, info: q.status, qid: q.id, oto: true })),
+  ...(c.dokLain || []).map(d => ({ f: d.jenis, judul: d.judul, tgl: d.tanggal || '', info: '', url: d.file.url }))
+].sort((a, b) => (b.tgl || '').localeCompare(a.tgl || ''));
+const barisDok = x => `<tr ${x.qid ? `class="cu-baris" data-qt="buka" data-id="${esc(x.qid)}"` : ''}><td data-label="Dokumen"><b>${esc(x.judul)}</b>${x.oto ? ' <span class="cu-oto">otomatis</span>' : ''}</td><td data-label="Jenis">${esc(FOLDER_DOK.find(f => f[0] === x.f)[1])}</td><td data-label="Tanggal">${x.tgl ? esc(x.tgl) : '<span class="cu-kosong">—</span>'}</td><td data-label="Keterangan">${esc(x.info)}</td><td class="mr-td-aksi">${x.url ? `<a class="mr-ikonbtn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="Buka berkas" title="Buka berkas">${ik('file', 16)}</a>` : ''}</td></tr>`;
+function isiLegal(c) {
+  const lg = legalDari(c), wajib = CU_LEGAL_WAJIB.filter(w => !lg.some(l => l.jenis === w.jenis && l.file));
+  return `<div class="mr-kartu mr-tabelkartu">${lg.length ? `<table class="mr-table"><thead><tr><th>Dokumen</th><th>Nomor</th><th>Berlaku s/d</th><th>Berkas</th></tr></thead><tbody>${lg.map(l => `<tr><td data-label="Dokumen"><b>${esc(l.jenis)}</b></td><td data-label="Nomor">${l.nomor ? esc(l.nomor) : '<span class="cu-kosong">—</span>'}</td><td data-label="Berlaku s/d">${l.berlakuSampai ? esc(l.berlakuSampai) : '—'}</td><td data-label="Berkas">${l.file ? `<a href="${esc(l.file.url)}" target="_blank" rel="noopener">${ik('file', 14)} ${esc(l.file.nama || 'Buka')}</a>` : '<span class="cu-st cu-st--warn">Belum diunggah</span>'}</td></tr>`).join('')}</tbody></table>` : `<div class="mr-kosong">${ik('file', 28)}<p>Belum ada dokumen legalitas.</p></div>`}</div>
+  ${wajib.length ? `<p class="mr-sub" style="margin:10px 0">Belum ada berkas: <b>${wajib.map(w => esc(w.jenis)).join(', ')}</b>.</p>` : ''}${bisaEdit() ? `<button type="button" class="mr-btn" data-cu="edit-customer">${ik('edit', 16)} Lengkapi lewat Ubah</button>` : ''}`;
+}
+function isiDokLain(c, j) {
+  const daftar = (c.dokLain || []).filter(d => d.jenis === j), bisaUbah = masterAtauAdmin() || akunAdmin(), nama = FOLDER_DOK.find(f => f[0] === j)[1];
+  return `${bisaUbah ? `<div class="mr-toolbar">
+    <label class="mr-f"><span>Judul ${nama} *</span><input id="dk-judul" placeholder="${j === 'mom' ? 'Mis. MOM Review Tarif Q4' : 'Mis. Surat penunjukan PIC'}" autocomplete="off"></label>
+    <label class="mr-f"><span>Tanggal</span><input id="dk-tanggal" type="date"></label>
+    <label class="mr-btn mr-btn--utama mr-unggah">${ik('upload', 16)} Unggah berkas<input type="file" accept="application/pdf,image/*" data-dok-file="${j}" hidden></label>
+  </div>` : ''}
+  ${daftar.length ? `<div class="mr-kartu mr-tabelkartu"><table class="mr-table"><thead><tr><th>Judul</th><th>Tanggal</th><th>Berkas</th><th></th></tr></thead><tbody>${daftar.sort((a, b) => (b.tanggal || '').localeCompare(a.tanggal || '')).map(d => `<tr><td data-label="Judul"><b>${esc(d.judul)}</b></td><td data-label="Tanggal">${d.tanggal ? esc(d.tanggal) : '<span class="cu-kosong">—</span>'}</td><td data-label="Berkas"><a href="${esc(d.file.url)}" target="_blank" rel="noopener">${ik('file', 14)} ${esc(d.file.nama)}</a></td><td class="mr-td-aksi">${bisaUbah ? `<button class="mr-ikonbtn mr-ikonbtn--bahaya" data-cu="hapus-dok" data-id="${esc(d.id)}" aria-label="Hapus">${ik('tong', 16)}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+    : `<div class="mr-kosong">${ik('file', 28)}<p>Belum ada ${nama} untuk customer ini.</p></div>`}`;
+}
+function tabDokumen(c) {
+  const semua = itemDok(c), f = S.folder, n = k => semua.filter(x => x.f === k).length;
+  const lgWajib = CU_LEGAL_WAJIB.filter(w => legalDari(c).some(l => l.jenis === w.jenis && l.file)).length;
+  const ket = { legalitas: `${lgWajib}/${CU_LEGAL_WAJIB.length} wajib lengkap`, kontrak: n('kontrak') ? `${n('kontrak')} dokumen` : 'Belum ada', quotation: `${semua.filter(x => x.qid && x.info === 'disetujui').length} disetujui`, mom: n('mom') ? 'Terakhir ' + (semua.find(x => x.f === 'mom').tgl || '—') : 'Belum ada', lain: n('lain') ? `${n('lain')} dokumen` : 'Belum ada' };
+  const kartu = ([k, nm, kls]) => `<button type="button" class="cu-fold ${f === k ? 'is-aktif' : ''}" data-cu="folder" data-k="${k}"><span class="cu-tj cu-tj--${kls}">${nm.slice(0, 3).toUpperCase()}</span><span class="cu-fold__t"><b>${nm}</b><small>${ket[k]}</small></span><em>${n(k)}</em><span class="cu-fold__panah">${ik('panah', 14)}</span></button>`;
+  const fk = f || 'semua';
+  const isi = fk === 'legalitas' ? isiLegal(c) : fk === 'kontrak' ? tabKontrak(c) : fk === 'quotation' ? tabQuot(c) : fk === 'mom' || fk === 'lain' ? isiDokLain(c, fk)
+    : `<div class="mr-kartu mr-tabelkartu">${semua.length ? `<table class="mr-table"><thead><tr><th>Dokumen</th><th>Jenis</th><th>Tanggal</th><th>Keterangan</th><th></th></tr></thead><tbody>${semua.map(barisDok).join('')}</tbody></table>` : `<div class="mr-kosong">${ik('file', 28)}<p>Belum ada dokumen.</p></div>`}</div>`;
+  return `<div class="cu-dok ${f ? 'is-buka' : ''}"><div class="cu-dok__folder"><button type="button" class="cu-fold cu-fold--semua ${f ? '' : 'is-aktif'}" data-cu="folder" data-k=""><span class="cu-tj cu-tj--ln">ALL</span><span class="cu-fold__t"><b>Semua</b><small>Urut tanggal</small></span><em>${semua.length}</em></button>${FOLDER_DOK.map(kartu).join('')}</div>
+    <div class="cu-dok__isi">${f ? `<button type="button" class="mr-btn mr-btn--kecil cu-dok__kembali" data-cu="folder" data-k="">${ik('kembali', 14)} Dokumen</button>` : ''}${isi}</div></div>`;
+}
+document.addEventListener('change', async ev => {
+  const t = ev.target; if (!t.matches || !t.matches('[data-dok-file]')) return;
+  const file = t.files[0], j = t.dataset.dokFile; t.value = ''; if (!file) return;
+  const c = cust(S.id); if (!c) return;
+  const judul = (($('#dk-judul') || {}).value || '').trim(), tanggal = ($('#dk-tanggal') || {}).value || '';
+  if (!judul) return toast('<b>Isi judul dulu.</b>', 'bahaya');
+  if (!(file.type === 'application/pdf' || file.type.startsWith('image/'))) return toast('<b>Format file tidak didukung.</b> Unggah PDF atau gambar.', 'bahaya');
+  if (file.size > BATAS_MENTAH) return toast('<b>File terlalu besar.</b> Maksimal 30 MB (dikecilkan otomatis ke 4 MB).', 'bahaya');
+  const id = uid('d');
+  try {
+    const path = `dokumen/dok_customer/${c.id}/${Date.now()}_${file.name.replace(/[^A-Za-z0-9._-]/g, '_')}`;
+    const url = await window.__ISL.unggahBlob(path, file, file.type);
+    const baru = [...(c.dokLain || []), { id, jenis: j, judul, tanggal, file: { url, path, nama: file.name } }];
+    await tulisDB(() => { c.dokLain = baru; }, () => (cust(c.id) || {}).dokLain?.some(d => d.id === id));
+    toast(`<b>${esc(judul)} tersimpan.</b>`);
+  } catch (er) { toast(`<b>GAGAL menyimpan dokumen.</b><br>${esc(er.message)}`, 'bahaya'); }
+  gambar();
+});
+async function hapusDokLain(id) {
+  const c = cust(S.id), d = c && (c.dokLain || []).find(x => x.id === id); if (!d) return;
+  if (!await konfirmasi({ judul: 'Hapus dokumen?', isi: `<b>${esc(d.judul)}</b> dihapus dari customer ini. File di penyimpanan tidak ikut dihapus.`, aksi: 'Hapus', bahaya: true })) return;
+  try { const sisa = c.dokLain.filter(x => x.id !== id); await tulisDB(() => { c.dokLain = sisa; }, () => !(cust(c.id) || {}).dokLain?.some(x => x.id === id)); toast('Dokumen dihapus dan terverifikasi.'); }
+  catch (er) { toast(`<b>GAGAL menghapus.</b> ${esc(er.message)}`, 'bahaya'); }
+  gambar();
 }
 
 /* ---------- tab Riwayat Quotation ---------- */
@@ -1279,7 +1342,10 @@ document.addEventListener('click', ev => {
   const e = ev.target.closest('[data-cu]'); if (!e) return;
   if (ev.target.closest('button[data-cu="buka"]') && e.tagName === 'TR') return;
   const a = e.dataset.cu;
-  if (a === 'buka') { S.view = 'detail'; S.id = e.dataset.id; S.tab = 'profil'; S.rLini = ''; S.rSemua = false; gambar(); window.scrollTo(0, 0); }
+  if (a === 'buka') { S.view = 'detail'; S.id = e.dataset.id; S.tab = 'profil'; S.folder = ''; S.rLini = ''; S.rSemua = false; gambar(); window.scrollTo(0, 0); }
+  else if (a === 'folder') { S.folder = e.dataset.k; gambar(); window.scrollTo(0, 0); }
+  else if (a === 'ke-vendor') { try { sessionStorage.setItem('islhub-buka', JSON.stringify({ jenis: 'vendor', id: e.dataset.vid })); } catch (er) { } location.hash = '#master-rate'; }
+  else if (a === 'hapus-dok') hapusDokLain(e.dataset.id);
   else if (a === 'kembali') { S.view = 'list'; S.id = null; gambar(); }
   else if (a === 'tab') { S.tab = e.dataset.tab; gambar(); }
   else if (a === 'tab-status') { S.fStatus = e.dataset.v; gambar(); }
@@ -8167,7 +8233,7 @@ const jualSetujuiTertinggi = (liniKey, nama) => { const n = normJualQ(nama); if 
 window.__qt = {
   _jualSetujui: (l, n) => jualSetujuiTertinggi(l, n),
   _ubahFL: () => { Q.kotor = true; segarTurunan(); }, _aset: () => asetSekarang(),
-  terkaitCustomer, orderTerkait, gambar, tabCustomer, tabOrder, jumlahOrder, laporanGambar, lembarGambar, panelTambahRate: cid => panelTambahRate(cid), jumlahCust: cid => DB.list.filter(q => q.customerId === cid).length,
+  terkaitCustomer, orderTerkait, gambar, tabCustomer, tabOrder, jumlahOrder, laporanGambar, lembarGambar, panelTambahRate: cid => panelTambahRate(cid), jumlahCust: cid => DB.list.filter(q => q.customerId === cid).length, daftarCust: cid => DB.list.filter(q => q.customerId === cid).map(x => ({ id: x.id, nama: namaQ(x), judul: x.judul, status: x.status, tgl: x.dikirim || String(x.diubahPada || '').slice(0, 10) })),
   buka: bukaId, baru: mulaiBaru, _Q: Q, _R: R, _Repo: Repo, _riwayatQ: rwSeperQ, _AQ: AQ, _renderDok: renderDok, _renderFit: renderDokFit, unduhRatePdf, _buatDocx: buatDocx, _namaFileWord: namaFileWord, _f: { barisDariLayanan, mrLayananLini, layananByKunci, modalTertinggiDepo, templateBaris, templateKunci, liniPunyaTemplate, liniBerTemplate, kolomLini, kolomBawaan, kolomTersimpan, cariMirip, terkaitCustomer, orderTerkait, cariCustomer, periodeAtur, periodeBaru, periodeTerakhir, statusPeriode, rkBangun, versiRatePeriode, LAP, imTgl, imNum, angkaRp, fmtRpIn, imCariCust, imCocok, belumDipakai, realisasiQ, rateBerlakuPada, senin, tambahHariIso, akhirBulan, DB, pastikanCustomer, kunciGrup }, _util: { senin, tambahHariIso, akhirBulan, hariAntara, periodeBaru, periodeAtur, periodeSebelumnya, periodeTerakhir, imTgl, imNum, angkaRp, angkaDok, versiRatePeriode }, _taruh: taruhPratinjau, _PENG: PENG, _buatPdf: buatPdf, _tungguGambar: tungguGambar
 };
 
