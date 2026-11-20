@@ -3,6 +3,9 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
+// Galat tak terduga dikirim ke klien beserta penyebabnya (bukan "internal" saja), dan dicatat di log fungsi.
+const onCallJelas = (opsi, fn) => onCall(opsi, async (req) => { try { return await fn(req); } catch (er) { if (er instanceof HttpsError) throw er; console.error(er); throw new HttpsError("internal", `${er.code || "galat"}: ${er.message || er}`); } });
+
 const EMAIL_MASTER = "codcodan1@gmail.com"; // sama dengan isMaster() di firestore.rules
 const BATAS_SESI_DETIK = 87000; // 24 jam 10 menit, sama dengan sesiBerlaku()
 
@@ -22,7 +25,7 @@ exports.aturKataSandi = onCall({ region: "asia-southeast2" }, async (req) => {
   return { ok: true };
 });
 // Master menghapus akun permanen: profil, sales_publik, dan login Firebase Authentication sekaligus.
-exports.hapusAkun = onCall({ region: "asia-southeast2" }, async (req) => {
+exports.hapusAkun = onCallJelas({ region: "asia-southeast2" }, async (req) => {
   const a = req.auth;
   if (!a || String(a.token.email || "").toLowerCase() !== EMAIL_MASTER || Date.now() / 1000 - a.token.auth_time > BATAS_SESI_DETIK)
     throw new HttpsError("permission-denied", "Hanya master.");
@@ -38,7 +41,7 @@ exports.hapusAkun = onCall({ region: "asia-southeast2" }, async (req) => {
   return { ok: true };
 });
 // Master mengubah nama, email login, dan WhatsApp akun lain (email login hanya bisa diganti dari server).
-exports.ubahAkun = onCall({ region: "asia-southeast2" }, async (req) => {
+exports.ubahAkun = onCallJelas({ region: "asia-southeast2" }, async (req) => {
   const a = req.auth;
   if (!a || String(a.token.email || "").toLowerCase() !== EMAIL_MASTER || Date.now() / 1000 - a.token.auth_time > BATAS_SESI_DETIK)
     throw new HttpsError("permission-denied", "Hanya master.");
@@ -55,7 +58,7 @@ exports.ubahAkun = onCall({ region: "asia-southeast2" }, async (req) => {
   return { ok: true };
 });
 // Waktu login terakhir tiap akun (hanya master dan admin aktif); data ada di Firebase Authentication, bukan di Firestore.
-exports.loginTerakhir = onCall({ region: "asia-southeast2" }, async (req) => {
+exports.loginTerakhir = onCallJelas({ region: "asia-southeast2" }, async (req) => {
   const a = req.auth; if (!a) throw new HttpsError("unauthenticated", "Masuk dulu.");
   let ok = String(a.token.email || "").toLowerCase() === EMAIL_MASTER;
   if (!ok) { const p = await admin.firestore().doc(`pengguna/${a.uid}`).get(); ok = p.get("peran") === "admin" && p.get("status") === "aktif"; }

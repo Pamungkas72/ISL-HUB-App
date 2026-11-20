@@ -362,7 +362,7 @@ async function aksiAkun(a, tr) {
       await updateDoc(doc(db, "pengguna", uid), { status: "nonaktif", peran: null, ditolakPada: serverTimestamp() }); await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
       await catatLogAkun({ uid, email: ak.email }, "tolak", { peran: ak.peran ?? ak.peranDiminta ?? null, status: ak.status }, { peran: null, status: "nonaktif" }); toast("Pendaftaran ditolak. Akun ini tidak bisa masuk.");
     }
-  } catch (er) { return toast(`<b>Gagal.</b> ${e(er.code || er.message)}`, "bahaya"); }
+  } catch (er) { return toast(`<b>Gagal.</b> ${e(String(er.code || "").startsWith("functions/") ? er.message : (er.code || er.message))}`, "bahaya"); } // galat fungsi server: tampilkan penyebabnya
   await muatAkun();
 }
 async function muatLokal() { S.lokal = await C.daftarLokal(); render(); if (S.kelola && !S.akunMuat) { S.akunMuat = true; muatAkun(); } }
