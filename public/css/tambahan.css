@@ -2590,3 +2590,22 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .ak-dua { grid-template-columns: minmax(0, 1fr) 320px; }
 .ak-tb td, .ak-tb th { padding-left: 12px; padding-right: 12px; }
 .ad-akses { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--mr-border); } .ad-akses:first-child { border-top: 0; } .ad-akses b { display: block; font-size: 14.5px; } .ad-akses small { display: block; color: var(--mr-muted); font-size: 12.5px; max-width: 220px; } .ad-akses .ad-seg { flex: 0 0 auto; min-width: 190px; } .ad-akses--mati { opacity: .55; } .ad-seg button:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ---------- tab Peran (desain C): pilih peran, daftar hak per modul ---------- */
+.pr { display: grid; gap: 12px; }
+.pr-nav { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(127, 145, 170, .18); }
+.pr-nav button { flex: 1; min-width: 0; padding: 9px 4px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 13.5px; color: var(--mr-muted); cursor: pointer; white-space: nowrap; }
+.pr-nav button.is-aktif { background: var(--mr-surface); color: var(--mr-ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+.pr-n { display: none; } .pr-n small { display: block; font-size: 12px; font-weight: 400; color: var(--mr-muted); }
+.pr-kartu { border: 1px solid var(--mr-border); border-radius: 16px; padding: 14px; background: var(--mr-surface); }
+.pr-h { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; } .pr-h h4 { margin: 0; font-size: 17px; }
+.pr-m { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--mr-border); } .pr-m:first-of-type { margin-top: 8px; }
+.pr-m b { display: block; font-size: 14.5px; } .pr-m small { display: block; color: var(--mr-muted); font-size: 12.5px; }
+.pr-lv { flex: none; padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--mr-ink); }
+.pr-lv--k { background: rgba(31, 138, 91, .2); } .pr-lv--l { background: rgba(75, 130, 196, .22); } .pr-lv--x { background: rgba(127, 145, 170, .16); color: var(--mr-muted); font-weight: 500; }
+@media (min-width: 761px) {
+  .pr { grid-template-columns: 260px 1fr; align-items: start; gap: 18px; }
+  .pr-nav { flex-direction: column; gap: 4px; padding: 0; background: none; }
+  .pr-nav button { text-align: left; padding: 12px; font-size: 14.5px; border-radius: 12px; } .pr-nav button.is-aktif { background: rgba(75, 130, 196, .16); box-shadow: none; }
+  .pr-n { display: block; } .pr-s { display: none; }
+}
