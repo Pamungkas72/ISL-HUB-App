@@ -423,8 +423,15 @@ service cloud.firestore {
     }
     match /dj_kelompok/{id} {
       allow read: if aktifDJ();
-      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori', 'profil']) && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map && request.resource.data.get('profil', 'marketing') in ['marketing', 'tracking'];
+      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori', 'profil', 'kategori']) && request.resource.data.get('kategori', []) is list && request.resource.data.get('kategori', []).size() <= 60 && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map && request.resource.data.get('profil', 'marketing') in ['marketing', 'tracking'];
       allow delete: if isKelola();
+    }
+    // Ajuan kategori baru dari anggota; master/admin yang menyetujui (menambah ke dj_kelompok.kategori) atau menolak.
+    match /dj_kategori_ajuan/{id} {
+      allow read: if isKelola() || djAnggota(resource.data.get('kelompokId', null));
+      allow create: if djAnggota(request.resource.data.get('kelompokId', null)) && request.resource.data.keys().hasOnly(['kelompokId', 'nama', 'oleh', 'olehNama', 'dibuat'])
+        && request.resource.data.oleh == request.auth.uid && request.resource.data.nama is string && request.resource.data.nama.size() > 0 && request.resource.data.nama.size() <= 40;
+      allow update, delete: if isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && resource.data.oleh == request.auth.uid);
     }
     match /dj_job/{id} {
       allow read: if isKelola() || djAnggota(resource.data.get('kelompokId', null));

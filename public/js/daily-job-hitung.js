@@ -163,6 +163,12 @@ export function petaExcel(baris) {
 
 /** Kategori yang tersedia: bawaan + semua kategori yang pernah dipakai job (termasuk kategori baru). */
 export const daftarKategori = (jobs) => [...new Set([...KATEGORI, ...(jobs || []).map((j) => j.kategori).filter(Boolean)])];
+/** Kategori satu kelompok: daftar yang diatur master (kel.kategori; bila belum ada, bawaan Excel) ditambah kategori job yang sudah disetujui. Job dengan ajuan kategori belum ikut. */
+export const kategoriKel = (kel, jobs) => [...new Set([...(kel && Array.isArray(kel.kategori) ? kel.kategori : KATEGORI), ...(jobs || []).filter((j) => !j.kategoriAjuan).map((j) => j.kategori).filter(Boolean)])];
+/** Peta target per kategori setelah nama diganti (gabung ke target kategori tujuan bila sudah ada). */
+export const targetGantiNama = (peta, lama, baru) => { const p = { ...(peta || {}) }; if (lama in p) { if (!(baru in p)) p[baru] = p[lama]; delete p[lama]; } return p; };
+/** Kategori setelah nama diganti: urutan tetap, tanpa ganda. */
+export const daftarGantiNama = (daftar, lama, baru) => [...new Set(daftar.map((k) => (k === lama ? baru : k)))];
 /** Kategori ketikan pengguna: spasi dirapikan; bila sama (tanpa beda huruf besar) dengan yang ada, pakai yang ada supaya tidak ganda. */
 export const rapikanKategori = (t, ada) => { const k = String(t || "").replace(/\s+/g, " ").trim().slice(0, 40); return (ada || []).find((x) => x.toLowerCase() === k.toLowerCase()) || k; };
 

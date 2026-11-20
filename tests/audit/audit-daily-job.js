@@ -13,7 +13,7 @@ const hari = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
 /* data uji: delapan job dengan PIC, kategori, dan posisi yang beragam; satu bagikan aktif untuk halaman publik */
 const J = (id, k, pic, st, m, t, s) => [id, { kelompokId: 'k1', judul: 'Job ' + id + ' ' + k, kategori: k, pic, customer: 'PT X', status: st, tglMasuk: hari(m), tglTarget: t == null ? null : hari(t), tglSelesai: s == null ? null : hari(s), bobot: 2, file: [], tautan: [], catatan: [] }];
 const DJ = Object.fromEntries([J('a', 'Quotation', 'Ega', 'selesai', -5, -2, -2), J('c', 'DSR Projek', 'Dede', 'proses', -3, -1), J('d', 'Monitoring Kasus', 'Ega', 'proses', -2, 0), J('e', 'RFQ', 'Fathur', 'baru', -1, 3), J('f', 'Quotation', 'Ega', 'tunggu', -9, 6), J('g', 'Dokumen Kontrak', 'Dede', 'proses', -12, -8), J('h', 'Dokumen Kontrak', 'Dede', 'baru', -6, null), J('i', 'Quotation', 'Dede', 'proses', -2, -3)]);
-const DATA = () => ({ ...JSON.parse(JSON.stringify(awal)), dj_kelompok: { k1: { nama: 'Marketing dan BD' } }, dj_job: DJ, dj_bagikan: { tokenAudit0000000000000000: { jobId: 'a', kelompokId: 'k1', aktif: true, berlakuSampai: Date.now() + 6 * 864e5, unduh: false, snapshot: { judul: 'Job a Quotation', kategori: 'Quotation', pic: 'Ega', status: 'selesai', tglMasuk: hari(-5), tglTarget: hari(-2), tglSelesai: hari(-2), file: [], tautan: [], catatan: [] } } } });
+const DATA = () => ({ ...JSON.parse(JSON.stringify(awal)), dj_kelompok: { k1: { nama: 'Marketing dan BD' } }, dj_job: { ...DJ, z: { ...DJ.a, judul: 'Job z ajuan', kategori: 'Rapat Vendor', kategoriAjuan: 'aj1', status: 'proses', tglSelesai: null } }, dj_kategori_ajuan: { aj1: { kelompokId: 'k1', nama: 'Rapat Vendor', oleh: 'u9', olehNama: 'Dede', dibuat: hari(-1) } }, dj_bagikan: { tokenAudit0000000000000000: { jobId: 'a', kelompokId: 'k1', aktif: true, berlakuSampai: Date.now() + 6 * 864e5, unduh: false, snapshot: { judul: 'Job a Quotation', kategori: 'Quotation', pic: 'Ega', status: 'selesai', tglMasuk: hari(-5), tglTarget: hari(-2), tglSelesai: hari(-2), file: [], tautan: [], catatan: [] } } } });
 
 /* adegan: tiap entri mengubah tampilan lalu memanggil periksa(label) */
 const ADEGAN = [
@@ -31,6 +31,9 @@ const ADEGAN = [
   ['dj: form catat, status tertunda (alasan)', async (p) => { await p.evaluate(() => { const s = document.getElementById('djf-status'); if (s) { s.value = 'tunggu'; s.dispatchEvent(new Event('change', { bubbles: true })); } }); await tunggu(p, 300); }],
   ['dj: panel impor Excel', async (p) => { await klikSel(p, '[data-dj="impor"]'); await tunggu(p, 500); }],
   ['dj: tab pengaturan', async (p) => { await klikSel(p, '[data-dj="tab"][data-v="kelompok"]'); await tunggu(p, 500); }],
+  ['dj: pengaturan, kategori dan ajuan', async (p) => { await klikSel(p, '[data-dj="subkel"][data-v="kpi"]'); await tunggu(p, 400); }],
+  ['dj: pengaturan, panel ubah kategori', async (p) => { await klikSel(p, '[data-dj="kat-ubah"]'); await tunggu(p, 400); }],
+  ['dj: pengaturan, panel hapus kategori', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await klikSel(p, '[data-dj="kat-hapus"]'); await tunggu(p, 400); }],
   ['dj: daftar, status selesai (chip di halaman)', async (p) => { await klikSel(p, '[data-aksi="tutup-layer"]'); await klikSel(p, '[data-dj="tab"][data-v="job"]'); await klikSel(p, '[data-dj="st"][data-v="selesai"]'); await tunggu(p, 300); }],
 ];
 
@@ -49,7 +52,7 @@ const ADEGAN = [
     adegan = nama;
     try { await fn(p); } catch (e) { semua.push({ adegan: nama, jenis: 'adegan-gagal', el: String(e.message).slice(0, 100) }); continue; }
     await periksa(nama);
-    await p.evaluate(() => { document.querySelectorAll('[data-aksi="tutup-layer"]').forEach(b => b.click()); document.querySelectorAll('.mr-konfirm [data-x="batal"]').forEach(b => b.click()); }); await tunggu(p, 250);
+    await p.evaluate(() => { document.querySelectorAll('[data-aksi="tutup-layer"], [data-dj="sheet-tutup"]').forEach(b => b.click()); document.querySelectorAll('.mr-konfirm [data-x="batal"]').forEach(b => b.click()); }); await tunggu(p, 250);
   }
   // halaman publik (tanpa login) untuk tautan bagikan
   const c2 = await browser.newContext({ viewport: ctx._options?.viewport || { width: 390, height: 844 }, colorScheme: TEMA === 'gelap' ? 'dark' : 'light', isMobile: hp, hasTouch: hp });
