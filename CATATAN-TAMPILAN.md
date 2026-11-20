@@ -2,6 +2,13 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-20 (Customer: tab Dokumen, folder per jenis)
+
+- **Tab baru Dokumen** (desain B, folder per jenis; HP dan desktop) menggantikan tab Kontrak dan Riwayat Quotation. Folder: **Legalitas, Kontrak, Quotation, MOM, Lainnya** dengan jumlah dan ringkasan. HP: grid folder, ketuk membuka isi (tombol kembali). Desktop: folder di kiri, isi di kanan, plus **Semua** (satu daftar urut tanggal).
+- **Otomatis tertaut**: legalitas (berkas yang sudah diunggah di form customer) dan quotation customer muncul tanpa unggah ulang. **Unggah manual**: Kontrak (seperti sebelumnya), **MOM** dan **Lainnya** (judul, tanggal, berkas PDF/gambar; master/admin; disimpan di `dokLain`).
+- **Customer = vendor**: bila nama sama dengan vendor di Master Rate, muncul lencana **Juga vendor** yang membuka profil vendor itu. Dokumen vendor belum digabung ke arsip (data vendor rahasia dipisah aturan server).
+- Teknis: `tabDokumen`, `itemDok`, `vendorSama` di `app-core.js`; `window.__qt.daftarCust`; gaya `.cu-dok`, `.cu-fold` di `tambahan.css`.
+
 ## 2026-11-19 (Customer di HP dan desktop: daftar padat, desain A)
 
 - **Halaman Customer diseragamkan dengan Master Rate dan Quotation** (dipilih dari 3 desain, HP dan desktop). Satu baris ringkasan ("n customer · n% data lengkap"), pencarian, **tab status dengan jumlah** (Semua, Prospek, Aktif, Nonaktif), **chip cepat** (Semua, Belum lengkap, VIP, Rate segera berakhir).
