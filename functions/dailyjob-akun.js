@@ -23,6 +23,11 @@ async function pastikanKepala(c, kelompokId) {
   const k = await db().doc(`dj_kelompok/${kelompokId}`).get();
   if (!k.exists || !(k.get("kepala") || []).includes(c.uid)) throw new HttpsError("permission-denied", "Hanya kepala divisi kelompok ini yang boleh mengurus anggotanya.");
 }
+/** Kode unit berikutnya di satu kelompok (STR-01, AGR-02, ...); nomor tidak dipakai ulang. */
+async function kodeUnitKelompok(kelompokId) {
+  const [k, m] = await Promise.all([db().doc(`dj_kelompok/${kelompokId}`).get(), db().collection("pengguna").where("kelompokDJ", "==", kelompokId).get()]);
+  return U.kodeUnitBerikut(U.awalanKelompok(k.get("nama")), m.docs.map((x) => x.get("kodeUnit")));
+}
 const catat = (c, uid, email, aksi, dari = null, ke = null) => db().collection("pengguna_log").add({ uid, email, aksi, dari, ke, oleh: c.nama, waktu: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
 
 /** Kunci login (alias) yang dipesan satu akun: username wajib, telepon dan email opsional. */
@@ -53,7 +58,7 @@ exports.djBuatAnggota = onCall(OPSI, async (req) => {
   let uid;
   try { uid = (await admin.auth().createUser({ email, password: sandi, displayName: nama })).uid; }
   catch (err) { await lepasAlias(alias); throw new HttpsError("internal", "Akun belum bisa dibuat: " + (err.message || err)); }
-    await db().doc(`pengguna/${uid}`).set({ email, nama, peran: "dj", status: "aktif", kelompokDJ: kelompokId, username, telepon: telepon || null, emailKontak: emailKontak || null, alias, dibuat: admin.firestore.FieldValue.serverTimestamp(), disetujuiPada: admin.firestore.FieldValue.serverTimestamp(), dibuatOleh: c.uid, dibuatOlehNama: c.nama });
+    await db().doc(`pengguna/${uid}`).set({ email, nama, peran: "dj", status: "aktif", kelompokDJ: kelompokId, kodeUnit: await kodeUnitKelompok(kelompokId), username, telepon: telepon || null, emailKontak: emailKontak || null, alias, dibuat: admin.firestore.FieldValue.serverTimestamp(), disetujuiPada: admin.firestore.FieldValue.serverTimestamp(), dibuatOleh: c.uid, dibuatOlehNama: c.nama });
   if (jadiKepala) await db().doc(`dj_kelompok/${kelompokId}`).update({ kepala: [uid] }); // satu kepala per kelompok: yang lama kembali jadi anggota
   await catat(c, uid, email, "dj-tambah");
   return { uid, username, email };
@@ -88,7 +93,7 @@ exports.djAturAnggota = onCall(OPSI, async (req) => {
       if (!baruId || !(await db().doc(`dj_kelompok/${baruId}`).get()).exists) throw new HttpsError("not-found", "Kelompok tujuan tidak ada.");
       const kl = await db().doc(`dj_kelompok/${lamaId}`).get(); // pindah kelompok: jabatan kepala di kelompok lama dilepas
       if (kl.exists && (kl.get("kepala") || []).includes(uid)) await kl.ref.update({ kepala: (kl.get("kepala") || []).filter((x) => x !== uid) });
-      await ref.update({ kelompokDJ: baruId });
+      await ref.update({ kelompokDJ: baruId, kodeUnit: await kodeUnitKelompok(baruId) }); // kode unit mengikuti kelompok baru
     } else {
       const kl = db().doc(`dj_kelompok/${lamaId}`), ks = await kl.get(); if (!ks.exists) throw new HttpsError("not-found", "Kelompok tidak ada.");
       await kl.update({ kepala: aksi === "kepala" ? [uid] : (ks.get("kepala") || []).filter((x) => x !== uid) });

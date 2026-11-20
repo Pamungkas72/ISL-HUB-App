@@ -20,4 +20,7 @@ function kunciLogin(masukan) {
 const sandiValid = (s) => typeof s === "string" && s.length >= 8 && s.length <= 64;
 /** Kunci alias pertama yang sudah dipakai akun lain (ada di dj_login dan bukan milik akun ini); null bila tidak ada. Dokumen dj_login publik, jadi tanpa uid: kepemilikan dari daftar alias akun. */
 const kunciBentrok = (kunci, ada, milik) => kunci.find((k, i) => ada[i] && !(milik || []).includes(k)) || null;
-module.exports = { kunciBentrok, DOMAIN, normalUsername, usernameValid, normalTelepon, emailValid, emailSintetis, kunciLogin, sandiValid };
+/* Kode unit anggota divisi: awalan dari nama kelompok (huruf pertama + konsonan berikutnya: Star -> STR, Agora -> AGR) dan nomor urut per kelompok. */
+const awalanKelompok = (nama) => { const h = String(nama || "").normalize("NFD").toUpperCase().replace(/[^A-Z]/g, ""); if (!h) return "DJ"; const k = [h[0], ...[...h.slice(1)].filter((c) => !"AEIOU".includes(c))].join("").slice(0, 3); return k.length >= 3 ? k : (k + h.slice(1).replace(new RegExp(`[${k}]`, "g"), "")).slice(0, 3).padEnd(2, "X"); };
+const kodeUnitBerikut = (awalan, terpakai) => `${awalan}-${String(terpakai.reduce((m, k) => { const x = String(k || "").match(new RegExp(`^${awalan}-(\\d+)$`)); return x ? Math.max(m, +x[1]) : m; }, 0) + 1).padStart(2, "0")}`;
+module.exports = { awalanKelompok, kodeUnitBerikut, kunciBentrok, DOMAIN, normalUsername, usernameValid, normalTelepon, emailValid, emailSintetis, kunciLogin, sandiValid };

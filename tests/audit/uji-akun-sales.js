@@ -41,7 +41,7 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   p = await buka(MASTER, 'app.html'); await p.waitForTimeout(2000);
   await p.evaluate(async () => { const m = await import('/js/pendaftar-aksi.js'); m.bukaPendaftarAksi(); }); await p.waitForTimeout(800);
   const kode = await p.inputValue('.ip-item [data-f=kode]').catch(() => null);
-  cek('kode otomatis terisi (BUD dipakai → BUDI)', kode === 'BUDI', String(kode));
+  cek('kode unit otomatis terisi (SLS-01)', kode === 'SLS-01', String(kode));
   cek('peran terpilih Sales', await p.inputValue('.ip-item [data-f=peran]') === 'sales');
   cek('kartu menampilkan nomor WhatsApp', /6281234567890/.test(await p.textContent('.ip-item .ip-mail')));
   await p.click('.ip-item [data-a=setujui]'); await p.waitForTimeout(1500);
@@ -49,10 +49,10 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   if (/Belum bisa disetujui/.test(teksKartu)) cek('setujui (modal belum dipisah di data uji)', false, 'terkunci modal');
   else {
     const u = await p.evaluate(() => window.__FS.pengguna['u-budi']);
-    cek('akun aktif sebagai sales dengan kode BUDI', u.status === 'aktif' && u.peran === 'sales' && u.kodeSales === 'BUDI', JSON.stringify(u));
-    cek('masuk daftar sales_publik', !!Object.values(await p.evaluate(() => window.__FS.sales_publik)).find(x => x.kode === 'BUDI'));
+    cek('akun aktif sebagai sales dengan kode SLS-01', u.status === 'aktif' && u.peran === 'sales' && u.kodeSales === 'SLS-01', JSON.stringify(u));
+    cek('masuk daftar sales_publik', !!Object.values(await p.evaluate(() => window.__FS.sales_publik)).find(x => x.kode === 'SLS-01'));
     const href = await p.getAttribute('.ip-btn--wa', 'href');
-    cek('tombol Kabari via WhatsApp ke nomor sales', /wa\.me\/6281234567890\?text=/.test(href) && /BUDI/.test(decodeURIComponent(href)), String(href));
+    cek('tombol Kabari via WhatsApp ke nomor sales', /wa\.me\/6281234567890\?text=/.test(href) && /SLS-01/.test(decodeURIComponent(href)), String(href));
   }
   await p.context().close();
 
