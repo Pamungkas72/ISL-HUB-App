@@ -41,7 +41,7 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   p = await buka(MASTER, 'app.html'); await p.waitForTimeout(2000);
   await p.evaluate(async () => { const m = await import('/js/pendaftar-aksi.js'); m.bukaPendaftarAksi(); }); await p.waitForTimeout(800);
   const kode = await p.inputValue('.ip-item [data-f=kode]').catch(() => null);
-  cek('kode otomatis terisi (BUD dipakai → BUDI)', kode === 'BUDI', String(kode));
+  cek('kode unit otomatis terisi (SLS-01)', kode === 'SLS-01', String(kode));
   cek('peran terpilih Sales', await p.inputValue('.ip-item [data-f=peran]') === 'sales');
   cek('kartu menampilkan nomor WhatsApp', /6281234567890/.test(await p.textContent('.ip-item .ip-mail')));
   await p.click('.ip-item [data-a=setujui]'); await p.waitForTimeout(1500);
@@ -49,10 +49,10 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   if (/Belum bisa disetujui/.test(teksKartu)) cek('setujui (modal belum dipisah di data uji)', false, 'terkunci modal');
   else {
     const u = await p.evaluate(() => window.__FS.pengguna['u-budi']);
-    cek('akun aktif sebagai sales dengan kode BUDI', u.status === 'aktif' && u.peran === 'sales' && u.kodeSales === 'BUDI', JSON.stringify(u));
-    cek('masuk daftar sales_publik', !!Object.values(await p.evaluate(() => window.__FS.sales_publik)).find(x => x.kode === 'BUDI'));
+    cek('akun aktif sebagai sales dengan kode SLS-01', u.status === 'aktif' && u.peran === 'sales' && u.kodeSales === 'SLS-01', JSON.stringify(u));
+    cek('masuk daftar sales_publik', !!Object.values(await p.evaluate(() => window.__FS.sales_publik)).find(x => x.kode === 'SLS-01'));
     const href = await p.getAttribute('.ip-btn--wa', 'href');
-    cek('tombol Kabari via WhatsApp ke nomor sales', /wa\.me\/6281234567890\?text=/.test(href) && /BUDI/.test(decodeURIComponent(href)), String(href));
+    cek('tombol Kabari via WhatsApp ke nomor sales', /wa\.me\/6281234567890\?text=/.test(href) && /SLS-01/.test(decodeURIComponent(href)), String(href));
   }
   await p.context().close();
 
@@ -63,19 +63,19 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   else cek('lonceng menandai pendaftar baru (HP)', Number(await p.textContent('#nf-lencana').catch(() => 0)) >= 1);
   await p.evaluate(() => document.querySelectorAll('.ip-lapis').forEach(x => x.remove()));
   await p.click('[data-st=bag][data-v=akses]'); await p.waitForTimeout(500); // Pengaturan kini daftar bagian: buka "Akun sales dan akses"
-  cek('tabel menunggu: kode terisi otomatis', await p.evaluate(() => { const i = document.querySelector('tr[data-uid="u-budi"] [data-akun=kode]'); return i && i.value === 'BUDI'; }));
-  await p.evaluate(() => document.querySelectorAll('details.st-laci').forEach(d => d.open = true));
+  if (LAYAR.width <= 760) { await p.click('[data-st=ak-tab][data-v=menunggu]'); await p.waitForTimeout(200); }
+  cek('antrean menunggu: kode unit otomatis SLS-01', await p.evaluate(() => { const i = document.querySelector('.ak-tunggu[data-uid="u-budi"] [data-ak=prev]'); return i && i.textContent === 'SLS-01'; }));
+  await p.click('[data-st=akun-buka-tambah]'); await p.waitForTimeout(200);
   await p.fill('#ta-nama', 'Siti Aminah');
-  cek('form manual: kode ikut nama (SIT)', await p.inputValue('#ta-kode') === 'SIT');
+  cek('form tambah: kode unit otomatis SLS-01', await p.textContent('#ta-kode') === 'SLS-01');
   await p.fill('#ta-email', 'siti@isl.test'); await p.fill('#ta-wa', '081200000001');
-  await p.click('[data-st=akun-tambah]'); await p.waitForTimeout(600);
-  await p.evaluate(() => { const b = [...document.querySelectorAll('.mr-konfirm button')].find(x => /Buat akun/.test(x.textContent)); if (b) b.click(); }); await p.waitForTimeout(1500);
+  await p.click('#ak-tambah [data-st=akun-tambah]'); await p.waitForTimeout(1500);
   const sandi = await p.inputValue('#db-sandi').catch(() => null);
   cek('sandi sementara tampil (10 karakter)', !!sandi && sandi.length === 10, String(sandi));
   const wa = await p.getAttribute('.mr-konfirm a', 'href').catch(() => null);
   cek('tombol WhatsApp berisi email dan sandi', !!wa && /62812000000/.test(wa) && decodeURIComponent(wa).includes(sandi) && /siti%40isl\.test|siti@isl\.test/.test(decodeURIComponent(wa)), String(wa));
   const pg = await p.evaluate(() => Object.values(window.__FS.pengguna).find(x => x.email === 'siti@isl.test'));
-  cek('profil manual: aktif, sales, kode SIT, telepon', pg && pg.status === 'aktif' && pg.peran === 'sales' && pg.kodeSales === 'SIT' && pg.telepon === '6281200000001', JSON.stringify(pg));
+  cek('profil manual: aktif, sales, kode SLS-01, telepon', pg && pg.status === 'aktif' && pg.peran === 'sales' && pg.kodeSales === 'SLS-01' && pg.telepon === '6281200000001', JSON.stringify(pg));
   await p.context().close();
 
   cek('tanpa galat halaman', galat.length === 0, galat.slice(0, 3).join(' | '));

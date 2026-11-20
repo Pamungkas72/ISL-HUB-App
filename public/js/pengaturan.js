@@ -12,7 +12,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeSalesOtomatis } from "./akses.js";
+import { PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
@@ -20,7 +20,7 @@ import { pasangPembersihan } from "./pembersihan-qt.js";
 import { isiAkunDivisi } from "./akun-divisi.js";
 import { bukaPanelAkses } from "./akses-panel.js";
 
-const S = { bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, perf: { targetDefault: 0 }, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
+const S = { bag: "", sales: false, akun: [], log: [], akunMuat: false, modal: null, cari: "", filter: "semua", pilih: null, tab: "anggota", masuk: null, email: "", master: false, admin: false, kelola: false, lokal: [], progres: "", sibuk: false, analisa: null, berkas: null };
 const IKON_BAG = { umum: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', profil: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/></svg>', ajuan: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>', cad: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a8 3 0 0 1 16 0v10a8 3 0 0 1-16 0zM4 12a8 3 0 0 0 16 0"/></svg>', akses: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' };
 const kb = (n) => (n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(2) + " MB");
 const wkt = (t) => new Date(t).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
@@ -38,7 +38,9 @@ function render() {
     <section class="st-kartu"><h3>Akun saya</h3><p>Masuk sebagai <b>${e(S.email)}</b>.</p>
       <div class="st-stat">Peran: <span class="st-badge ${S.kelola ? "st-badge--ok" : ""}">${S.master ? "Pemilik (bisa mengubah semua data)" : S.admin ? "Admin (mengelola Master Rate, modal, dan akun sales)" : "Lihat saja"}</span></div>
     </section>`;
-  const kAkses = `${S.kelola ? htmlAkun() : ""}
+  const kAkses = S.kelola ? htmlAkun() : "";
+  const kSistem = `${htmlModal()}
+    <section class="st-kartu" style="grid-column:1/-1"><h3>Pembersihan quotation</h3><p>Quotation diabaikan atau lewat masa. Perubahan di sini hanya mengubah status atau menghapus; isi quotation yang sudah terbit tidak diubah.</p><div id="st-bersih"></div></section>
     ${S.master ? htmlCekFirebase() : ""}`;
   const kCad = `<section class="st-kartu" style="grid-column:1/-1"><h3>Cadangan data</h3>
       <p>Cadangan otomatis disimpan <b>di browser PC ini</b>, bukan di Firebase, jadi tidak memakai kuota atau memori Firebase. Dibuat 45 detik setelah perubahan terakhir, dilewati kalau isinya sama, dikompres, dan hanya 8 terakhir per bagian yang disimpan.</p>
@@ -68,7 +70,8 @@ function render() {
     ...(S.sales ? [{ id: "profil", label: "Profil sales", ket: "Nama, telepon, tanda tangan", ikon: "profil", isi: `<section class="st-kartu"><h3>Profil sales</h3>${window.ISLSales ? window.ISLSales.kontenProfil() : ""}</section>` }] : []),
     ...(S.sales || S.kelola ? [{ id: "ajuan", label: "Pengajuan hapus quotation", ket: S.master ? (jmlAj ? `${jmlAj} menunggu keputusan` : "Tidak ada yang menunggu") : S.sales ? (jmlAj ? `${jmlAj} menunggu master` : "Status pengajuan milikmu") : "Daftar pengajuan sales", badge: jmlAj, ikon: "ajuan", isi: `<section class="st-kartu"><h3>Pengajuan hapus quotation${jmlAj ? ` <span class="cu-jml">${jmlAj}</span>` : ""}</h3><p>${S.master ? "Keputusan ada di tangan pemilik. Quotation yang sudah disetujui customer tidak bisa dihapus dari sini." : S.sales ? "Status pengajuan hapus yang kamu kirim. Master yang memutuskan." : "Pengajuan hapus dari sales. Keputusan ada di tangan pemilik."}</p>${window.ISLSales ? window.ISLSales.kontenAjuan() : ""}</section>` }] : []),
     ...(!S.sales ? [{ id: "cadangan", label: "Cadangan data", ket: "Unduh dan pulihkan", ikon: "cad", isi: kCad }] : []),
-    ...(S.kelola ? [{ id: "akses", label: "Akun dan akses", ket: "Divisi, sales, persetujuan", ikon: "akses", isi: kAkses }] : []),
+    ...(S.kelola ? [{ id: "akses", label: "Akun dan akses", ket: "Divisi, sales, persetujuan", ikon: "akses", badge: S.akun.filter((a) => a.status === "menunggu").length, isi: kAkses }] : []),
+    ...(S.kelola ? [{ id: "sistem", label: "Sistem dan data", ket: "Keamanan modal, pembersihan, cek Firebase", ikon: "cad", isi: kSistem }] : []),
   ];
   const hp = matchMedia("(max-width: 760px)").matches, aktif = BAG.find((x) => x.id === S.bag) || (hp ? null : BAG[0]);
   const lencana = (x) => (x.badge ? `<span class="cu-jml">${x.badge}</span>` : "");
@@ -77,6 +80,18 @@ function render() {
     : `<div class="st-dua"><nav class="st-menu" aria-label="Bagian pengaturan">${BAG.map((x) => baris(x, "st-bag")).join("")}</nav><div class="st-isi"><div class="st-grid" style="grid-template-columns:1fr">${aktif.isi}</div></div></div>`);
   if (S.kelola && document.getElementById("ad-root")) isiAkunDivisi(document.getElementById("ad-root"));
   if (S.kelola && document.getElementById("st-bersih")) pasangPembersihan(document.getElementById("st-bersih"), { master: S.master });
+}
+
+/* ---------- keamanan modal (master dan admin) ---------- */
+function htmlModal() {
+  const m = S.modal;
+  /* Admin hanya bisa memisahkan modal Master Rate. Modal quotation dan rate dipisah pemilik, jadi admin diberi tahu, bukan diarahkan ke tombol yang tidak menuntaskan. */
+  const info = (x) => S.master ? `<b>Modal belum dipisah.</b> ${x.tarif} tarif dan ${x.fase2} dokumen quotation/rate masih menyimpan modal di dokumen biasa. Pisahkan dulu sebelum menyetujui akun sales. Prosesnya sekali jalan, otomatis, dan bisa diulang.`
+    : x.tarif > 0 ? `<b>Modal Master Rate belum dipisah.</b> ${x.tarif} tarif masih menyimpan modal di dokumen biasa. Admin bisa memisahkannya sekarang. Modal quotation dan rate hanya bisa dipisah pemilik, dan akun sales baru bisa disetujui setelah itu.`
+    : `<b>Menunggu pemilik.</b> Modal quotation dan rate hanya bisa dipisah dan diperiksa pemilik. Akun sales baru bisa disetujui setelah pemilik memastikan semuanya terpisah.`;
+  return `<section class="st-kartu" style="grid-column:1/-1"><h3>Keamanan modal</h3><p>Sales hanya melihat quotation miliknya, tanpa modal. Modal disimpan terpisah di koleksi khusus master.</p>
+    ${m == null ? `<div class="st-stat">Memeriksa keamanan modal…</div>` : m.siap ? `<div class="st-stat"><span class="st-badge st-badge--ok">Modal sudah dipisah</span> Modal hanya tersimpan di koleksi khusus master.</div>`
+      : `<div class="mr-banner mr-banner--peringatan"><div>${info(m)}${S.master || m.tarif > 0 ? `<div class="st-baris" style="margin-top:8px"><button class="mr-btn mr-btn--utama" data-st="modal-pisah" ${S.sibuk ? "disabled" : ""}>Pisahkan modal sekarang</button></div>` : ""}<div class="st-stat" id="st-modal-prog"></div></div></div>`}</section>`;
 }
 
 /* ---------- cek koneksi dan aturan Firebase (master dan admin) ---------- */
@@ -101,58 +116,95 @@ const ringkasLog = (dari, ke) => {
 const htmlLog = () => S.log.length
   ? `<table class="st-tabel"><thead><tr><th>Waktu</th><th>Oleh</th><th>Akun</th><th>Aksi</th><th>Perubahan</th></tr></thead><tbody>${S.log.map((x) => `<tr><td>${waktuLog(x.waktu)}</td><td>${e(x.oleh || "-")}</td><td>${e(x.email || "-")}</td><td>${e(LABEL_LOG[x.aksi] || x.aksi)}</td><td class="mr-sub">${e(ringkasLog(x.dari, x.ke))}</td></tr>`).join("")}</tbody></table>`
   : `<div class="st-stat">Belum ada perubahan yang tercatat.</div>`;
-function htmlAkun() {
-  const menunggu = S.akun.filter((a) => a.status === "menunggu"), lain = S.akun.filter((a) => a.status !== "menunggu");
-  const hapusAkun = S.master ? `<button class="st-hapus" data-st="akun-hapus" aria-label="Hapus akun" title="Hapus akun"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>` : "";
-  const dikunci = (a) => !S.master && (a.peran === "admin" || a.peran === "master");
-  /* Peran yang terpilih di daftar. Pendaftar mengikuti permintaannya; admin tidak bisa mengangkat admin, jadi permintaan admin jatuh ke Lihat saja. */
-  const peranPilih = (a) => a.peran || (a.peranDiminta === "admin" ? (S.master ? "admin" : "lihat") : "sales");
-  const terpakai = S.akun.map((a) => a.kodeSales).filter(Boolean);
-  const baris = (a) => { const kodeIsi = a.kodeSales || (a.status === "menunggu" && peranPilih(a) === "sales" ? kodeSalesOtomatis(a.nama, terpakai) : ""); if (!a.kodeSales && kodeIsi) terpakai.push(kodeIsi); return `<tr data-uid="${e(a.id)}"><td><b>${e(a.nama || "-")}</b><div class="mr-sub">${e(a.email)}${a.telepon ? ` · ${e(a.telepon)}` : ""}${a.status === "menunggu" && a.peranDiminta === "admin" ? ` · diminta: <b>Admin</b>` : ""}</div></td>
-    <td><select data-akun="peran"><option value="sales" ${peranPilih(a) === "sales" ? "selected" : ""}>Sales</option><option value="lihat" ${peranPilih(a) === "lihat" ? "selected" : ""}>Lihat saja</option>${S.master ? `<option value="admin" ${peranPilih(a) === "admin" ? "selected" : ""}>Admin</option>` : ""}</select></td>
-    <td><input data-akun="kode" value="${e(kodeIsi)}" placeholder="Kode" style="width:70px" maxlength="6"></td>
-    <td><input data-akun="target" inputmode="numeric" value="${a.targetBulanan ? Number(a.targetBulanan).toLocaleString("id-ID") : ""}" placeholder="${S.perf.targetDefault ? Number(S.perf.targetDefault).toLocaleString("id-ID") : "Target Rp/bln"}" style="width:130px" ${S.master ? "" : "disabled"}></td>
-    <td><span class="${warna[a.status] || "st-badge"}">${e(STATUS_AKUN[a.status] || a.status)}</span></td>
-    <td class="st-aksi">${dikunci(a) ? `<span class="mr-sub">Dikelola pemilik</span>` : a.status === "menunggu" ? `<button class="mr-btn mr-btn--kecil mr-btn--utama" data-st="akun-setujui" ${S.modal && S.modal.siap ? "" : "aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\""}>Setujui</button><button class="mr-btn mr-btn--kecil" data-st="akun-tolak">Tolak</button>`
-      : a.status === "aktif" ? `<button class="mr-btn mr-btn--kecil" data-st="akun-simpan">Simpan</button><button class="mr-btn mr-btn--kecil" data-st="akun-akses">Akses</button>${S.master ? `<button class="mr-btn mr-btn--kecil" data-st="akun-sandi">Kata sandi</button>` : ""}<button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-nonaktif">Nonaktifkan</button>${hapusAkun}`
-      : `<button class="mr-btn mr-btn--kecil" data-st="akun-aktif" ${S.modal && S.modal.siap ? "" : "aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\""}>Aktifkan lagi</button>${hapusAkun}`}</td></tr>`; };
-  const m = S.modal;
-  /* Admin hanya bisa memisahkan modal Master Rate. Modal quotation dan rate dipisah pemilik, jadi admin diberi tahu, bukan diarahkan ke tombol yang tidak menuntaskan. */
-  const modalPeringatan = (x) => S.master ? `<b>Modal belum dipisah.</b> ${x.tarif} tarif dan ${x.fase2} dokumen quotation/rate masih menyimpan modal di dokumen biasa. Pisahkan dulu sebelum menyetujui akun sales. Prosesnya sekali jalan, otomatis, dan bisa diulang.`
-    : x.tarif > 0 ? `<b>Modal Master Rate belum dipisah.</b> ${x.tarif} tarif masih menyimpan modal di dokumen biasa. Admin bisa memisahkannya sekarang. Modal quotation dan rate hanya bisa dipisah pemilik, dan akun sales baru bisa disetujui setelah itu.`
-    : `<b>Menunggu pemilik.</b> Modal quotation dan rate hanya bisa dipisah dan diperiksa pemilik. Akun sales baru bisa disetujui setelah pemilik memastikan semuanya terpisah.`;
-  return `<section class="st-kartu" style="grid-column:1/-1"><div id="ad-root" class="ad-root"></div></section>
-  <section class="st-kartu" style="grid-column:1/-1"><h3>Staf dan sales</h3>
-    <p>Sales mendaftar sendiri dari halaman login dan baru bisa masuk setelah kamu setujui di sini. Akun yang ditolak tetap terdaftar sebagai Nonaktif dan bisa diaktifkan lagi. Akun yang pendaftarannya gagal tersimpan bisa diperbaiki dengan meminta orangnya masuk sekali lagi. Sales hanya melihat quotation miliknya, tanpa modal. Akun yang keluar dinonaktifkan, datanya tetap atas namanya. Akun lama (mis. Fathur) otomatis muncul di sini saat pertama login: setujui sebagai <b>Lihat saja</b>.</p>
-    ${m == null ? `<div class="st-stat">Memeriksa keamanan modal…</div>` : m.siap ? `<div class="st-stat"><span class="st-badge st-badge--ok">Modal sudah dipisah</span> Modal hanya tersimpan di koleksi khusus master.</div>`
-      : `<div class="mr-banner mr-banner--peringatan"><div>${modalPeringatan(m)}${S.master || m.tarif > 0 ? `<div class="st-baris" style="margin-top:8px"><button class="mr-btn mr-btn--utama" data-st="modal-pisah" ${S.sibuk ? "disabled" : ""}>Pisahkan modal sekarang</button></div>` : ""}<div class="st-stat" id="st-modal-prog"></div></div></div>`}
-    ${S.master ? `<div class="st-baris"><label class="mr-sub">Target bulanan bawaan sales (Rp, nilai quotation disetujui)</label><input id="ak-target" inputmode="numeric" value="${S.perf.targetDefault ? Number(S.perf.targetDefault).toLocaleString("id-ID") : ""}" placeholder="0" style="width:160px"><button class="mr-btn mr-btn--kecil" data-st="target-simpan">Simpan target</button></div>` : ""}
-    ${menunggu.length ? `<h4 style="margin:12px 0 6px">Menunggu persetujuan (${menunggu.length})</h4><table class="st-tabel"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Target</th><th>Status</th><th></th></tr></thead><tbody>${menunggu.map(baris).join("")}</tbody></table>` : ""}
-    <details class="st-laci" open><summary><span>Pembersihan quotation</span><span class="st-laci-jml">Diabaikan atau lewat masa</span></summary><div class="st-laci-isi" id="st-bersih"></div></details>
-    ${S.master || S.admin ? `<details class="st-laci"><summary><span>Tambah akun manual</span><span class="st-laci-jml">buat login dan profil</span></summary><div class="st-laci-isi">
-      <p class="mr-sub">Isi nama dan email saja. Kode sales terisi otomatis dan bisa diubah. Akun langsung aktif dengan kata sandi sementara yang tampil sekali untuk disalin atau dikirim lewat WhatsApp.</p>
-      <div class="st-baris"><input id="ta-nama" placeholder="Nama lengkap" autocomplete="off" style="min-width:220px"><input id="ta-email" type="email" placeholder="Email" autocomplete="off" style="min-width:220px"><input id="ta-wa" type="tel" inputmode="tel" placeholder="WhatsApp (opsional)" autocomplete="off" style="width:180px"></div>
-      <div class="st-baris"><select id="ta-peran" aria-label="Peran"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option></select><input id="ta-kode" placeholder="Kode sales (2 sampai 6 huruf)" maxlength="6" autocomplete="off" style="width:200px">${S.master ? `<input id="ta-target" inputmode="numeric" placeholder="Target bulanan (opsional)" autocomplete="off" style="width:200px">` : ""}</div>
-      <div class="st-baris"><button class="mr-btn mr-btn--utama" data-st="akun-tambah">Buat akun</button></div>
-    </div></details>` : ""}
-    <details class="st-laci"><summary><span>Riwayat perubahan akun</span><span class="st-laci-jml">${S.log.length} catatan terakhir</span></summary><div class="st-laci-isi">${htmlLog()}</div></details>
-    <details class="st-laci"><summary><span>Akun terdaftar</span><span class="st-laci-jml">${lain.length} akun</span></summary><div class="st-laci-isi">${lain.length ? `<table class="st-tabel"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Target</th><th>Status</th><th></th></tr></thead><tbody>${lain.map(baris).join("")}</tbody></table>` : `<div class="st-stat">Belum ada akun lain.</div>`}</div></details>
-  </section>`;
+/* ---------- akun dan akses: desktop = daftar + panel detail, HP = tab Anggota / Persetujuan / Peran ---------- */
+const WARNA_AV = ["#6c5ce7", "#2e9e6e", "#d9822b", "#2c7be5", "#c0392b", "#7f8c8d"];
+const avAk = (a, s = 36) => { const n = String(a.nama || a.email || "?"); let h = 0; for (const c of String(a.id || n)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `<i class="ak-av" style="width:${s}px;height:${s}px;font-size:${Math.round(s * 0.42)}px;background:${WARNA_AV[h % 6]}" aria-hidden="true">${e(n[0].toUpperCase())}</i>`; };
+const kodeTampil = (a) => (a.kodeSales ? `<span class="ak-kode">${e(a.kodeSales)}</span>` : `<span class="mr-sub">-</span>`);
+const loginTxt = (uid) => { const t = S.masuk && S.masuk[uid]; if (!t) return "-"; const d = new Date(t), n = Math.floor((new Date().setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 864e5); const jam = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(":", "."); return n <= 0 ? `Hari ini ${jam}` : n === 1 ? `Kemarin ${jam}` : `${n} hari lalu`; };
+const kodeTerpakai = () => S.akun.map((a) => a.kodeSales).filter(Boolean);
+const peranPilih = (a) => a.peran || (a.peranDiminta === "admin" ? (S.master ? "admin" : "lihat") : "sales"); // admin tidak bisa mengangkat admin: permintaan admin jatuh ke Lihat saja
+const opsiPeran = (v, dis = "") => `<select data-akun="peran" ${dis}><option value="sales" ${v === "sales" ? "selected" : ""}>Sales</option><option value="lihat" ${v === "lihat" ? "selected" : ""}>Lihat saja</option>${S.master ? `<option value="admin" ${v === "admin" ? "selected" : ""}>Admin</option>` : ""}</select>`;
+const dikunci = (a) => !S.master && (a.peran === "admin" || a.peran === "master");
+const kunciModal = () => (S.modal && S.modal.siap ? "" : " aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\"");
+const cocokAkun = (a) => { const q = S.cari.trim().toLowerCase(); if (q && !`${a.nama || ""} ${a.email || ""}`.toLowerCase().includes(q)) return false; const f = S.filter; return f === "semua" || (f === "nonaktif" ? a.status === "nonaktif" : a.peran === f); };
+const FILTER = [["semua", "Semua"], ["sales", "Sales"], ["admin", "Admin"], ["lihat", "Lihat saja"], ["nonaktif", "Nonaktif"]];
+
+function kartuMenunggu(a) {
+  const p = peranPilih(a);
+  return `<div class="ak-tunggu" data-uid="${e(a.id)}">${avAk(a, 40)}<div class="ak-tunggu__t"><b>${e(a.nama || "(tanpa nama)")}</b> meminta akses <b>${a.peranDiminta === "admin" ? "Admin" : "Sales"}</b><div class="mr-sub">${e(a.email)}${a.telepon ? ` · ${e(a.telepon)}` : ""}</div></div>
+    <div class="ak-tunggu__f">${opsiPeran(p)}<span class="ak-lblkecil">Kode <span class="ak-kode" data-ak="prev">${e(kodeUnit(p, kodeTerpakai()))}</span></span></div>
+    <div class="ak-tunggu__a"><button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-setujui"${kunciModal()}>Setujui</button><button class="mr-btn mr-btn--kecil" data-st="akun-tolak">Tolak</button></div></div>`;
 }
-/* Tambah akun manual (master). Akun login dibuat lewat instance Firebase kedua supaya sesi master tidak berpindah. */
+function panelAkun(a, hp) {
+  const aktif = a.status === "aktif";
+  const hapus = S.master ? `<button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-hapus">Hapus permanen</button>` : "";
+  return `<div class="ak-panel" data-uid="${e(a.id)}"><div class="ak-ph">${avAk(a, 48)}<div class="ak-ph__t"><h3>${e(a.nama || "-")}</h3><div class="mr-sub">${e(a.email)}${a.telepon ? ` · ${e(a.telepon)}` : ""}</div></div><button type="button" class="ak-x" data-st="ak-tutup" aria-label="${hp ? "Kembali" : "Tutup"}">${hp ? "‹" : "✕"}</button></div>
+    <div class="ak-meta"><span class="${warna[a.status] || "st-badge"}">${e(STATUS_AKUN[a.status] || a.status)}</span><span class="mr-sub">Login terakhir: ${e(loginTxt(a.id))}</span></div>
+    ${dikunci(a) ? `<p class="mr-sub">Akun ini dikelola pemilik.</p>` : `<label class="ak-lbl">Peran</label>${opsiPeran(peranPilih(a), aktif ? "" : "disabled")}
+    <label class="ak-lbl">Kode unit (otomatis oleh sistem)</label><div class="ak-kodebox">${kodeTampil(a)}<span class="mr-sub">${a.kodeSales ? "Tidak bisa diubah" : "Dibuat saat akun disetujui"}</span></div>
+    <div class="ak-aksi">${aktif ? `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-simpan">Simpan</button><button class="mr-btn mr-btn--kecil" data-st="akun-akses">Akses</button>${S.master ? `<button class="mr-btn mr-btn--kecil" data-st="akun-ubah">Ubah data</button><button class="mr-btn mr-btn--kecil" data-st="akun-sandi">Kata sandi</button>` : ""}` : `<button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-aktif"${kunciModal()}>Aktifkan lagi</button>`}</div>
+    <div class="ak-aksi ak-bahaya">${aktif ? `<button class="mr-btn mr-btn--kecil mr-btn--bahaya" data-st="akun-nonaktif">Nonaktifkan</button>` : ""}${hapus}</div>`}</div>`;
+}
+const htmlPeranAkses = () => {
+  const ck = (x) => (x ? `<span class="ak-ya" aria-label="Boleh">✓</span>` : `<span class="mr-sub" aria-label="Tidak">—</span>`);
+  const baris = [["Buat dan ubah quotation", 1, 1, 0], ["Lihat quotation orang lain", 0, 1, 1], ["Lihat modal dan margin", 0, 1, 0], ["Kelola akun sales", 0, 1, 0], ["Setujui pendaftaran", 0, 1, 0]];
+  return `<table class="st-tabel ak-matriks"><thead><tr><th>Boleh</th><th>Sales</th><th>Admin</th><th>Lihat</th></tr></thead><tbody>${baris.map((r) => `<tr><td>${r[0]}</td><td>${ck(r[1])}</td><td>${ck(r[2])}</td><td>${ck(r[3])}</td></tr>`).join("")}</tbody></table><p class="mr-sub" style="margin:8px 0 0">Kode unit: SLS (Sales), ADM (Admin), LHT (Lihat saja), diikuti nomor urut. Anggota divisi Daily Job punya kode unit per kelompok.</p>`;
+};
+function htmlAkun() {
+  const hp = matchMedia("(max-width: 760px)").matches;
+  const menunggu = S.akun.filter((a) => a.status === "menunggu"), lain = S.akun.filter((a) => a.status !== "menunggu" && cocokAkun(a));
+  const n = (f) => S.akun.filter(f).length, stat = [["Aktif", n((a) => a.status === "aktif"), "st-badge--ok"], ["Menunggu", menunggu.length, "st-badge--warn"], ["Nonaktif", n((a) => a.status === "nonaktif"), ""], ["Admin", n((a) => a.status === "aktif" && a.peran === "admin"), ""]];
+  const m = S.modal, peringatan = m && !m.siap ? `<div class="mr-banner mr-banner--peringatan"><div><b>Modal belum dipisah.</b> Menyetujui akun sales terkunci sampai modal dipisah. <button type="button" class="mr-link" data-st="bag" data-v="sistem">Buka Sistem dan data</button></div></div>` : "";
+  const cari = `<input type="search" id="ak-cari" class="ak-cari" placeholder="Cari nama atau email" value="${e(S.cari)}" aria-label="Cari akun" autocomplete="off">`;
+  const chip = `<div class="ak-chip" role="group" aria-label="Filter peran">${FILTER.map(([k, l]) => `<button type="button" data-st="ak-filter" data-v="${k}" class="${S.filter === k ? "is-aktif" : ""}">${l}</button>`).join("")}</div>`;
+  const pilih = S.akun.find((a) => a.id === S.pilih && a.status !== "menunggu") || (hp ? null : lain[0]);
+  const tambah = `<button class="mr-btn mr-btn--utama" data-st="akun-buka-tambah">＋ Tambah akun</button>`;
+  const kepala = `<div class="ak-kepala"><div><h3>Akun dan akses</h3><p>Kelola siapa yang bisa masuk dan apa yang boleh mereka lakukan.</p></div>${tambah}</div>`;
+  const statHtml = `<div class="ak-stat">${stat.map(([t, v, k]) => `<div class="ak-stat__k"><span class="st-badge ${k}">${t}</span><b>${v}</b></div>`).join("")}</div>`;
+  const kosong = `<div class="st-stat">${S.akunMuat ? "Tidak ada akun yang cocok." : "Memuat akun…"}</div>`;
+  let isi;
+  if (!hp) {
+    const tabel = lain.length ? `<table class="ak-tb"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Login terakhir</th></tr></thead><tbody>${lain.map((a) => `<tr data-uid="${e(a.id)}" data-st="ak-pilih" class="${pilih && pilih.id === a.id ? "is-pilih" : ""}"><td><div class="ak-orang">${avAk(a)}<div><b>${e(a.nama || "-")}</b><div class="mr-sub">${e(a.email)}</div></div></div></td><td>${e(PERAN[a.peran] || "-")}${a.status !== "aktif" ? ` <span class="st-badge">${e(STATUS_AKUN[a.status] || a.status)}</span>` : ""}</td><td>${kodeTampil(a)}</td><td class="mr-sub">${e(loginTxt(a.id))}</td></tr>`).join("")}</tbody></table>` : kosong;
+    isi = `${kepala}${statHtml}${peringatan}${menunggu.length ? `<div class="ak-antre"><h4>Menunggu persetujuan (${menunggu.length})</h4>${menunggu.map(kartuMenunggu).join("")}</div>` : ""}<div class="ak-alat">${cari}${chip}</div>
+      <div class="ak-dua"><div class="ak-daftar">${tabel}</div><aside class="ak-samping">${pilih ? panelAkun(pilih, false) : `<div class="st-stat">Pilih akun untuk melihat dan mengubah detailnya.</div>`}</aside></div>
+      <details class="st-laci"><summary><span>Peran dan akses</span><span class="st-laci-jml">hak tiap peran</span></summary><div class="st-laci-isi">${htmlPeranAkses()}</div></details>
+      <details class="st-laci"><summary><span>Riwayat perubahan akun</span><span class="st-laci-jml">${S.log.length} catatan terakhir</span></summary><div class="st-laci-isi">${htmlLog()}</div></details>`;
+  } else if (pilih && S.tab === "anggota") isi = panelAkun(pilih, true);
+  else {
+    const tab = [["anggota", "Anggota"], ["menunggu", `Persetujuan${menunggu.length ? ` ${menunggu.length}` : ""}`], ["peran", "Peran"]];
+    const kartu = lain.map((a) => `<button type="button" class="ak-kartu" data-uid="${e(a.id)}" data-st="ak-pilih">${avAk(a, 40)}<span class="ak-kartu__t"><b>${e(a.nama || "-")}</b><small>${e(a.email)}</small><small>${a.status === "aktif" ? `Login ${e(loginTxt(a.id))}` : e(STATUS_AKUN[a.status] || a.status)}</small></span>${kodeTampil(a)}</button>`).join("");
+    const badan = S.tab === "menunggu" ? (menunggu.length ? menunggu.map(kartuMenunggu).join("") : `<div class="st-stat">Tidak ada pendaftar yang menunggu.</div>`)
+      : S.tab === "peran" ? `<div class="ak-peran-hp">${htmlPeranAkses()}</div><h4 style="margin:14px 0 6px">Riwayat perubahan akun</h4>${htmlLog()}`
+        : `${statHtml}${peringatan}${cari}${chip}<div class="ak-daftar-hp">${kartu || kosong}</div>`;
+    isi = `${kepala}<div class="ak-tab" role="tablist">${tab.map(([k, l]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" data-st="ak-tab" data-v="${k}" class="${S.tab === k ? "is-aktif" : ""}">${l}</button>`).join("")}</div>${badan}`;
+  }
+  return `<section class="st-kartu ak" style="grid-column:1/-1">${isi}</section>
+  <section class="st-kartu" style="grid-column:1/-1"><div id="ad-root" class="ad-root"></div></section>`;
+}
+/* Tambah akun (master dan admin). Akun login dibuat lewat instance Firebase kedua supaya sesi yang sedang masuk tidak berpindah. */
 let authTambah = null;
 const authTambahAkun = async () => { if (!authTambah) { authTambah = getAuth(initializeApp(app.options, "tambah-akun")); authTambah.languageCode = "id"; await setPersistence(authTambah, inMemoryPersistence); } return authTambah; };
 const HURUF_SANDI = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const sandiAcak = (n = 24) => { const b = new Uint8Array(n); crypto.getRandomValues(b); return Array.from(b, (x) => HURUF_SANDI[x % HURUF_SANDI.length]).join(""); };
-/* kode sales: hanya huruf A-Z (spasi, angka, tanda baca, dan aksen dibuang); dipakai di nomor quotation */
-const bersihKode = (v) => String(v || "").normalize("NFD").replace(/[^A-Za-z]/g, "").toUpperCase();
-document.addEventListener("input", (ev) => {
+document.addEventListener("change", (ev) => {
   const t = ev.target; if (!t) return;
-  if (t.id === "ta-kode" || (t.dataset && t.dataset.akun === "kode")) { const b = bersihKode(t.value); if (b !== t.value) t.value = b; if (t.id === "ta-kode") t.dataset.manual = "1"; }
-  // kode sales ikut nama selama belum diubah tangan
-  if (t.id === "ta-nama" || t.id === "ta-peran") { const k = $("#ta-kode"); if (k && k.dataset.manual !== "1") k.value = $("#ta-peran").value === "sales" ? kodeSalesOtomatis($("#ta-nama").value, S.akun.map((a) => a.kodeSales)) : ""; }
+  if (t.id === "ta-peran") { const k = $("#ta-kode"); if (k) k.textContent = kodeUnit(t.value, kodeTerpakai()); }
+  if (t.dataset && t.dataset.akun === "peran") { const p = t.closest(".ak-tunggu"), k = p && p.querySelector('[data-ak="prev"]'); if (k) k.textContent = kodeUnit(t.value, kodeTerpakai()); }
 });
-document.addEventListener("change", (ev) => { if (ev.target && ev.target.id === "ta-peran") ev.target.dispatchEvent(new Event("input", { bubbles: true })); });
+document.addEventListener("input", (ev) => {
+  if (ev.target && ev.target.id === "ak-cari") { S.cari = ev.target.value; const p = ev.target.selectionStart; render(); const el = $("#ak-cari"); if (el) { el.focus(); el.setSelectionRange(p, p); } }
+});
+function dialogTambah() {
+  const lapis = document.createElement("div"); lapis.className = "mr-konfirm"; lapis.id = "ak-tambah";
+  lapis.innerHTML = `<div class="mr-konfirm__kotak"><h3>Tambah akun</h3><div class="mr-konfirm__isi">
+    <label class="ak-lbl">Nama lengkap</label><input id="ta-nama" autocomplete="off" style="width:100%;box-sizing:border-box">
+    <label class="ak-lbl">Email</label><input id="ta-email" type="email" autocomplete="off" style="width:100%;box-sizing:border-box">
+    <label class="ak-lbl">WhatsApp (opsional)</label><input id="ta-wa" type="tel" inputmode="tel" autocomplete="off" style="width:100%;box-sizing:border-box">
+    <label class="ak-lbl">Peran</label><select id="ta-peran" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option></select>
+    <p class="mr-sub" style="margin:10px 0 0">Kode unit <span class="ak-kode" id="ta-kode">${e(kodeUnit("sales", kodeTerpakai()))}</span> dibuat otomatis. Akun langsung aktif dengan kata sandi sementara yang tampil sekali untuk disalin atau dikirim lewat WhatsApp.</p></div>
+    <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="batal">Batal</button><button class="mr-btn mr-btn--utama" data-st="akun-tambah">Buat akun</button></div></div>`;
+  document.body.appendChild(lapis); lapis.querySelector('[data-x="batal"]').onclick = () => lapis.remove(); lapis.querySelector("#ta-nama").focus();
+}
 /* Sandi sementara tampil sekali: salin atau kirim lewat WhatsApp. */
 function dialogAkunBaru(d) {
   return new Promise((selesai) => {
@@ -170,13 +222,11 @@ function dialogAkunBaru(d) {
 }
 async function tambahAkunManual() {
   if (!S.master && !S.admin) return;
-  const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), peran = $("#ta-peran").value, kode = bersihKode($("#ta-kode").value), target = S.master ? angkaIn($("#ta-target").value) : null, telepon = normalisasiWa($("#ta-wa").value);
+  const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), peran = $("#ta-peran").value, kode = kodeUnit(peran, kodeTerpakai()), telepon = normalisasiWa($("#ta-wa").value);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi email yang valid.", "bahaya");
   if (!nama) return toast("Isi nama lengkap.", "bahaya");
-  if (peran === "sales" && !/^[A-Z]{2,6}$/.test(kode)) return toast(`Kode sales "${e(kode)}" belum valid: wajib 2 sampai 6 huruf A-Z, tanpa angka atau spasi.`, "bahaya");
   if (S.akun.some((a) => String(a.email || "").toLowerCase() === email)) return toast("Email ini sudah ada di daftar akun.", "bahaya");
-  if (!(await konfirmasi("Buat akun ini?", `Akun login untuk <b>${e(email)}</b> dibuat sebagai <b>${e(PERAN[peran])}</b> dan langsung aktif. Kata sandi sementara akan ditampilkan sekali.`, "Buat akun"))) return;
-  const tombol = document.querySelector('[data-st="akun-tambah"]'); if (tombol) { tombol.disabled = true; tombol.textContent = "Membuat akun…"; }
+  const tombol = document.querySelector('#ak-tambah [data-st="akun-tambah"]'); if (tombol) { tombol.disabled = true; tombol.textContent = "Membuat akun…"; }
   const pulih = () => { if (tombol) { tombol.disabled = false; tombol.textContent = "Buat akun"; } };
   let uid = null;
   const sandi = sandiAcak(10);
@@ -189,25 +239,25 @@ async function tambahAkunManual() {
     return toast(pesan, "bahaya");
   }
   try {
-    await setDoc(doc(db, "pengguna", uid), { email, nama, peranDiminta: peran, peran, status: "aktif", dibuat: serverTimestamp(), disetujuiPada: serverTimestamp(), dibuatOleh: "manual", kodeSales: peran === "sales" ? kode : null, targetBulanan: peran === "sales" ? target : null, ...(telepon ? { telepon } : {}) });
-    if (peran === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama, kode, targetBulanan: target || null });
+    await setDoc(doc(db, "pengguna", uid), { email, nama, peranDiminta: peran, peran, status: "aktif", dibuat: serverTimestamp(), disetujuiPada: serverTimestamp(), dibuatOleh: "manual", kodeSales: kode, ...(telepon ? { telepon } : {}) });
+    if (peran === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama, kode, targetBulanan: null });
   } catch (er) {
     pulih();
     return toast(`Akun login sudah dibuat, tetapi profilnya gagal disimpan (${e(er.code || er.message)}). Minta orangnya masuk sekali; akunnya akan muncul di Menunggu persetujuan.`, "bahaya");
   }
-  await catatLogAkun({ uid, email }, "tambah", null, { peran, status: "aktif", kode: kode || null, target: target ?? null });
+  await catatLogAkun({ uid, email }, "tambah", null, { peran, status: "aktif", kode });
   try { await signOut(await authTambahAkun()); } catch (_) {}
-  await muatAkun(); render();
-  await dialogAkunBaru({ nama, email, sandi, kode: peran === "sales" ? kode : "", telepon });
+  const l = $("#ak-tambah"); if (l) l.remove();
+  await muatAkun(); S.pilih = uid;
+  await dialogAkunBaru({ nama, email, sandi, kode, telepon });
 }
 async function muatAkun() {
   try { const snap = await getDocs(collection(db, "pengguna")); S.akun = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.peran !== "dj").sort((a, b) => String(a.email).localeCompare(String(b.email))); } catch (er) { S.akun = []; toast(`<b>Daftar akun gagal dimuat.</b> ${e(er.code || er.message)}. Pasang aturan Firestore terbaru.`, "bahaya"); }
-  try { const p = await getDoc(doc(db, "sistem", "performa")); S.perf = { targetDefault: 0, ...(p.exists() ? p.data() : {}) }; } catch (_) {}
   try { S.log = await muatLogAkun(); } catch (_) { S.log = []; }
   try { const [t, f] = await Promise.all([MRDB.hitungModalBelumDipisah(), hitungModalFase2()]); S.modal = { tarif: t.inline, fase2: f.total, siap: !t.inline && !f.total && f.tandai && !f.gagal.length }; } catch (er) { S.modal = { tarif: "?", fase2: "?", siap: false }; }
-  render();
+  S.akunMuat = true; render();
+  if (!S.masuk) { S.masuk = {}; httpsCallable(getFunctions(app, "asia-southeast2"), "loginTerakhir")().then((r) => { S.masuk = (r.data && r.data.masuk) || {}; render(); }).catch(() => { S.masuk = null; }); }
 }
-const angkaIn = (v) => { const n = Number(String(v || "").replace(/[^\d]/g, "")); return n > 0 ? n : null; };
 /* Kata sandi akun lain (master): kirim email reset, atau ketik kata sandi baru (lewat Cloud Function; butuh paket Blaze). */
 function dialogSandi(ak, uid) {
   return new Promise((selesai) => {
@@ -243,29 +293,51 @@ function dialogSandi(ak, uid) {
     };
   });
 }
+/* Ubah nama, email login, dan WhatsApp lewat fungsi server; resolve true bila tersimpan. */
+function dialogUbah(ak, uid) {
+  return new Promise((selesai) => {
+    const lapis = document.createElement("div"); lapis.className = "mr-konfirm";
+    lapis.innerHTML = `<div class="mr-konfirm__kotak"><h3>Ubah data akun</h3><div class="mr-konfirm__isi">
+      <label class="mr-sub">Nama</label><input id="du-nama" value="${e(ak.nama || "")}" style="width:100%;box-sizing:border-box;margin-bottom:8px">
+      <label class="mr-sub">Email login</label><input id="du-email" type="email" value="${e(ak.email || "")}" style="width:100%;box-sizing:border-box;margin-bottom:8px">
+      <label class="mr-sub">WhatsApp</label><input id="du-wa" type="tel" value="${e(ak.telepon || "")}" style="width:100%;box-sizing:border-box">
+      <p class="mr-sub" style="margin:8px 0 0">Bila email diganti, sesi login lama akun ini berakhir.</p></div>
+      <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="tutup">Batal</button><button class="mr-btn mr-btn--utama" data-x="simpan">Simpan</button></div></div>`;
+    document.body.appendChild(lapis);
+    const q = (x) => lapis.querySelector(x), tutup = (v) => { lapis.remove(); selesai(v); };
+    q('[data-x="tutup"]').onclick = () => tutup(false);
+    q('[data-x="simpan"]').onclick = async (ev) => {
+      const nama = q("#du-nama").value.trim(), email = q("#du-email").value.trim().toLowerCase(), telepon = normalisasiWa(q("#du-wa").value);
+      if (!nama || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi nama dan email yang valid.", "bahaya");
+      if (S.akun.some((x) => x.id !== uid && String(x.email || "").toLowerCase() === email)) return toast("Email ini sudah dipakai akun lain.", "bahaya");
+      ev.target.disabled = true; ev.target.textContent = "Menyimpan…";
+      try { await httpsCallable(getFunctions(app, "asia-southeast2"), "ubahAkun")({ uid, nama, email, telepon }); tutup(true); }
+      catch (er) { ev.target.disabled = false; ev.target.textContent = "Simpan"; toast(`<b>Gagal.</b> ${e(er.code === "functions/internal" ? "Email sudah dipakai di Firebase atau server belum ter-deploy." : er.message || er.code)}`, "bahaya"); }
+    };
+  });
+}
 async function aksiAkun(a, tr) {
-  const uid = tr && tr.dataset.uid, ak = S.akun.find((x) => x.id === uid); if (a !== "target-simpan" && !ak) return;
+  const uid = tr && tr.dataset.uid, ak = S.akun.find((x) => x.id === uid); if (!ak) return;
   if (a === "akun-akses") return ak.peran && ak.peran !== "master" ? bukaPanelAkses(ak, { sesudah: render }) : undefined;
   if (a === "akun-hapus" && !S.master) return; // hanya pemilik
-  if (a === "target-simpan" && !S.master) return; // target bulanan bawaan hanya pemilik
-  const baca = () => ({ peran: tr.querySelector('[data-akun=peran]').value, kodeSales: bersihKode(tr.querySelector('[data-akun=kode]').value), targetBulanan: S.master ? angkaIn(tr.querySelector('[data-akun=target]').value) : null });
+  const sel = tr.querySelector("[data-akun=peran]"), peranBaru = sel ? sel.value : peranPilih(ak);
+  const baca = () => ({ peran: peranBaru, kodeSales: ak.kodeSales || kodeUnit(peranBaru, kodeTerpakai()) }); // kode unit dibuat sistem; akun lama mempertahankan kodenya
   if ((a === "akun-setujui" || a === "akun-aktif") && !(S.modal && S.modal.siap)) {
     // Tombol tidak dimatikan supaya terasa alasannya: kunci ini sengaja (modal harus dipisah dulu).
     const kartu = document.querySelector(".mr-banner--peringatan"); if (kartu) kartu.scrollIntoView({ behavior: "smooth", block: "center" });
-    return toast(S.modal == null ? "Sedang memeriksa keamanan modal. Coba lagi sebentar." : S.master ? "<b>Setujui terkunci.</b> Tekan <b>Pisahkan modal sekarang</b> di kartu kuning di atas tabel (cukup sekali), lalu Setujui akan aktif." : "<b>Setujui terkunci.</b> Modal quotation dan rate harus dipisah pemilik lebih dulu.", "bahaya");
+    return toast(S.modal == null ? "Sedang memeriksa keamanan modal. Coba lagi sebentar." : S.master ? "<b>Setujui terkunci.</b> Buka <b>Sistem dan data</b>, tekan <b>Pisahkan modal sekarang</b> (cukup sekali), lalu Setujui akan aktif." : "<b>Setujui terkunci.</b> Modal quotation dan rate harus dipisah pemilik lebih dulu.", "bahaya");
   }
   try {
     if (a === "akun-setujui" || a === "akun-simpan" || a === "akun-aktif") {
-      const b = baca(), data = { ...b, status: "aktif", disetujuiPada: serverTimestamp() };
-      /* Target hanya diatur pemilik. Admin menyimpan akun tanpa menyentuh target yang sudah ada (aturan Firestore juga menolaknya). */
-      const target = S.master ? b.targetBulanan : (ak.targetBulanan ?? null);
-      if (!S.master) delete data.targetBulanan;
-      if (b.peran === "sales" && !/^[A-Z]{2,6}$/.test(b.kodeSales)) return toast("Isi kode sales (2 sampai 6 huruf) untuk akun sales.", "bahaya");
-      await updateDoc(doc(db, "pengguna", uid), data);
-      if (b.peran === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama: ak.nama || ak.email, kode: b.kodeSales, targetBulanan: target || null });
+      const b = baca();
+      await updateDoc(doc(db, "pengguna", uid), { ...b, status: "aktif", disetujuiPada: serverTimestamp() });
+      if (b.peran === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama: ak.nama || ak.email, kode: b.kodeSales, targetBulanan: ak.targetBulanan ?? null });
       else await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
-      await catatLogAkun({ uid, email: ak.email }, a === "akun-setujui" ? "setujui" : a === "akun-aktif" ? "aktifkan" : "ubah", { peran: ak.peran ?? null, status: ak.status, kode: ak.kodeSales || null, target: ak.targetBulanan ?? null }, { peran: b.peran, status: "aktif", kode: b.kodeSales || null, target: target ?? null });
+      await catatLogAkun({ uid, email: ak.email }, a === "akun-setujui" ? "setujui" : a === "akun-aktif" ? "aktifkan" : "ubah", { peran: ak.peran ?? null, status: ak.status, kode: ak.kodeSales || null }, { peran: b.peran, status: "aktif", kode: b.kodeSales || null });
       toast(`Akun <b>${e(ak.email)}</b> ${a === "akun-simpan" ? "diperbarui" : "aktif"} sebagai ${e(PERAN[b.peran])}.`);
+    } else if (a === "akun-ubah") {
+      if (S.master && await dialogUbah(ak, uid)) toast("Data akun diperbarui.");
+      else return;
     } else if (a === "akun-sandi") {
       if (S.master) await dialogSandi(ak, uid);
     } else if (a === "akun-nonaktif") {
@@ -273,12 +345,10 @@ async function aksiAkun(a, tr) {
       await updateDoc(doc(db, "pengguna", uid), { status: "nonaktif" }); await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
       await catatLogAkun({ uid, email: ak.email }, "nonaktifkan", { status: ak.status }, { status: "nonaktif" }); toast("Akun dinonaktifkan.");
     } else if (a === "akun-hapus") {
-      // Hanya profil di aplikasi yang bisa dihapus dari sini. Login di Firebase Authentication harus dihapus di Firebase Console.
-      if (!(await konfirmasi("Hapus akun ini?", `<b>${e(ak.email)}</b> dihapus dari daftar aplikasi. Quotation dan riwayatnya tetap tersimpan atas namanya.<br><br>Login-nya masih ada di Firebase Authentication. Kalau orangnya masih punya akun itu, ia akan muncul lagi sebagai <i>menunggu</i> saat masuk. Untuk menutup akses sepenuhnya, hapus juga akun loginnya di Firebase Console &gt; Authentication.`, "Hapus akun"))) return;
-      await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
-      await deleteDoc(doc(db, "pengguna", uid));
-      await catatLogAkun({ uid, email: ak.email }, "hapus", { peran: ak.peran ?? null, status: ak.status }, null);
-      toast("Akun dihapus dari daftar aplikasi.");
+      // Fungsi server menghapus profil dan login Firebase Authentication sekaligus (browser tidak bisa menghapus login orang lain); log dicatat di sana.
+      if (!(await konfirmasi("Hapus akun ini?", `<b>${e(ak.email)}</b> dihapus permanen dari aplikasi dan dari login Firebase. Quotation dan riwayatnya tetap tersimpan atas namanya. Tidak bisa dibatalkan.`, "Hapus akun"))) return;
+      await httpsCallable(getFunctions(app, "asia-southeast2"), "hapusAkun")({ uid });
+      toast("Akun dihapus permanen."); S.pilih = null;
     } else if (a === "akun-tolak") {
       // Ditolak = nonaktif, bukan dihapus. Akun tetap terlihat di daftar dan bisa diaktifkan lagi.
       // (Menghapus dokumen membuat profil "menunggu" muncul lagi saat orangnya masuk, dan email yang sama tidak bisa didaftar ulang.)
@@ -310,7 +380,12 @@ document.addEventListener("click", async (ev) => {
     } catch (er) { if (el) el.textContent = `Gagal: ${er.message}`; toast(`<b>Gagal.</b> ${e(er.message)}`, "bahaya"); }
     return;
   }
+  if (a === "akun-buka-tambah") return dialogTambah();
   if (a === "akun-tambah") return tambahAkunManual();
+  if (a === "ak-pilih") { S.pilih = t.dataset.uid || (t.closest("[data-uid]") || {}).dataset.uid; render(); return; }
+  if (a === "ak-tutup") { S.pilih = null; render(); return; }
+  if (a === "ak-filter") { S.filter = t.dataset.v; render(); return; }
+  if (a === "ak-tab") { S.tab = t.dataset.v; S.pilih = null; render(); return; }
   if (a === "cek-firebase") {
     /* Dokumen uji ditulis ke koleksi diagnostik, yang hanya boleh ditulis master (aturan Firestore). */
     if (!S.master) return;
@@ -318,11 +393,7 @@ document.addEventListener("click", async (ev) => {
     try { S.diag = await window.__ISL.diagnosa(); } catch (er) { S.diag = [{ nama: "Pemeriksaan", ok: false, info: String((er && er.message) || er) }]; }
     S.diagJalan = false; render(); return;
   }
-  if (a && (a.startsWith("akun-"))) return aksiAkun(a, t.closest("tr"));
-  if (a === "target-simpan") {
-    try { await setDoc(doc(db, "sistem", "performa"), { targetDefault: angkaIn($("#ak-target").value) || 0, diperbarui: serverTimestamp() }, { merge: true }); toast("Target bulanan bawaan tersimpan."); } catch (er) { toast(`<b>Gagal.</b> ${e(er.code || er.message)}`, "bahaya"); }
-    return muatAkun();
-  }
+  if (a && (a.startsWith("akun-"))) return aksiAkun(a, t.closest("[data-uid]"));
   if (a === "modal-pisah") {
     if (!(await konfirmasi("Pisahkan modal?", "Modal dipindah ke koleksi khusus master. Quotation, rate, dan tarif tidak berubah isinya. Jangan menutup halaman sampai selesai.", "Pisahkan"))) return;
     S.sibuk = true; render(); const prog = (t2) => { const el = $("#st-modal-prog"); if (el) el.textContent = t2; };
