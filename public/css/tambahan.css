@@ -2503,3 +2503,21 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
   .cu-dok .cu-dok__folder, .cu-dok.is-buka .cu-dok__folder { display: grid; gap: 8px; } .cu-dok .cu-dok__isi, .cu-dok:not(.is-buka) .cu-dok__isi { display: block; } .cu-dok:not(.is-buka) .cu-fold--semua { display: flex; }
   .cu-fold { padding: 11px 14px; } .cu-fold__panah, .cu-dok__kembali { display: none; }
 }
+
+/* ---------- Pengaturan > akun divisi per kelompok (akun-divisi.js) ---------- */
+.ad-kepala { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; } .ad-kepala h4 { margin: 0 0 4px; font-size: 16px; }
+.ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-top: 12px; }
+.ad-kartu { border: 1px solid var(--mr-border); border-radius: 14px; padding: 12px 14px; background: var(--mr-surface); }
+.ad-kh { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; } .ad-kh b { display: block; font-size: 16px; } .ad-kh small, .ad-t small { display: block; color: var(--mr-muted); font-size: 12.5px; }
+.ad-baris { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--mr-border); } .ad-t { flex: 1; min-width: 0; overflow-wrap: anywhere; } .ad-t b { display: block; font-size: 14.5px; }
+.ad-av { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; flex: none; }
+.ad-bd { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(127, 145, 170, .18); color: var(--mr-ink); white-space: nowrap; } .ad-bd--k { background: rgba(247, 148, 29, .2); color: var(--mr-ink); }
+.ad-seg { display: flex; padding: 3px; border-radius: 12px; background: rgba(127, 145, 170, .18); } .ad-seg button { flex: 1; padding: 9px 6px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14px; color: var(--mr-muted); cursor: pointer; } .ad-seg button.is-on { background: var(--mr-surface); color: var(--mr-ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+.ad-sandi { display: flex; gap: 6px; } .ad-sandi input { flex: 1; min-width: 0; }
+.ad-bag { padding: 14px 0; border-top: 1px solid var(--mr-border); display: grid; gap: 10px; } .ad-bag:first-child { border-top: 0; padding-top: 0; } .ad-bag h4 { margin: 0; font-size: 14px; } .ad-bag .mr-btn { justify-self: start; } .ad-aksi { display: flex; gap: 8px; flex-wrap: wrap; }
+.ad-bag select, .ad-bag input, #ad-buat input, #ad-buat select { width: 100%; height: 42px; border: 1px solid var(--mr-border); border-radius: 10px; background: var(--mr-surface); color: var(--mr-ink); padding: 0 10px; font: inherit; }
+.ad-id { display: flex; align-items: center; gap: 12px; } .ad-info { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; } .ad-info > div { background: rgba(127, 145, 170, .14); border-radius: 12px; padding: 10px 6px; text-align: center; } .ad-info b { display: block; font-size: 14px; } .ad-info small { color: var(--mr-muted); font-size: 11.5px; }
+.ad-tab { display: flex; border-bottom: 1px solid var(--mr-border); margin-bottom: 8px; overflow-x: auto; } .ad-tab button { padding: 10px 14px; border: 0; background: none; font: inherit; color: var(--mr-muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; } .ad-tab button.is-on { color: var(--mr-ink); font-weight: 600; border-bottom-color: var(--accent, #f7941d); }
+.ad-bag[data-tab] { border-top: 0; padding: 6px 0; } .ad-cek { display: block; margin-top: 4px; font-size: 12px; color: var(--mr-muted); } .ad-cek--ok { color: var(--mr-ok, #1f8a5b); font-weight: 600; } .ad-cek--x { color: var(--mr-bahaya, #c0392b); }
+.ad-catatan { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--mr-warn-bg, #fbefd0); color: var(--mr-warn, #6b4a0a); font-size: 12.5px; line-height: 1.45; } .ad-ev { padding: 9px 0; border-top: 1px solid var(--mr-border); font-size: 13.5px; } .ad-ev:first-child { border-top: 0; } .ad-ev small { display: block; color: var(--mr-muted); font-size: 12px; }
+.ad-bag[hidden], #ad-kaki[hidden] { display: none !important; }

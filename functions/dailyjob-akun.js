@@ -23,7 +23,7 @@ async function pastikanKepala(c, kelompokId) {
   const k = await db().doc(`dj_kelompok/${kelompokId}`).get();
   if (!k.exists || !(k.get("kepala") || []).includes(c.uid)) throw new HttpsError("permission-denied", "Hanya kepala divisi kelompok ini yang boleh mengurus anggotanya.");
 }
-const catat = (c, uid, email, aksi) => db().collection("pengguna_log").add({ uid, email, aksi, dari: null, ke: null, oleh: c.nama, waktu: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+const catat = (c, uid, email, aksi, dari = null, ke = null) => db().collection("pengguna_log").add({ uid, email, aksi, dari, ke, oleh: c.nama, waktu: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
 
 /** Kunci login (alias) yang dipesan satu akun: username wajib, telepon dan email opsional. */
 const daftarAlias = (username, telepon, emailKontak) => [`u_${username}`, ...(telepon ? [`p_${telepon}`] : []), ...(emailKontak ? [`e_${emailKontak.toLowerCase()}`] : [])];
@@ -42,6 +42,7 @@ exports.djBuatAnggota = onCall(OPSI, async (req) => {
   const username = U.normalUsername(d.username), telepon = d.telepon ? U.normalTelepon(d.telepon) : "", emailKontak = String(d.emailKontak || "").trim().toLowerCase(), sandi = d.sandi;
   if (!kelompokId || !(await db().doc(`dj_kelompok/${kelompokId}`).get()).exists) throw new HttpsError("not-found", "Kelompok tidak ada.");
   await pastikanKepala(c, kelompokId);
+  const jadiKepala = d.jabatan === "kepala"; if (jadiKepala && !c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin yang menetapkan kepala divisi.");
   if (!nama) throw new HttpsError("invalid-argument", "Isi nama lengkap.");
   if (!U.usernameValid(username)) throw new HttpsError("invalid-argument", "Username 3 sampai 30 karakter: huruf kecil, angka, titik, garis bawah, atau strip.");
   if (d.telepon && !telepon) throw new HttpsError("invalid-argument", "Nomor telepon tidak valid.");
@@ -53,6 +54,7 @@ exports.djBuatAnggota = onCall(OPSI, async (req) => {
   try { uid = (await admin.auth().createUser({ email, password: sandi, displayName: nama })).uid; }
   catch (err) { await lepasAlias(alias); throw new HttpsError("internal", "Akun belum bisa dibuat: " + (err.message || err)); }
     await db().doc(`pengguna/${uid}`).set({ email, nama, peran: "dj", status: "aktif", kelompokDJ: kelompokId, username, telepon: telepon || null, emailKontak: emailKontak || null, alias, dibuat: admin.firestore.FieldValue.serverTimestamp(), disetujuiPada: admin.firestore.FieldValue.serverTimestamp(), dibuatOleh: c.uid, dibuatOlehNama: c.nama });
+  if (jadiKepala) await db().doc(`dj_kelompok/${kelompokId}`).update({ kepala: [uid] }); // satu kepala per kelompok: yang lama kembali jadi anggota
   await catat(c, uid, email, "dj-tambah");
   return { uid, username, email };
 });
@@ -78,12 +80,41 @@ exports.djAturAnggota = onCall(OPSI, async (req) => {
     await admin.auth().deleteUser(uid).catch((err) => { if (err.code !== "auth/user-not-found") throw err; });
     await lepasAlias(s.get("alias") || []); await ref.delete();
     const tk = await db().collection("dj_token").where("uid", "==", uid).get(); await Promise.all(tk.docs.map((x) => x.ref.delete())); await catat(c, uid, email, "dj-hapus");
+  } else if (aksi === "kepala" || aksi === "anggota" || aksi === "kelompok") {
+    if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin yang mengatur jabatan dan kelompok.");
+    const lamaId = s.get("kelompokDJ"), baruId = aksi === "kelompok" ? String(d.kelompokId || "") : lamaId;
+    if (aksi === "kelompok") {
+      if (baruId === lamaId) return { ok: true };
+      if (!baruId || !(await db().doc(`dj_kelompok/${baruId}`).get()).exists) throw new HttpsError("not-found", "Kelompok tujuan tidak ada.");
+      const kl = await db().doc(`dj_kelompok/${lamaId}`).get(); // pindah kelompok: jabatan kepala di kelompok lama dilepas
+      if (kl.exists && (kl.get("kepala") || []).includes(uid)) await kl.ref.update({ kepala: (kl.get("kepala") || []).filter((x) => x !== uid) });
+      await ref.update({ kelompokDJ: baruId });
+    } else {
+      const kl = db().doc(`dj_kelompok/${lamaId}`), ks = await kl.get(); if (!ks.exists) throw new HttpsError("not-found", "Kelompok tidak ada.");
+      await kl.update({ kepala: aksi === "kepala" ? [uid] : (ks.get("kepala") || []).filter((x) => x !== uid) });
+    }
+    await admin.auth().revokeRefreshTokens(uid); await catat(c, uid, email, "dj-" + aksi);
   } else if (aksi === "ubah") {
     const nama = String(d.nama || s.get("nama") || "").trim().slice(0, 80), telepon = d.telepon ? U.normalTelepon(d.telepon) : "", emailKontak = String(d.emailKontak || "").trim().toLowerCase();
+    const usernameLama = s.get("username"), username = d.username ? U.normalUsername(d.username) : usernameLama, gantiUser = username !== usernameLama;
     if (d.telepon && !telepon) throw new HttpsError("invalid-argument", "Nomor telepon tidak valid."); if (emailKontak && !U.emailValid(emailKontak)) throw new HttpsError("invalid-argument", "Format email tidak valid.");
-    const lama = s.get("alias") || [], baru = daftarAlias(s.get("username"), telepon, emailKontak);
-    await pesanAlias(baru, email, lama); await lepasAlias(lama.filter((k) => !baru.includes(k)));
-    await ref.update({ nama, telepon: telepon || null, emailKontak: emailKontak || null, alias: baru }); await admin.auth().updateUser(uid, { displayName: nama }); await catat(c, uid, email, "dj-ubah");
+    if (gantiUser && !U.usernameValid(username)) throw new HttpsError("invalid-argument", "Username 3 sampai 30 karakter: huruf kecil, angka, titik, garis bawah, atau strip.");
+    const emailBaru = gantiUser ? U.emailSintetis(username) : email, lama = s.get("alias") || [], baru = daftarAlias(username, telepon, emailKontak);
+    await pesanAlias(baru, emailBaru, lama);
+    if (gantiUser) { // email login internal ikut berubah; gagal = alias dikembalikan
+      try { await admin.auth().updateUser(uid, { email: emailBaru }); }
+      catch (err) { await pesanAlias(lama, email, baru).catch(() => {}); await lepasAlias(baru.filter((k) => !lama.includes(k))); throw new HttpsError("internal", "Username belum bisa diubah: " + (err.message || err)); }
+    }
+    await lepasAlias(lama.filter((k) => !baru.includes(k)));
+    const dari = {}, ke = {}, ubah = (k, a, b2) => { if (String(a || "") !== String(b2 || "")) { dari[k] = a || null; ke[k] = b2 || null; } };
+    ubah("username", usernameLama, username); ubah("nama", s.get("nama"), nama); ubah("telepon", s.get("telepon"), telepon); ubah("emailKontak", s.get("emailKontak"), emailKontak);
+    await ref.update({ nama, username, email: emailBaru, telepon: telepon || null, emailKontak: emailKontak || null, alias: baru }); await admin.auth().updateUser(uid, { displayName: nama });
+    if (gantiUser) await admin.auth().revokeRefreshTokens(uid); // username berubah: sesi lama berakhir, masuk lagi dengan data baru
+    await catat(c, uid, emailBaru, "dj-ubah", dari, ke);
+  } else if (aksi === "keluar") {
+    await admin.auth().revokeRefreshTokens(uid); await catat(c, uid, email, "dj-keluar");
+  } else if (aksi === "info") {
+    const u = await admin.auth().getUser(uid); return { terakhirMasuk: u.metadata.lastSignInTime || null, dibuat: u.metadata.creationTime || null };
   } else throw new HttpsError("invalid-argument", "Aksi tidak dikenal.");
   return { ok: true };
 });
