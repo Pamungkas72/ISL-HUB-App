@@ -37,5 +37,22 @@ exports.hapusAkun = onCall({ region: "asia-southeast2" }, async (req) => {
   await admin.firestore().collection("pengguna_log").add({ uid, email, aksi: "hapus", dari: { peran: profil.get("peran") ?? null, status: profil.get("status") ?? null }, ke: null, oleh: a.token.email, waktu: admin.firestore.FieldValue.serverTimestamp() });
   return { ok: true };
 });
+// Master mengubah nama, email login, dan WhatsApp akun lain (email login hanya bisa diganti dari server).
+exports.ubahAkun = onCall({ region: "asia-southeast2" }, async (req) => {
+  const a = req.auth;
+  if (!a || String(a.token.email || "").toLowerCase() !== EMAIL_MASTER || Date.now() / 1000 - a.token.auth_time > BATAS_SESI_DETIK)
+    throw new HttpsError("permission-denied", "Hanya master.");
+  const d = req.data || {}, uid = String(d.uid || ""), nama = String(d.nama || "").trim().slice(0, 80), email = String(d.email || "").trim().toLowerCase(), telepon = String(d.telepon || "").trim().slice(0, 20);
+  if (!uid || !nama || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError("invalid-argument", "Nama dan email wajib valid.");
+  const ref = admin.firestore().doc(`pengguna/${uid}`), profil = await ref.get();
+  if (!profil.exists) throw new HttpsError("not-found", "Akun tidak ada di daftar aplikasi.");
+  const lama = String(profil.get("email") || "").toLowerCase();
+  if (lama === EMAIL_MASTER) throw new HttpsError("permission-denied", "Akun master tidak diubah dari sini.");
+  if (email !== lama) { await admin.auth().updateUser(uid, { email }); await admin.auth().revokeRefreshTokens(uid); }
+  await ref.update({ nama, email, telepon: telepon || admin.firestore.FieldValue.delete() });
+  if (profil.get("peran") === "sales") await admin.firestore().doc(`sales_publik/${uid}`).set({ nama }, { merge: true });
+  await admin.firestore().collection("pengguna_log").add({ uid, email, aksi: "ubah", dari: { nama: profil.get("nama") ?? null, email: lama }, ke: { nama, email }, oleh: a.token.email, waktu: admin.firestore.FieldValue.serverTimestamp() });
+  return { ok: true };
+});
 exports.notifDailyJob = require("./dailyjob").notifDailyJob;
 Object.assign(exports, require("./dailyjob-akun"));
