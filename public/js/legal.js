@@ -14,7 +14,7 @@ export const JENIS_DOK = [["Akta Pendirian", "Akta"], ["SK Kemenkumham", "SK"], 
 import { BATAS_HARI, statusKontrak as hitungStatus } from "./legal-hitung.js";
 export { BATAS_HARI };
 export const JENIS = { customer: "Kontrak Customer", vendor: "Kontrak Vendor", mou: "MOU", addendum: "Addendum", perusahaan: "Dokumen Perusahaan" };
-const S = { u: null, profil: null, staf: false, tab: "", kontrak: [], mom: [], pers: [], muat: true, galat: "", fJenis: "", cari: "", edit: null, ver: 0 };
+const S = { u: null, profil: null, staf: false, tab: "", kontrak: [], mom: [], pers: [], muat: true, galat: "", fJenis: "", cari: "", edit: null, ver: 0, pilih: new Set(), modePilih: false, terbuka: "", sisi: "", urut: "", ids: [] };
 const hp = () => window.matchMedia("(max-width: 760px)").matches;
 const hariIni = () => window.__ISL.hariIni();
 const uid = () => "lg" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -49,8 +49,24 @@ const WARNA_PT = ["#0A3D66", "#9A4F00", "#1F7A55", "#6B3FC0", "#0B6E70"]; // kon
 function baris(ikn, judul, sub, kanan, data) {
   return `<button type="button" class="lg-baris" ${data}><i class="lg-ikon">${ikon(ikn, 18)}</i><span class="lg-baris__t"><b>${e(judul)}</b><small>${e(sub)}</small></span><span class="lg-baris__k">${kanan}</span></button>`;
 }
-const barisKontrak = (k) => baris("file", k.pihak || "Tanpa nama", [JENIS[k.jenis] || "Dokumen", k.nomor, k.lini].filter(Boolean).join(" · "), `<span class="lg-tgl">${k.berakhir && !k.draf ? "s/d " + fmtTgl(k.berakhir) : ""}</span>${lencana(k)}`, `data-lg-kontrak="${e(k.id)}"`);
-const barisMom = (m) => baris("edit", m.judul || "MOM tanpa judul", [fmtTgl(m.tanggal), m.nomor || "Draf", S.staf ? m.pemilikNama : "", m.customerNama].filter(Boolean).join(" · "), `<span class="lg-badge lg-badge--${m.status === "final" ? "ok" : "gr"}">${m.status === "final" ? "Final" : "Draf"}</span>`, `data-lg-mom="${e(m.id)}"`);
+const pilihAktif = () => S.modePilih || S.pilih.size > 0;
+/** Satu baris daftar: geser kanan = aksi, geser kiri = Hapus, tekan lama = pilih banyak (sama dengan Daily Job). */
+function rw(kunci, id, ikn, judul, sub, kanan, aksi, bisaHapus) {
+  const ada = pilihAktif(), akt = ada ? [] : aksi, wa = akt.length * 62, wh = ada || !bisaHapus ? 0 : 80, buka = S.terbuka === id ? ` is-geser-${S.sisi}` : "";
+  const btn = ([a, i, t, w]) => `<button type="button" class="dj-sw__${w}" data-lg-a="${a}" data-id="${e(id)}">${ikon(i, 18)}<span>${t}</span></button>`;
+  return `<div class="dj-rw${S.terbuka === id ? " is-buka" : ""}" data-wa="${wa}" data-wh="${wh}" style="--dj-wa:${wa}px">${ada ? "" : `<div class="dj-sw dj-sw--kiri">${akt.map(btn).join("")}</div>${wh ? `<div class="dj-sw dj-sw--kanan">${btn(["hapus", "tong", "Hapus", "bahaya"])}</div>` : ""}`}
+    <div class="dj-job2${S.pilih.has(id) ? " is-pilih" : ""}${buka}" data-lg-${kunci}="${e(id)}" data-id="${e(id)}" tabindex="0" role="button">${ada ? `<input type="checkbox" class="lg-cb" ${S.pilih.has(id) ? "checked" : ""} aria-label="Pilih">` : `<i class="dj-ik">${ikon(ikn, 18)}</i>`}<div class="dj-job__isi"><b>${e(judul)}</b><small>${e(sub)}</small></div><div class="dj-job__t">${kanan}</div></div></div>`;
+}
+const barisKontrak = (k) => rw("kontrak", k.id, k.jenis === "perusahaan" ? "tameng" : "file", k.pihak || "Tanpa nama", [JENIS[k.jenis] || "Dokumen", k.nomor, k.lini].filter(Boolean).join(" · "), `${k.berakhir && !k.draf ? `<b>s/d ${fmtTgl(k.berakhir)}</b>` : ""}${lencana(k)}`,
+  [["ubah", "edit", "Ubah", "sky"], ...(k.draf ? [] : [["perpanjang", "riwayat", "Perpanjang", "ok"]]), ...(k.file ? [["file", "file", "File", "info"]] : []), ["bagikan", "salin", "Bagikan", "info"]], S.staf);
+const barisMom = (m) => rw("mom", m.id, "edit", m.judul || "MOM tanpa judul", [m.nomor || "Draf", S.staf ? m.pemilikNama : "", m.customerNama].filter(Boolean).join(" · "), `<b>${fmtTgl(m.tanggal)}</b><span class="lg-badge lg-badge--${m.status === "final" ? "ok" : "gr"}">${m.status === "final" ? "Final" : "Draf"}</span>`,
+  [[m.status === "final" ? "buka" : "ubah", "edit", m.status === "final" ? "Buka" : "Ubah", "sky"], ["pdf", "download", "PDF", "ok"], ["bagikan", "salin", "Bagikan", "info"], ["salinmom", "papan-plus", "Salin", "info"]], S.staf || m.status !== "final");
+/** Bilah alat di atas daftar: urutkan dan Pilih; saat mode pilih berganti menjadi bilah aksi massal (pola Daily Job). */
+function alat(opsiUrut) {
+  const n = S.pilih.size, kont = S.tab === "kontrak", bs = (a, i, t, k = "") => `<button type="button" class="mr-btn dj-bp${k ? " " + k : ""}" data-lg-m="${a}" title="${t}" aria-label="${t}">${ikon(i, 16)}<span class="dj-bp__t"> ${t}</span></button>`;
+  if (pilihAktif()) return `<div class="dj-kepala dj-kepala--d dj-kepala--pilih lg-alat"><button type="button" class="mr-ikonbtn" data-lg-m="batal" title="Batal pilih" aria-label="Batal pilih">${ikon("tutup", 16)}</button><b class="dj-bp__n">${n} dipilih</b><button type="button" class="mr-link" data-lg-m="semua">${n && n === S.ids.length ? "Batal semua" : "Pilih semua"}</button><span class="mr-ruang"></span>${n ? `${kont ? bs("status", "cek", "Ubah status") : bs("pdf", "download", "PDF gabungan")}${bs("hapus", "tong", "Hapus", "dj-bp--hapus")}` : ""}</div>`;
+  return `<div class="lg-alat"><label class="lg-urut">Urutkan <select data-lg-urut aria-label="Urutkan">${opsiUrut.map(([v, l]) => `<option value="${v}"${(S.urut || opsiUrut[0][0]) === v ? " selected" : ""}>${l}</option>`).join("")}</select></label><button type="button" class="mr-link" data-lg-m="pilih">Pilih</button></div>`;
+}
 const kosong = (t) => `<div class="lg-kosong"><p>${e(t)}</p></div>`;
 const docsPt = (p) => S.kontrak.filter((k) => k.jenis === "perusahaan" && k.perusahaanId === p.id);
 const inisial = (n) => String(n || "?").replace(/^(PT|CV)\.?\s+/i, "").split(/\s+/).map((w) => w[0] || "").join("").slice(0, 3).toUpperCase();
@@ -68,21 +84,21 @@ function tabPerusahaan() {
   const ps = S.pers.filter((p) => cocok([p.nama, ...docsPt(p).map((k) => [k.pihak, k.nomor, k.jenisDok].join(" "))].join(" ")));
   return `<div class="lg-grid">${ps.map(kartuPt).join("")}${S.cari ? "" : `<button type="button" class="lg-pt lg-pt--baru" data-lg="pt-baru">${ikon("plus", 16)} Tambah perusahaan</button>`}</div>${!ps.length && S.cari ? kosong("Tidak ada perusahaan atau dokumen yang cocok.") : ""}`;
 }
+const chipL = (v, on, label, n, warn) => `<button type="button" class="cu-chip${on ? " is-on" : ""}${warn && n ? " is-warn" : ""}" data-lg-fj="${v}">${label}${n != null ? ` <em>${n}</em>` : ""}</button>`; // sama dengan chip cepat halaman Customer
 function tabKontrak() {
-  const nonPt = S.kontrak.filter((k) => k.jenis !== "perusahaan"), ab = akanBerakhir().filter((k) => k.jenis !== "perusahaan"), ber = sudahBerakhir().filter((k) => k.jenis !== "perusahaan");
-  const f = { "": () => true, customer: (k) => k.jenis === "customer", vendor: (k) => k.jenis === "vendor", lain: (k) => ["mou", "addendum"].includes(k.jenis), draf: (k) => k.draf, segera: (k) => ["segera", "mendesak"].includes(statusKontrak(k).kode) }[S.fJenis] || (() => true);
-  const tampil = nonPt.filter((k) => f(k) && cocok([k.pihak, k.nomor, k.lini].join(" "))).sort(urut);
-  const chips = [["", "Semua"], ["customer", "Customer"], ["vendor", "Vendor"], ["lain", "MOU dan lainnya"], ["draf", "Draf"], ["segera", "Segera habis"]];
-  return `<div class="mr-chips lg-chips">${chips.map(([v, l]) => `<button type="button" class="mr-chip${S.fJenis === v ? " is-aktif" : ""}" data-lg-fj="${v}">${l}${v === "draf" ? ` <span>${nonPt.filter((k) => k.draf).length}</span>` : v === "segera" ? ` <span>${ab.length}</span>` : ""}</button>`).join("")}</div>
-    ${ab.length || ber.length ? `<button type="button" class="lg-alert" data-lg-fj="segera"><b>${ikon("peringatan", 16)} ${ab.length} kontrak habis dalam ${BATAS_HARI.segera} hari${ber.length ? " · " + ber.length + " sudah berakhir" : ""}</b><span>Lihat</span></button>` : ""}
-    <div class="mr-kartu lg-daftar">${tampil.map(barisKontrak).join("") || kosong("Belum ada kontrak. Ketuk tombol + untuk mengunggah kontrak yang sedang berjalan atau menyimpan draf.")}</div>`;
+  const nonPt = S.kontrak.filter((k) => k.jenis !== "perusahaan"), kode = (k) => statusKontrak(k).kode, n = (fn) => nonPt.filter(fn).length;
+  const F = { "": () => true, customer: (k) => k.jenis === "customer", vendor: (k) => k.jenis === "vendor", lain: (k) => ["mou", "addendum"].includes(k.jenis), draf: (k) => k.draf, segera: (k) => ["segera", "mendesak"].includes(kode(k)), berakhir: (k) => kode(k) === "berakhir" }, f = F[S.fJenis] || (() => true);
+  const u = S.urut || "jatuh", tampil = nonPt.filter((k) => f(k) && cocok([k.pihak, k.nomor, k.lini].join(" "))).sort(u === "nama" ? (x, y) => String(x.pihak).localeCompare(String(y.pihak), "id") : u === "baru" ? (x, y) => ms(y.dibuat) - ms(x.dibuat) : urut), c = (v, l, fn, warn) => chipL(v, S.fJenis === v, l, v === "" ? null : n(fn), warn);
+  return `<div class="cu-chips">${chipL("", !S.fJenis, "Semua", null)}${c("customer", "Customer", F.customer)}${c("vendor", "Vendor", F.vendor)}${c("lain", "MOU", F.lain)}${c("segera", ikon("peringatan", 14) + " Segera habis", F.segera, true)}${c("draf", "Draf", F.draf)}${c("berakhir", "Berakhir", F.berakhir)}</div>
+    ${(S.ids = tampil.map((k) => k.id), "")}${alat([["jatuh", "Jatuh tempo terdekat"], ["nama", "Nama A–Z"], ["baru", "Terbaru ditambahkan"]])}
+    <div class="dj-lst lg-daftar">${tampil.map(barisKontrak).join("") || kosong("Belum ada kontrak. Ketuk tombol + untuk mengunggah kontrak yang sedang berjalan atau menyimpan draf.")}</div>`;
 }
 function tabMom() {
   const f = { "": () => true, draf: (m) => m.status !== "final", final: (m) => m.status === "final" }[S.fJenis] || (() => true);
-  const tampil = S.mom.filter((m) => f(m) && cocok([m.judul, m.nomor, m.customerNama, m.pemilikNama].join(" "))).sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
-  let bln = "", isi = "";
-  tampil.forEach((m) => { const b = m.tanggal ? new Date(m.tanggal + "T00:00:00Z").toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).toUpperCase() : "TANPA TANGGAL"; if (b !== bln) { bln = b; isi += `<div class="lg-bln">${e(b)}</div>`; } isi += barisMom(m); });
-  return `<div class="mr-chips lg-chips">${[["", "Semua"], ["draf", "Draf"], ["final", "Final"]].map(([v, l]) => `<button type="button" class="mr-chip${S.fJenis === v ? " is-aktif" : ""}" data-lg-fj="${v}">${l}${v === "draf" ? ` <span>${S.mom.filter((m) => m.status !== "final").length}</span>` : ""}</button>`).join("")}</div><div class="mr-kartu lg-daftar">${isi || kosong("Belum ada MOM. Ketuk tombol + untuk mencatat rapat pertama.")}</div>`;
+  const tampil = S.mom.filter((m) => f(m) && cocok([m.judul, m.nomor, m.customerNama, m.pemilikNama].join(" "))).sort(S.urut === "nama" ? (a, b) => String(a.judul).localeCompare(String(b.judul), "id") : S.urut === "nomor" ? (a, b) => String(b.nomor).localeCompare(String(a.nomor)) : (a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
+  let bln = "", isi = ""; const perBulan = !S.urut || S.urut === "tanggal"; S.ids = tampil.map((m) => m.id);
+  tampil.forEach((m) => { const b = m.tanggal ? new Date(m.tanggal + "T00:00:00Z").toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "UTC" }).toUpperCase() : "TANPA TANGGAL"; if (perBulan && b !== bln) { bln = b; isi += `<div class="lg-bln">${e(b)}</div>`; } isi += barisMom(m); });
+  return `<div class="cu-chips">${[["", "Semua"], ["draf", "Draf"], ["final", "Final"]].map(([v, l]) => chipL(v, S.fJenis === v, l, v === "draf" ? S.mom.filter((m) => m.status !== "final").length : v === "final" ? S.mom.filter((m) => m.status === "final").length : null)).join("")}</div>${alat([["tanggal", "Tanggal terbaru"], ["nama", "Judul A–Z"], ["nomor", "Nomor"]])}<div class="dj-lst lg-daftar">${isi || kosong("Belum ada MOM. Ketuk tombol + untuk mencatat rapat pertama.")}</div>`;
 }
 const FAB = { perusahaan: ["tameng-plus", "Tambah perusahaan atau dokumen"], kontrak: ["berkas-plus", "Tambah kontrak"], mom: ["papan-plus", "Buat MOM"] };
 function gambar() {
@@ -94,7 +110,7 @@ function gambar() {
     ${S.galat ? `<div class="mr-banner mr-banner--bahaya">${e(S.galat)}</div>` : ""}
     ${tab.length > 1 ? `<div class="lg-tabs" role="tablist">${tab.map(([k, l]) => { const n = k === "perusahaan" ? S.pers.length : k === "kontrak" ? S.kontrak.filter((x) => x.jenis !== "perusahaan").length : S.mom.length; return `<button type="button" role="tab" class="${S.tab === k ? "is-aktif" : ""}" data-lg-tab="${k}">${l}${n ? `<em>${n}</em>` : ""}</button>`; }).join("")}</div>` : ""}
     ${S.muat ? `<p class="mr-sub">Memuat…</p>` : S.tab === "perusahaan" ? tabPerusahaan() : S.tab === "kontrak" ? tabKontrak() : tabMom()}
-    <button type="button" class="mr-fab fab-d fab--legal" data-lg="fab" aria-label="${lab}" title="${lab}">${ikon(ik, 24)}<span class="fab-teks">${lab}</span></button></div>`;
+    ${pilihAktif() ? "" : `<button type="button" class="mr-fab fab-d fab--legal" data-lg="fab" aria-label="${lab}" title="${lab}">${ikon(ik, 24)}<span class="fab-teks">${lab}</span></button>`}</div>`;
 }
 
 /* ---------- kontrak: form, detail, perpanjang ---------- */
@@ -205,18 +221,96 @@ function aksiFab() {
 }
 
 /* ---------- aksi ---------- */
+/* ---------- aksi baris, pilih banyak, geser (HP) ---------- */
+const cari_ = (id) => (S.tab === "kontrak" ? S.kontrak : S.mom).find((x) => x.id === id);
+async function bagikanTeks(judul, teks, url) {
+  try { if (navigator.share) return await navigator.share({ title: judul, text: teks, ...(url ? { url } : {}) }); await navigator.clipboard.writeText(teks + (url ? "\n" + url : "")); toast("Ringkasan disalin."); } catch (er) { if (er && er.name !== "AbortError") toast("Gagal membagikan: " + e(er.message || er), "bahaya"); }
+}
+const tutupGeser = () => { S.terbuka = ""; document.querySelectorAll("#lg-root .dj-job2.is-geser-aksi, #lg-root .dj-job2.is-geser-hapus").forEach((el) => { el.classList.remove("is-geser-aksi", "is-geser-hapus"); el.style.transform = ""; }); };
+const keluarPilih = () => { S.pilih.clear(); S.modePilih = false; };
+async function hapusItems(ids) {
+  const kont = S.tab === "kontrak", dok = ids.map(cari_).filter(Boolean), boleh = kont || S.staf ? dok : dok.filter((m) => m.status !== "final"), lewat = dok.length - boleh.length;
+  if (!boleh.length) return toast("MOM final hanya bisa dihapus master atau admin.", "bahaya");
+  const nama = boleh.length === 1 ? `<b>${e(boleh[0].pihak || boleh[0].judul || "item ini")}</b>` : `<b>${boleh.length} ${kont ? "kontrak" : "MOM"}</b>`;
+  if (!(await konfirmasi("Hapus?", `${nama} dihapus permanen.${lewat ? ` ${lewat} MOM final dilewati.` : ""}${kont ? " File di penyimpanan tidak ikut dihapus otomatis." : ""}`, "Hapus"))) return;
+  try { await Promise.all(boleh.map((x) => deleteDoc(doc(db, kont ? "lg_kontrak" : "lg_mom", x.id)))); keluarPilih(); tutupGeser(); toast(boleh.length + " dihapus."); await muat(); } catch (er) { toast("Gagal menghapus: " + e(er.message || er), "bahaya"); }
+}
+function ubahStatusMassal() {
+  const ids = [...S.pilih], p = bukaLayer(`<div class="mr-panel__kepala"><h2>Ubah status ${ids.length} kontrak</h2><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup", 18)}</button></div><div class="mr-panel__isi">${[["aktif", "cek", "Jadikan aktif", "Lepas status draf"], ["auto", "riwayat", "Aktifkan perpanjangan otomatis", "Tandai kontrak diperpanjang otomatis"], ["manual", "tutup", "Matikan perpanjangan otomatis", "Perpanjangan dilakukan manual"]].map(([v, i, t, k]) => `<button type="button" class="lg-baris" data-st="${v}"><i class="lg-ikon">${ikon(i, 18)}</i><span class="lg-baris__t"><b>${t}</b><small>${k}</small></span></button>`).join("")}</div>`, { lebar: "drawer" });
+  p.onclick = async (ev) => { const b = ev.target.closest("[data-st]"); if (!b) return; const d = { aktif: { draf: false }, auto: { autoRenew: true }, manual: { autoRenew: false } }[b.dataset.st]; try { await Promise.all(ids.map((id) => setDoc(doc(db, "lg_kontrak", id), { ...d, diubah: serverTimestamp() }, { merge: true }))); tutupLayer(); keluarPilih(); toast("Status diperbarui."); await muat(); } catch (er) { toast("Gagal: " + e(er.message || er), "bahaya"); } };
+}
+async function aksiBaris(a, id) {
+  const x = cari_(id); if (!x) return; tutupGeser();
+  if (S.tab === "kontrak") {
+    if (a === "ubah") return formKontrak(x);
+    if (a === "perpanjang") return formPerpanjang(x);
+    if (a === "file") return window.open(x.file.url, "_blank", "noopener");
+    if (a === "bagikan") return bagikanTeks(x.pihak || "Kontrak", `${x.pihak} · ${JENIS[x.jenis] || ""}${x.nomor ? " · " + x.nomor : ""}${x.berakhir ? " · berakhir " + fmtTgl(x.berakhir) : ""}`, x.file && x.file.url);
+    if (a === "hapus") return hapusItems([id]);
+  } else {
+    if (a === "ubah" || a === "buka") return bukaMom(x);
+    if (a === "pdf") return M.unduhMom(x);
+    if (a === "bagikan") return M.bagikanMom(x);
+    if (a === "salinmom") return M.bukaSalinan(x, { S, db, kembali: async (u) => { S.edit = null; if (u) await muat(); else gambar(); window.scrollTo(0, 0); }, segar: gambar });
+    if (a === "hapus") return hapusItems([id]);
+  }
+}
+async function aksiMassal(a) {
+  if (a === "pilih") { S.modePilih = true; return gambar(); }
+  if (a === "batal") { keluarPilih(); return gambar(); }
+  if (a === "semua") { const semua = S.ids.length && S.ids.every((i) => S.pilih.has(i)); S.pilih.clear(); if (!semua) S.ids.forEach((i) => S.pilih.add(i)); return gambar(); }
+  if (a === "hapus") return hapusItems([...S.pilih]);
+  if (a === "status") return ubahStatusMassal();
+  if (a === "pdf") {
+    const dok = [...S.pilih].map(cari_).filter((m) => m && m.status === "final"); if (!dok.length) return toast("Pilih MOM yang sudah final untuk digabung.", "bahaya");
+    toast("Membuat PDF gabungan…"); try { await M.pdfGabungan(dok.sort((x, y) => String(x.tanggal).localeCompare(String(y.tanggal)))); toast(dok.length + " MOM digabung."); } catch (er) { toast("PDF gagal dibuat. " + e(er.message || er), "bahaya"); }
+  }
+}
+let sw = null, blokKlik = 0;
+const lgAktif = () => window.__rute === "legal" && !S.edit;
+document.addEventListener("touchstart", (ev) => {
+  if (!lgAktif()) return;
+  const el = ev.target.closest("#lg-root .dj-job2");
+  if (S.terbuka && (!el || el.dataset.id !== S.terbuka) && !ev.target.closest(".dj-sw")) tutupGeser();
+  if (!el || ev.target.closest("input")) { sw = null; return; }
+  const t = ev.touches[0], id = el.dataset.id, rwEl = el.parentElement, wa = +rwEl.dataset.wa || 0, wh = +rwEl.dataset.wh || 0;
+  sw = { el, id, x: t.clientX, y: t.clientY, dx: 0, mode: "", wa, wh, dasar: S.terbuka === id ? (S.sisi === "aksi" ? wa : -wh) : 0 };
+  sw.lama = setTimeout(() => { if (sw && !sw.mode) { sw.mode = "tekan"; blokKlik = Date.now(); if (navigator.vibrate) navigator.vibrate(15); if (pilihAktif()) S.pilih.has(sw.id) ? S.pilih.delete(sw.id) : S.pilih.add(sw.id); else { S.modePilih = true; S.pilih.add(sw.id); } gambar(); } }, 480);
+}, { passive: true });
+document.addEventListener("touchmove", (ev) => {
+  if (!sw) return; const t = ev.touches[0], dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+  if (!sw.mode) { if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { clearTimeout(sw.lama); sw = null; return; } if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.3 && !pilihAktif()) { clearTimeout(sw.lama); sw.mode = "geser"; sw.el.style.transition = "none"; sw.el.parentElement.classList.add("is-buka"); } else return; }
+  if (sw.mode !== "geser") return; ev.preventDefault(); sw.dx = dx;
+  sw.el.style.transform = `translateX(${Math.max(-sw.wh, Math.min(sw.wa, sw.dasar + dx))}px)`;
+}, { passive: false });
+document.addEventListener("touchend", () => {
+  if (!sw) return; clearTimeout(sw.lama); const { el, id, dasar, dx, mode, wa, wh } = sw; sw = null; if (mode !== "geser") return;
+  blokKlik = Date.now(); el.style.transition = ""; const akhir = dasar + dx; el.style.transform = "";
+  if (wa && akhir > wa * 0.4) { tutupGeser(); S.terbuka = id; S.sisi = "aksi"; el.classList.add("is-geser-aksi"); el.parentElement.classList.add("is-buka"); }
+  else if (wh && akhir < -wh * 0.4) { tutupGeser(); S.terbuka = id; S.sisi = "hapus"; el.classList.add("is-geser-hapus"); el.parentElement.classList.add("is-buka"); }
+  else { if (S.terbuka === id) { S.terbuka = ""; el.classList.remove("is-geser-aksi", "is-geser-hapus"); } setTimeout(() => el.parentElement && !el.parentElement.querySelector(".is-geser-aksi, .is-geser-hapus") && el.parentElement.classList.remove("is-buka"), 260); }
+});
+document.addEventListener("contextmenu", (ev) => { if (lgAktif() && ev.target.closest("#lg-root .dj-job2")) ev.preventDefault(); });
+
 function pasang(r) {
   r.addEventListener("click", (ev) => {
-    if (S.edit) return;
+    if (S.edit || Date.now() - blokKlik < 400) return;
+    const sa = ev.target.closest("[data-lg-a]"); if (sa) return aksiBaris(sa.dataset.lgA, sa.dataset.id);
+    const m = ev.target.closest("[data-lg-m]"); if (m) return aksiMassal(m.dataset.lgM);
+    if (S.terbuka && !ev.target.closest(".dj-sw")) { tutupGeser(); return; } // ketuk di luar baris yang terbuka: tutup saja
     const t = ev.target.closest("[data-lg-tab],[data-lg-kontrak],[data-lg-mom],[data-lg],[data-lg-fj],[data-lg-pt]"); if (!t) return;
-    if (t.dataset.lgTab) { S.tab = t.dataset.lgTab; S.fJenis = ""; gambar(); }
+    if (t.dataset.lgTab) { S.tab = t.dataset.lgTab; S.fJenis = ""; S.urut = ""; keluarPilih(); gambar(); }
     else if (t.dataset.lgPt) { const pt = S.pers.find((x) => x.id === t.dataset.lgPt); if (pt) detailPt(pt); }
     else if (t.dataset.lgFj !== undefined) { S.fJenis = t.dataset.lgFj; gambar(); }
-    else if (t.dataset.lgKontrak) { const k = S.kontrak.find((x) => x.id === t.dataset.lgKontrak); if (k) detailKontrak(k); }
-    else if (t.dataset.lgMom) { const m = S.mom.find((x) => x.id === t.dataset.lgMom); if (m) bukaMom(m); }
+    else if (t.dataset.lgKontrak || t.dataset.lgMom) {
+      const id = t.dataset.lgKontrak || t.dataset.lgMom;
+      if (pilihAktif()) { S.pilih.has(id) ? S.pilih.delete(id) : S.pilih.add(id); if (!S.pilih.size && hp()) S.modePilih = false; return gambar(); }
+      const x = t.dataset.lgKontrak ? S.kontrak.find((k) => k.id === id) : S.mom.find((k) => k.id === id); if (x) t.dataset.lgKontrak ? detailKontrak(x) : bukaMom(x);
+    }
     else if (t.dataset.lg === "fab") aksiFab();
     else if (t.dataset.lg === "pt-baru") formPt({});
   });
+  r.addEventListener("change", (ev) => { if (ev.target.matches("[data-lg-urut]")) { S.urut = ev.target.value; gambar(); } });
   r.addEventListener("input", (ev) => { if (ev.target.matches("[data-lg-cari]")) { S.cari = ev.target.value; const p = ev.target.selectionStart; gambar(); const i = $("[data-lg-cari]", r); if (i) { i.focus(); i.setSelectionRange(p, p); } } });
 }
 function bukaMom(m) {
@@ -228,5 +322,5 @@ export function mulaiLegal(user, profil) {
   S.tab = S.staf ? "perusahaan" : "mom";
   const r = $("#lg-root"); if (!r) return;
   if (!terpasang) { terpasang = true; pasang(r); }
-  S.edit = null; muat();
+  S.edit = null; S.urut = ""; keluarPilih(); S.terbuka = ""; muat();
 }

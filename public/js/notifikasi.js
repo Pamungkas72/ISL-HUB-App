@@ -152,6 +152,20 @@ async function dariKontrak() {
   } catch (e) { console.warn("Kontrak Legal tidak termuat:", e && e.code); return []; }
 }
 
+/* Legal: tugas tindak lanjut MOM yang lewat tenggat atau jatuh tempo dalam 2 hari. Pemilik MOM melihat miliknya; master dan admin melihat semua. PIC ditulis bebas di MOM, jadi pengingat sampai ke pencatat MOM, bukan ke akun PIC. */
+async function dariTugasMom() {
+  const u = auth.currentUser; if (!u) return [];
+  const pr = window.__ISL_PROFIL || {}, kel = window.__ISL_KELOLA ?? adalahMaster(u.email); if (!kel && pr.peran !== "sales") return [];
+  try {
+    const snap = await getDocs(kel ? collection(db, "lg_mom") : query(collection(db, "lg_mom"), where("pemilikUid", "==", u.uid))), now = window.__ISL && window.__ISL.hariIni ? window.__ISL.hariIni() : hariIni();
+    return snap.docs.flatMap((d) => { const m = d.data(); return (m.tugas || []).map((t, i) => ({ t, i, m, id: d.id })); }).filter(({ t }) => t.tenggat && t.status !== "selesai").flatMap(({ t, i, m, id }) => {
+      const sisa = Math.round((Date.parse(t.tenggat + "T00:00:00Z") - Date.parse(now + "T00:00:00Z")) / 864e5); if (sisa > 2) return [];
+      return [{ id: `mt:${id}:${i}`, jenis: "halaman", grup: "legal", level: sisa < 0 ? "bahaya" : "warn", judul: sisa < 0 ? `Tugas MOM terlambat ${-sisa} hari: ${t.tugas || ""}` : `Tugas MOM jatuh tempo ${sisa === 0 ? "hari ini" : sisa + " hari lagi"}: ${t.tugas || ""}`,
+        ket: `${t.pic || "Tanpa PIC"} · tenggat ${t.tenggat} · ${m.judul || "MOM"}`, tujuan: { jenis: "halaman", hash: "#legal" } }];
+    });
+  } catch (e) { console.warn("Tugas MOM tidak termuat:", e && e.code); return []; }
+}
+
 export async function kumpulkan({ paksa = false } = {}) {
   const c = baca(K_CACHE, null);
   let semua = c && !paksa && Date.now() - c.t < UMUR_CACHE_MS ? c.items : null;
@@ -163,7 +177,7 @@ export async function kumpulkan({ paksa = false } = {}) {
   }
   const urut = { bahaya: 0, warn: 1, info: 2 }, t = ditutup();
   const items = semua.filter((i) => true).sort((a, b) => urut[a.level] - urut[b.level]);
-  return { semua: [...items, ...dariCadangan(), ...(await pendaftarMenunggu()), ...(await dariKontrak()), ...pwTerkumpul()], t };
+  return { semua: [...items, ...dariCadangan(), ...(await pendaftarMenunggu()), ...(await dariKontrak()), ...(await dariTugasMom()), ...pwTerkumpul()], t };
 }
 
 // ---------- tujuan: buka sumber masalahnya ----------
@@ -217,7 +231,7 @@ export const tersembunyi = () => terakhir.semua.filter(sembunyi);
 
 let terakhir = { semua: [], t: new Set() };
 // Kategori tampilan (halaman Pemberitahuan). Item boleh membawa `grup` sendiri.
-export const GRUP = [["tarif", "Master Rate · Tarif"], ["vendor", "Master Rate · Vendor"], ["lokasi", "Master Rate · Lokasi"], ["quotation", "Quotation"], ["legal", "Legal · Kontrak"], ["sistem", "Sistem"]];
+export const GRUP = [["tarif", "Master Rate · Tarif"], ["vendor", "Master Rate · Vendor"], ["lokasi", "Master Rate · Lokasi"], ["quotation", "Quotation"], ["legal", "Legal"], ["sistem", "Sistem"]];
 const GRUP_JENIS = { quotation: "quotation", riwayat: "quotation", tarif: "tarif", vendor: "vendor", lokasi: "lokasi" };
 export const grupDari = (i) => i.grup || GRUP_JENIS[i.jenis] || "sistem";
 export const semuaItem = () => terlihat();

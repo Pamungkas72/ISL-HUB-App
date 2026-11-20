@@ -74,8 +74,8 @@ async function renderPdf(m) {
 }
 const namaBerkas = (m) => `MOM_${(m.nomor || "Draf").replace(/\//g, "-")}_${(m.judul || "").replace(/[^\w]+/g, "_").slice(0, 30)}.pdf`;
 async function pdfBlob(m) { const r = await renderPdf(m); try { const pdf = await window.__islDok.pdf(r.pages); return { blob: pdf.output("blob"), n: r.n }; } finally { r.host.remove(); } }
-async function unduh(m) { toast("Membuat PDF…"); try { const { blob } = await pdfBlob(m), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = namaBerkas(m); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast("PDF diunduh."); } catch (err) { toast("PDF gagal dibuat. " + e(err.message || err), "bahaya"); } }
-async function bagikan(m) {
+export async function unduhMom(m) { toast("Membuat PDF…"); try { const { blob } = await pdfBlob(m), a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = namaBerkas(m); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast("PDF diunduh."); } catch (err) { toast("PDF gagal dibuat. " + e(err.message || err), "bahaya"); } }
+export async function bagikanMom(m) {
   try {
     const { blob } = await pdfBlob(m), f = new File([blob], namaBerkas(m), { type: "application/pdf" });
     if (navigator.canShare && navigator.canShare({ files: [f] })) return await navigator.share({ files: [f], title: m.judul || "MOM", text: `${m.judul || "MOM"} (${m.nomor || "Draf"})` });
@@ -183,8 +183,8 @@ export function pasangEditor(r) {
     if (a === "draf") return simpan(false);
     if (a === "final") { if (!(await konfirmasi("Finalkan MOM?", "Nomor MOM diterbitkan dan isinya terkunci. Perubahan berikutnya lewat revisi.", "Finalkan"))) return; return simpan(true); }
     if (a === "pratinjau") return pratinjau(E);
-    if (a === "unduh") return unduh(E);
-    if (a === "bagikan") return bagikan(E);
+    if (a === "unduh") return unduhMom(E);
+    if (a === "bagikan") return bagikanMom(E);
     if (a === "revisi") { const n = salinan(E); Object.assign(n, { status: "draf", versi: (E.versi || 1) + 1, revisiDari: E.id, id: uid(), ttd: "", final: "", _baru: true, _lihat: false, _kotor: true }); E = n; buka_.add("info"); return ulang(); }
     if (a === "salin") { E = dariSumber(E); return ulang(); }
     if (a === "salin-lama") return pilihLama();
@@ -215,4 +215,16 @@ export async function buka(m, ctx) {
   ["tercapai", "tidakTercapai", "isl", "lain", "topik", "tugas", "foto"].forEach((k) => { E[k] = E[k] || []; }); E.penyetuju = E.penyetuju || { nama: "", jabatan: "" };
   C.S.edit = true; ctx.segar(); window.scrollTo(0, 0);
   try { const s = await getDoc(doc(C.db, "lg_peserta", U().uid)); if (s.exists()) { saran = s.data().nama || []; const dl = $("#mm-saran"); if (dl) dl.innerHTML = saran.map((n) => `<option value="${e(n)}">`).join(""); } } catch (_) { /* saran nama tidak wajib */ }
+}
+
+/** MOM baru dari salinan MOM lama (info dan peserta ikut, isi rapat kosong). */
+export function bukaSalinan(src, ctx) { C = ctx; E = dariSumber(src); E._lihat = false; C.S.edit = true; ctx.segar(); window.scrollTo(0, 0); }
+/** Satu PDF berisi beberapa MOM (semua halaman digabung, nomor halaman per MOM). */
+export async function pdfGabungan(moms) {
+  const hosts = [], pages = [];
+  try {
+    for (const m of moms) { const r = await renderPdf(m); hosts.push(r.host); pages.push(...r.pages); }
+    const pdf = await window.__islDok.pdf(pages), a = document.createElement("a");
+    a.href = URL.createObjectURL(pdf.output("blob")); a.download = `MOM_gabungan_${moms.length}_dokumen.pdf`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  } finally { hosts.forEach((h) => h.remove()); }
 }

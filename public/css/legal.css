@@ -145,3 +145,15 @@ body.mr-kunci-scroll #lg-root .mr-fab { display: none; }
   .mm-acc__h span { max-width: 45%; }
   .mm-form .mr-form, .mm .mr-form { grid-template-columns: 1fr; }
 }
+
+/* ---------- daftar baris (pola Daily Job): urutkan, pilih banyak, geser ---------- */
+.lg-alat { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin: 0 0 8px; }
+.lg-alat.dj-kepala { justify-content: flex-start; flex-wrap: nowrap; }
+.lg-urut { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.lg-urut select { height: 34px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0 8px; font: inherit; font-size: 13px; }
+.lg-cb { width: 22px; height: 22px; margin: 8px; flex: none; accent-color: var(--head); cursor: pointer; }
+.dj-lst.lg-daftar { padding: 0; }
+.dj-lst .lg-bln { padding: 10px 14px 4px; background: var(--bg); }
+.dj-lst .lg-kosong { padding: 28px 12px; }
+.dj-job2 .dj-job__t .lg-badge { align-self: flex-end; }
+@media (min-width: 761px) { .dj-job2 { padding: 12px 16px; } .dj-job2:hover { background: var(--sky-soft); } }
