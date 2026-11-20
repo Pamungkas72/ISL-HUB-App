@@ -17,7 +17,7 @@ import { htmlFormTracking, chipPil, dataFormTracking } from "./daily-job-trackin
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 
-const S = { ajuanKat: [], u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAktif: "", sub: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
+const S = { lihatSaja: false, ajuanKat: [], u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAktif: "", sub: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 const namaKel = (id) => (S.kelompok.find((k) => k.id === id) || {}).nama || "–";
@@ -481,7 +481,7 @@ function render() {
   else if (S.detail && S.tab === "job") isi = htmlDetail(now);
   else isi = S.tab === "performa" ? htmlPemilihKel() + kepalaP + (profilAktif() === "tracking" ? htmlPerformaTracking(now) : htmlPengingat(now) + htmlPerforma(now)) : S.tab === "job" ? htmlPemilihKel() + kepalaD + htmlDaftar(now) : htmlKelompok();
   el.innerHTML = `${tabs.length > 1 ? `<div class="dj-tabs" role="tablist">${tabs.map(([k, t]) => `<button type="button" role="tab" class="${S.tab === k ? "is-aktif" : ""}" data-dj="tab" data-v="${k}">${t}</button>`).join("")}</div>`: ""}${isi}
-    ${perlu && !S.muat && !S.detail ? `<button type="button" class="mr-fab fab-d fab--job" data-dj="baru" aria-label="Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"} baru">${ikon("papan-plus", 24)}<span class="fab-teks">Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"}</span></button>` : ""}`;
+    ${perlu && !S.muat && !S.detail && !S.lihatSaja ? `<button type="button" class="mr-fab fab-d fab--job" data-dj="baru" aria-label="Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"} baru">${ikon("papan-plus", 24)}<span class="fab-teks">Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"}</span></button>` : ""}`;
   if (S.detail && S.tab === "job" && !S.muat) muatPratinjau();
   if (layarHp() && S.tab === "job" && !S.muat && !S.detail && !pilihAktif()) intipGeser();
 }
@@ -813,6 +813,7 @@ function intipGeser() {
   setTimeout(() => { el.parentElement.classList.add("is-buka"); el.classList.add("is-intip"); setTimeout(() => { el.classList.remove("is-intip"); tutupRw(el.parentElement); }, 900); }, 600);
 }
 document.addEventListener("contextmenu", (ev) => { if (window.__rute === "dailyjob" && ev.target.closest(".dj-job2")) ev.preventDefault(); });
+const UBAH_DJ = new Set(["baru", "simpan", "hapus", "a-selesai", "a-ubah", "a-hapus", "m-selesai", "m-pic", "m-hapus", "pic-simpan", "d-nilai", "d-target", "target-simpan", "d-unggah", "file-lepas", "tautan-lepas", "tautan-tambah", "impor", "impor-jalan", "masalah-hapus", "b-toggle", "b-cabut", "a-bagikan", "m-bagikan"]);
 const periksa = (ev) => window.__rute === "dailyjob" || ev.target.closest("#mr-layer");
 document.addEventListener("click", async (ev) => {
   if (!periksa(ev)) return;
@@ -820,6 +821,7 @@ document.addEventListener("click", async (ev) => {
   const t = ev.target.closest("[data-dj]"); if (!t) return;
   const a = t.dataset.dj, id = t.dataset.id, v = t.dataset.v;
   if (t.tagName === "SELECT" || t.tagName === "INPUT") return;
+  if (S.lihatSaja && UBAH_DJ.has(a)) return toast("Akses Daily Job akun ini lihat saja.", "bahaya"); // server juga menolak (firestore.rules)
   if (a === "tab") { S.tab = v; S.detail = null; render(); if (v === "kelompok") kepalaDi().forEach((k) => muatTim(k.id)); return; }
   if (a === "baru") return formJob(null);
   if (a === "menu") { S.menu = S.menu === id ? "" : id; return render(); }
@@ -946,7 +948,7 @@ document.addEventListener("input", (ev) => { if (window.__rute === "dailyjob" &&
 /* ---------- pintu masuk ---------- */
 export async function mulaiDailyJob(user, profil) {
   S.u = { uid: user.uid, email: user.email, nama: (profil && profil.nama) || user.displayName || "" };
-  S.kelola = !!window.__ISL_KELOLA; S.kelompokSaya = (profil && profil.kelompokDJ) || null;
+  S.kelola = !!window.__ISL_KELOLA; S.kelompokSaya = (profil && profil.kelompokDJ) || null; S.lihatSaja = !S.kelola && !!profil && !!profil.akses && profil.akses.dj === 1;
   $("#user-email").textContent = labelAkun(user.email, user.displayName); renderNav("dailyjob");
   const el = $("#dj-root"); if (el && !el.dataset.siap) el.dataset.siap = "1";
   if (window.__djBukaForm) { window.__djBukaForm = false; await muat(); if (S.kelola || S.kelompokSaya) formJob(null); return; }
