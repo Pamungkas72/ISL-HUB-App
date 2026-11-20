@@ -54,5 +54,15 @@ exports.ubahAkun = onCall({ region: "asia-southeast2" }, async (req) => {
   await admin.firestore().collection("pengguna_log").add({ uid, email, aksi: "ubah", dari: { nama: profil.get("nama") ?? null, email: lama }, ke: { nama, email }, oleh: a.token.email, waktu: admin.firestore.FieldValue.serverTimestamp() });
   return { ok: true };
 });
+// Waktu login terakhir tiap akun (hanya master dan admin aktif); data ada di Firebase Authentication, bukan di Firestore.
+exports.loginTerakhir = onCall({ region: "asia-southeast2" }, async (req) => {
+  const a = req.auth; if (!a) throw new HttpsError("unauthenticated", "Masuk dulu.");
+  let ok = String(a.token.email || "").toLowerCase() === EMAIL_MASTER;
+  if (!ok) { const p = await admin.firestore().doc(`pengguna/${a.uid}`).get(); ok = p.get("peran") === "admin" && p.get("status") === "aktif"; }
+  if (!ok) throw new HttpsError("permission-denied", "Hanya master dan admin.");
+  const masuk = {};
+  for (let r = await admin.auth().listUsers(1000); ; r = await admin.auth().listUsers(1000, r.pageToken)) { r.users.forEach((u) => { if (u.metadata.lastSignInTime) masuk[u.uid] = new Date(u.metadata.lastSignInTime).toISOString(); }); if (!r.pageToken) break; }
+  return { masuk };
+});
 exports.notifDailyJob = require("./dailyjob").notifDailyJob;
 Object.assign(exports, require("./dailyjob-akun"));

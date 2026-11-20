@@ -24,6 +24,13 @@ export function kodeSalesOtomatis(nama, terpakai = []) {
   for (const h of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") if (!pakai.has(dasar + h)) return dasar + h;
   return "";
 }
+/* Kode unit otomatis: AWALAN-urutan per kelompok (SLS-01, ADM-01). Urutan naik terus dan tidak memakai ulang nomor akun yang dihapus. */
+export const AWALAN = { sales: "SLS", admin: "ADM", lihat: "LHT" };
+export function kodeUnit(peran, terpakai = []) {
+  const aw = AWALAN[peran]; if (!aw) return "";
+  const maks = terpakai.reduce((m, k) => { const x = String(k || "").match(new RegExp(`^${aw}-(\\d+)$`)); return x ? Math.max(m, +x[1]) : m; }, 0);
+  return `${aw}-${String(maks + 1).padStart(2, "0")}`;
+}
 export const STATUS_AKUN = { menunggu: "Menunggu persetujuan", aktif: "Aktif", nonaktif: "Nonaktif" };
 
 export async function muatProfil(user) {
