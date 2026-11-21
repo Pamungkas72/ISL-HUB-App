@@ -2,6 +2,10 @@
 // NAV CONFIG — daftar modul Marketing & BD.
 // Tambah/ubah/hapus modul cukup edit array ini.
 // nav.js otomatis merender ulang di semua halaman.
+// HAK AKSES: tiap halaman wajib punya `modul` (kunci pendek, unik) + `ket` (satu kalimat), atau `selalu: true` bila selalu tersedia.
+// Daftar hak di Pengaturan > Akun dan akses > Peran dibaca otomatis dari sini. Awalnya halaman baru hanya untuk master dan admin;
+// peran lain diaktifkan lewat Pengaturan. Tes tests/unit/halaman-akses.test.mjs gagal bila ada halaman tanpa `modul` atau `selalu`.
+// Catatan: data halaman baru yang disimpan di koleksi Firestore sendiri tetap perlu aturan di firestore.rules.
 // Struktur ini juga yang nanti dipakai saat modul ini
 // disambungkan ke ISL HUB (id & href jadi acuan integrasi).
 // ===========================================================
@@ -26,6 +30,7 @@ const icons = {
 export const navItems = [
   {
     id: "beranda",
+    selalu: true,
     utama: true,
     label: "Beranda",
     href: "app.html#beranda",
@@ -34,6 +39,8 @@ export const navItems = [
   },
   {
     id: "master-rate",
+    modul: "mr",
+    ket: "Tarif, vendor, lokasi, uang jalan",
     utama: true,
     label: "Master Rate",
     href: "app.html#master-rate",
@@ -42,6 +49,8 @@ export const navItems = [
   },
   {
     id: "quotation",
+    modul: "qt",
+    ket: "Buat dan kirim penawaran; membuka data tarif untuk harga",
     utama: true,
     label: "Quotation",
     href: "app.html#quotation",
@@ -50,6 +59,8 @@ export const navItems = [
   },
   {
     id: "customer",
+    modul: "cu",
+    ket: "Daftar dan data customer",
     utama: true,
     label: "Customer",
     href: "app.html#customer",
@@ -58,6 +69,8 @@ export const navItems = [
   },
   {
     id: "dailyjob",
+    modul: "dj",
+    ket: "Pencatatan job harian kelompok",
     utama: true,
     label: "Daily Job",
     href: "app.html#dailyjob",
@@ -66,6 +79,8 @@ export const navItems = [
   },
   {
     id: "legal",
+    modul: "lg",
+    ket: "Kontrak dan MOM",
     label: "Legal",
     href: "app.html#legal",
     icon: icons.legal,
@@ -73,6 +88,7 @@ export const navItems = [
   },
   {
     id: "pengaturan",
+    selalu: true,
     label: "Pengaturan",
     href: "app.html#pengaturan",
     icon: icons.setelan,

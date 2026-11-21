@@ -290,3 +290,10 @@ export function kunciLogin(masukan) {
 export function sandiAcak(rand = (n) => crypto.getRandomValues(new Uint32Array(1))[0] % n) {
   const h = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return Array.from({ length: 10 }, () => h[rand(h.length)]).join("");
 }
+
+/* Awalan kode unit dari nama kelompok: huruf pertama + konsonan berikutnya (Star -> STR, Agora -> AGR); sama dengan functions/dailyjob-akun-util.js. */
+export function awalanKelompok(nama) {
+  const h = String(nama || "").normalize("NFD").toUpperCase().replace(/[^A-Z]/g, ""); if (!h) return "";
+  const k = [h[0], ...[...h.slice(1)].filter((c) => !"AEIOU".includes(c))].join("").slice(0, 3);
+  return k.length >= 3 ? k : (k + h.slice(1).replace(new RegExp(`[${k}]`, "g"), "")).slice(0, 3).padEnd(2, "X");
+}

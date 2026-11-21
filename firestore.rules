@@ -450,7 +450,7 @@ service cloud.firestore {
     }
     match /dj_kelompok/{id} {
       allow read: if baca('dj') && (aktifDJ());
-      allow create, update: if kelola('dj') && (isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori', 'profil', 'kategori']) && request.resource.data.get('kategori', []) is list && request.resource.data.get('kategori', []).size() <= 60 && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map && request.resource.data.get('profil', 'marketing') in ['marketing', 'tracking']);
+      allow create, update: if kelola('dj') && (isKelola() && request.resource.data.keys().hasOnly(['nama', 'dibuat', 'kepala', 'bawaan', 'targetKategori', 'profil', 'kategori', 'awalan', 'arsip']) && (!('awalan' in request.resource.data) || (request.resource.data.awalan is string && request.resource.data.awalan.matches('[A-Z]{2,4}'))) && request.resource.data.get('arsip', false) is bool && request.resource.data.get('kategori', []) is list && request.resource.data.get('kategori', []).size() <= 60 && request.resource.data.get('kepala', []) is list && request.resource.data.get('kepala', []).size() <= 1 && request.resource.data.get('bawaan', false) is bool && request.resource.data.get('targetKategori', {}) is map && request.resource.data.get('profil', 'marketing') in ['marketing', 'tracking']);
       allow delete: if kelola('dj') && (isKelola());
     }
     // Ajuan kategori baru dari anggota; master/admin yang menyetujui (menambah ke dj_kelompok.kategori) atau menolak.

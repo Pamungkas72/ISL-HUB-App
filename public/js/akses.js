@@ -7,6 +7,7 @@
 import { auth, db } from "./firebase-config.js";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { adalahMaster } from "./config-akses.js";
+import { navItems } from "./nav-config.js";
 import { WA_ADMIN_TAMPILAN, linkWaAdmin, pesanDaftarSales } from "./kontak-admin.js";
 
 export const PERAN = { master: "Master", admin: "Admin", sales: "Sales", lihat: "Lihat saja", dj: "Anggota Daily Job" };
@@ -119,8 +120,11 @@ export async function muatSemuaKegiatan() {
 }
 
 /* ---------- Izin per modul (pengguna.akses): 0 tidak, 1 lihat, 2 kelola. Hanya MEMBATASI izin peran (ditegakkan di firestore.rules). ---------- */
-export const MODUL = [["mr", "Master Rate"], ["qt", "Quotation"], ["cu", "Customer"], ["dj", "Daily Job"], ["lg", "Legal"]];
-export const MODUL_NAV = { "master-rate": "mr", quotation: "qt", customer: "cu", dailyjob: "dj", legal: "lg" };
+/* Daftar halaman yang bisa diatur dibaca dari navigasi (nav-config.js): halaman baru otomatis muncul di Pengaturan > Peran. */
+const HALAMAN = navItems.filter((i) => i.modul);
+export const MODUL = HALAMAN.map((i) => [i.modul, i.label]);
+export const MODUL_NAV = Object.fromEntries(HALAMAN.map((i) => [i.id, i.modul]));
+export const KET_MODUL = Object.fromEntries(HALAMAN.map((i) => [i.modul, i.ket || ""]));
 export const NAMA_LEVEL = ["Tidak", "Lihat", "Kelola"];
 /* Batas tertinggi tiap peran (sama dengan perilaku lama). 0 = modul tidak tersedia untuk peran itu. */
 export const BATAS_PERAN = {
@@ -129,10 +133,14 @@ export const BATAS_PERAN = {
   lihat: { mr: 1, qt: 1, cu: 1, dj: 2, lg: 0 },
   dj: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 },
 };
+/* Batas tertinggi (batasModul) dan hak awal tanpa pengaturan (awalModul). Halaman baru di navigasi: peran dasar boleh diberi sampai Kelola,
+   tetapi awalnya hanya admin yang punya (peran lain 0 sampai diaktifkan di Pengaturan). */
+export const batasModul = (peran, m) => { const b = BATAS_PERAN[peran]; return b && m in b ? b[m] : peran === "dj" ? 0 : 2; };
+export const awalModul = (peran, m) => { const b = BATAS_PERAN[peran]; return b && m in b ? b[m] : peran === "admin" ? 2 : 0; };
 /** Level efektif satu modul: nilai di pengguna.akses (bila ada) dibatasi oleh batas peran. */
 export function levelAkses(p, m) {
   if (!p || p.peran === "master") return 2;
-  const batas = (BATAS_PERAN[p.peran] || {})[m] ?? 0, v = p.akses && typeof p.akses[m] === "number" ? p.akses[m] : batas;
+  const batas = batasModul(p.peran, m), v = p.akses && typeof p.akses[m] === "number" ? p.akses[m] : awalModul(p.peran, m);
   return Math.max(0, Math.min(v, batas));
 }
 /** Modul yang sengaja dimatikan master/admin lewat pengguna.akses (menu disembunyikan; data juga ditolak server). */
@@ -151,8 +159,8 @@ export const PRESET_BAWAAN = [
 ];
 /** Bentuk pengguna.akses dari satu preset, dipangkas oleh batas peran dasarnya; akses.jabatan membawa nama preset. */
 export function aksesPreset(pr) {
-  const b = BATAS_PERAN[pr.peran] || {}, a = {};
-  MODUL.forEach(([m]) => { if (b[m] > 0) a[m] = Math.max(0, Math.min(pr.akses && typeof pr.akses[m] === "number" ? pr.akses[m] : b[m], b[m])); });
+  const a = {};
+  MODUL.forEach(([m]) => { const b = batasModul(pr.peran, m); if (b > 0) a[m] = Math.max(0, Math.min(pr.akses && typeof pr.akses[m] === "number" ? pr.akses[m] : 0, b)); }); // halaman yang belum diatur = 0
   a.jabatan = pr.nama;
   return a;
 }
