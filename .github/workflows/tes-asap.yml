@@ -45,6 +45,7 @@ jobs:
           node tests/unit/daily-job-akun.test.js
           node tests/unit/daily-job-tracking.test.mjs
           node tests/unit/daily-job-kategori.test.mjs
+          node tests/unit/halaman-akses.test.mjs
 
       - name: Pasang Playwright dan Chromium
         run: |

@@ -3,7 +3,7 @@
 // Halaman baru tinggal punya <nav id="app-nav"></nav> kosong,
 // tidak perlu tulis ulang daftar menu tiap halaman.
 // ===========================================================
-import { MODUL_NAV, modulDimatikan } from "./akses.js";
+import { MODUL_NAV, levelAkses } from "./akses.js";
 import { navItems as semuaNav, logoutIcon, SEMBUNYI_PERAN } from "./nav-config.js";
 import { logoutUser } from "./auth.js";
 import "./cadangan.js";
@@ -69,7 +69,7 @@ export function renderNav(activeId) {
   if (!nav) return;
   const peran = (window.__ISL_PROFIL && window.__ISL_PROFIL.peran) || "";
   const profilNav = window.__ISL_PROFIL || null;
-  const navItems = semuaNav.filter((i) => !(SEMBUNYI_PERAN[peran] || []).includes(i.id) && !(MODUL_NAV[i.id] && modulDimatikan(profilNav, MODUL_NAV[i.id]))); // izin per modul: yang dimatikan tidak tampil
+  const navItems = semuaNav.filter((i) => !(SEMBUNYI_PERAN[peran] || []).includes(i.id) && !(MODUL_NAV[i.id] && profilNav && levelAkses(profilNav, MODUL_NAV[i.id]) === 0)); // izin per modul: yang dimatikan tidak tampil
 
   const lipat = sidebarLipat();
   const brand = `<button type="button" class="app-nav__brand" id="btn-sidebar" aria-expanded="${lipat ? "false" : "true"}" title="${lipat ? "Buka menu" : "Lipat menu"}">ISL <span>HUB</span></button>`;
