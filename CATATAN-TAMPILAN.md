@@ -494,3 +494,10 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 - **Deploy Cloud Function gagal kini terlihat:** langkah deploy fungsi tetap tidak membatalkan hosting dan aturan, tetapi menulis peringatan dan ringkasan di Actions (notifikasi push dan akun tim mati bila fungsi tidak terdeploy).
 - **Alias login `dj_login` tanpa uid:** dokumen publik hanya berisi email. Kepemilikan alias saat ubah data dicek dari daftar `alias` di dokumen pengguna (`kunciBentrok`, ada uji). Dokumen lama yang masih memuat uid tertimpa otomatis saat data akun diubah.
 - **CORS Storage** untuk pratinjau berkas belum otomatis: jalankan sekali `gsutil cors set cors-storage.json gs://system-marketing-bd-isl-2026.firebasestorage.app` (Cloud Shell, akun pemilik proyek).
+
+## 21 Nov 2026: quotation Gudang, "Kartu ringan" Desain A (matriks varian)
+- Dipilih dari tiga desain (A matriks, B kartu per tipe, C daftar datar): **A**. Handling dan biaya lain satu harga untuk semua tipe.
+- **Formulir:** centang varian tipe (Dry, Cool room, Chiller, Frozen) × sistem (On floor, Racking), suhu tiap varian bisa diubah; centang kolom harga (per pallet/hari, per pallet/bulan, per m²/bulan); satu kartu harga per varian. Handling dan layanan tambahan memakai baris tarif lama (preset Handling in/out, stripping, plug reefer, overtime, repacking).
+- **PDF:** kartu Spesifikasi (nama, lokasi, luas, dimensi pallet, jam operasional), pita A. Storage (baris varian + lencana tipe, kolom harga), pita B. Handling, C. Layanan tambahan. Sel baru `pre`/`preK` (lencana di depan nama) di `taruhFL`.
+- Draf lama (tanpa `varian`) dilengkapi saat dibuka; baris Storage/Sewa lama tetap tampil. S&K bawaan baru (10 butir) hanya untuk pengaturan yang belum tersimpan; S&K tersimpan di Pengaturan dokumen tidak diubah.
+- Margin storage per varian belum dihitung (tanpa kolom modal).

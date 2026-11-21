@@ -2621,3 +2621,9 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .ak-pre { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; }
 .ak-pre span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ak-pre small { color: var(--muted); }
+
+/* Gudang: varian tipe × sistem */
+.fl-var{display:flex;flex-direction:column;gap:6px;margin-top:6px}.fl-var__t{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.fl-var__t .fl-tipe{min-width:84px;text-align:center}
+.fl-tipe{display:inline-block;font:800 11px var(--font-body,inherit);letter-spacing:.5px;text-transform:uppercase;padding:4px 10px;border-radius:999px;color:var(--mr-ink);background:color-mix(in srgb,var(--mr-muted,#7a8794) 22%,transparent)}
+.fl-tipe--cool{background:color-mix(in srgb,#2fa36b 26%,transparent)}.fl-tipe--chiller{background:color-mix(in srgb,#2f8fd1 26%,transparent)}.fl-tipe--frozen{background:color-mix(in srgb,#7b5cd6 28%,transparent)}
+.fl-var__s{flex:none}.fl-var__su{flex:1;min-width:0}.fl-var__su input{width:100%}
