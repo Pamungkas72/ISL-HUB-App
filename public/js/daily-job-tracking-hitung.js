@@ -2,8 +2,8 @@
 import { aktif, terlambat, dalam, hariIni } from "./daily-job-hitung.js";
 
 export const SUBDIVISI = {
-  kecil: { nama: "Mobil kecil", kategori: ["CDE", "CDD", "Fuso", "Tronton", "Grand Max Blind Van"] },
-  besar: { nama: "Mobil besar", kategori: ["Trailer Ekspor", "Trailer Impor", "Trailer Domestik"] },
+  kecil: { nama: "Truk Distribusi", kategori: ["CDE", "CDD", "Fuso", "Tronton", "Grand Max Blind Van"] },
+  besar: { nama: "Tracking Trailer", kategori: ["Trailer Ekspor", "Trailer Impor", "Trailer Domestik"] },
 };
 export const PROFIL = { marketing: "Marketing dan BD", tracking: "Tracking" };
 export const TAGIHAN = { belum: "Belum dikirim", dikirim: "Dikirim", konfirmasi: "Dikonfirmasi" };
