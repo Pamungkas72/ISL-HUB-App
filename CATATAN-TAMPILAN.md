@@ -494,3 +494,8 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 - **Deploy Cloud Function gagal kini terlihat:** langkah deploy fungsi tetap tidak membatalkan hosting dan aturan, tetapi menulis peringatan dan ringkasan di Actions (notifikasi push dan akun tim mati bila fungsi tidak terdeploy).
 - **Alias login `dj_login` tanpa uid:** dokumen publik hanya berisi email. Kepemilikan alias saat ubah data dicek dari daftar `alias` di dokumen pengguna (`kunciBentrok`, ada uji). Dokumen lama yang masih memuat uid tertimpa otomatis saat data akun diubah.
 - **CORS Storage** untuk pratinjau berkas belum otomatis: jalankan sekali `gsutil cors set cors-storage.json gs://system-marketing-bd-isl-2026.firebasestorage.app` (Cloud Shell, akun pemilik proyek).
+
+## 2026-11-23 (sisa data tes "UJI format …" disembunyikan)
+
+- Lini berawalan **"UJI "** (sisa tes e2e di database sungguhan) tidak lagi muncul di panel "Buat quotation", Quotation manual (Word), dan daftar Template lini. Datanya tetap ada di Master Rate; hapus permanen lewat Master Rate → Lini bisnis bila perlu.
+- Tombol **"+ Tambah format lini bisnis baru"** (master/admin) dan ikon pengaturan ⚙ (atur template per lini) di panel itu tetap ada.
