@@ -182,7 +182,7 @@ FL.TNC_LINI_EN = {
   sewa_container_empty: ['The daily rate is calculated from the time the container leaves the depot and applies for the next 24 hours.', 'Return delay tolerance is 2 hours.', 'The container is handed over in clean condition at the start of the rental.', 'Daily and weekly rentals exclude LOLO. Monthly rentals include LOLO.'],
   warehouse_dry: ['Storage rates are calculated based on the number of pallets, tons, revenue tons, or CBM recorded when the goods enter the warehouse.', 'Handling in and handling out are charged per revenue ton or per CBM according to the actual goods.', 'The container stripping rate applies specifically to this warehouse and is separate from depot rates.', 'Additional services (e.g., repacking) are charged as agreed and billed separately.'],
   warehouse_frozen: ['Storage rates are calculated based on the number of pallets, tons, revenue tons, or CBM recorded when the goods enter the warehouse.', 'Handling in and handling out are charged per revenue ton or per CBM according to the actual goods.', 'The container stripping rate applies specifically to this warehouse and is separate from depot rates.', 'Cold storage is rented per chamber, per pallet, or per m² as agreed. The temperature is maintained according to the warehouse classification.', 'Additional services (e.g., repacking) are charged as agreed and billed separately.'],
-  open_yard: ['A security deposit must be paid before the yard is handed over.', 'The deposit is refunded after the rental period ends, less any damage to the yard or outstanding amounts.', 'Electricity, water, and other service charges are billed according to usage or actual cost.', 'The yard is handed over in the condition recorded in the handover report.']
+  open_yard: ['Prices exclude VAT and other taxes in accordance with applicable regulations.', 'Rent is paid in advance for the payment period stated in this quotation. Invoices are due 14 days after issuance.', 'The security deposit is refunded after the rental period ends, less any damage to the land or outstanding amounts.', 'Electricity, water, and other service charges are billed according to usage or actual cost.', 'Payment delays of more than 14 days may result in access to the land being suspended until the arrears are settled.', 'Early termination of the rental period must be requested in writing 30 days in advance. Rent and deposit already paid are non-refundable.', 'Additional rental area may be requested and is subject to land availability and the agreed rate.', 'The land is rented exclusively to the Lessee and may only be used for storing containers and non-hazardous goods.', 'The land is returned in clean condition when the rental period ends.', 'Goods and containers on the land are the Lessee’s responsibility, including their insurance.', 'The Lessee may access the land 24 hours a day in accordance with the site’s security procedures.', 'This quotation is valid for 14 days from the date of the letter.']
 };
 /* ============================ S&K BAWAAN PER LINI (data awal, dimuat sekali ke Pengaturan dokumen) ============================ */
 FL.TNC_LINI = {
@@ -195,7 +195,7 @@ FL.TNC_LINI = {
   sewa_container_empty: ['Argo harian dihitung sejak container keluar dari depo, berlaku 24 jam ke depan.', 'Toleransi keterlambatan pengembalian 2 jam.', 'Container diserahkan dalam kondisi bersih saat pertama disewa.', 'Harian dan mingguan belum termasuk LOLO. Bulanan sudah termasuk LOLO.'],
   warehouse_dry: ['Tarif storage dihitung sesuai jumlah pallet, ton, revenue ton, atau CBM yang tercatat saat barang masuk gudang.', 'Handling in dan handling out dihitung per revenue ton atau per CBM sesuai realisasi barang.', 'Tarif stripping dari kontainer berlaku khusus untuk gudang ini dan terpisah dari tarif depo.', 'Layanan tambahan (mis. repacking) dihitung sesuai kesepakatan dan ditagihkan terpisah.'],
   warehouse_frozen: ['Tarif storage dihitung sesuai jumlah pallet, ton, revenue ton, atau CBM yang tercatat saat barang masuk gudang.', 'Handling in dan handling out dihitung per revenue ton atau per CBM sesuai realisasi barang.', 'Tarif stripping dari kontainer berlaku khusus untuk gudang ini dan terpisah dari tarif depo.', 'Gudang pendingin disewa per chamber, per pallet, atau per m² sesuai perjanjian. Suhu dijaga sesuai klasifikasi gudang.', 'Layanan tambahan (mis. repacking) dihitung sesuai kesepakatan dan ditagihkan terpisah.'],
-  open_yard: ['Deposit jaminan wajib dibayar sebelum lahan diserahterimakan.', 'Deposit dikembalikan setelah masa sewa berakhir, dikurangi kerusakan lahan atau tunggakan.', 'Biaya listrik, air, dan layanan lain ditagihkan sesuai pemakaian atau realisasi.', 'Lahan diserahterimakan dalam kondisi yang dicatat di berita acara serah terima.']
+  open_yard: ['Harga belum termasuk PPN dan pajak lain sesuai ketentuan yang berlaku.', 'Sewa dibayar di muka sesuai periode pembayaran yang tertulis pada penawaran. Invoice jatuh tempo 14 hari sejak diterbitkan.', 'Deposit jaminan dikembalikan setelah masa sewa berakhir, dikurangi kerusakan lahan atau tunggakan.', 'Biaya listrik, air, dan layanan lain ditagihkan sesuai pemakaian atau realisasi.', 'Keterlambatan pembayaran lebih dari 14 hari dapat menghentikan akses ke lahan sampai tunggakan dilunasi.', 'Pengakhiran masa sewa lebih awal diajukan tertulis 30 hari sebelumnya. Sewa dan deposit yang sudah dibayar tidak dikembalikan.', 'Penambahan luas sewa dapat diajukan dan mengikuti ketersediaan lahan serta tarif yang disepakati.', 'Lahan disewa khusus untuk Penyewa dan hanya digunakan untuk penumpukan kontainer dan barang non-berbahaya.', 'Lahan dikembalikan dalam keadaan bersih saat masa sewa berakhir.', 'Barang dan kontainer di lahan menjadi tanggung jawab Penyewa, termasuk asuransinya.', 'Penyewa dapat mengakses lahan 24 jam sesuai prosedur keamanan lokasi.', 'Penawaran berlaku 14 hari sejak tanggal surat.']
 };
 /* S&K Freight Forwarding (dari ff-master-data.json, disepakati 19 Okt 2026). Bisa diubah di formulir FF, tersimpan di Pengaturan dokumen. */
 FL.FF_AWAL = {
@@ -1491,7 +1491,7 @@ function terapkanProfil(st, p, citraKe) {
   if (citraKe) fotos.filter(f => f.kategori === 'citra').slice(0, 3).forEach(f => { if (!st[citraKe].some(x => x.src === (f.url || f.src))) st[citraKe].push({ src: f.url || f.src, ket: 'Citra satelit' }); });
 }
 /* baris tarif bersama untuk gudang dan open yard */
-function htmlBarisTarif(st, liniKey, satuanOpsi, periodeOpsi) {
+function htmlBarisTarif(st, liniKey, satuanOpsi, periodeOpsi, saring = () => true) {
   const int = lihatInt();
   /* kartu dikelompokkan per grup tabel (sama dengan desain A di pratinjau); grup bisa diganti lewat pilihan Kelompok */
   const kartu = (r, i) => { const m = num(r.modal), j = jualBaris(st, r, liniKey), mg = margin(j, m), rendah = mg !== null && mg < targetLini(liniKey);
@@ -1500,7 +1500,7 @@ function htmlBarisTarif(st, liniKey, satuanOpsi, periodeOpsi) {
       <div class="fl-harga ${int ? '' : 'fl-harga--satu'}">${int ? `<label class="fl-kotak"><small>Modal (internal)</small>${inpAngka(`rows.${i}.modal`, r.modal, 'isi')}</label>` : ''}<label class="fl-kotak"><small>Harga jual</small>${inpAngka(`rows.${i}.jual`, j, 'isi')}</label></div>
       ${int ? `<div data-flo ${mg === null ? 'hidden' : ''} class="fl-int ${rendah ? 'is-rendah' : ''}">Margin ${fmtPct(mg)} dari modal${rendah ? ' (di bawah target lini)' : ''}</div>` : rekomendasiHtml(m, liniKey, r.u)}</div>`; };
   const grupList = [...new Set([...(st.grupOpsi || []), ...(st.rows || []).map(r => r.grup || 'Layanan tambahan')])];
-  return grupList.map(g => { const ids = (st.rows || []).map((r, i) => [r, i]).filter(([r]) => (r.grup || 'Layanan tambahan') === g); if (!ids.length) return ''; return `<div class="fl-bagian fl-bagian--h"><span>${esc(g)}</span></div>` + ids.map(([r, i]) => kartu(r, i)).join(''); }).join('') + datalist(`fl-dl-sat-${liniKey}`, satuanOpsi);
+  return grupList.map(g => { const ids = (st.rows || []).map((r, i) => [r, i]).filter(([r, i]) => saring(i) && (r.grup || 'Layanan tambahan') === g); if (!ids.length) return ''; return `<div class="fl-bagian fl-bagian--h"><span>${esc(g)}</span></div>` + ids.map(([r, i]) => kartu(r, i)).join(''); }).join('') + datalist(`fl-dl-sat-${liniKey}`, satuanOpsi);
 }
 const jualBaris = (st, r, liniKey, nama) => { if (ada(num(r.jual))) return num(r.jual); return rekomendasiJual(num(r.modal), liniKey, nama || r.u); };
 const htmlFasilitas = st => `<div class="fl-fas">${st.fasilitas.map((f, i) => `<div class="fl-fas__i ${f.ada ? 'is-on' : ''}"><label><input type="checkbox" data-fla="fas" data-flx="${i}" ${f.ada ? 'checked' : ''}> ${esc(f.nama)}</label>${f.ada ? inpTeks(`fasilitas.${i}.detail`, f.detail, 'Detail, mis. kapasitas atau jumlah') : ''}</div>`).join('')}</div>
@@ -1585,31 +1585,40 @@ LINI.gudang = { key: 'gudang', mesin: 'gudang', nama: 'Gudang (dry, chiller, fro
 
 
 /* ============================ MESIN 6: OPEN YARD ============================ */
+/* Desain B (23 Nov 2026): harga dulu (pita Sewa lahan + kartu tarif + layanan tambahan + ketentuan), profil lahan sesudahnya, denah opsional jadi lampiran. */
 const FAS_OY = ['Listrik (kapasitas daya)', 'Sumber air', 'Pagar keliling', 'CCTV', 'Security 24 jam', 'Toilet / kamar mandi', 'Office', 'Gudang indoor', 'Penerangan lampu area', 'Akses truk / trailer 40 ft', 'Timbangan truk', 'Pemadam kebakaran', 'Parkir'];
+const idxSewaOy = st => { const i = st.rows.findIndex(r => /sewa lahan/i.test(r.u)); return i >= 0 ? i : st.rows.findIndex(r => r.grup === 'Sewa'); };
 MESIN.oy = {
-  awal() { return { spek: { nama: '', luas: '', alamat: '', kota: '', permukaan: 'Beton', maps: '', koord: '' }, fasilitas: FAS_OY.map(n => ({ nama: n, ada: false, detail: '' })), foto: [], citra: [],
+  awal() { return { spek: { nama: '', luas: '', alamat: '', kota: '', permukaan: 'Beton', maps: '', koord: '' }, fasilitas: FAS_OY.map(n => ({ nama: n, ada: false, detail: '' })), foto: [], citra: [], denah: [],
     rows: [{ u: 'Sewa lahan', s: 'per m²', p: 'bulanan', grup: 'Sewa' }, { u: 'Listrik (sesuai pemakaian)', s: 'per bulan', p: 'bulanan', grup: 'Layanan tambahan' }, { u: 'Air (sesuai pemakaian)', s: 'per bulan', p: 'bulanan', grup: 'Layanan tambahan' }].map((p, i) => barisPreset(p, i === 0)),
-    mk: 20, minLuas: 1000, minMasa: '12 bulan', luasSewa: '', deposit: 2, grupOpsi: ['Sewa', 'Layanan tambahan'] }; },
-  hitung(st) { const sewa = st.rows.find(r => r.on && /sewa lahan/i.test(r.u)) || st.rows.find(r => r.on && /m²|m2/.test(r.s)); const h = sewa ? jualBaris(st, sewa) : null, min = num(st.minLuas) || 0, minta = num(st.luasSewa) || 0, tagih = Math.max(min, minta), est = ada(h) ? h * tagih : null, dep = ada(est) ? est * (num(st.deposit) || 0) : null; return { h, min, tagih, est, dep }; },
+    mk: 20, minLuas: 1000, minMasa: 'Minimum 12 bulan', pembayaran: 'Di muka, per 3 bulan', luasSewa: '', deposit: 2, grupOpsi: ['Sewa', 'Layanan tambahan'] }; },
+  hitung(st) { const si = idxSewaOy(st), sewa = si >= 0 ? st.rows[si] : st.rows.find(r => r.on && /m²|m2/.test(r.s)), h = sewa ? jualBaris(st, sewa, 'open_yard') : null, min = num(st.minLuas) || 0, minta = num(st.luasSewa) || 0, tagih = Math.max(min, minta), est = ada(h) ? h * tagih : null, dep = ada(est) ? est * (num(st.deposit) || 0) : null; return { h, min, tagih, est, dep }; },
   html(st) {
-    const sp = st.spek, prof = profilUntuk(['open_yard']), x = this.hitung(st);
+    const sp = st.spek, prof = profilUntuk(['open_yard']), x = this.hitung(st), si = idxSewaOy(st), r0 = si >= 0 ? st.rows[si] : null, int = lihatInt();
+    const m0 = r0 ? num(r0.modal) : null, mg = r0 ? margin(x.h, m0) : null, rendah = mg !== null && mg < targetLini('open_yard');
+    const sewa = r0 ? `<div class="fl-item is-on"><div class="fl-item__h"><b class="fl-u">Sewa lahan (per m² per bulan)</b></div>
+      <div class="fl-grid2"><label class="fl-f"><span>Luas disewa (m²)</span>${inpAngka('luasSewa', st.luasSewa, 'Kosongkan untuk pakai minimum')}</label><label class="fl-f"><span>Minimum luas sewa (m²)</span>${inpAngka('minLuas', st.minLuas, '1000')}</label></div>
+      <div class="fl-harga ${int ? '' : 'fl-harga--satu'}">${int ? `<label class="fl-kotak"><small>Modal per m² (internal)</small>${inpAngka(`rows.${si}.modal`, r0.modal, 'isi')}</label>` : ''}<label class="fl-kotak"><small>Tarif jual per m²</small>${inpAngka(`rows.${si}.jual`, x.h, 'isi')}</label></div>
+      ${int ? `<div data-flo ${mg === null ? 'hidden' : ''} class="fl-int ${rendah ? 'is-rendah' : ''}">Margin ${fmtPct(mg)} dari modal${rendah ? ' (di bawah target lini)' : ''}</div>` : rekomendasiHtml(m0, 'open_yard', r0.u)}</div>` : '<div class="fl-mut">Baris “Sewa lahan” tidak ada. Tambahkan lewat Tambah baris di Layanan tambahan.</div>';
     return `${prof.length && bisaEdit() ? `<div class="fl-grid2"><label class="fl-f"><span>Isi dari profil fasilitas (Master Rate &gt; Lokasi)</span><select data-flprofil="oy"><option value="">Pilih profil open yard…</option>${prof.map(p => `<option value="${esc(p.id)}">${esc(p.namaTampil || p.nama)}</option>`).join('')}</select></label></div>` : ''}
-      <div class="fl-bagian">1. Spesifikasi lahan</div>
+      <div class="fl-bagian">1. Sewa lahan dan ketentuan</div>${sewa}
+      <div class="fl-grid2"><label class="fl-f"><span>Masa sewa (ketik bebas)</span>${inpTeks('minMasa', st.minMasa, 'Minimum 12 bulan', 'list="fl-dl-minmasa"')}${datalist('fl-dl-minmasa', ['Minimum 12 bulan', 'Minimum 6 bulan', '12 bulan', '24 bulan', '36 bulan'])}</label><label class="fl-f"><span>Pembayaran (ketik bebas)</span>${inpTeks('pembayaran', st.pembayaran, 'Di muka, per 3 bulan')}</label>
+        <label class="fl-f"><span>Deposit jaminan (jumlah bulan sewa)</span>${inpAngka('deposit', st.deposit, '2')}</label></div>
+      <div class="fl-ringkas" data-flout="oy">${this.ringkasHtml(x)}</div>
+      <div class="fl-bagian">2. Layanan tambahan</div><div class="fl-mut">Centang lalu isi harga. Baris tercentang tanpa harga tampil “Sesuai pemakaian”.</div>
+            ${htmlKatalog(st, 'open_yard', 'layanan', [{ k: 'u', nama: 'Nama layanan', ph: 'Biaya kebersihan lahan' }, { k: 's', nama: 'Satuan', ph: 'per bulan' }, { k: 'p', nama: 'Periode', opsi: ['bulanan', 'harian', 'sekali'] }, { k: 'modal', nama: 'Modal contoh (opsional, Rp)', num: true }], 'Tambah layanan ke katalog open yard', id => st.rows.some(r => r.cid === id))}
+      ${htmlBarisTarif(st, 'open_yard', ['per m²', 'per bulan', 'per kontainer', 'per shipment'], ['bulanan', 'harian', 'sekali'], i => i !== si)}${bisaEdit() ? '<button type="button" class="fl-tambah fl-tambah--kecil" data-fla="row-tambah">+ Tambah baris</button>' : ''}
+      <div class="fl-bagian">3. Spesifikasi lahan</div>
       <div class="fl-grid2"><label class="fl-f"><span>Nama lokasi</span>${inpTeks('spek.nama', sp.nama, 'Open Yard Cikarang 1')}</label><label class="fl-f"><span>Luas lahan total (m²)</span>${inpAngka('spek.luas', sp.luas)}</label>
         <label class="fl-f"><span>Alamat</span>${inpTeks('spek.alamat', sp.alamat, 'Jalan, nomor, kawasan')}</label><label class="fl-f"><span>Kota</span>${inpTeks('spek.kota', sp.kota, 'Cikarang, Bekasi')}</label>
         <label class="fl-f"><span>Permukaan lahan</span>${pilihan('spek.permukaan', ['Beton', 'Paving block', 'Aspal', 'Tanah merah / urugan', 'Lainnya'], sp.permukaan)}</label><label class="fl-f"><span>Google Maps (link)</span>${inpTeks('spek.maps', sp.maps, 'https://maps.app.goo.gl/...', 'inputmode="url"')}</label>
         <label class="fl-f"><span>Koordinat (opsional)</span>${inpTeks('spek.koord', sp.koord, '-6.2000, 107.1500')}</label></div>
-      <div class="fl-bagian">2. Fasilitas lahan</div>${htmlFasilitas(st)}
-      <div class="fl-bagian">3. Galeri foto lahan</div>${htmlGaleri(st.foto, 'foto', 'Tambah foto lahan')}
-      <div class="fl-bagian">4. Citra satelit atau foto udara</div>${htmlGaleri(st.citra, 'citra', 'Tambah citra satelit')}
-      <div class="fl-bagian">5. Tarif sewa dan deposit</div>
-      <div class="fl-grid2"><label class="fl-f"><span>Minimum luas sewa (m²)</span>${inpAngka('minLuas', st.minLuas, '1000')}</label><label class="fl-f"><span>Minimum masa sewa</span>${inpTeks('minMasa', st.minMasa, 'Pilih atau ketik, mis. 9 bulan', 'list="fl-dl-minmasa"')}${datalist('fl-dl-minmasa', ['12 bulan', '6 bulan', '3 bulan'])}</label>
-        <label class="fl-f"><span>Luas yang diminta customer (m²)</span>${inpAngka('luasSewa', st.luasSewa, 'Kosongkan untuk pakai minimum')}</label><label class="fl-f"><span>Deposit jaminan (jumlah bulan sewa)</span>${inpAngka('deposit', st.deposit, '2')}</label></div>
-      <div class="fl-ringkas" data-flout="oy">${this.ringkasHtml(x)}</div>
-            ${htmlKatalog(st, 'open_yard', 'layanan', [{ k: 'u', nama: 'Nama layanan', ph: 'Biaya kebersihan lahan' }, { k: 's', nama: 'Satuan', ph: 'per bulan' }, { k: 'p', nama: 'Periode', opsi: ['bulanan', 'harian', 'sekali'] }, { k: 'modal', nama: 'Modal contoh (opsional, Rp)', num: true }], 'Tambah layanan ke katalog open yard', id => st.rows.some(r => r.cid === id))}
-      ${htmlBarisTarif(st, 'open_yard', ['per m²', 'per bulan', 'per kontainer', 'per shipment'], ['bulanan', 'harian', 'sekali'])}${bisaEdit() ? '<button type="button" class="fl-tambah fl-tambah--kecil" data-fla="row-tambah">+ Tambah baris</button>' : ''}`;
+      <div class="fl-bagian">4. Fasilitas lahan</div>${htmlFasilitas(st)}
+      <div class="fl-bagian">5. Galeri foto lahan</div>${htmlGaleri(st.foto, 'foto', 'Tambah foto lahan')}
+      <div class="fl-bagian">6. Citra satelit atau foto udara</div>${htmlGaleri(st.citra, 'citra', 'Tambah citra satelit')}
+      <div class="fl-bagian">7. Denah lahan <span class="fl-opsi">opsional · jadi lampiran penawaran</span></div>${htmlGaleri(st.denah, 'denah', 'Unggah denah / site plan')}`;
   },
-  ringkasHtml(x) { return `<div><small>Luas ditagihkan</small><b>${fmt(x.tagih)} m²</b></div><div><small>Estimasi sewa per bulan</small><b>${x.est !== null ? fmtRp(x.est) : '—'}</b></div><div><small>Deposit</small><b>${x.dep !== null ? fmtRp(x.dep) : '—'}</b></div>`; },
+  ringkasHtml(x) { return `<div><small>Luas ditagihkan</small><b>${fmt(x.tagih)} m²</b></div><div><small>Total sewa per bulan</small><b>${x.est !== null ? fmtRp(x.est) : '—'}</b></div><div><small>Deposit</small><b>${x.dep !== null ? fmtRp(x.dep) : '—'}</b></div>`; },
   out(st, root) { const el = root.querySelector('[data-flout="oy"]'); if (el) el.innerHTML = this.ringkasHtml(this.hitung(st)); },
   aksi(a, x, st, cfg, root) { return aksiBersama(a, x, st, root); },
   ubah(path, st) { ubahBaris(path, st); return false; },
@@ -1619,15 +1628,28 @@ MESIN.oy = {
   hapusKatalog(st, cfg, id) { st.rows = st.rows.filter(r => r.cid !== id); },
   baris(st) { return barisTarif(st, 'open_yard'); },
   dok(st) {
-    const sp = st.spek, x = this.hitung(st), f = st.fasilitas.filter(z => z.ada), dep = num(st.deposit) || 0;
-    const ring = { jenis: 'kv', cap: '', baris: [['Minimum luas sewa', fmt(x.min) + ' m²'], ['Minimum masa sewa', st.minMasa || '—'], ['Luas yang disewa', fmt(x.tagih) + ' m²'], ['Estimasi sewa lahan per bulan', x.est !== null ? `${fmtRp(x.est)} (${angkaDok(x.h)} × ${fmt(x.tagih)} m²)` : '—'], ['Deposit jaminan', dep ? `${dep} bulan sewa${x.dep !== null ? ', ' + fmtRp(x.dep) : ''}` : '—']] };
+    const sp = st.spek, x = this.hitung(st), f = st.fasilitas.filter(z => z.ada), dep = num(st.deposit) || 0, si = idxSewaOy(st), nama = String(sp.nama || '').trim(), blok = [];
+    const bayar = (r, j) => ada(j) && j > 0 ? { v: angkaDok(j), rp: true, a: 'r', b: true } : { v: 'Sesuai pemakaian', a: 'r' };
+    if (ada(x.h) && x.h > 0) {
+      blok.push({ jenis: 'jalur', kartu: true, warna: 'isl', teks: 'Sewa lahan — Dedicated', teksEn: 'Land rental — Dedicated' });
+      blok.push({ jenis: 'tabel', kelas: 'isl-kartu isl-kartu--cc isl-kartu--oy', kolom: [{ h: 'Uraian', hEn: 'Description', w: 38, a: 'l' }, { h: 'Luas', hEn: 'Area', w: 14, a: 'r' }, { h: 'Tarif / m² / bulan', hEn: 'Rate / m² / month', w: 22, a: 'r' }, { h: 'Per bulan', hEn: 'Per month', w: 26, a: 'r' }],
+        baris: [{ c: [{ v: 'Sewa lahan', b: true, ...(nama ? { sat: nama } : {}) }, { v: fmt(x.tagih) + ' m²', a: 'r' }, { v: angkaDok(x.h), rp: true, a: 'r' }, { v: angkaDok(x.est), rp: true, a: 'r', b: true }] }, { tot: ['Total sewa per bulan', 'Rp ' + angkaDok(x.est)] }] });
+    }
+    const lay = st.rows.filter((r, i) => i !== si && r.on && String(r.u || '').trim());
+    if (lay.length) {
+      blok.push({ jenis: 'jalur', kartu: true, warna: 'biru', teks: 'Layanan tambahan', teksEn: 'Additional services' });
+      blok.push({ jenis: 'tabel', kelas: 'isl-kartu isl-kartu--cc isl-kartu--oy isl-kartu--oy3', kolom: [{ h: 'Uraian', hEn: 'Description', w: 52, a: 'l' }, { h: 'Satuan', hEn: 'Unit', w: 20, a: 'l' }, { h: 'Harga', hEn: 'Price', w: 28, a: 'r' }],
+        baris: lay.map(r => ({ c: [{ v: r.u, b: true }, [r.s, r.p && r.p !== 'bulanan' && r.p !== 'sekali' ? r.p : ''].filter(Boolean).join(' · ') || '—', bayar(r, jualBaris(st, r, 'open_yard'))] })) });
+    }
+    const chip = [['Masa sewa', st.minMasa], ['Deposit jaminan', dep ? `${dep} bulan sewa${x.dep !== null ? ', ' + fmtRp(x.dep) : ''}` : ''], ['Pembayaran', st.pembayaran], ['Minimum luas sewa', x.min ? fmt(x.min) + ' m²' : '']].filter(z => String(z[1] || '').trim()).map(z => ({ k: z[0], v: String(z[1]) }));
+    if (chip.length) blok.push({ jenis: 'chip', baris: chip });
     const kv = [['Nama lokasi', sp.nama], ['Luas lahan total', ada(num(sp.luas)) ? fmt(num(sp.luas)) + ' m²' : ''], ['Permukaan', sp.permukaan], ['Lokasi', [sp.alamat, sp.kota].filter(Boolean).join(', ')], ['Google Maps', sp.maps], ['Koordinat', sp.koord], ...f.map(z => [z.nama, z.detail || 'Tersedia'])].filter(z => String(z[1] || '').trim());
-    const blok = [tabelTarifBertingkat(st, ['Sewa', 'Layanan tambahan'], 'open_yard'), ring, { jenis: 'kv', cap: 'SPESIFIKASI LAHAN', baris: kv }];
+    blok.push({ jenis: 'kv', cap: 'SPESIFIKASI LAHAN', baris: kv });
     if (st.foto.length) blok.push({ jenis: 'galeri', cap: 'GALERI LAHAN', foto: st.foto });
     if (st.citra.length) blok.push({ jenis: 'galeri', cap: 'CITRA SATELIT DAN FOTO UDARA', foto: st.citra });
-    return { blok, info: [], catatan: [] };
+    return { blok, info: [], catatan: [], lampiran: (st.denah || []).map(z => ({ cap: 'LAMPIRAN: DENAH LAHAN', src: z.src, ket: z.ket || '' })) };
   },
-  tnc(st) { const x = this.hitung(st), dep = num(st.deposit) || 0; return [{ judul: 'Ketentuan sewa lahan', items: [`Sewa lahan dihitung per m² per bulan. Luas yang ditagihkan tidak kurang dari minimum luas sewa sebesar ${fmt(x.min)} m².`, `Masa sewa minimum ${st.minMasa || '12 bulan'} sejak tanggal serah terima lahan.`, ...(dep ? [`Deposit jaminan sebesar ${dep} bulan sewa wajib dibayar sebelum lahan diserahterimakan.`] : [])] }]; },
+  tnc(st) { const dep = num(st.deposit) || 0; return dep ? [{ judul: 'Ketentuan sewa lahan', items: [`Deposit jaminan sebesar ${dep} bulan sewa wajib dibayar sebelum lahan diserahterimakan.`] }] : []; },
   cek(st) { const g = []; if (!this.baris(st).length) g.push('Isi harga sewa lahan.'); if (st.spek.maps && !/^https:\/\//i.test(st.spek.maps)) g.push('Link Google Maps harus diawali https://'); return { galat: g, peringatan: !st.spek.nama ? ['Nama lokasi belum diisi.'] : [] }; }
 };
 LINI.open_yard = { key: 'open_yard', mesin: 'oy', liniKey: 'open_yard', nama: 'Open Yard', judul: 'Penawaran Sewa Lahan Open Yard', ket: 'Satu penawaran untuk satu lokasi. Per m² per bulan, minimum luas dan masa sewa, deposit.', katLini: 'open_yard',
@@ -2011,9 +2033,9 @@ FL.dok = (q) => {
   /* Firestore menolak array di dalam array: baris label-nilai disimpan sebagai objek { k, v } */
   const kv = a => (a || []).map(x => Array.isArray(x) ? { k: String(x[0] ?? ''), v: String(x[1] ?? '') } : x);
   /* aturan tata letak untuk SEMUA lini: blok tabel/kv tanpa baris dibuang, dan pita jalur hanya dipakai bila tepat di atas sebuah tabel yang berisi */
-  const ada2 = b => (b.jenis === 'tabel' || b.jenis === 'kv') ? (b.baris || []).length > 0 : true;
+  const ada2 = b => (b.jenis === 'tabel' || b.jenis === 'kv' || b.jenis === 'chip') ? (b.baris || []).length > 0 : true;
   const bersih = (d.blok || []).filter(ada2).filter((b, i, a) => b.jenis !== 'jalur' || (a[i + 1] && a[i + 1].jenis === 'tabel'));
-  return { blok: bersih.map(b => b.jenis === 'kv' ? { ...b, baris: kv(b.baris) } : b), info: kv(d.info), catatan: d.catatan || [] };
+  return { blok: bersih.map(b => b.jenis === 'kv' ? { ...b, baris: kv(b.baris) } : b), info: kv(d.info), catatan: d.catatan || [], ...(d.lampiran && d.lampiran.length ? { lampiran: d.lampiran } : {}) };
 };
 /* syarat tambahan: S&K tipe body/buntut/varian dari master, ketentuan dinamis. FF: menggantikan seluruh S&K. */
 FL.tncTambahan = q => { const cfg = cfgDari(q && q.formLini); if (!cfg) return []; return panggil(cfg, 'tnc', q.formLini.s) || []; };
@@ -2023,8 +2045,21 @@ FL.validasi = q => { const cfg = cfgDari(q && q.formLini); if (!cfg) return []; 
 /* ---------- data awal (sekali): S&K per lini dan template FF dimuat ke Pengaturan dokumen ---------- */
 /* v2: menambah butir S&K bawaan yang belum ada untuk tiap lini (v1 melewati lini yang sudah punya satu butir, sehingga S&K Trucking Trailer tidak lengkap).
    Dianggap sudah ada bila kemiripan kata >= 0,6 dengan butir yang tersimpan (teks bawaan Pengaturan dan FL.TNC_LINI tidak identik). */
+/* 23 Nov 2026: S&K Open Yard bawaan diganti (12 butir pilihan pemilik). Butir bawaan lama yang belum disunting dibuang; butir sunting atau buatan pengguna dipertahankan. Sekali (p.syaratOyVer). */
+const OY_LAMA = ['Deposit jaminan wajib dibayar sebelum lahan diserahterimakan.', 'Deposit dikembalikan setelah masa sewa berakhir, dikurangi kerusakan lahan atau tunggakan.', 'Biaya listrik, air, dan layanan lain ditagihkan sesuai pemakaian atau realisasi.', 'Lahan diserahterimakan dalam kondisi yang dicatat di berita acara serah terima.'];
+const migrasiSyaratOy = p => {
+  if (p.syaratOyVer >= 1) return false;
+  p.tnc = Array.isArray(p.tnc) ? p.tnc : [];
+  const idDari = t => String((t.teks && t.teks.id) || ''), lama = new Set(OY_LAMA.map(normT));
+  p.tnc = p.tnc.filter(t => !(t.kat === 'open_yard' && lama.has(normT(idDari(t)))));
+  const ada = new Set(p.tnc.filter(t => t.kat === 'open_yard').map(t => normT(idDari(t))));
+  FL.TNC_LINI.open_yard.forEach((tx, i) => { if (!ada.has(normT(tx))) p.tnc.push({ id: 'oy' + (i + 1), kat: 'open_yard', kategori: 'lainnya', teks: { id: tx, en: FL.TNC_LINI_EN.open_yard[i] || '' }, aktif: true }); });
+  p.syaratOyVer = 1; return true;
+};
 FL.seedPengaturan = p => {
-  if (!p || p.seedFL === 'v2') return false;
+  if (!p) return false;
+  const oy = migrasiSyaratOy(p);
+  if (p.seedFL === 'v2') return oy;
   p.tnc = Array.isArray(p.tnc) ? p.tnc : [];
   const kata = t => new Set(String(t || '').toLowerCase().match(/[a-z0-9]+/g) || []);
   const mirip = (x, y) => { const u = new Set([...x, ...y]); let i = 0; x.forEach(w => { if (y.has(w)) i++; }); return u.size ? i / u.size : 0; };

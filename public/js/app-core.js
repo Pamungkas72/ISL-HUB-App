@@ -3300,6 +3300,13 @@ table.isl-fl{margin-top:12px}
 .isl-kartu--cc thead .isl-fl-sub{font-weight:500;text-transform:none;letter-spacing:0;color:#7A8794}
 .isl-page.tema-b table.isl-t.isl-kartu--cc:not(.isl-mx):not(.isl-kisi) tbody tr:first-child td{border-top:0}
 .isl-kartu--cc tbody tr:first-child td:first-child,.isl-kartu--cc tbody tr:first-child td:last-child{border-top-left-radius:0;border-top-right-radius:0}
+/* Open Yard (desain B, 23 Nov 2026): kartu tarif sewa dan layanan tambahan, harga di kolom kanan, baris total biru muda, ketentuan sewa sebagai chip, lampiran denah satu halaman. */
+.isl-page.tema-b table.isl-t.isl-kartu--oy:not(.isl-mx):not(.isl-kisi) tbody tr td:nth-child(n){background:#fff !important}
+.isl-page.tema-b table.isl-t.isl-kartu--oy:not(.isl-mx):not(.isl-kisi) tbody tr.tot td:nth-child(n){background:#E8F2FB !important;border-top:1px solid #CFE0F0;font-weight:800;font-size:11px;text-align:left !important}
+.isl-page.tema-b table.isl-t.isl-kartu--oy:not(.isl-mx):not(.isl-kisi) tbody tr.tot td.r{text-align:right !important;font-size:13px;color:#10233F}
+.isl-page.tema-b table.isl-t.isl-kartu--oy3:not(.isl-mx):not(.isl-kisi) thead th:nth-child(2){text-align:left}
+.isl-oychip{display:flex;flex-wrap:wrap;gap:7px;margin:2px 0 12px}.isl-oychip span{background:#F3F8FD;border:1px solid #DDE6EF;border-radius:20px;padding:4px 11px;font-size:10px;color:#44566C}.isl-oychip b{color:#10233F;font-weight:700}
+.isl-lamp{display:flex;flex-direction:column;height:940px}.isl-lamp__i{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;border:1px solid #DDE6EF;border-radius:10px;overflow:hidden;background:#fff}.isl-lamp__i img{max-width:100%;max-height:100%;object-fit:contain}.isl-lamp__k{font-size:10px;color:#6b7a90;padding-top:6px}
 /* Kartu ringan Trucking Distribusi (4 Nov 2026, desain C): pita pick up di dalam kartu (biru, oranye bila semua Express), kolom Layanan berlabel, kolom kelas berselang-seling. */
 .isl-page.tema-b table.isl-t.isl-kartu--dst:not(.isl-mx):not(.isl-kisi) thead th{text-align:right}
 .isl-page.tema-b table.isl-t.isl-kartu--dst:not(.isl-mx):not(.isl-kisi) thead th:first-child{text-align:left}.isl-page.tema-b table.isl-t.isl-kartu--dst:not(.isl-mx):not(.isl-kisi) thead th.c{text-align:center}
@@ -3506,6 +3513,7 @@ async function renderDok(m, aset, o = {}) {
     fl.blok.forEach(bk => {
       if (bk.jenis === 'tabel') tabelFL(bk, false);
       else if (bk.jenis === 'kv') tabelFL(bk, true);
+      else if (bk.jenis === 'chip') taruh([htmlEl(`<div class="isl-oychip">${(bk.baris || []).map(r => `<span>${esc(r.k)} <b>${esc(r.v)}</b></span>`).join('')}</div>`)]);
       else if (bk.jenis === 'galeri') {
         const f = bk.foto || [], baris = []; for (let i = 0; i < f.length; i += 3) baris.push(f.slice(i, i + 3));
         baris.forEach((b3, bi) => taruh([htmlEl(`<div class="isl-gal">${bi === 0 ? `<div class="isl-gal__cap">${esc(bk.cap)}</div>` : ''}<div class="isl-gal__r">${b3.map(x => `<figure><div class="isl-gal__i"><img src="${esc(x.src)}" alt="" crossorigin="anonymous"></div>${x.ket ? `<figcaption>${esc(x.ket)}</figcaption>` : ''}</figure>`).join('')}</div></div>`)]));
@@ -3567,6 +3575,8 @@ async function renderDok(m, aset, o = {}) {
   const cat = htmlEl(`<p class="isl-note"><b>${esc(L.note)}:</b> ${esc(m.catatan)}</p>`);
   const ult = blok.pop(); blok.push([...ult, ttd, cat]);
   blok.forEach(u => taruh(u));
+  /* lampiran (mis. denah lahan Open Yard): satu halaman sendiri per gambar, setelah tanda tangan */
+  if (m.fl && m.fl.lampiran) m.fl.lampiran.forEach(l => { halamanBaru(); taruh([htmlEl(`<div class="isl-lamp"><div class="isl-gal__cap">${esc(l.cap)}</div><div class="isl-lamp__i"><img src="${esc(l.src)}" alt="" crossorigin="anonymous"></div>${l.ket ? `<div class="isl-lamp__k">${esc(l.ket)}</div>` : ''}</div>`)]); });
   pages.forEach(pg => pg.querySelectorAll('table.isl-t').forEach(perbaikiRowspan));
   const n = pages.length;
   pages.forEach((pg, i) => { pg.querySelector('.isl-foot').innerHTML = `<span>PT Indo Sukses Logistik · ${esc(m.judulDok)} No. ${esc(m.nomor)}</span><span>${esc(L.hal(i + 1, n))}</span>`; });
@@ -5959,6 +5969,7 @@ const DOK_EN = new Map(Object.entries({
   'Tahun / tonase': 'Year / tonnage', 'Lokasi gudang': 'Warehouse location', 'Rute (asal – tujuan)': 'Route (origin – destination)', 'Komponen biaya': 'Cost component', 'Tarif (asal)': 'Rate (original)', 'Keterangan domestik': 'Domestic remarks',
   'RINCIAN TARIF': 'RATE DETAILS', 'RINCIAN TARIF SEWA (Rp)': 'RENTAL RATE DETAILS (IDR)', 'Rincian Unit dan Tarif Sewa': 'Unit and Rental Rate Details', 'SPESIFIKASI GUDANG': 'WAREHOUSE SPECIFICATIONS', 'SPESIFIKASI LAHAN': 'YARD SPECIFICATIONS',
   'GALERI GUDANG': 'WAREHOUSE GALLERY', 'GALERI GUDANG PLB': 'PLB WAREHOUSE GALLERY', 'GALERI LAHAN': 'YARD GALLERY', 'CITRA SATELIT DAN FOTO UDARA': 'SATELLITE AND AERIAL IMAGERY', 'TOTAL BIAYA PENGIRIMAN': 'TOTAL SHIPPING COST',
+  'Sesuai pemakaian': 'Based on usage', 'Pembayaran': 'Payment', 'Total sewa per bulan': 'Total rent per month', 'LAMPIRAN: DENAH LAHAN': 'ATTACHMENT: SITE PLAN',
   'Sewa': 'Rental', 'Sewa lahan': 'Land rental', 'Layanan tambahan': 'Additional services', 'Layanan Tambahan': 'Additional Services', 'Import dan Export': 'Import and Export', 'Berlaku untuk impor, ekspor, dan REPO': 'Applies to import, export, and REPO', 'Ketentuan sewa lahan': 'Land rental terms',
   'Port berlaku': 'Applicable port', 'Masa sewa': 'Rental period', 'Masa kontrak': 'Contract period', 'Luasan minimum': 'Minimum area', 'Masa sewa dedicated': 'Dedicated rental period', 'Minimum luas sewa': 'Minimum rental area', 'Minimum masa sewa': 'Minimum rental period', 'Luas yang disewa': 'Rented area',
   'Estimasi sewa lahan per bulan': 'Estimated monthly land rent', 'Deposit jaminan': 'Security deposit', 'Nama gudang': 'Warehouse name', 'Jenis': 'Type', 'Luas gudang': 'Warehouse area', 'Sistem penyimpanan': 'Storage system', 'Lokasi': 'Location', 'Nama lokasi': 'Location name', 'Luas lahan total': 'Total land area',
@@ -5989,6 +6000,7 @@ const DOK_EN = new Map(Object.entries({
 }));
 const DOK_EN_POLA = [
   [/^Tipe (.+)$/, 'Type $1'], [/^Trailer (.+?): (.+)$/, (m, a, b) => `Trailer ${terjemahTeksDok(a, false)}: ${b}`], [/^Sewa container (.+) \((Harian|Mingguan|Bulanan)\)$/, (m, a, b) => `Container rental ${a} (${DOK_EN.get(b)})`], [/^Sewa unit (.+)$/, 'Unit rental $1'],
+  [/^Minimum (\d+) bulan$/, 'Minimum $1 months'], [/^Di muka, per (\d+) bulan$/, 'In advance, every $1 months'],
   [/^(\d+) bulan$/, '$1 months'], [/^(\d+) bulan sewa(, .+)?$/, '$1 months’ rent$2'], [/^(\d+) hari$/, '$1 days'],
   [/^Jumlah driver (.+) per unit\. Tarif driver adalah tambahan di luar tarif sewa unit\.$/, (m, a) => `Number of drivers: ${a.replace(/ atau /g, ' or ').replace(/ orang$/, '')} per unit. Driver rates are in addition to the unit rental rate.`],
   [/^Sewa lahan dedicated wajib dengan luasan minimum (.+) m² dan masa sewa (\d+) bulan\.$/, 'Dedicated land rental requires a minimum area of $1 m² and a rental period of $2 months.'],
@@ -6027,7 +6039,7 @@ R.terjemahFL = (d, b) => {
   const sel = c => c && typeof c === 'object' ? { ...c, ...(typeof c.v === 'string' ? { v: S(c.v) } : {}), ...(typeof c.sat === 'string' ? { sat: S(c.sat) } : {}) } : S(c);
   const kv = x => Array.isArray(x) ? [T(x[0]), S(x[1])] : x && typeof x === 'object' ? { ...x, k: T(x.k), v: S(x.v) } : x;
   return {
-    ...d, info: (d.info || []).map(kv), catatan: (d.catatan || []).map(T),
+    ...d, info: (d.info || []).map(kv), catatan: (d.catatan || []).map(T), ...(d.lampiran ? { lampiran: d.lampiran.map(l => ({ ...l, cap: T(l.cap) })) } : {}),
     blok: (d.blok || []).map(k => ({ ...k, ...(k.cap ? { cap: T(k.cap) } : {}), ...(k.sub ? { sub: T(k.sub) } : {}), ...(k.teks && !k.teksEn ? { teks: T(k.teks) } : {}),
       ...(k.kolom ? { kolom: k.kolom.map(c => ({ ...c, ...(c.h && !c.hEn ? { h: T(c.h) } : {}) })) } : {}), ...(k.baris ? { baris: k.baris.map(r => r && Array.isArray(r.c) ? { ...r, c: r.c.map(sel) } : r && Array.isArray(r.tot) ? { ...r, tot: r.tot.map(S) } : (r && typeof r === 'object' && 'k' in r ? kv(r) : r)) } : {}) }))
   };

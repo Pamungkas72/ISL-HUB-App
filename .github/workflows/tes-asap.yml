@@ -88,3 +88,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
         run: node tests/asap/uji-semua-lini.js
+      - name: Uji Open Yard (tabel, lampiran denah, English, migrasi S&K)
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-openyard.js

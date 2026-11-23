@@ -2621,3 +2621,6 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .ak-pre { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; }
 .ak-pre span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ak-pre small { color: var(--muted); }
+
+/* Open Yard: penanda bagian opsional di judul bagian formulir */
+.fl-opsi{margin-left:8px;padding:2px 8px;border-radius:9px;font-size:10.5px;font-weight:700;letter-spacing:.3px;text-transform:none;color:var(--mr-muted);background:var(--mr-bg);border:1px solid var(--mr-border)}

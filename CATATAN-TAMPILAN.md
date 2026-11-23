@@ -2,6 +2,13 @@
 
 Setiap perubahan tampilan dicatat di sini: tanggal, halaman, apa yang berubah, dan PR-nya. Yang terbaru di atas.
 
+## 2026-11-23 (Quotation Open Yard: desain B)
+
+- **Formulir dan PDF Open Yard dirombak (desain B, dipilih dari 3 desain; HP dan desktop)**. Formulir: 1 Sewa lahan dan ketentuan (luas, tarif per m², masa sewa dan pembayaran teks bebas, deposit, ringkasan total), 2 Layanan tambahan, 3 Spesifikasi, 4 Fasilitas, 5 Galeri, 6 Citra satelit, 7 **Denah lahan (opsional, jadi lampiran)**.
+- **PDF**: harga dulu (pita "Sewa lahan", kartu tarif dengan baris Total sewa per bulan, kartu Layanan tambahan, chip ketentuan), profil lahan sesudahnya, denah sebagai halaman lampiran terakhir. Layanan tercentang tanpa harga tampil "Sesuai pemakaian". Semua teks punya terjemahan English.
+- **S&K bawaan Open Yard diganti 12 butir** pilihan pemilik; data tersimpan dimigrasi sekali (butir sunting dipertahankan). Rincian: `ATURAN-TABEL-QUOTATION.md`.
+- Teknis: `MESIN.oy` di `formulir-lini.js`, blok baru `chip` dan `lampiran` di `renderDok`; gaya `.isl-kartu--oy`, `.isl-oychip`, `.isl-lamp`, `.fl-opsi`. Uji baru `tests/asap/uji-openyard.js`.
+
 ## 2026-11-20 (Customer: tab Dokumen, folder per jenis)
 
 - **Tab baru Dokumen** (desain B, folder per jenis; HP dan desktop) menggantikan tab Kontrak dan Riwayat Quotation. Folder: **Legalitas, Kontrak, Quotation, MOM, Lainnya** dengan jumlah dan ringkasan. HP: grid folder, ketuk membuka isi (tombol kembali). Desktop: folder di kiri, isi di kanan, plus **Semua** (satu daftar urut tanggal).
