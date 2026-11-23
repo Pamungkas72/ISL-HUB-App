@@ -119,8 +119,8 @@ async function ujiPeran(browser, peran) {
   cek(!tr.teks.some(t => /(^|[^0-9])4 jam|Kepala Engkel|at cost|fee administrasi/.test(t)), `[${peran}] S&K trailer masih memuat butir lama yang bentrok: ${JSON.stringify(tr.teks)}`);
   // lini yang sudah dihapus master dari daftar Template lini tidak boleh ditawarkan saat membuat quotation
   const sb = await p.evaluate(async () => {
-    const MR = window.__islMR, PENG = window.__qt._R.PENG; MR.lini.push({ id: 'uji_format_1', nama: 'UJI format 1', aktif: true });
-    window.__ISL_DATA.formatLini = []; if (window.ISLFL) window.ISLFL.muatFormat([{ id: 'uji_format_1', kode: 'uji_format_1', nama: 'UJI format 1', ket: 'x', judul: 'x', pembuka: '', kolom: [{ nama: 'Uraian', num: false, lebar: 60 }, { nama: 'Tarif', num: true, lebar: 40 }], bagian: [{ judul: 'A', baris: [] }] }]);
+    const MR = window.__islMR, PENG = window.__qt._R.PENG; MR.lini.push({ id: 'uji_format_1', nama: 'Format tes 1', aktif: true });
+    window.__ISL_DATA.formatLini = []; if (window.ISLFL) window.ISLFL.muatFormat([{ id: 'uji_format_1', kode: 'uji_format_1', nama: 'Format tes 1', ket: 'x', judul: 'x', pembuka: '', kolom: [{ nama: 'Uraian', num: false, lebar: 60 }, { nama: 'Tarif', num: true, lebar: 40 }], bagian: [{ judul: 'A', baris: [] }] }]);
     const tunggu = () => new Promise(r => setTimeout(r, 150)), teksPanel = () => (document.getElementById('mr-layer') || document.body).innerText;
     const buka = async kunci => { const t = document.querySelector(`#qt-root [data-qt="${kunci}"]`); if (t) t.click(); await tunggu(); const x = teksPanel(); document.querySelectorAll('[data-aksi="tutup-layer"]').forEach(b => b.click()); await tunggu(); return x; };
     window.__qt._Q.edit = null; window.__qt._Q.view = 'list'; window.__qt.gambar(); await tunggu();
@@ -128,7 +128,7 @@ async function ujiPeran(browser, peran) {
     const wmAda = await buka('manual-word'), fmAda = await buka('baru');
     PENG.liniSembunyi = ['uji_format_1'];
     const wmHilang = await buka('manual-word'), fmHilang = await buka('baru');
-    return { wmAda: /UJI format 1/.test(wmAda), wmHilang: /UJI format 1/.test(wmHilang), fmAda: /UJI format 1/.test(fmAda), fmHilang: /UJI format 1/.test(fmHilang), fmMuncul: /Buat quotation/.test(fmAda) };
+    return { wmAda: /Format tes 1/.test(wmAda), wmHilang: /Format tes 1/.test(wmHilang), fmAda: /Format tes 1/.test(fmAda), fmHilang: /Format tes 1/.test(fmHilang), fmMuncul: /Buat quotation/.test(fmAda) };
   });
   if (peran !== 'sales') cek(sb.wmAda && !sb.wmHilang, `[${peran}] Quotation manual (Word): lini ada=${sb.wmAda}, setelah dihapus=${sb.wmHilang}`);
   if (process.env.DBG) console.log(peran, JSON.stringify(sb));

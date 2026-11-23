@@ -2404,13 +2404,15 @@ window.ISLTemplate = { tersimpan: templateTersimpan, baris: templateBaris, satua
 const liniPunyaTemplate = liniKey => templateBaris(liniKey).length > 0;
 const liniBerTemplate = () => daftarLini().filter(l => l.resmi && liniPunyaTemplate(l.key));
 /* lini yang ditawarkan saat MEMBUAT quotation (baru, manual Word) dan di pengaturan: lini yang sudah dihapus master dari daftar Template lini tidak muncul lagi */
-const liniTersembunyi = key => { const sb = PENG.liniSembunyi || [], fl = window.ISLFL && window.ISLFL.liniKey ? window.ISLFL.liniKey(key) : key; return sb.includes(key) || sb.includes(fl); };
+/* sisa data tes (nama berawalan "UJI ") tidak pernah ditawarkan */
+const liniUji = key => { const x = daftarLini().find(z => z.key === key); return !!x && /^UJI\s/i.test(x.nama || ''); };
+const liniTersembunyi = key => { const sb = PENG.liniSembunyi || [], fl = window.ISLFL && window.ISLFL.liniKey ? window.ISLFL.liniKey(key) : key; return sb.includes(key) || sb.includes(fl) || liniUji(key); };
 const liniPilihan = () => daftarLini().filter(l => l.resmi && !liniTersembunyi(l.key));
 /* daftar lini di halaman template: satu baris per lini. Hapus (✕) hanya master: lini disembunyikan dari daftar ini saja.
    Lini, tarif Master Rate, dan quotation yang sudah dibuat tidak berubah. */
 function htmlTemplateLiniDaftar() {
   const sembunyi = PENG.liniSembunyi || [];
-  const lini = daftarLini().filter(l => l.resmi && !sembunyi.includes(l.key));
+  const lini = daftarLini().filter(l => l.resmi && !sembunyi.includes(l.key) && !liniUji(l.key));
   const baris = lini.map(l => { const n = templateBaris(l.key).length; return `<div class="qt-tlk"><button type="button" class="qt-tlk__utama" data-qt="atur-template" data-lini="${esc(l.key)}"><b class="qt-tlk__nama">${esc(l.nama)}</b><span class="qt-tlk__info"><i class="qt-dot${n ? ' is-ok' : ''}"></i>${n ? n + ' layanan' : 'Belum diisi'}</span></button>${masterSaja() ? `<button type="button" class="qt-tl-x qt-tlk__x" data-qt="tl-sembunyi" data-lini="${esc(l.key)}" aria-label="Hapus ${esc(l.nama)} dari daftar" title="Hapus dari daftar (master)">${ik('tutup', 14)}</button>` : ''}</div>`; }).join('');
   const tersembunyi = masterSaja() && sembunyi.length ? `<div class="qt-tl-sembunyi"><span class="mr-sub">Disembunyikan:</span>${sembunyi.map(k => { const x = daftarLini().find(z => z.key === k); return `<button type="button" class="qt-chip qt-chip--kosong" data-qt="tl-tampil" data-lini="${esc(k)}">${esc(x ? x.nama : k)} ↺</button>`; }).join('')}</div>` : '';
   return `<div class="qt-tl-daftar qt-tlk-kisi">${baris || '<p class="mr-sub">Belum ada lini resmi.</p>'}</div>${tersembunyi}`;
@@ -7397,7 +7399,7 @@ function pilihFormat(cid) {
   bukaPanel(`<header class="mr-panel__kepala"><div><h2>Buat quotation</h2><p class="mr-sub">Pilih format penawaran. Format lini memakai tabel dan syarat yang sudah disepakati per lini bisnis.</p></div><span style="display:flex;gap:6px;align-items:flex-start"><button type="button" class="mr-ikonbtn" data-qt="buka-template-lini" aria-label="Atur template per lini bisnis" title="Atur template per lini bisnis">${ik('setelan')}</button><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ik('tutup')}</button></span></header>
   <div class="mr-panel__isi"><div class="fl-pilihformat">
     <button type="button" class="is-utama" data-qt="baru-format" data-fmt="" data-cid="${esc(cid || '')}"><b>Format bebas layanan</b><small>Lintas lini, isi baris satu per satu, pakai template, rate aktif customer, atau Master Rate.</small></button>
-    ${window.ISLFL.daftar().filter(l => !liniTersembunyi(l.key)).map(l => `<button type="button" data-qt="baru-format" data-fmt="${esc(l.key)}" data-cid="${esc(cid || '')}"><b>${esc(l.nama)}</b><small>${esc(l.ket)}</small></button>`).join('')}
+    ${window.ISLFL.daftar().filter(l => !liniTersembunyi(l.key) && !/^UJI\s/i.test(l.nama)).map(l => `<button type="button" data-qt="baru-format" data-fmt="${esc(l.key)}" data-cid="${esc(cid || '')}"><b>${esc(l.nama)}</b><small>${esc(l.ket)}</small></button>`).join('')}
     ${masterAtauAdmin() ? `<button type="button" class="is-baru" data-qt="format-baru"><b>+ Tambah format lini bisnis baru</b><small>Buat tabel dan syarat sendiri lewat langkah bertahap, bisa mulai dari contoh penawaran (Excel atau PDF).</small></button>` : ''}</div></div>
   <footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Batal</button></footer>`);
 }
