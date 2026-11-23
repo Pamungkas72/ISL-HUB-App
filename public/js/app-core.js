@@ -5149,8 +5149,7 @@ function paginaPengaturan(html) {
     ${simpan ? `<footer class="mr-panel__kaki qt-pgfoot"><span class="mr-ruang"></span><button class="mr-btn mr-btn--utama" data-qt="pg-simpan-bagian" data-seksi="${pilih.id}">${ik('cek', 16)} Simpan bagian ini</button></footer>` : ''}`;
   }
   const daftar = grup.map(g => `<button type="button" class="qt-bagian" data-qt="pg-buka" data-seksi="${esc(g.id)}"><span>${esc(judulGrup(g))}</span><span class="qt-bagian__panah" aria-hidden="true">›</span></button>`).join('');
-  return `${awal}<div class="qt-main qt-daftar-bagian">${daftar}</div>
-    <footer class="mr-panel__kaki qt-pgfoot">${ed ? `<button class="mr-btn" data-qt="pg-batal">Batalkan perubahan</button>` : ''}<span class="mr-ruang"></span><button class="mr-btn" data-qt="pg-kembali">${ik('kembali', 16)} Kembali</button>${ed ? `<button class="mr-btn mr-btn--utama" data-qt="pg-simpan">${ik('cek', 16)} Simpan pengaturan</button>` : ''}</footer>`;
+  return `${awal}<div class="qt-main qt-daftar-bagian">${daftar}</div>`;
 }
 function viewPengaturan() { return paginaPengaturan(sembunyiKartuPgd(viewPengaturanPenuh())); }
 // Kartu lipat: saat satu dibuka, kartu lain di bagian yang sama menutup (kecuali sedang mencari); kotak teks menyesuaikan tinggi isi
@@ -5246,7 +5245,7 @@ function viewPengaturanPenuh() {
       <div class="qt-aset__p">${img ? `<img src="${img}" alt="${judul}">` : '<span class="mr-sub">Belum ada gambar. Dokumen akan menyisakan ruang untuk tanda tangan basah.</span>'}</div>
       ${kelolaSaja() ? `<div class="qt-aset__a"><button type="button" class="mr-btn mr-btn--kecil" data-qt="pg-unggah" data-j="${j}">${ik('upload', 14)} Unggah ${judul.toLowerCase()}</button>${img ? `${dilarangHapus() ? '' : `<button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya" data-qt="pg-hapus-aset" data-j="${j}">${ik('tong', 14)} Hapus</button>`}` : ''}<input type="file" id="pg-file-${j}" accept="image/png,image/jpeg,image/webp" hidden></div>` : ''}</div>`; };
   return `
-    <div class="cu-judul"><div class="qt-kepala-sebaris"><button type="button" class="mr-btn mr-btn--kecil" data-qt="pg-kembali">${ik('kembali', 14)} Kembali</button><h2>Pengaturan dokumen</h2></div><div class="cu-judul__tag"><span class="mr-sub">Kop surat, penandatangan, tanda tangan dan cap, kalimat standar, dan pustaka syarat dan ketentuan.</span></div></div>
+    <div class="cu-judul"><div class="qt-kepala-sebaris"><button type="button" class="mr-ikonbtn" data-qt="pg-kembali" aria-label="Kembali" title="Kembali">${ik('kembali', 18)}</button><h2>Pengaturan dokumen</h2>${ed ? `<span class="qt-pgaksi"><button type="button" class="mr-btn mr-btn--kecil qt-pgaksi__batal" data-qt="pg-batal">Batalkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--utama" data-qt="pg-simpan">${ik('cek', 14)} Simpan</button></span>` : ''}</div><div class="cu-judul__tag"><span class="mr-sub">Kop surat, penandatangan, tanda tangan dan cap, kalimat standar, dan pustaka syarat dan ketentuan.</span></div></div>
   <div class="mr-galat" id="qt-galat" hidden></div>
   ${ed ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Pengaturan hanya bisa diubah akun master dan admin.</div></div>`}
   ${R.kopBelumDiisi() ? `<div class="mr-banner mr-banner--peringatan">${ik('peringatan')}<div>Data kop dan nama penandatangan masih contoh (tanda kurung siku). Isi dengan data asli sebelum menerbitkan quotation.</div></div>` : ''}
@@ -5293,8 +5292,7 @@ function viewPengaturanPenuh() {
   <details class="mr-kartu cu-kartu qt-pgd" id="pg-tnc" data-pgd="pustaka" ${pgOpen('pustaka')}><summary><h3>Pustaka syarat dan ketentuan</h3></summary><p class="mr-sub qt-ket">Butir <b>Umum</b> otomatis masuk ke semua lini; yang sama atau mirip dengan butir lini dilewati supaya tidak dobel. Butir <b>Khusus</b> hanya muncul bila lininya dipakai di quotation. Cukup tulis dalam Bahasa Indonesia; teks English dibuat otomatis saat dokumen dicetak. Tulis <code>{berlaku}</code> untuk tanggal berlaku.</p>
     <div id="tp-isi">${tpHtml()}</div>
     ${ed ? `<div class="qt-pgadd" style="margin-top:8px"><button type="button" class="mr-btn mr-btn--kecil" data-tp="isi-excel">${ik('plus', 14)} Tambah syarat khas Distribusi Mobil Kecil dari Excel</button></div>` : ''}</details>
-  </div>
-  <footer class="mr-panel__kaki qt-pgfoot">${ed ? `<button class="mr-btn" data-qt="pg-batal">Batalkan perubahan</button>` : ''}<span class="mr-ruang"></span><button class="mr-btn" data-qt="pg-kembali">${ik('kembali', 16)} Kembali</button>${ed ? `<button class="mr-btn mr-btn--utama" data-qt="pg-simpan">${ik('cek', 16)} Simpan pengaturan</button>` : ''}</footer>`;
+  </div>`;
 }
 function bacaPengaturanField(t) {
   if (!Q.pd) return;
