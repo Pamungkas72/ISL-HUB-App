@@ -176,7 +176,7 @@ FL.TNC_LINI_EN = {
   depo: ['The depot operates 24 hours.', 'Storage is charged per day from the date the container enters the depot, after the free time expires.', 'Overtime outside working hours is charged per shift at the applicable rate.', 'Labor hours for stripping and stuffing: Monday to Friday 08:00 to 17:00 (one shift), Saturday 08:00 to 12:00.', 'Any damage or loss of containers during the storage period at the depot is the full responsibility of PT Indo Sukses Logistik.'],
   trucking_trailer: [],   /* S&K Trailer: SYARAT_TRAILER_EN di app-core */
   distribusi_kecil: ['Rates are per trip.', 'Express service includes toll fees. Regular service excludes toll fees.', 'Estimated Regular delivery is 1 to 3 days, depending on distance.', 'Long variants (CDE long and CDD long) are IDR 300,000 to IDR 500,000 higher than the standard rate and are billed upon the customer’s request.', 'Delivery documents (DO, POD) are provided by PT Indo Sukses Logistik.', 'Waiting time exceeding 4 hours will be subject to additional charges.'],
-  sewa_unit: ['Rental period according to the customer’s choice (monthly, 3, 6, or 12 months).', 'Driver as an add-on is charged per person per month, separately from the unit rental rate.', 'The unit is handed over ready for use. Bare rental (without driver) excludes the driver terms.'],
+  sewa_unit: ['Rental period as agreed (monthly, 3, 6, or 12 months).', 'The unit is handed over ready for use.'],
   customs_clearance: ['Price excludes trucking costs.', 'Charges from relevant authorities (liner charges, packing, demurrage, detention, cleaning, LOLO, mechanic, storage, CFS, DOC, overtime, and the like) are billed cost-to-cost according to official receipts.', 'Additional charges will be confirmed in advance.', 'Marine insurance premium is billed according to the invoice value if required.'],
   gudang_plb: ['The revenue ton basis is the greater of weight (tons) and volume (m3).', 'Monthly storage is charged per multiple of 30 days.', 'Services follow the regulations of the Bonded Logistics Center.'],
   sewa_container_empty: ['The daily rate is calculated from the time the container leaves the depot and applies for the next 24 hours.', 'Return delay tolerance is 2 hours.', 'The container is handed over in clean condition at the start of the rental.', 'Daily and weekly rentals exclude LOLO. Monthly rentals include LOLO.'],
@@ -189,7 +189,7 @@ FL.TNC_LINI = {
   depo: ['Depo beroperasi 24 jam.', 'Storage dihitung per hari sejak kontainer masuk depo, setelah free time berakhir.', 'Overtime di luar jam kerja ditagihkan per shift sesuai tarif.', 'Jam kerja buruh stripping dan stuffing: Senin sampai Jumat pukul 08.00 sampai 17.00 (satu shift), Sabtu pukul 08.00 sampai 12.00.', 'Kerusakan atau kehilangan kontainer selama masa penumpukan di depo menjadi tanggung jawab PT Indo Sukses Logistik.'],
   trucking_trailer: [],   /* S&K Trailer dari SYARAT_TRAILER_BAWAAN di app-core (surat penawaran customer + TOP/reimbursement) */
   distribusi_kecil: ['Tarif per ritase.', 'Service Express sudah termasuk biaya tol. Service Reguler belum termasuk biaya tol.', 'Estimasi pengiriman Reguler 1 sampai 3 hari, tergantung jarak.', 'Varian long (CDE long dan CDD long) lebih tinggi Rp300.000 sampai Rp500.000 dari tarif standar, dan ditagihkan sesuai permintaan customer.', 'Surat jalan (DO, POD) disediakan oleh PT Indo Sukses Logistik.', 'Waktu tunggu lebih dari 4 jam dikenakan biaya tambahan.'],
-  sewa_unit: ['Masa sewa sesuai pilihan customer (bulanan, 3, 6, atau 12 bulan).', 'Driver sebagai add-on dihitung per orang per bulan, terpisah dari tarif sewa unit.', 'Unit diserahkan dalam kondisi siap pakai. Sewa lepas kunci tidak termasuk ketentuan driver.'],
+  sewa_unit: ['Masa sewa sesuai kesepakatan (bulanan, 3, 6, atau 12 bulan).', 'Unit diserahkan dalam kondisi siap pakai.'],
   customs_clearance: ['Harga belum termasuk biaya trucking.', 'Biaya dari instansi terkait (liner charges, packing, demurrage, detention, cleaning, LOLO, mechanic, storage, CFS, DOC, overtime, dan sejenisnya) ditagihkan cost to cost sesuai kwitansi resmi.', 'Biaya tambahan akan dikonfirmasi terlebih dahulu.', 'Marine insurance premium ditagihkan sesuai invoice value jika diperlukan.'],
   gudang_plb: ['Basis revenue ton adalah yang lebih besar antara berat (ton) dan volume (m3).', 'Storage bulanan dihitung per kelipatan 30 hari.', 'Layanan mengikuti ketentuan Pusat Logistik Berikat.'],
   sewa_container_empty: ['Argo harian dihitung sejak container keluar dari depo, berlaku 24 jam ke depan.', 'Toleransi keterlambatan pengembalian 2 jam.', 'Container diserahkan dalam kondisi bersih saat pertama disewa.', 'Harian dan mingguan belum termasuk LOLO. Bulanan sudah termasuk LOLO.'],
@@ -318,26 +318,28 @@ MESIN.tabel = {
     cfg.bagian.forEach((b, bi) => {
       if (st.off && st.off[bi]) return;
       if (b.gabungKe !== undefined) return;
+      if (b.tampil && !b.tampil(st)) return;
       if (cfg.centang) { h += this.centangBagian(cfg, b, bi, st); return; }
       b.kolom.forEach(k => { if (k.opsi) h += datalist(`fl-dl-${bi}-${k.k}`, k.opsi); });
       h += htmlKatalog(st, cfg.katLini || cfg.key, b.judul, b.kolom.map(k => ({ k: k.k, nama: k.nama, ph: k.ph, num: k.num })), '', id => (st.rows[bi] || []).some(r => r._cid === id));
       if (cfg.kartuHp) { h += this.kartuBagian(cfg, b, bi, st); return; }
+      const kol = cfg.kolomB ? cfg.kolomB(st, b, bi) : b.kolom;   /* kolom aktif: sebagian kolom hanya tampil untuk tipe tertentu (Sewa Unit) */
       const kepalaB = `<div class="fl-bagian fl-bagian--h">${bisaEdit() ? `<span class="fl-grup-nama">${inpTeks(`judulBlok.${bi}`, judulTampil(st, bi, b), b.judul, 'class="fl-u" aria-label="Nama blok"')}</span>` : `<span>${esc(judulTampil(st, bi, b))}</span>`}${tombolHapusBlok(bi, this)}</div>${b.sub ? `<div class="fl-mut">${esc(b.sub)}</div>` : ''}`;
       if (cfg.htmlKartuLokasi) { h += kepalaB + cfg.htmlKartuLokasi(st, b, bi); return; }
-      h += kepalaB + `<div class="fl-tbl"><table><thead><tr>${b.kolom.map(k => `<th${k.num ? ' class="r"' : ''}>${esc(k.nama)}</th>`).join('')}<th></th></tr></thead><tbody>`;
+      h += kepalaB + `<div class="fl-tbl"><table><thead><tr>${kol.map(k => `<th${k.num ? ' class="r"' : ''}>${esc(k.nama)}</th>`).join('')}<th></th></tr></thead><tbody>`;
       const rows = st.rows[bi] || [];
-      if (!rows.length) h += `<tr><td colspan="${b.kolom.length + 1}" class="fl-mut" style="text-align:center;padding:10px">Belum ada baris. Klik “+ Tambah baris”.</td></tr>`;
+      if (!rows.length) h += `<tr><td colspan="${kol.length + 1}" class="fl-mut" style="text-align:center;padding:10px">Belum ada baris. Klik “+ Tambah baris”.</td></tr>`;
       rows.forEach((r, ri) => {
         /* kelompok per tipe container (Sewa Container Empty): judul tipe di atas setiap kelompok */
-        if (b.kelompokTipe && (ri === 0 || rows[ri - 1].tipe !== r.tipe)) h += `<tr class="fl-grup"><td colspan="${b.kolom.length + 1}">${esc(r.tipe || '—')}</td></tr>`;
-        h += '<tr>' + b.kolom.map(k => {
+        if (b.kelompokTipe && (ri === 0 || rows[ri - 1].tipe !== r.tipe)) h += `<tr class="fl-grup"><td colspan="${kol.length + 1}">${esc(r.tipe || '—')}</td></tr>`;
+        h += '<tr>' + kol.map(k => {
           const p = `rows.${bi}.${ri}.${k.k}`, v = r[k.k];
           if (k.tetap && !r._baru && !r._cid) return `<td data-label="${esc(k.nama)}">${esc(v)}</td>`;
           if (k.num) return `<td data-label="${esc(k.nama)}">${inpAngka(p, v, k.ph || '0', attrRendah(cfg, b, r, k))}${cfg.saranJual ? htmlSaranSel(cfg, b, r, k, `${bi}.${ri}.${k.k}`) : (cfg.modalSel ? htmlInt(num(v), cfg.modalSel(r, k, bi), cfg.liniKey, 'Modal', cfg.namaSel ? cfg.namaSel(r, k) : null) : '')}</td>`;
           return `<td data-label="${esc(k.nama)}">${inpTeks(p, v, k.ph, k.opsi ? `list="fl-dl-${bi}-${k.k}"` : '')}</td>`;
         }).join('') + `<td class="fl-aksi">${bisaEdit() ? `${bisaKatalog() && (r._baru || r._cid) ? `<button type="button" class="fl-ikon" data-fla="baris-simpan" data-flx="${bi}.${ri}" title="Simpan item ke katalog: jadi referensi tarif untuk item yang sama di penawaran berikutnya" aria-label="Simpan item ke katalog">${IKON_SIMPAN}</button>` : ''}<button type="button" class="fl-x" data-fla="baris-hapus" data-flx="${bi}.${ri}" aria-label="Hapus baris" title="Hapus baris">×</button>` : ''}</td></tr>`;
         const ref = r._baru && !r._cid ? this.refTabel(cfg, b, r) : null;
-        if (ref) h += `<tr class="fl-refrow"><td colspan="${b.kolom.length + 1}"><div class="fl-bx__ref" data-flo>Tersimpan di katalog: ${esc(ref.label || '')}${b.kolom.filter(k => k.num && ada(num((ref.vals || {})[k.k]))).map(k => ` · ${esc(k.nama)} ${fmtRp(num(ref.vals[k.k]))}`).join('')} <button type="button" class="fl-tuju" data-fla="baris-ref" data-flx="${bi}.${ri}|${esc(ref.id)}">Pakai referensi ini</button></div></td></tr>`;
+        if (ref) h += `<tr class="fl-refrow"><td colspan="${kol.length + 1}"><div class="fl-bx__ref" data-flo>Tersimpan di katalog: ${esc(ref.label || '')}${kol.filter(k => k.num && ada(num((ref.vals || {})[k.k]))).map(k => ` · ${esc(k.nama)} ${fmtRp(num(ref.vals[k.k]))}`).join('')} <button type="button" class="fl-tuju" data-fla="baris-ref" data-flx="${bi}.${ri}|${esc(ref.id)}">Pakai referensi ini</button></div></td></tr>`;
       });
       h += `</tbody></table></div>${bisaEdit() ? `<div><button type="button" class="fl-tambah fl-tambah--kecil" data-fla="baris-tambah" data-flx="${bi}">+ Tambah baris</button></div>` : ''}`;
     });
@@ -657,59 +659,96 @@ LINI.trucking_trailer = {
   }
 };
 
-/* ---------- SEWA UNIT (lepas kunci, dengan driver). Uang jalan per rute dihapus (keputusan 21 Okt 2026). ---------- */
-const kolUnit = () => [{ k: 'tipe', nama: 'Tipe', ph: 'CDD Long' }, { k: 'tahun', nama: 'Tahun', ph: '2022' }, { k: 'model', nama: 'Model', ph: 'Box' }, { k: 'tonase', nama: 'Tonase', ph: '4 ton' }, { k: 'kub', nama: 'Kubikasi', ph: '20 m³' }, { k: 'tarif', nama: 'Tarif sewa per bulan (Rp)', num: true }];
-/* kolom driver tampil kecuali dipilih Sembunyikan; bila disembunyikan, add-on driver tidak masuk penawaran */
+/* ---------- SEWA UNIT: tiga tipe (lepas kunci, dengan driver, driver + operasional). Satu tipe per quotation (keputusan 23 Nov 2026).
+   Uang jalan per rute kembali, hanya untuk tipe operasional (Variabel Cost). Deposit hanya lepas kunci, diisi manual. ---------- */
+const SU_NAMA = { lepas: 'Lepas kunci', driver: 'Dengan driver', operasional: 'Driver + operasional' };
+/* draf lama belum punya tipeSewa: ada tarif driver = dengan driver, selain itu lepas kunci */
+const suTipe = st => { const o = st.opsi || {}; return SU_NAMA[o.tipeSewa] ? o.tipeSewa : (o.driverTampil !== 'tidak' && (st.rows[0] || []).some(r => num(r.driver) > 0) ? 'driver' : 'lepas'); };
+const SU_DRV = ['driver', 'operasional'];
+const SU_ZONA = st => [1, 2, 3].map(i => String((st.opsi || {})['zona' + i] || '').trim());
+/* S&K bawaan per tipe (angka tertulis di teks, bisa disunting master di Master Rate > Lini Bisnis > Sewa Unit); pajak, denda, kerusakan minor dipakai semua tipe */
+const SU_SK_UMUM = ['Tarif belum termasuk pajak (PPN) dan pajak lainnya yang berlaku.', 'Keterlambatan pembayaran dikenakan denda administrasi 2% per bulan dari nilai tagihan.', 'Kerusakan minor (penyok atau baret) dikenakan denda Rp 500.000 per panel.', 'Kerusakan di luar panel (kaca, lampu, atau mekanikal) ditagihkan terpisah sesuai nota bengkel.'];
+const SU_SK = {
+  lepas: [...SU_SK_UMUM, 'Deposit dibayar sebelum serah terima unit (minimum 2 kali harga sewa per unit) dan dikembalikan di akhir masa sewa setelah dikurangi kewajiban yang belum diselesaikan.', 'Penyewa bertanggung jawab atas kerusakan, kehilangan, denda tilang, dan pelanggaran lalu lintas selama masa sewa.'],
+  driver: [...SU_SK_UMUM, 'Tarif driver dikenakan per orang per bulan, di luar tarif sewa unit.'],
+  operasional: [...SU_SK_UMUM, 'Harga fix cost sudah termasuk unit, driver untuk operasional harian, maintenance unit, dan GPS tracking.', 'Tarif uang jalan sudah termasuk solar, tol, uang makan driver, dan mel per trip.', 'Biaya pihak ketiga dari kegiatan operasional ditagihkan sesuai bukti (at cost) ditambah fee manajemen 10%. Fee tidak dikenakan atas tarif uang jalan.', 'Waktu kerja driver 12 jam per hari (dihitung sejak pick up), Senin – Sabtu.', 'Lembur Rp 25.000 per jam, termasuk waktu tunggu yang melewati 12 jam kerja.', 'Pekerjaan pada hari libur (Minggu atau libur nasional) dikenakan tambahan Rp 350.000 per hari.', 'Standby charge Rp 100.000 per hari per unit apabila unit dan driver standby di luar jadwal operasional normal atas permintaan customer.', 'Pergerakan unit di luar rute yang disepakati (moving) dikenakan Rp 1.000.000 per moving.', 'Perubahan harga solar sebesar Rp 500 per liter atau lebih, atau perubahan tarif tol resmi, menyesuaikan tarif uang jalan dengan pemberitahuan tertulis.', 'Fix cost: TOP 30 hari setelah invoice diterima. Uang jalan: TOP 14 hari setelah ritase selesai dan dokumen lengkap.']
+};
+FL.SU_SK = SU_SK;
+const SU_KOL = [
+  { k: 'tipe', nama: 'Tipe kendaraan', ph: 'CDD Long' }, { k: 'tahun', nama: 'Tahun', ph: '2022' }, { k: 'model', nama: 'Tipe box', ph: 'Box' }, { k: 'kub', nama: 'Kubikasi', ph: '20 m³' }, { k: 'tonase', nama: 'Tonase', ph: '4 ton' },
+  { k: 'tarif', nama: 'Sewa per bulan (Rp)', num: true },
+  { k: 'deposit', nama: 'Deposit (Rp)', num: true, u: ['lepas'] },
+  { k: 'driver', nama: 'Driver / orang / bulan (Rp)', num: true, u: SU_DRV }, { k: 'jumlah', nama: 'Jumlah driver', ph: '1', u: SU_DRV },
+  { k: 'ket', nama: 'Keterangan', ph: 'Include 1 driver' }
+];
+const SU_HDOK = { tipe: 'Tipe kendaraan', tahun: 'Tahun', model: 'Tipe box', kub: 'Kubikasi', tonase: 'Tonase', tarif: 'Sewa / bulan (Rp)', deposit: 'Deposit (Rp)', driver: 'Driver / orang (Rp)', ket: 'Keterangan' };
+const SU_LEBAR = { tipe: 20, tahun: 9, model: 12, kub: 11, tonase: 11, tarif: 20, deposit: 18, driver: 20, ket: 22 };
 /* nama blok yang ditampilkan: bisa diubah di formulir (st.judulBlok); nama asli dipakai untuk katalog */
 const judulTampil = (st, bi, b) => ((st && st.judulBlok) || {})[bi] || b.judul;
-const SU_DRIVER = st => (st.opsi || {}).driverTampil !== 'tidak';
 LINI.sewa_unit = {
   key: 'sewa_unit', mesin: 'tabel', liniKey: 'sewa_unit', galeri: 'GALERI UNIT', nama: 'Sewa Unit', judul: 'Penawaran Sewa Unit',
   saranJual: true, tarifMinimum: true,
-  /* tarif minimum hanya untuk tarif sewa per bulan (bukan add-on driver); cocokkan tipe unit ke tarif vendor Sewa Unit di Master Rate */
+  /* tarif minimum hanya untuk tarif sewa per bulan (bukan driver); cocokkan tipe unit ke tarif vendor Sewa Unit di Master Rate */
   minSpek: (b, r, k) => k.k === 'tarif' && String(r.tipe || '').trim() ? { nama: r.tipe, dim: {} } : null,
-  ket: 'Satu tabel per tipe unit. Kolom driver bisa ditampilkan atau disembunyikan di penawaran.',
+  ket: 'Pilih tipe sewa: lepas kunci, dengan driver, atau driver + operasional. Kolom dan syarat mengikuti tipe.',
 
-  opsiAwal: { masa: '12 bulan', driverTampil: 'ya' },
-  /* satu tabel untuk semua unit, dikelompokkan per tipe (sama dengan desain A) */
+  opsiAwal: { masa: '12 bulan', tipeSewa: 'lepas', asuransi: 'exclude', area: '', zona1: '', zona2: '', zona3: '' },
   bagian: [
-    { judul: 'Sewa unit', kelompokTipe: true, kolom: [...kolUnit(), { k: 'driver', nama: 'Driver / orang / bulan (Rp)', num: true }, { k: 'jumlah', nama: 'Jumlah driver', ph: '1' }], baris: [{ tipe: 'CDD Long', tahun: '', model: '', tonase: '', kub: '', tarif: '', _baru: true }] },
+    { judul: 'Unit dan tarif sewa', kolom: SU_KOL, baris: [{ tipe: 'CDD Long', tahun: '', model: '', kub: '', tonase: '', tarif: '', deposit: '', driver: '', jumlah: '', ket: '', _baru: true }] },
+    { judul: 'Uang jalan per rute', sub: 'Variabel Cost: tarif per rit, kolom zona opsional (mis. Kalijati, Wanasari)', tampil: st => suTipe(st) === 'operasional',
+      kolom: [{ k: 'rute', nama: 'Rute', ph: 'Port Patimban – GD VF Subang – Depo Retur Patimban' }, { k: 'z1', nama: 'Tarif per rit (Rp)', num: true }, { k: 'z2', nama: 'Zona 2', num: true }, { k: 'z3', nama: 'Zona 3', num: true }], baris: [{ rute: '', z1: '', z2: '', z3: '', _baru: true }] },
   ],
-  htmlAtas(st) { return `<div class="fl-grid2"><label class="fl-f"><span>Masa sewa</span>${inpTeks('opsi.masa', st.opsi.masa, '12 bulan', 'list="fl-dl-masa-su"')}${datalist('fl-dl-masa-su', ['1 bulan', '3 bulan', '6 bulan', '12 bulan'])}</label><label class="fl-f"><span>Kolom driver di penawaran</span>${pilihan('opsi.driverTampil', [['ya', 'Tampilkan'], ['tidak', 'Sembunyikan']], st.opsi.driverTampil || 'ya')}</label></div>`; },
+  /* kolom yang tampil di formulir: sesuai tipe sewa; kolom tarif uang jalan memakai nama zona yang diisi */
+  kolomB(st, b, bi) {
+    if (bi === 0) { const t = suTipe(st); return b.kolom.filter(k => !k.u || k.u.includes(t)); }
+    const z = SU_ZONA(st);
+    return b.kolom.filter(k => !/^z\d$/.test(k.k) || k.k === 'z1' || z[+k.k[1] - 1]).map(k => /^z\d$/.test(k.k) ? { ...k, nama: `${z[+k.k[1] - 1] || 'Tarif per rit'} (Rp / rit)` } : k);
+  },
+  htmlAtas(st) {
+    const t = suTipe(st), o = st.opsi || {};
+    return `<div class="fl-grid2"><label class="fl-f"><span>Tipe sewa (satu per quotation)</span>${pilihan('opsi.tipeSewa', Object.entries(SU_NAMA), t)}</label><label class="fl-f"><span>Masa sewa</span>${inpTeks('opsi.masa', o.masa, '12 bulan', 'list="fl-dl-masa-su"')}${datalist('fl-dl-masa-su', ['1 bulan', '3 bulan', '6 bulan', '12 bulan'])}</label>
+      <label class="fl-f"><span>Asuransi unit</span>${pilihan('opsi.asuransi', [['exclude', 'Exclude (belum termasuk)'], ['include', 'Include (sudah termasuk)']], o.asuransi || 'exclude')}</label><label class="fl-f"><span>Batas wilayah / area pemakaian</span>${inpTeks('opsi.area', o.area, 'Mis. Jabodetabek')}</label></div>
+      ${t === 'operasional' ? `<div class="fl-grid2"><label class="fl-f"><span>Nama zona uang jalan 1 (opsional)</span>${inpTeks('opsi.zona1', o.zona1, 'Mis. Kalijati')}</label><label class="fl-f"><span>Nama zona 2 (opsional)</span>${inpTeks('opsi.zona2', o.zona2, 'Mis. Wanasari')}</label><label class="fl-f"><span>Nama zona 3 (opsional)</span>${inpTeks('opsi.zona3', o.zona3, '')}</label></div>` : ''}`;
+  },
   baris(st) {
-    const out = [], nmU = r => [r.tipe, r.model, r.tahun].filter(Boolean).join(' ');
+    const out = [], t = suTipe(st), nmU = r => [r.tipe, r.model, r.tahun].filter(Boolean).join(' ');
     (st.rows[0] || []).forEach(r => {
       const j = num(r.tarif), d = num(r.driver), n = num(r.jumlah) || 1;
       const sp = minSpek(this, null, r, { k: 'tarif' });
       if (j > 0) out.push({ item: `Sewa unit ${nmU(r)}`, satuan: 'per bulan', jual: j, modal: null, min: sp && minAktifCfg(this) ? tarifMinimum(this.liniKey, sp.nama, sp.dim) : null, bagian: r.tipe || 'Sewa unit' });
-      if (SU_DRIVER(st) && j > 0 && d > 0) out.push({ item: `Driver add-on ${r.tipe || ''}`.trim(), satuan: 'per orang per bulan', qty: n, jual: d, modal: null, bagian: r.tipe || 'Sewa unit' });
+      if (SU_DRV.includes(t) && j > 0 && d > 0) out.push({ item: `Driver ${r.tipe || ''}`.trim(), satuan: 'per orang per bulan', qty: n, jual: d, modal: null, bagian: r.tipe || 'Sewa unit' });
+      if (t === 'lepas' && j > 0 && num(r.deposit) > 0) out.push({ item: `Deposit ${nmU(r)}`, satuan: 'per unit (dikembalikan)', jual: num(r.deposit), modal: null, bagian: r.tipe || 'Sewa unit' });
     });
+    if (t === 'operasional') { const z = SU_ZONA(st); (st.rows[1] || []).forEach(r => ['z1', 'z2', 'z3'].forEach((k, i) => { if (String(r.rute || '').trim() && num(r[k]) > 0) out.push({ item: `Uang jalan ${r.rute}${z[i] ? ' (' + z[i] + ')' : ''}`, satuan: 'per rit', jual: num(r[k]), modal: null, bagian: 'Uang jalan' }); })); }
     return out;
   },
   dok(st) {
-    const showDrv = SU_DRIVER(st), cat = [];
+    const t = suTipe(st), op = t === 'operasional', cat = [], b0 = this.bagian[0];
     const units = (st.rows[0] || []).filter(r => num(r.tarif) > 0);
-    const adaDrv = showDrv && units.some(r => num(r.driver) > 0);
-    const grup = [...new Set(units.map(r => r.tipe || '—'))], baris = [];
-    grup.forEach(g => {
-      const its = units.filter(r => (r.tipe || '—') === g);
-      its.forEach((r, k) => {
-        const c = [k === 0 ? { v: g, rs: its.length, b: true } : null, r.model || '—', [r.tahun, r.tonase].filter(Boolean).join(' / ') || '—', hargaSel(r.tarif)];
-        if (adaDrv) c.push(num(r.driver) > 0 ? hargaSel(r.driver) : '—');
-        baris.push({ c });
-      });
-    });
-    const kolom = adaDrv
-      ? [{ h: 'Tipe', w: 18, a: 'l' }, { h: 'Unit', w: 26, a: 'l' }, { h: 'Tahun / tonase', w: 16, a: 'l' }, { h: 'Sewa / bulan (Rp)', w: 20, a: 'r' }, { h: 'Driver / orang (Rp)', w: 20, a: 'r' }]
-      : [{ h: 'Tipe', w: 22, a: 'l' }, { h: 'Unit', w: 30, a: 'l' }, { h: 'Tahun / tonase', w: 18, a: 'l' }, { h: 'Sewa / bulan (Rp)', w: 30, a: 'r' }];
-    if (adaDrv) { const jml = [...new Set(units.filter(r => num(r.driver) > 0).map(r => String(r.jumlah || '').trim()).filter(Boolean))]; cat.push(`Jumlah driver ${jml.length ? jml.join(' atau ') + ' orang' : '(1 atau 2 orang)'} per unit. Tarif driver adalah tambahan di luar tarif sewa unit.`); }
-    return { blok: baris.length ? [{ jenis: 'tabel', cap: 'Rincian Unit dan Tarif Sewa', kolom, baris }] : [], catatan: cat, info: st.opsi.masa ? [['Masa sewa', st.opsi.masa]] : [] };
+    /* kolom yang kosong di semua baris tidak tampil (kecuali tipe dan sewa) */
+    const pakai = this.kolomB(st, b0, 0).filter(k => k.k !== 'jumlah' && (k.k === 'tipe' || k.k === 'tarif' || units.some(r => k.num ? num(r[k.k]) > 0 : String(r[k.k] || '').trim())));
+    const tot = pakai.reduce((a, k) => a + SU_LEBAR[k.k], 0);
+    const kolom = pakai.map(k => ({ h: SU_HDOK[k.k], w: Math.round(SU_LEBAR[k.k] * 100 / tot), a: k.num ? 'r' : 'l' }));
+    const baris = units.map(r => ({ c: pakai.map((k, i) => k.num ? hargaSel(r[k.k]) : (i === 0 ? { v: String(r[k.k] || '').trim() || '—', b: true } : (String(r[k.k] || '').trim() || '—'))) }));
+    const blok = baris.length ? [{ jenis: 'tabel', cap: op ? 'A. Sewa Unit + Driver (Fix Cost)' : 'Rincian Unit dan Tarif Sewa', kolom, baris }] : [];
+    if (pakai.some(k => k.k === 'driver')) { const jml = [...new Set(units.filter(r => num(r.driver) > 0).map(r => String(r.jumlah || '').trim()).filter(Boolean))]; cat.push(`Jumlah driver ${jml.length ? jml.join(' atau ') + ' orang' : '(1 atau 2 orang)'} per unit. Tarif driver adalah tambahan di luar tarif sewa unit.`); }
+    if (op) {
+      const z = SU_ZONA(st), kz = ['z1', 'z2', 'z3'].filter((k, i) => i === 0 || z[i]), rute = (st.rows[1] || []).filter(r => String(r.rute || '').trim() && kz.some(k => num(r[k]) > 0));
+      if (rute.length) blok.push({ jenis: 'tabel', cap: 'B. Uang Jalan per Rute (Variabel Cost)', kolom: [{ h: 'No', w: 6, a: 'c' }, { h: 'Rute', w: 94 - kz.length * 20, a: 'l' }, ...kz.map((k, i) => ({ h: `${z[i] || 'Tarif per rit'} (Rp / rit)`, w: 20, a: 'r' }))], baris: rute.map((r, i) => ({ c: [String(i + 1), r.rute, ...kz.map(k => hargaSel(r[k]))] })) });
+    }
+    return { blok, catatan: cat, info: [['Tipe sewa', SU_NAMA[t]], ...(st.opsi.masa ? [['Masa sewa', st.opsi.masa]] : [])] };
   },
-  varianDipakai(st) { const v = []; if ((st.rows[0] || []).some(r => num(r.tarif) > 0)) v.push('lepas'); if (SU_DRIVER(st) && (st.rows[0] || []).some(r => num(r.tarif) > 0 && num(r.driver) > 0)) v.push('driver'); return v; },
-  tnc(st) { const sk = skTipeMaster('sewa_unit'), nm = { lepas: 'sewa unit lepas kunci', driver: 'sewa unit dengan driver' }; return this.varianDipakai(st).map(k => ({ judul: `Syarat dan ketentuan ${nm[k]}`, items: satuDua(sk[k]) })).filter(g => g.items.length); },
+  /* S&K: teks master (Master Rate > Lini Bisnis > Sewa Unit) bila diisi, kalau tidak bawaan di atas; asuransi dan area mengikuti pilihan formulir */
+  tnc(st) {
+    const t = suTipe(st), o = st.opsi || {}, sk = satuDua(skTipeMaster('sewa_unit')[t]), dasar = sk.length ? sk : SU_SK[t], area = String(o.area || '').trim();
+    const items = [...dasar, o.asuransi === 'include' ? 'Asuransi unit sudah termasuk dalam tarif sewa.' : 'Asuransi unit belum termasuk dalam tarif sewa.', ...(area ? [`Batas wilayah pemakaian unit: ${area}.`] : [])];
+    return [{ judul: `Syarat dan ketentuan sewa unit ${SU_NAMA[t].toLowerCase()}`, items }];
+  },
   cek(st) {
-    const sk = skTipeMaster('sewa_unit'), nm = { lepas: 'lepas kunci', driver: 'dengan driver (jam kerja dan insentif driver)' };
-    return { galat: this.baris(st).length ? [] : ['Isi minimal satu tarif sewa unit.'], peringatan: this.varianDipakai(st).filter(k => !satuDua(sk[k]).length).map(k => `S&K khusus sewa unit ${nm[k]} belum diisi di Master Rate > Lini Bisnis > Sewa Unit. Penawaran tetap bisa diterbitkan.`) };
+    const t = suTipe(st), peringatan = [];
+    if (t === 'lepas') (st.rows[0] || []).forEach(r => { if (num(r.tarif) > 0 && !(num(r.deposit) > 0)) peringatan.push(`Deposit ${r.tipe || 'unit'} belum diisi (minimum biasanya 2 kali harga sewa).`); else if (num(r.deposit) > 0 && num(r.deposit) < 2 * num(r.tarif)) peringatan.push(`Deposit ${r.tipe || 'unit'} kurang dari 2 kali harga sewa.`); });
+    if (t === 'operasional' && !this.baris(st).some(x => x.satuan === 'per rit')) peringatan.push('Tipe driver + operasional belum punya tarif uang jalan per rute.');
+    return { galat: (st.rows[0] || []).some(r => num(r.tarif) > 0) ? [] : ['Isi minimal satu tarif sewa unit.'], peringatan };
   }
 };
 

@@ -552,6 +552,7 @@ async function siapkan(browser, peran, pengaturan) {
     await buka('sewa_unit'); await p.waitForTimeout(300);
     await isi('[data-fl="rows.0.0.tipe"]', 'CDD Long'); await isi('[data-fl="rows.0.0.tarif"]', '7000000'); await p.waitForTimeout(300);
     h = await hintDi('[data-fl="rows.0.0.tarif"]'); cek(h && h.rendah && /9\.200\.000/.test(h.teks), 'Sewa Unit CDD Long: minimum 8 jt x 1,15 = 9.200.000, merah di 7 jt: ' + JSON.stringify(h));
+    await p.selectOption('[data-fl="opsi.tipeSewa"]', 'driver'); await p.waitForTimeout(300);   // kolom driver hanya tampil di tipe dengan driver
     h = await hintDi('[data-fl="rows.0.0.driver"]'); cek(h && h.teks === '', 'Sewa Unit: kolom driver tidak boleh punya tarif minimum: ' + JSON.stringify(h));
     // panel template lini (master): saklar tampil untuk lini yang didukung
     await p.evaluate(() => { const b = document.createElement('button'); b.dataset.qt = 'atur-template'; b.dataset.lini = 'trucking_trailer'; b.dataset.tab = 'layanan'; document.body.appendChild(b); b.click(); }); await p.waitForTimeout(500);
