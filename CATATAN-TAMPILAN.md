@@ -499,3 +499,7 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 
 - Lini berawalan **"UJI "** (sisa tes e2e di database sungguhan) tidak lagi muncul di panel "Buat quotation", Quotation manual (Word), dan daftar Template lini. Datanya tetap ada di Master Rate; hapus permanen lewat Master Rate → Lini bisnis bila perlu.
 - Tombol **"+ Tambah format lini bisnis baru"** (master/admin) dan ikon pengaturan ⚙ (atur template per lini) di panel itu tetap ada.
+
+## 2026-11-23 (Pengaturan dokumen: tombol aksi kompak)
+
+- Kartu aksi bawah (Batalkan perubahan, Kembali, Simpan pengaturan) dihapus. **Batalkan** (teks) dan **Simpan** (kecil) kini sebaris dengan judul; **Kembali** jadi ikon ‹ di kiri judul. Berlaku di HP dan desktop.
