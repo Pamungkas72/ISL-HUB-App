@@ -92,3 +92,24 @@ export function hitungDistribusi(jobs, r, now = hariIni()) {
     tanpaPod: js.filter(dibayarTanpaPod).length, tungguPod: js.filter((j) => kemajuan(j) === 3).length };
 }
 export { tambahHari };
+
+/** Langkah berikut yang bisa ditandai: titik pick up dulu, lalu drop, lalu POD. null bila sudah selesai semua. */
+export function berikut(j) {
+  const t = titikDari(j), p = t.find((x) => x.t === "P" && !x.selesai), dr = t.find((x) => x.t === "D" && !x.selesai);
+  if (!t.length) return null;
+  if (p) return { jenis: "P", label: `Pick up ${t.filter((x) => x.t === "P" && x.selesai).length + 1}: ${p.nama || p.kota || ""}`.trim() };
+  if (dr) return { jenis: "D", label: `Drop ${t.filter((x) => x.t === "D" && x.selesai).length + 1}: ${dr.nama || dr.kota || ""}`.trim() };
+  return podKembali(j) ? null : { jenis: "POD", label: "POD kembali" };
+}
+/** Tandai langkah berikut selesai; mengembalikan rinci baru. */
+export function tandaiBerikut(j, waktu) {
+  const b = berikut(j); if (!b) return rinci(j);
+  return b.jenis === "POD" ? { ...rinci(j), pod: "kembali", tglPod: String(waktu).slice(0, 10) } : tandaiTitik(j, waktu);
+}
+/** Batalkan langkah terakhir (salah tekan): POD dulu, lalu drop terakhir, lalu pick up terakhir. */
+export function batalkanBerikut(j) {
+  const r = rinci(j); if (r.pod === "kembali") return { ...r, pod: "belum", tglPod: null };
+  const t = titikDari(j).map((x) => ({ ...x })); let k = -1;
+  for (const jenis of ["D", "P"]) { for (let i = t.length - 1; i >= 0; i--) if (t[i].t === jenis && t[i].selesai) { k = i; break; } if (k >= 0) break; }
+  if (k >= 0) t[k].selesai = null; return { ...r, titik: t };
+}
