@@ -18,9 +18,6 @@ eq("perlu bayar (Cash, resi ada), selesai otomatis, fase", [D.perluBayar(c), D.p
 const ti = J(6, { titik: [P("A", W), Dr("B")] }), tm = D.tandaiBerikut(ti, "2026-11-23T09:00"), tv = D.tandaiBerikut({ ...ti, rinci: { ...ti.rinci, vendor: "CV X" } }, "2026-11-23T09:00");
 eq("internal: drop terakhir otomatis mengisi POD; vendor tidak", [tm.pod, tm.tglPod, tv.pod || "belum"], ["kembali", "2026-11-23", "belum"]);
 eq("internal: batalkan POD otomatis ikut membatalkan drop terakhir", [D.batalkanBerikut({ ...ti, rinci: tm }).titik.map((x) => !!x.selesai), D.batalkanBerikut({ ...ti, rinci: tm }).pod], [[true, false], "belum"]);
-const u = D.hitungUangJalan({ jenisArmada: "CDD", jarak: 420, solar: 6800, tol: 180000, tkbm: 150000, retribusi: 50000, insentif: 200000 });
-eq("uang jalan: BBM = 420/5 x 6.800", [u.liter, u.baris[0][1], u.total], [84, 571200, 1151200]);
-eq("tarif tetap hanya yang disetujui", [D.cariTarif([{ rute: "Cikarang → Bandung", jenisArmada: "CDD", status: "setuju", nominal: 650000 }], "cikarang → bandung ", "CDD").nominal, D.cariTarif([{ rute: "X", jenisArmada: "CDD", status: "menunggu" }], "X", "CDD")], [650000, null]);
 eq("tingkat urgensi", [-1, 0, 7, 8, 14, 15, 30, 31].map(D.tingkat), ["lewat", "mendesak", "mendesak", "segera", "segera", "bulan", "bulan", "aman"]);
 const K = [{ id: "k1", plat: "B 1", kir: "2026-11-20", stnk: "2027-03-01", pajak: "2026-12-14", servis: { tglBerikut: "2026-12-30", kmBerikut: 45000, odo: 44200 } }, { id: "k2", plat: "B 2", kir: "2027-05-01", sewa: { bentuk: "driver", kota: "Surabaya", mulai: "2026-10-28", akhir: "2027-03-31" } }];
 eq("servis jatuh tempo karena km", D.servisDue(K[0], now), { sisa: 7, sisaHari: 37, sisaKm: 800 });
