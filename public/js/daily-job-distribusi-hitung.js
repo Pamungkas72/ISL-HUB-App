@@ -122,3 +122,18 @@ export function ringkasRiwayat(kendaraan, r) {
   const sv = h((x) => x.tipe === "servis"), dk = h((x) => ["kir", "stnk", "pajak"].includes(x.tipe)), vs = h((x) => x.tipe === "visit");
   return { servis: { n: sv.length, biaya: biaya(sv) }, dokumen: { n: dk.length, biaya: biaya(dk) }, visit: { n: vs.length } };
 }
+
+/** Umur POD (hari) sejak titik terakhir selesai; 0 bila belum selesai semua titik atau POD sudah kembali. */
+export function umurPod(j, now = hariIni()) {
+  const t = titikDari(j); if (!t.length || podKembali(j) || !t.every((x) => x.selesai)) return 0;
+  return Math.max(0, selisihHari(now, String(t.map((x) => x.selesai).sort().pop()).slice(0, 10)));
+}
+/** Strip tindakan Distribusi (sama dengan Trailer): bayar, pod, berangkat, armada. */
+export function cocokTindakan(j, id, now = hariIni()) {
+  const r = rinci(j); if (r.jenis !== "distribusi" || j.status === "selesai" || j.status === "batal") return false; const n = kemajuan(j);
+  if (id === "bayar") return dibayarTanpaPod(j);
+  if (id === "pod") return !dibayarTanpaPod(j) && n === 3 && umurPod(j, now) >= 3;
+  if (id === "berangkat") return n <= 1 && (r.tglKirim || j.tglMasuk) === now;
+  if (id === "armada") return n === 0 && !r.vendor && !r.plat && !r.driver;
+  return false;
+}

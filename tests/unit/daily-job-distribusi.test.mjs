@@ -36,4 +36,7 @@ eq("batalkan drop terakhir sebelum pick up", D.batalkanBerikut(a).titik.map((t) 
 eq("ritase per hari dan pola", [k.perHari, k.pola], [[{ k: "2026-11-11", n: 4 }], { satu: 2, banyak: 2 }]);
 const rr = D.ringkasRiwayat([{ riwayat: [{ tipe: "servis", tgl: "2026-11-05", biaya: 1500000 }, { tipe: "kir", tgl: "2026-11-10", biaya: 350000 }, { tipe: "visit", tgl: "2026-11-12" }, { tipe: "servis", tgl: "2026-10-01", biaya: 900000 }] }], r);
 eq("ringkas riwayat periode", rr, { servis: { n: 1, biaya: 1500000 }, dokumen: { n: 1, biaya: 350000 }, visit: { n: 1 } });
+const tdz = (rinci, o = {}) => J(30, { tahap: {}, ...rinci }, o);
+eq("tindakan Distribusi: bayar, pod, berangkat, armada", [D.cocokTindakan(c, "bayar", now), D.cocokTindakan(tdz({ titik: [P("A", "2026-11-18T08:00"), Dr("B", "2026-11-19T08:00")], tahap: { siap: W } }), "pod", now), D.cocokTindakan(tdz({ titik: [P("A"), Dr("B")], tahap: { siap: W }, tglKirim: now }), "berangkat", now), D.cocokTindakan(tdz({ titik: [P("A"), Dr("B")] }), "armada", now), D.cocokTindakan(d, "pod", now)], [true, true, true, true, false]);
+eq("umur POD Distribusi", D.umurPod(tdz({ titik: [P("A", "2026-11-18T08:00"), Dr("B", "2026-11-19T08:00")] }), now), 4);
 process.exit(gagal ? 1 : 0);

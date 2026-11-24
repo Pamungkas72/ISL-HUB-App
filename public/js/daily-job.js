@@ -138,7 +138,7 @@ function dataDaftar(now) {
   const cari = S.cari.trim().toLowerCase(), pr = H.rentangDaftar(S.pDaftar, now, S.pDari, S.pSampai), arah = S.urut === "baru" ? -1 : 1, kunci = H.kunciTambah;
   const dasar = jobsKel().filter((j) => (!S.fPic || j.pic === S.fPic) && (!S.fKat || j.kategori === S.fKat) && (!pr || H.dalam(j.tglMasuk || j.dibuatPada, pr)));
   const n = Object.fromEntries(STATUS_DJ.map(([k]) => [k, dasar.filter(COCOK[k]).length]));
-  const l = dasar.filter(COCOK[S.status] || COCOK.aktif).filter((j) => !S.masalah || H.masalahJob(j, now).includes(S.masalah)).filter((j) => !S.tind || TL.cocokTindakan(j, S.tind, now))
+  const l = dasar.filter(COCOK[S.status] || COCOK.aktif).filter((j) => !S.masalah || H.masalahJob(j, now).includes(S.masalah)).filter((j) => !S.tind || cocokTind(j, S.tind, now))
     .filter((j) => !cari || [j.judul, j.customer, j.pic, j.kategori, j.deskripsi].join(" ").toLowerCase().includes(cari))
     .sort((a, b) => arah * kunci(a).localeCompare(kunci(b)));
   const jml = Math.max(1, Math.ceil(l.length / PER_HAL)), hal = Math.min(S.hal, jml - 1);
@@ -207,10 +207,12 @@ function htmlPager(hal, jml) {
   nomor.forEach((x, i) => { if (i && x - nomor[i - 1] > 1) isi.push('<span class="dj-pg__t">…</span>'); isi.push(`<button type="button" class="dj-pg${x === hal ? " is-aktif" : ""}" data-dj="hal-ke" data-v="${x}" aria-label="Halaman ${x + 1}"${x === hal ? ' aria-current="page"' : ""}>${x + 1}</button>`); });
   return `<nav class="dj-pgs" aria-label="Halaman"><button type="button" class="dj-pg" data-dj="hal" data-v="-1" aria-label="Halaman sebelumnya"${hal <= 0 ? " disabled" : ""}>‹</button>${isi.join("")}<button type="button" class="dj-pg" data-dj="hal" data-v="1" aria-label="Halaman berikutnya"${hal >= jml - 1 ? " disabled" : ""}>›</button></nav>`;
 }
+const cocokTind = (j, id, now) => TL.cocokTindakan(j, id, now) || DZ.cocokTindakan(j, id, now);
 /** Strip tindakan Trailer: kelompok job yang perlu perhatian; ketuk untuk menyaring Daftar, ketuk lagi untuk melepas. Hanya tampil bila ada. */
 function htmlStripTindakan(now) {
-  const js = jobsKel(), b = TL.TINDAKAN.map(([id, t, k]) => ({ id, t, k, n: js.filter((j) => TL.cocokTindakan(j, id, now)).length })).filter((x) => x.n || S.tind === x.id);
-  return b.length ? `<div class="dj-tind" role="group" aria-label="Perlu tindakan">${b.map((x) => `<button type="button" class="dj-chip dj-chip--${x.k} dj-chip--btn${S.tind === x.id ? " is-aktif" : ""}" data-dj="tind" data-v="${x.id}" aria-pressed="${S.tind === x.id}">${x.t} <b>${x.n}</b></button>`).join("")}</div>` : "";
+  const js = jobsKel(), b = TL.TINDAKAN.map(([id, t, k]) => ({ id, t, k, n: js.filter((j) => cocokTind(j, id, now)).length })).filter((x) => x.n || S.tind === x.id), tg = DZ.tugasArmada(armadaKel(), now), lewat = tg.filter((x) => x.tingkat === "lewat").length;
+  const arm = tg.length ? `<button type="button" class="dj-chip dj-chip--${lewat ? "bahaya" : "warn"} dj-chip--btn" data-dj="tab" data-v="armada">Armada: ${lewat ? `${lewat} lewat tempo · ` : ""}${tg.length} urusan <b>›</b></button>` : "";
+  return b.length || arm ? `<div class="dj-tind" role="group" aria-label="Perlu tindakan">${b.map((x) => `<button type="button" class="dj-chip dj-chip--${x.k} dj-chip--btn${S.tind === x.id ? " is-aktif" : ""}" data-dj="tind" data-v="${x.id}" aria-pressed="${S.tind === x.id}">${x.t} <b>${x.n}</b></button>`).join("")}${arm}</div>` : "";
 }
 function htmlDaftar(now) {
   const { l, n, halaman, hal, jml } = dataDaftar(now), ada = pilihAktif(), awal = hal * PER_HAL;
