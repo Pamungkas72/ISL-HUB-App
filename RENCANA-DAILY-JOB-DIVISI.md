@@ -97,3 +97,12 @@ Menggantikan bagian "Divisi Tracking" 19 Nov untuk subdivisi Mobil besar. Mobil 
 - **Strip tindakan dihapus**: alasan (Dibayar POD belum, POD terlambat, berangkat hari ini, tanpa armada) tampil sebagai chip di kartu/baris dan menandai garis kiri; job perlu tindakan diurutkan paling atas. Tab Armada bertitik merah bila ada urusan lewat tempo.
 - **Subdivisi** (Semua, Truk Distribusi, Tracking Trailer) pindah ke menu ⋮ (juga berlaku di Performa); bila dipilih muncul chip "× nama" di bawah cari. Pemilih kelompok lama dihapus.
 - **Pengaturan** hanya tampil dan bisa dibuka oleh master/admin.
+
+## Logika POD dan pembayaran vendor (diluruskan 24 Nov 2026, berlaku Trailer dan Distribusi)
+Aturan murni di `daily-job-pod.js` (diuji `tests/unit/daily-job-pod.test.mjs`).
+- **Internal:** uang jalan dibayar sebelum berangkat, tidak ada pembayaran vendor. POD **otomatis kembali** saat tahap operasional terakhir (Trailer) atau titik terakhir (Distribusi) ditandai; batalkan POD ikut membatalkan tahap itu. Pengiriman langsung Selesai.
+- **Vendor TOP:** surat jalan tetap dikirim vendor lewat ekspedisi; invoice dibayar Finance dalam tempo di luar sistem. **POD diterima = beres** (Selesai); hanya label TOP, tanpa pelacakan jatuh tempo.
+- **Vendor Cash:** vendor mengirim POD lewat ekspedisi → catat **resi POD** (ekspedisi, no. resi, tanggal, foto/berkas resi; `rinci.podKirim`) → kantor transfer setelah resi ada → catat **pembayaran** (tanggal transfer + bukti bayar, `rinci.tglBayar`, `rinci.buktiBayar`) → POD diterima = Selesai. Berkas di Storage `dailyjob/{kelompok}/{job}/`.
+- **Antrean:** "Tunggu POD" (belum sampai), "Perlu dibayar" (Cash, resi ada, belum transfer), Selesai.
+- **Peringatan** (menggantikan "Dibayar, POD belum" dan Janji POD yang dihapus): Perlu dibayar; Resi POD belum diisi (3 hari setelah operasional selesai); POD belum sampai (5 hari sejak resi). Internal tidak diperingatkan. Push 09.00 mengikuti aturan yang sama.
+- Data lama: job internal yang sudah menunggu POD tidak diubah otomatis; tandai POD manual.

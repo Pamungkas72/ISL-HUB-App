@@ -334,3 +334,4 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-job__isi small small, .dj-tb td small small { display: inline; margin: 0; font-size: inherit; }
 .dj-tabs button { white-space: nowrap; } @media (max-width: 760px) { .dj-tabs { gap: 0; overflow-x: auto; } .dj-tabs button { padding: 10px 12px; flex: none; } }
 .dj-job__pic .dj-chip ~ small { margin-left: auto; }
+.dj-podbayar li { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: start; } .dj-podbayar li > div b, .dj-podbayar li > div small { display: block; } .dj-podbayar li > div small { color: var(--muted); font-size: 12.5px; } .dj-podbayar a { color: var(--sky); } .dj-podbayar li > .mr-btn { grid-column: 1 / -1; justify-self: stretch; }
