@@ -1,5 +1,5 @@
 // Pengingat Tracking di notifikasi push 09.00 WIB (murni, diuji tests/unit/daily-job-notif-tracking.test.js):
-// 1) POD belum kembali (dibayar tanpa POD, atau operasional selesai >= 3 hari); 2) Armada: KIR, STNK, pajak, servis, visit sewa pada 30, 14, 7 hari, lalu setiap hari bila lewat tempo.
+// 1) POD vendor: perlu dibayar (Cash), resi POD belum diisi, POD belum sampai; 2) Armada: KIR, STNK, pajak, servis, visit sewa pada 30, 14, 7 hari, lalu setiap hari bila lewat tempo.
 const { hariJakarta, jamJakarta, akhirPekan, tambahHari } = require("./dailyjob-pesan");
 
 const selisih = (a, b) => Math.round((new Date(a + "T00:00:00Z") - new Date(b + "T00:00:00Z")) / 864e5);
@@ -11,11 +11,21 @@ function selesaiOperasional(r) {
   if (r.jenis === "distribusi") { const t = (r.titik || []).filter((x) => x && x.selesai); const semua = (r.titik || []).length > 0 && t.length === (r.titik || []).length; return semua ? String(t.map((x) => x.selesai).sort().pop()).slice(0, 10) : ""; }
   const k = SEBELUM_POD[r.jenis]; return k && r.tahap && r.tahap[k] ? String(r.tahap[k]).slice(0, 10) : "";
 }
+/** Urusan POD vendor (internal tidak ikut: POD otomatis kembali): perlu dibayar (Cash, resi ada), resi belum diisi (3 hari setelah selesai), POD belum sampai (5 hari sejak resi). */
 function pesanPod(jobs, hari) {
-  const l = jobs.filter((j) => j.rinci && j.rinci.jenis && AKTIF(j) && j.rinci.pod !== "kembali").map((j) => { const r = j.rinci, t = selesaiOperasional(r); return { j, umur: t ? Math.max(0, selisih(hari, t)) : 0, dibayar: !internal(r) && !!r.tglBayar, ops: !!t }; }).filter((x) => x.dibayar || (x.ops && x.umur >= 3));
-  if (!l.length) return null; const bayar = l.filter((x) => x.dibayar).length, nama = (x) => `${x.j.rinci.noDo || x.j.judul} (${x.j.customer || "–"}${x.ops ? `, ${x.umur} hari` : ""})`;
-  const urut = [...l].sort((a, b) => Number(b.dibayar) - Number(a.dibayar) || b.umur - a.umur), t = urut.slice(0, 3).map(nama), lebih = urut.length - t.length;
-  return { tag: "dj-pod", title: `${l.length} POD belum kembali${bayar ? ` · ${bayar} sudah dibayar` : ""}`, body: t.join("; ") + (lebih > 0 ? ` +${lebih} lainnya` : "") + ". POD wajib kembali sebelum penagihan." };
+  const l = [];
+  jobs.filter((j) => j.rinci && j.rinci.jenis && AKTIF(j) && !internal(j.rinci)).forEach((j) => {
+    const r = j.rinci, p = r.podKirim || {}, resi = !!(p.resi || (p.berkas || []).length), kembali = r.pod === "kembali", t = selesaiOperasional(r), umur = (a) => Math.max(0, selisih(hari, a));
+    let jenis = "";
+    if (r.bayar !== "top" && !r.tglBayar && (resi || kembali)) jenis = "bayar";
+    else if (!kembali && t && !resi && umur(t) >= 3) jenis = "resi";
+    else if (!kembali && resi && umur(String(p.tgl || t || hari).slice(0, 10)) >= 5) jenis = "pod";
+    if (jenis) l.push({ j, jenis, umur: t ? umur(t) : 0 });
+  });
+  if (!l.length) return null;
+  const n = (x) => l.filter((y) => y.jenis === x).length, nama = (x) => `${x.j.rinci.noDo || x.j.judul} (${x.j.customer || "–"})`, urut = [...l].sort((a, b) => ["bayar", "pod", "resi"].indexOf(a.jenis) - ["bayar", "pod", "resi"].indexOf(b.jenis) || b.umur - a.umur), t = urut.slice(0, 3).map(nama), lebih = urut.length - t.length;
+  const rinciJudul = [n("bayar") && `${n("bayar")} perlu dibayar`, n("resi") && `${n("resi")} resi POD belum diisi`, n("pod") && `${n("pod")} POD belum sampai`].filter(Boolean).join(" · ");
+  return { tag: "dj-pod", title: `POD vendor: ${rinciJudul}`, body: t.join("; ") + (lebih > 0 ? ` +${lebih} lainnya` : "") + "." };
 }
 const NAMA = { kir: "KIR", stnk: "STNK", pajak: "Pajak", servis: "Servis", visit: "Visit" };
 const tambahBulan = (s, n) => { const d = new Date(s + "T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 10); };

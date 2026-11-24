@@ -13,7 +13,11 @@ eq("kemajuan dan label tahap", [a, b, c, d].map((j) => [D.kemajuan(j), D.labelTa
 eq("belum ada armada: Order baru", D.labelTahap({ rinci: { jenis: "distribusi", titik: [P("A"), Dr("B")] } }), "Order baru");
 const m = D.tandaiTitik(b, "2026-11-23T09:00");
 eq("tandai titik: pick up dulu baru drop", [m.titik.map((x) => !!x.selesai), D.kemajuan({ rinci: m })], [[true, true, false], 2]);
-eq("dibayar tanpa POD dan selesai otomatis", [D.dibayarTanpaPod(c), D.dibayarTanpaPod(d), D.selesaiOtomatis(d), D.selesaiOtomatis(c)], [true, false, true, false]);
+const cr = J(5, { titik: [P("A", W), Dr("B", W)], vendor: "CV X", podKirim: { resi: "R1" } });
+eq("perlu bayar (Cash, resi ada), selesai otomatis, fase", [D.perluBayar(c), D.perluBayar(cr), D.perluBayar({ ...cr, rinci: { ...cr.rinci, bayar: "top" } }), D.selesaiOtomatis(d), D.selesaiOtomatis(c), D.fase(c), D.fase(cr), D.fase(a), D.fase(d)], [false, true, false, true, false, "pod", "bayar", "jalan", "selesai"]);
+const ti = J(6, { titik: [P("A", W), Dr("B")] }), tm = D.tandaiBerikut(ti, "2026-11-23T09:00"), tv = D.tandaiBerikut({ ...ti, rinci: { ...ti.rinci, vendor: "CV X" } }, "2026-11-23T09:00");
+eq("internal: drop terakhir otomatis mengisi POD; vendor tidak", [tm.pod, tm.tglPod, tv.pod || "belum"], ["kembali", "2026-11-23", "belum"]);
+eq("internal: batalkan POD otomatis ikut membatalkan drop terakhir", [D.batalkanBerikut({ ...ti, rinci: tm }).titik.map((x) => !!x.selesai), D.batalkanBerikut({ ...ti, rinci: tm }).pod], [[true, false], "belum"]);
 const u = D.hitungUangJalan({ jenisArmada: "CDD", jarak: 420, solar: 6800, tol: 180000, tkbm: 150000, retribusi: 50000, insentif: 200000 });
 eq("uang jalan: BBM = 420/5 x 6.800", [u.liter, u.baris[0][1], u.total], [84, 571200, 1151200]);
 eq("tarif tetap hanya yang disetujui", [D.cariTarif([{ rute: "Cikarang → Bandung", jenisArmada: "CDD", status: "setuju", nominal: 650000 }], "cikarang → bandung ", "CDD").nominal, D.cariTarif([{ rute: "X", jenisArmada: "CDD", status: "menunggu" }], "X", "CDD")], [650000, null]);
@@ -26,7 +30,7 @@ eq("ringkas sewa", D.ringkasSewa(K), { total: 1, driver: 1, lepas: 0, kota: [{ n
 const k = D.hitungDistribusi([a, b, c, d], r, now);
 eq("KPI: order, ritase, drop, cost", [k.order, k.ritase, k.drop, k.cost, k.costVendor, k.costInternal], [4, 4, 6, 9050000, 6400000, 2650000]);
 eq("per jenis armada dan vendor", [k.perJenis.map((o) => o.ritase), k.perVendor.map((o) => [o.nama, o.ritase])], [[0, 1, 1, 1, 1], [["Internal (uang jalan)", 2], ["CV X", 2]]]);
-eq("risiko", [k.tanpaPod, k.tungguPod], [2, 1]);
+eq("risiko", [k.perluBayar, k.tungguPod], [0, 1]);
 const x = J(20, { titik: [P("A"), P("B"), Dr("C"), Dr("D")] });
 eq("berikut: pick up, drop, lalu POD", [D.berikut(x).label, D.berikut(J(21, { titik: [P("A", W), P("B", W), Dr("C")] })).label, D.berikut(c).jenis, D.berikut(d)], ["Pick up 1: A", "Drop 1: C", "POD", null]);
 const x2 = D.tandaiBerikut(x, W), x3 = D.tandaiBerikut({ ...x, rinci: x2 }, W);
@@ -37,6 +41,7 @@ eq("ritase per hari dan pola", [k.perHari, k.pola], [[{ k: "2026-11-11", n: 4 }]
 const rr = D.ringkasRiwayat([{ riwayat: [{ tipe: "servis", tgl: "2026-11-05", biaya: 1500000 }, { tipe: "kir", tgl: "2026-11-10", biaya: 350000 }, { tipe: "visit", tgl: "2026-11-12" }, { tipe: "servis", tgl: "2026-10-01", biaya: 900000 }] }], r);
 eq("ringkas riwayat periode", rr, { servis: { n: 1, biaya: 1500000 }, dokumen: { n: 1, biaya: 350000 }, visit: { n: 1 } });
 const tdz = (rinci, o = {}) => J(30, { tahap: {}, ...rinci }, o);
-eq("tindakan Distribusi: bayar, pod, berangkat, armada", [D.cocokTindakan(c, "bayar", now), D.cocokTindakan(tdz({ titik: [P("A", "2026-11-18T08:00"), Dr("B", "2026-11-19T08:00")], tahap: { siap: W } }), "pod", now), D.cocokTindakan(tdz({ titik: [P("A"), Dr("B")], tahap: { siap: W }, tglKirim: now }), "berangkat", now), D.cocokTindakan(tdz({ titik: [P("A"), Dr("B")] }), "armada", now), D.cocokTindakan(d, "pod", now)], [true, true, true, true, false]);
+const sel = { titik: [P("A", "2026-11-18T08:00"), Dr("B", "2026-11-19T08:00")], tahap: { siap: W } };
+eq("tindakan Distribusi: bayar, resi, pod, berangkat, armada", [D.cocokTindakan(cr, "bayar", now), D.cocokTindakan(c, "bayar", now), D.cocokTindakan(tdz({ ...sel, vendor: "X" }), "resi", now), D.cocokTindakan(tdz({ ...sel, vendor: "X", podKirim: { resi: "R", tgl: "2026-11-15" } }), "pod", now), D.cocokTindakan(tdz({ ...sel }), "resi", now), D.cocokTindakan(tdz({ titik: [P("A"), Dr("B")], tahap: { siap: W }, tglKirim: now }), "berangkat", now), D.cocokTindakan(tdz({ titik: [P("A"), Dr("B")] }), "armada", now), D.cocokTindakan(d, "pod", now)], [true, false, true, true, false, true, true, false]);
 eq("umur POD Distribusi", D.umurPod(tdz({ titik: [P("A", "2026-11-18T08:00"), Dr("B", "2026-11-19T08:00")] }), now), 4);
 process.exit(gagal ? 1 : 0);

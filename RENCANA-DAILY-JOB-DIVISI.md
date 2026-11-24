@@ -91,6 +91,21 @@ Menggantikan bagian "Divisi Tracking" 19 Nov untuk subdivisi Mobil besar. Mobil 
 - **Ditunda:** impor Excel Tracking (menunggu contoh Excel tim), revisi hasil pakai pemilik. Tipe bak (Box Reefer, Bak, Losbak) perlu dikonfirmasi pemilik.
 - **Deploy:** otomatis dari `main` (aturan, hosting, Cloud Function) lewat `deploy-firebase.yml`.
 
+## Tampilan awal Daftar job Tracking: desain A "Antrean" (dipilih 24 Nov 2026)
+- **Urutan halaman:** judul (kelompok di bawah judul, master/admin bisa mengganti lewat "Tracking ▾"), tab, kolom cari paling atas (+ Filter, ⋮), chip antrean, daftar.
+- **Antrean** menggantikan status Aktif/Tertunda/Selesai/Dibatalkan khusus Tracking: Semua aktif, Perlu tindakan, Belum jalan, Di lapangan, Tunggu POD, Bayar vendor, Selesai. Fase turun dari tahap pengiriman (`faseTr` di `daily-job.js`). Marketing dan BD tetap memakai status.
+- **Strip tindakan dihapus**: alasan (Dibayar POD belum, POD terlambat, berangkat hari ini, tanpa armada) tampil sebagai chip di kartu/baris dan menandai garis kiri; job perlu tindakan diurutkan paling atas. Tab Armada bertitik merah bila ada urusan lewat tempo.
+- **Subdivisi** (Semua, Truk Distribusi, Tracking Trailer) pindah ke menu ⋮ (juga berlaku di Performa); bila dipilih muncul chip "× nama" di bawah cari. Pemilih kelompok lama dihapus.
+- **Pengaturan** hanya tampil dan bisa dibuka oleh master/admin.
+
+## Logika POD dan pembayaran vendor (diluruskan 24 Nov 2026, berlaku Trailer dan Distribusi)
+Aturan murni di `daily-job-pod.js` (diuji `tests/unit/daily-job-pod.test.mjs`).
+- **Internal:** uang jalan dibayar sebelum berangkat, tidak ada pembayaran vendor. POD **otomatis kembali** saat tahap operasional terakhir (Trailer) atau titik terakhir (Distribusi) ditandai; batalkan POD ikut membatalkan tahap itu. Pengiriman langsung Selesai.
+- **Vendor TOP:** surat jalan tetap dikirim vendor lewat ekspedisi; invoice dibayar Finance dalam tempo di luar sistem. **POD diterima = beres** (Selesai); hanya label TOP, tanpa pelacakan jatuh tempo.
+- **Vendor Cash:** vendor mengirim POD lewat ekspedisi → catat **resi POD** (ekspedisi, no. resi, tanggal, foto/berkas resi; `rinci.podKirim`) → kantor transfer setelah resi ada → catat **pembayaran** (tanggal transfer + bukti bayar, `rinci.tglBayar`, `rinci.buktiBayar`) → POD diterima = Selesai. Berkas di Storage `dailyjob/{kelompok}/{job}/`.
+- **Antrean:** "Tunggu POD" (belum sampai), "Perlu dibayar" (Cash, resi ada, belum transfer), Selesai.
+- **Peringatan** (menggantikan "Dibayar, POD belum" dan Janji POD yang dihapus): Perlu dibayar; Resi POD belum diisi (3 hari setelah operasional selesai); POD belum sampai (5 hari sejak resi). Internal tidak diperingatkan. Push 09.00 mengikuti aturan yang sama.
+- Data lama: job internal yang sudah menunggu POD tidak diubah otomatis; tandai POD manual.
 ## Revisi formulir Tracking Trailer (24 Nov 2026, aturan pemilik)
 - **Urutan formulir:** Customer → Subdivisi → **Jenis shipment** (Impor, Ekspor, Repo, Domestik; untuk Distribusi: Jenis armada) → rute. Jenis ditentukan sebelum rute.
 - **Multi drop (hanya Domestik):** tombol **+ Tujuan** menambah Tujuan 2 sampai 4 (maks. 4 tujuan, bisa dihapus). Tanpa tombol + Pick up (satu asal). Disimpan di `rinci.tujuanLain`; jenis lain mengosongkannya. Rute di Daftar, Excel, Performa, dan pembanding tarif memakai semua tujuan (`ruteTrailer`).

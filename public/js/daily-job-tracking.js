@@ -3,6 +3,7 @@ import { e } from "./ui.js";
 import { SUBDIVISI, TAGIHAN, BAYAR, subdivisiDari, rinci, jenisDariKategori } from "./daily-job-tracking-hitung.js";
 import * as TL from "./daily-job-trailer-hitung.js";
 import * as DZ from "./daily-job-distribusi-hitung.js";
+import * as P from "./daily-job-pod.js";
 
 const f = (lab, isi, kelas = "") => `<label class="mr-f ${kelas}"><span>${lab}</span>${isi}</label>`;
 const inp = (id, v, ph = "", ekstra = "") => `<input id="${id}" value="${e(v ?? "")}" placeholder="${e(ph)}" ${ekstra}>`;
@@ -36,7 +37,7 @@ export function htmlFormTracking(d, c) {
     ${f("Cost (Rp) <small id=\"djt-costinfo\">uang jalan bila armada internal</small>", inp("djt-cost", rp(r.cost), "mis. 2.500.000", 'inputmode="numeric"'))}
     <div class="mr-f dj-lebar"><span>POD</span>${chipPil("pod", st.pod, [["belum", "Belum kembali"], ["kembali", "Sudah kembali"]])}</div>
     ${f("Tanggal POD kembali", `<input type="date" id="djt-tglpod" value="${e(r.tglPod || "")}">`, "dj-tglpod" + (st.pod === "kembali" ? "" : " dj-sembunyi"))}
-    <div class="dj-lng__dua">${f("Tanggal bayar vendor <small>kosongkan bila belum dibayar</small>", `<input type="date" id="djt-tglbayar" value="${e(r.tglBayar || "")}">`)}${f("Janji POD kembali <small>wajib bila sudah dibayar sebelum POD kembali</small>", `<input type="date" id="djt-janji" value="${e(r.janjiPod || "")}">`)}</div>
+    ${f("Tanggal transfer vendor <small>Cash; kosongkan bila belum. Resi POD dan bukti bayar dicatat di detail</small>", `<input type="date" id="djt-tglbayar" value="${e(r.tglBayar || "")}">`)}
     ${c.status}${c.tunda}
     ${f("Catatan", `<textarea id="djf-desk" rows="2">${e(d.deskripsi || "")}</textarea>`, "dj-lebar")}${c.berkas}${c.lain}</div>`;
 }
@@ -60,17 +61,32 @@ export function htmlTitik(titik) {
   const n = { P: 0, D: 0 };
   return titik.map((x, i) => { n[x.t]++; const jml = titik.filter((y) => y.t === x.t).length; return `<div class="dj-ttk" data-i="${i}" data-t="${x.t}" data-selesai="${x.selesai || ""}"><span class="dj-chip dj-chip--${x.t === "P" ? "info" : "ok"}">${x.t === "P" ? "Pick up" : "Drop"} ${n[x.t]}</span><input class="djt-tn" value="${e(x.nama || "")}" placeholder="Nama lokasi" aria-label="Nama lokasi"><input class="djt-tk" value="${e(x.kota || "")}" placeholder="Kota" aria-label="Kota"><button type="button" class="mr-ikonbtn" data-dj="t-hapus" data-i="${i}" ${jml < 2 || x.selesai ? "disabled" : ""} aria-label="Hapus titik">✕</button></div>`; }).join("");
 }
+const tglP = (x) => (x ? new Date(String(x).slice(0, 10) + "T00:00:00Z").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
+const berkasLink = (l) => (l || []).map((b) => `<a href="${e(b.url)}" target="_blank" rel="noopener">${e(b.nama)}</a>`).join(" · ");
+/** Kartu POD dan pembayaran. Internal: otomatis. Vendor TOP: POD kembali = beres. Vendor Cash: resi POD, transfer (bukti bayar), POD diterima. */
+export function htmlPodBayar(j, ubah, opsSelesai, umur) {
+  const r = rinci(j), c = P.cara(j), id = e(j.id), pk = r.podKirim || {}, ada = P.resiAda(j);
+  if (c === "internal") return `<h3>POD dan pembayaran</h3><p class="dj-risiko">Armada internal: uang jalan dibayar sebelum berangkat, POD kembali otomatis saat tahap operasional terakhir selesai.</p>`;
+  if (!opsSelesai && !P.podKembali(j)) return `<h3>POD dan pembayaran · vendor ${c === "top" ? "TOP" : "Cash"}</h3><p class="dj-risiko">Setelah operasional selesai: catat resi POD dari vendor${c === "cash" ? " lalu transfer pembayaran" : ""}.</p>`;
+  const btn = (a, t, utama) => (ubah ? `<button type="button" class="mr-btn${utama ? " mr-btn--utama" : ""}" data-dj="${a}" data-id="${id}">${t}</button>` : "");
+  const baris = (ok, lab, isi, aksi) => `<li class="${ok ? "is-ok" : ""}"><span class="dj-chip dj-chip--${ok ? "ok" : "mu"}">${lab}</span><div>${isi}</div>${aksi}</li>`;
+  const resi = baris(ada, "Resi POD", ada ? `<b>${e([pk.ekspedisi, pk.resi].filter(Boolean).join(" · ") || "Resi terunggah")}</b><small>Dikirim ${e(tglP(pk.tgl))}${pk.berkas && pk.berkas.length ? " · " + berkasLink(pk.berkas) : ""}</small>` : `<b>Belum ada resi dari vendor</b><small>Vendor mengirim surat jalan lewat ekspedisi; catat resinya.</small>`, btn("t-resi", ada ? "Ubah" : "Catat resi POD", !ada));
+  const bayar = c === "top" ? baris(false, "Bayar", `<b>TOP</b><small>Finance membayar sesuai tempo di luar sistem. Dianggap beres saat POD diterima.</small>`, "")
+    : r.tglBayar ? baris(true, "Bayar", `<b>Ditransfer ${e(tglP(r.tglBayar))}</b><small>${r.buktiBayar && r.buktiBayar.length ? "Bukti: " + berkasLink(r.buktiBayar) : "Belum ada bukti bayar"}</small>`, btn("t-bayar", "Ubah", false))
+    : baris(false, "Bayar", ada ? `<b>Perlu ditransfer ke vendor</b><small>Resi sudah ada; transfer lalu unggah bukti bayar.</small>` : `<b>Menunggu resi POD</b><small>Transfer dilakukan setelah resi ada.</small>`, ada ? btn("t-bayar", "Catat pembayaran", true) : "");
+  const pod = baris(P.podKembali(j), "POD", P.podKembali(j) ? `<b>Diterima ${e(tglP(r.tglPod))}</b>` : `<b>Belum diterima</b><small>${umur ? umur + " hari sejak operasional selesai. " : ""}Tandai tahap POD di atas saat surat jalan sampai.</small>`, "");
+  return `<h3>POD dan pembayaran · vendor ${c === "top" ? "TOP" : "Cash"}</h3><ul class="dj-ttkl dj-podbayar">${resi}${bayar}${pod}</ul>`;
+}
 const fmtW = (w) => { const d = new Date(String(w).length === 16 ? w + ":00+07:00" : w); return isNaN(d) ? "" : d.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).replace(".", ":"); };
 /** Panel detail Trailer: stepper tahap bertanda waktu, tombol tahap berikut, risiko POD, dan daftar dokumen. ubah = boleh mengubah job. */
 export function htmlTrailerDetail(j, ubah, now) {
   const r = rinci(j), jn = TL.jenisTrailer(j); if (!jn) return "";
   const t = TL.tahapJenis(jn), n = TL.kemajuan(j), b = TL.tahapBerikut(j), id = e(j.id), umur = TL.umurPod(j, now);
   const stp = t.map(([k, l], i) => `<li class="${i < n ? "is-ok" : i === n ? "is-now" : ""}"><i></i><div><b>${l}</b><small>${r.tahap && r.tahap[k] ? fmtW(r.tahap[k]) : i === n ? "Berikutnya" : "–"}</small></div></li>`).join("");
-  const risiko = TL.dibayarTanpaPod(j) ? `<p class="dj-risiko dj-risiko--bahaya"><b>Berisiko:</b> sudah dibayar ${e(r.tglBayar)}, POD belum kembali${umur ? ` (${umur} hari sejak selesai operasional)` : ""}.${r.janjiPod ? ` Janji POD: ${e(r.janjiPod)}.` : " Isi janji POD kembali."}</p>` : TL.operasionalSelesai(j) && !TL.podKembali(j) ? `<p class="dj-risiko">POD belum kembali${umur ? ` · ${umur} hari` : ""}. Syarat penagihan ke customer.</p>` : "";
   const dok = TL.JENIS[jn].dok.map((x, i) => `<button type="button" class="mr-chip${r.dok && r.dok[i] ? " is-aktif" : ""}" ${ubah ? `data-dj="t-dok" data-id="${id}" data-i="${i}"` : "disabled"} aria-pressed="${!!(r.dok && r.dok[i])}">${r.dok && r.dok[i] ? "✓ " : ""}${e(x)}</button>`).join("");
   return `<div class="mr-kartu dj-kartu dj-trl"><h3>Tahap shipment · ${TL.JENIS[jn].nama}</h3><ol class="dj-stp">${stp}</ol>
-    ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-tahap" data-id="${id}">Tandai ${e(b[1])} selesai</button>` : ""}${n ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan tahap terakhir</button>` : ""}</div>` : ""}${risiko}
-    <h3>Dokumen</h3><div class="dj-seg mr-seg">${dok}</div></div>`;
+    ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-tahap" data-id="${id}">Tandai ${e(b[1])} selesai</button>` : ""}${n ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan tahap terakhir</button>` : ""}</div>` : ""}
+    ${htmlPodBayar(j, ubah, TL.operasionalSelesai(j), umur)}<h3>Dokumen</h3><div class="dj-seg mr-seg">${dok}</div></div>`;
 }
 
 export const rpJt = (n) => (n >= 1e6 ? "Rp " + (Math.round(n / 1e5) / 10).toLocaleString("id-ID") + " jt" : "Rp " + Math.round(n).toLocaleString("id-ID"));
@@ -79,7 +95,7 @@ export const tab = (judul, kolom, baris, ket = "") => `<section class="mr-kartu 
 /** Performa Tracking Trailer: volume order, jenis, vendor, rute, cost, pembanding tarif; risiko POD dalam satu strip. k = hitungTrailer, banding = bandingTarif, bulanan = label minggu. */
 export function htmlPerformaTrailer(k, banding, labelMinggu) {
   const kpi = (jd, nilai, ket, kelas = "") => `<div class="dj-kpi dj-kpi--statis ${kelas}"><span>${jd}</span><b>${nilai}</b><small>${ket}</small></div>`;
-  const risiko = k.tanpaPod || k.tungguPod || k.siapTagih ? `<div class="dj-tind">${k.tanpaPod ? `<span class="dj-chip dj-chip--bahaya">Dibayar, POD belum <b>${k.tanpaPod}</b> · ${rpJt(k.nilaiTanpaPod)}</span>` : ""}${k.tungguPod ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${k.tungguPod}</b></span>` : ""}${k.siapTagih ? `<span class="dj-chip dj-chip--ok">Siap ditagih <b>${k.siapTagih}</b></span>` : ""}</div>` : "";
+  const risiko = k.perluBayar || k.tungguPod ? `<div class="dj-tind">${k.perluBayar ? `<span class="dj-chip dj-chip--bahaya">Perlu dibayar <b>${k.perluBayar}</b> · ${rpJt(k.nilaiPerluBayar)}</span>` : ""}${k.tungguPod ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${k.tungguPod}</b></span>` : ""}</div>` : "";
   const mingguan = k.perMinggu.map((m) => [e(labelMinggu(m.k)), m.order, m.ritase]);
   const bd = banding.map((b) => `<div class="dj-bt"><b>${e(b.rute)}</b><span>${b.pelaku.map((o) => `<i class="${o.nama === b.murah ? "is-murah" : ""}">${e(o.nama)} ${jt(o.rata)}${o.nama === b.murah ? " ✓" : ""}</i>`).join("")}</span></div>`).join("");
   return `<div id="dj-dash">${risiko}<div class="dj-kpis">${kpi("Order masuk", k.order, `${k.ritase} terlaksana${k.persenTerlaksana != null ? ` (${k.persenTerlaksana}%)` : ""}`)}${kpi("Ritase", k.ritase, "shipment berjalan")}${kpi("Cost total", rpJt(k.cost), `Vendor ${jt(k.costVendor)} · uang jalan ${jt(k.costInternal)}`)}${kpi("Cost / ritase", rpJt(k.costPerRitase), "rata-rata")}</div>
@@ -94,19 +110,18 @@ export function htmlDistribusiDetail(j, ubah, now) {
   const n = DZ.kemajuan(j), b = DZ.berikut(j), id = e(j.id), titik = DZ.titikDari(j), nama = ["Siap", "Pick up", "Drop", "POD"];
   const stp = DZ.TAHAP.map(([k, l], i) => `<li class="${i < n ? "is-ok" : i === n ? "is-now" : ""}"><i></i><div><b>${l}</b><small>${i === n ? e(DZ.labelTahap(j)) : i < n ? "Selesai" : "–"}</small></div></li>`).join("");
   const tt = titik.map((x) => `<li class="${x.selesai ? "is-ok" : ""}"><span class="dj-chip dj-chip--${x.t === "P" ? "info" : "ok"}">${x.t === "P" ? "Pick up" : "Drop"}</span><div><b>${e(x.nama || "–")}</b><small>${e([x.kota, x.selesai ? fmtW(x.selesai) : ""].filter(Boolean).join(" · "))}</small></div><span>${x.selesai ? "✓" : ""}</span></li>`).join("");
-  const risiko = DZ.dibayarTanpaPod(j) ? `<p class="dj-risiko dj-risiko--bahaya"><b>Berisiko:</b> sudah dibayar ${e(r.tglBayar)}, POD belum kembali.${r.janjiPod ? ` Janji POD: ${e(r.janjiPod)}.` : " Isi janji POD kembali."}</p>` : n === 3 ? `<p class="dj-risiko">POD belum kembali. Syarat penagihan ke customer.</p>` : "";
   return `<div class="mr-kartu dj-kartu dj-trl"><h3>Pengiriman · ${e(DZ.pola(j) || "")} · ${e([j.kategori, r.bak].filter(Boolean).join(" "))}</h3><ol class="dj-stp">${stp}</ol><h3>Titik</h3><ul class="dj-ttkl">${tt}</ul>
-    ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-titik" data-id="${id}">Tandai ${e(b.label)} selesai</button>` : ""}${n > 1 || r.pod === "kembali" ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan langkah terakhir</button>` : ""}</div>` : ""}${risiko}</div>`;
+    ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-titik" data-id="${id}">Tandai ${e(b.label)} selesai</button>` : ""}${n > 1 || r.pod === "kembali" ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan langkah terakhir</button>` : ""}</div>` : ""}${htmlPodBayar(j, ubah, n >= 3, DZ.umurPod(j, now))}</div>`;
 }
 
 /** Performa "Semua" subdivisi: ringkasan gabungan Tracking Trailer dan Truk Distribusi; rincian ada di tiap subdivisi. kt = hitungTrailer, kd = hitungDistribusi, armada = { lewat, urusan }. */
 export function htmlPerformaGabungan(kt, kd, armada) {
-  const tanpa = kt.tanpaPod + kd.tanpaPod, tunggu = kt.tungguPod + kd.tungguPod, order = kt.order + kd.order, rit = kt.ritase + kd.ritase, cost = kt.cost + kd.cost;
-  const risiko = tanpa || tunggu || kt.siapTagih ? `<div class="dj-tind">${tanpa ? `<span class="dj-chip dj-chip--bahaya">Dibayar, POD belum <b>${tanpa}</b></span>` : ""}${tunggu ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${tunggu}</b></span>` : ""}${kt.siapTagih ? `<span class="dj-chip dj-chip--ok">Siap ditagih (Trailer) <b>${kt.siapTagih}</b></span>` : ""}</div>` : "";
+  const tanpa = kt.perluBayar + kd.perluBayar, tunggu = kt.tungguPod + kd.tungguPod, order = kt.order + kd.order, rit = kt.ritase + kd.ritase, cost = kt.cost + kd.cost;
+  const risiko = tanpa || tunggu ? `<div class="dj-tind">${tanpa ? `<span class="dj-chip dj-chip--bahaya">Perlu dibayar <b>${tanpa}</b></span>` : ""}${tunggu ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${tunggu}</b></span>` : ""}</div>` : "";
   const kpi = (jd, n, ket) => `<div class="dj-kpi dj-kpi--statis"><span>${jd}</span><b>${n}</b><small>${ket}</small></div>`;
   const baris = (l) => l.map(([a, b]) => `<div class="dj-uj__r"><span>${a}</span><b>${b}</b></div>`).join("");
   const kartu = (jd, sub, isi) => `<section class="mr-kartu dj-kartu"><div class="dj-kh"><h3>${jd}</h3><button type="button" class="mr-btn" data-dj="sub" data-v="${sub}">Lihat rincian</button></div>${isi}</section>`;
   return `<div id="dj-dash">${risiko}<div class="dj-kpis">${kpi("Order masuk", order, `${rit} terlaksana`)}${kpi("Ritase", rit, `Trailer ${kt.ritase} · Distribusi ${kd.ritase}`)}${kpi("Cost total", rpJt(cost), `Trailer ${jt(kt.cost)} · Distribusi ${jt(kd.cost)}`)}${kpi("Cost / ritase", rpJt(rit ? Math.round(cost / rit) : 0), "rata-rata gabungan")}</div>
-  <div class="dj-grid2e">${kartu("Tracking Trailer", "besar", baris([["Order masuk", kt.order], ["Ritase", kt.ritase], ["Cost total", rpJt(kt.cost)], ["Cost / ritase", rpJt(kt.costPerRitase)], ["Tunggu POD", kt.tungguPod], ["Dibayar, POD belum", kt.tanpaPod ? `<span class="dj-merah">${kt.tanpaPod} · ${rpJt(kt.nilaiTanpaPod)}</span>` : 0]]))}
-  ${kartu("Truk Distribusi", "kecil", baris([["Order masuk", kd.order], ["Ritase", `${kd.ritase} · ${kd.drop} titik drop`], ["Cost total", rpJt(kd.cost)], ["Cost / ritase", rpJt(kd.costPerRitase)], ["Dibayar, POD belum", kd.tanpaPod ? `<span class="dj-merah">${kd.tanpaPod}</span>` : 0], ["Armada: urusan 30 hari", armada.lewat ? `<span class="dj-merah">${armada.urusan} · ${armada.lewat} lewat</span>` : armada.urusan]]))}</div></div>`;
+  <div class="dj-grid2e">${kartu("Tracking Trailer", "besar", baris([["Order masuk", kt.order], ["Ritase", kt.ritase], ["Cost total", rpJt(kt.cost)], ["Cost / ritase", rpJt(kt.costPerRitase)], ["Tunggu POD", kt.tungguPod], ["Perlu dibayar", kt.perluBayar ? `<span class="dj-merah">${kt.perluBayar} · ${rpJt(kt.nilaiPerluBayar)}</span>` : 0]]))}
+  ${kartu("Truk Distribusi", "kecil", baris([["Order masuk", kd.order], ["Ritase", `${kd.ritase} · ${kd.drop} titik drop`], ["Cost total", rpJt(kd.cost)], ["Cost / ritase", rpJt(kd.costPerRitase)], ["Perlu dibayar", kd.perluBayar ? `<span class="dj-merah">${kd.perluBayar}</span>` : 0], ["Armada: urusan 30 hari", armada.lewat ? `<span class="dj-merah">${armada.urusan} · ${armada.lewat} lewat</span>` : armada.urusan]]))}</div></div>`;
 }

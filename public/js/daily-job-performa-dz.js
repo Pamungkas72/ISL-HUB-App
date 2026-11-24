@@ -11,7 +11,7 @@ const tglP = (s) => new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day
 const NAMA = { kir: "KIR", stnk: "STNK", pajak: "Pajak", servis: "Servis" };
 
 function tabPengiriman(k) {
-  const risiko = k.tanpaPod || k.tungguPod ? `<div class="dj-tind">${k.tanpaPod ? `<span class="dj-chip dj-chip--bahaya">Dibayar, POD belum <b>${k.tanpaPod}</b></span>` : ""}${k.tungguPod ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${k.tungguPod}</b></span>` : ""}</div>` : "";
+  const risiko = k.perluBayar || k.tungguPod ? `<div class="dj-tind">${k.perluBayar ? `<span class="dj-chip dj-chip--bahaya">Perlu dibayar <b>${k.perluBayar}</b></span>` : ""}${k.tungguPod ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${k.tungguPod}</b></span>` : ""}</div>` : "";
   const mxH = Math.max(1, ...k.perHari.map((x) => x.n)), mxB = Math.max(1, ...k.perBak.map((x) => x.ritase));
   return `${risiko}<div class="dj-kpis">${kpi("Order masuk", k.order, `${k.ritase} terlaksana`)}${kpi("Ritase", k.ritase, `${k.drop} titik drop${k.ritase ? ` · ${(Math.round((k.drop / k.ritase) * 10) / 10).toLocaleString("id-ID")} per ritase` : ""}`)}${kpi("Cost total", rpJt(k.cost), `Uang jalan ${jt(k.costInternal)} · vendor ${jt(k.costVendor)}`)}${kpi("Cost / ritase", rpJt(k.costPerRitase), `${k.ritaseInternal} internal · ${k.ritaseVendor} vendor`)}</div>
   <div class="dj-grid2e"><section class="mr-kartu dj-kartu"><h3>Ritase per hari</h3>${k.perHari.length ? k.perHari.slice(-14).map((x) => bar(tglP(x.k), x.n, mxH)).join("") : `<p class="mr-sub">Belum ada ritase pada periode ini.</p>`}<p class="mr-sub">Satu titik: ${k.pola.satu} · multi-titik: ${k.pola.banyak}</p></section>
