@@ -13,10 +13,11 @@ import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 import * as TR from "./daily-job-tracking-hitung.js";
-import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail, htmlPerformaTrailer, htmlDistribusiDetail, htmlTitik, titikAwal } from "./daily-job-tracking.js";
+import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail, htmlPerformaTrailer, htmlDistribusiDetail, htmlTitik, titikAwal, htmlPerformaGabungan } from "./daily-job-tracking.js";
 import * as TL from "./daily-job-trailer-hitung.js";
 import * as DZ from "./daily-job-distribusi-hitung.js";
 import { htmlArmada, htmlFormKendaraan, htmlFormTugas, judulTugas } from "./daily-job-armada.js";
+import { lembarEkspor, namaBerkas } from "./daily-job-ekspor.js";
 import { htmlPerformaDistribusi } from "./daily-job-performa-dz.js";
 import { htmlUangJalan, htmlHasilUj, buatSlipPdf } from "./daily-job-uangjalan.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
@@ -470,13 +471,11 @@ function htmlPemilihKel() {
 }
 /** Performa Tracking (desain A): KPI pengiriman, volume per armada, beban per PIC. */
 function htmlPerformaTracking(now) {
-  if (S.sub === "kecil") { const r = rentangAktif(), js = tampak(), ar = armadaKel(); return htmlPerformaDistribusi(DZ.hitungDistribusi(js, r, now), ar, DZ.ringkasRiwayat(ar, r), S.subPdz, now); }
-  if (S.sub === "besar") { const r = rentangAktif(), js = tampak(); return htmlPerformaTrailer(TL.hitungTrailer(js, r, now), TL.bandingTarif(js, r), (k) => "Mgg " + pBln(k)); }
-  const k = TR.hitungTracking(tampak(), rentangAktif(), now), p = (v) => (v == null ? "–" : v + "%"), maks = Math.max(1, ...k.volume.map((v) => v.n));
-  const kpi = (jd, nilai, ket) => `<div class="dj-kpi"><span>${jd}</span><b>${nilai}</b><small>${ket}</small></div>`;
-  const vol = k.volume.length ? k.volume.map((v) => `<div class="dj-vol"><span>${e(v.nama)} · ${v.n}</span><div class="dj-vol__b"><i style="width:${Math.round((v.n / maks) * 100)}%"></i></div></div>`).join("") : `<p class="mr-sub">Belum ada pengiriman pada periode ini.</p>`;
-  return `<div id="dj-dash"><div class="dj-kpis">${kpi("Pengiriman hari ini", k.hariIni, `${k.kirim} pada periode · ${k.order} order masuk`)}${kpi("Tepat waktu", p(k.persenTepat), `${k.tepat} dari ${k.pod} POD kembali`)}${kpi("POD kembali", p(k.persenPod), `${k.pod} dari ${k.kirim} pengiriman`)}${kpi("Tagihan belum dikonfirmasi", k.tagihanBelum, `${k.cash} cash · ${k.top} TOP`)}</div>
-  <div class="dj-grid2e"><section class="mr-kartu dj-kartu"><h3>Volume per kategori armada</h3>${vol}</section>${htmlTabel("Beban per PIC", ["PIC", "Aktif", "Belum POD", "Telat"], k.perPic.map((o) => ({ nama: o.nama, sel: [o.aktif, o.belumPod, o.telat ? `<b class="dj-merah">${o.telat}</b>` : 0] })), "pic", S.fPic)}</div></div>`;
+  const r = rentangAktif(), js = tampak(), ar = armadaKel();
+  if (S.sub === "kecil") return htmlPerformaDistribusi(DZ.hitungDistribusi(js, r, now), ar, DZ.ringkasRiwayat(ar, r), S.subPdz, now);
+  if (S.sub === "besar") return htmlPerformaTrailer(TL.hitungTrailer(js, r, now), TL.bandingTarif(js, r), (k) => "Mgg " + pBln(k));
+  const tg = DZ.tugasArmada(ar, now);
+  return htmlPerformaGabungan(TL.hitungTrailer(js, r, now), DZ.hitungDistribusi(js, r, now), { urusan: tg.length, lewat: tg.filter((x) => x.tingkat === "lewat").length });
 }
 
 function render() {
@@ -489,7 +488,7 @@ function render() {
   const btnFilter = `<button type="button" class="mr-btn dj-ib" data-dj="filter" title="Filter"  aria-label="Filter">${ikon("filter", 16)}${bukanBawaan ? `<i class="dj-dot"></i>` : ""}</button>`;
   const BEL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
   const mn = (a, i, t) => `<button type="button" role="menuitem" class="dj-mn__i" data-dj="${a}">${i} ${t}</button>`;
-  const menuAlat = `<span class="dj-mw"><button type="button" class="mr-btn dj-ib" data-dj="menu" data-id="__alat" aria-haspopup="menu" aria-expanded="${S.menu === "__alat"}" title="Lainnya" aria-label="Lainnya">${ikon("titik", 18)}</button>${S.menu === "__alat" ? `<div class="dj-mn" role="menu">${mn("push", BEL, pushOn ? "Matikan notifikasi" : "Aktifkan notifikasi")}${S.kelola && profilAktif() !== "tracking" ? mn("impor", ikon("upload", 15), "Impor dari Excel") : ""}${profilAktif() !== "tracking" || S.sub ? mn("pdf", ikon("download", 15), "Unduh laporan PDF") : ""}</div>` : ""}</span>`;
+  const menuAlat = `<span class="dj-mw"><button type="button" class="mr-btn dj-ib" data-dj="menu" data-id="__alat" aria-haspopup="menu" aria-expanded="${S.menu === "__alat"}" title="Lainnya" aria-label="Lainnya">${ikon("titik", 18)}</button>${S.menu === "__alat" ? `<div class="dj-mn" role="menu">${mn("push", BEL, pushOn ? "Matikan notifikasi" : "Aktifkan notifikasi")}${profilAktif() === "tracking" ? mn("ekspor", ikon("download", 15), "Ekspor Excel shipment") : ""}${S.kelola && profilAktif() !== "tracking" ? mn("impor", ikon("upload", 15), "Impor dari Excel") : ""}${profilAktif() !== "tracking" || S.sub ? mn("pdf", ikon("download", 15), "Unduh laporan PDF") : ""}</div>` : ""}</span>`;
   const r = rentangAktif(), p = periodeAktif(), kelNama = namaKel(S.kelAktif);
   const ringkas = [kelNama, S.fPic || "semua PIC", S.fKat || "semua kategori"].filter(Boolean).map(e).join(" · ");
   const kepalaP = `<div class="dj-kepala"><div class="dj-kepala__t"><div class="dj-ttl">Performa</div><p class="mr-sub" style="margin:4px 0 0;font-size:14px">Menampilkan <b style="color:var(--text)">${e(judulPeriode(r))}</b> · ${ringkas} &nbsp;<button type="button" class="mr-link" data-dj="filter">Ubah</button></p></div><span class="dj-kepala__a">${menuAlat}</span></div>`;
@@ -819,6 +818,16 @@ async function simpanJob() {
 
 /* ---------- PDF ---------- */
 const tungguLib = async () => { for (let i = 0; i < 40 && !(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API && window.jspdf.jsPDF.API.autoTable); i++) await new Promise((r) => setTimeout(r, 250)); if (!(window.jspdf && window.jspdf.jsPDF.API.autoTable)) throw new Error("Pustaka PDF belum siap. Coba lagi sebentar lagi."); };
+/** Ekspor Excel data shipment Tracking (kelompok dan subdivisi yang dilihat; periode: Performa = periode aktif, Daftar = filter periode daftar, "Semua" = tanpa batas). */
+async function eksporExcel() {
+  try {
+    for (let i = 0; i < 40 && !window.XLSX; i++) await new Promise((r) => setTimeout(r, 250)); if (!window.XLSX) throw new Error("Pustaka Excel belum siap. Coba lagi sebentar lagi.");
+    const now = H.hariIni(), per = S.tab === "performa" ? rentangAktif() : H.rentangDaftar(S.pDaftar, now, S.pDari, S.pSampai), js = jobsKel().filter((j) => !per || H.dalam(j.tglMasuk || j.dibuatPada, per)), lembar = lembarEkspor(js, S.sub, now), X = window.XLSX, wb = X.utils.book_new();
+    if (!lembar.some(([, a]) => a.length > 1)) return toast("Belum ada data shipment pada periode ini.", "bahaya");
+    lembar.forEach(([nama, aoa]) => { const ws = X.utils.aoa_to_sheet(aoa); ws["!cols"] = aoa[0].map((h, i) => ({ wch: Math.min(48, Math.max(h.length + 2, ...aoa.slice(1, 40).map((r) => String(r[i] ?? "").length + 2))) })); ws["!freeze"] = { xSplit: 0, ySplit: 1 }; X.utils.book_append_sheet(wb, ws, nama); });
+    X.writeFile(wb, namaBerkas(S.sub, now)); toast("Excel shipment diunduh.");
+  } catch (err) { console.error(err); toast("Excel belum jadi: " + e(err.message || err), "bahaya"); }
+}
 async function unduhPdf() {
   const tombol = $(".dj-pdf"); if (tombol) tombol.disabled = true;
   try {
@@ -978,7 +987,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "sub") { S.sub = v; S.hal = 0; S.fKat = ""; return render(); }
   if (a === "hal" || a === "hal-ke") { S.hal = Math.max(0, a === "hal" ? S.hal + +v : +v); render(); return window.scrollTo({ top: 0 }); }
   if (a === "cb0") return pilihAktif() ? togglePilih(id) : mulaiPilih(id);
-  if (a === "push" || a === "impor" || a === "pdf") { S.menu = ""; render(); }
+  if (a === "push" || a === "impor" || a === "pdf" || a === "ekspor") { S.menu = ""; render(); }
   if (a === "buka") { if (Date.now() - blokKlik < 500) return; if (S.terbuka) return tutupGeser(); if (pilihAktif()) return togglePilih(id); return bukaDetail(id); }
   if (a === "d-tutup") { S.detail = null; return render(); }
   if (a === "d-berkas") { S.detail.berkas = +t.dataset.i; render(); return; }
@@ -1010,6 +1019,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "masalah-hapus") { S.masalah = ""; S.hal = 0; return render(); }
   if (a === "f-picchip") { S.fPic = v; S.hal = 0; render(); return panelAktif(); }
   if (a === "pdf") return unduhPdf();
+  if (a === "ekspor") return eksporExcel();
   if (a === "push") {
     const st = statusPush(S.u.uid);
     if (st === "aktif") { if (await konfirmasi("Matikan notifikasi?", "Perangkat ini tidak lagi menerima pengingat Daily Job.", "Matikan")) { await matikanPush(S.u.uid); render(); toast("Notifikasi dimatikan di perangkat ini."); } return; }
