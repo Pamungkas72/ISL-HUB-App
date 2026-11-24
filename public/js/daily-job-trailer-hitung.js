@@ -52,7 +52,6 @@ export const butuhJanjiPod = (j) => dibayarTanpaPod(j) && !rinci(j).janjiPod;
 const cost = (j) => Number(rinci(j).cost) || 0;
 const dlm = (t, r) => dalam(String(t || "").slice(0, 10), r);
 const tglOrder = (j) => j.tglMasuk || j.dibuatPada;
-const jt = (n) => Math.round(n / 1e5) / 10;
 
 /** KPI Performa Tracking Trailer untuk periode r = [dari, sampai]. Terlaksana (ritase) = pick up/ambil MT sudah dikerjakan. */
 export function hitungTrailer(jobs, r, now = hariIni()) {
@@ -71,4 +70,15 @@ export function hitungTrailer(jobs, r, now = hariIni()) {
     umurPod: [["0-3", 0, 3], ["4-7", 4, 7], ["8-14", 8, 14], [">14", 15, 1e9]].map(([l, a, b]) => ({ l, n: tunggu.filter((j) => umurPod(j, now) >= a && umurPod(j, now) <= b).length })),
   };
 }
-export { jt };
+
+
+/** Strip tindakan di Daftar: job Trailer aktif yang perlu perhatian; satu job masuk paling banyak satu kelompok. */
+export const TINDAKAN = [["bayar", "Dibayar, POD belum", "bahaya"], ["pod", "POD terlambat", "warn"], ["berangkat", "Berangkat hari ini", "info"], ["armada", "Order tanpa armada", "warn"]];
+export function cocokTindakan(j, id, now = hariIni()) {
+  if (!jenisTrailer(j) || !aktif(j)) return false; const r = rinci(j), n = kemajuan(j);
+  if (id === "bayar") return dibayarTanpaPod(j);
+  if (id === "pod") return !dibayarTanpaPod(j) && operasionalSelesai(j) && !podKembali(j) && umurPod(j, now) >= 3;
+  if (id === "berangkat") return n <= 1 && (r.tglKirim || j.tglMasuk) === now;
+  if (id === "armada") return n === 0 && !r.vendor && !r.plat && !r.driver;
+  return false;
+}

@@ -29,4 +29,8 @@ eq("risiko: tunggu POD, dibayar tanpa POD, siap tagih", [k.tungguPod, k.tanpaPod
 eq("umur POD per kelompok", k.umurPod.map((o) => o.n), [0, 0, 2, 0]);
 const u = T.batalkanTahap(jobs[5]);
 eq("batalkan tahap terakhir (POD) mengosongkan pod", [u.pod, u.tglPod, !!u.tahap.pod, !!u.tahap.mtreturn], ["belum", null, false, true]);
+const tj = (id, rinci, o = {}) => J(id, { tahap: {}, ...rinci }, o), hr = "2026-11-23";
+eq("tindakan: dibayar tanpa POD, POD terlambat, berangkat hari ini, tanpa armada", [
+  T.cocokTindakan(jobs[1], "bayar", now), T.cocokTindakan(jobs[1], "pod", now), T.cocokTindakan(jobs[2], "pod", now),
+  T.cocokTindakan(tj(7, { jenis: "impor", vendor: "X", tglKirim: hr, tahap: t("siap") }), "berangkat", now), T.cocokTindakan(tj(8, { jenis: "impor", tglKirim: hr }), "armada", now), T.cocokTindakan(jobs[3], "pod", now)], [true, false, true, true, true, false]);
 process.exit(gagal ? 1 : 0);
