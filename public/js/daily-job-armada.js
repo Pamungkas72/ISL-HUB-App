@@ -2,6 +2,7 @@
 import { e } from "./ui.js";
 import * as DZ from "./daily-job-distribusi-hitung.js";
 import { selisihHari, hariIni } from "./daily-job-hitung.js";
+import { htmlTabTarif } from "./daily-job-uangjalan.js";
 
 const IK = { kir: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 14l2 2 3.5-4"/>', stnk: '<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 10h8M8 14h5"/>', pajak: '<circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/>', servis: '<path d="M14 6a4 4 0 0 0 5 5l-9 9a2 2 0 0 1-3-3l9-9a4 4 0 0 0-2-2z"/>', visit: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>' };
 const WARNA = { lewat: "bahaya", mendesak: "bahaya", segera: "warn", bulan: "info", aman: "ok" };
@@ -9,7 +10,7 @@ const ikon = (n, w) => `<span class="dj-ai dj-ai--${w}"><svg width="18" height="
 const tglP = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "2-digit", timeZone: "UTC" }) : "–");
 const sisaTeks = (s) => (s < 0 ? `lewat ${-s} hari` : s === 0 ? "hari ini" : `${s} hari lagi`);
 const chip = (k, t) => `<span class="dj-chip dj-chip--${k}">${t}</span>`;
-export const SUB_ARMADA = [["tindakan", "Perlu tindakan"], ["kendaraan", "Kendaraan"], ["sewa", "Sewa unit"], ["riwayat", "Riwayat"]];
+export const SUB_ARMADA = [["tindakan", "Perlu tindakan"], ["kendaraan", "Kendaraan"], ["sewa", "Sewa unit"], ["uangjalan", "Uang jalan"], ["riwayat", "Riwayat"]];
 const AKSI = { kir: "Catat perpanjangan", stnk: "Catat perpanjangan", pajak: "Catat perpanjangan", servis: "Catat servis", visit: "Catat hasil visit" };
 const ketTugas = (t) => (t.tipe === "visit" ? `${e(t.k.sewa.customer || "")} · ${e(t.k.sewa.kota || "")}` : t.tipe === "servis" ? [t.tgl ? "jadwal " + tglP(t.tgl) : "", t.sisaKm != null ? `${t.sisaKm <= 0 ? "lewat " + -t.sisaKm : "sisa " + t.sisaKm} km` : ""].filter(Boolean).join(" · ") : "berlaku " + tglP(t.tgl));
 
@@ -43,9 +44,9 @@ function tabRiwayat(arm) {
   return `<section class="mr-kartu dj-kartu"><h3>Riwayat perawatan dan dokumen</h3>${l.length ? l.map((x) => `<div class="dj-arm__t">${ikon(x.tipe, "ok")}<div class="dj-arm__i"><b>${e(x.judul || x.tipe)} · ${e(x.plat)}</b><small>${tglP(x.tgl)}${x.biaya ? " · Rp" + Number(x.biaya).toLocaleString("id-ID") : ""}${x.catatan ? " · " + e(x.catatan) : ""}${x.oleh ? " · " + e(x.oleh) : ""}</small></div></div>`).join("") : `<p class="mr-sub">Belum ada catatan perpanjangan, servis, atau visit.</p>`}</section>`;
 }
 /** Isi tab Armada. ubah = boleh mengubah data. */
-export function htmlArmada(arm, sub, now, ubah) {
+export function htmlArmada(arm, sub, now, ubah, tarif = [], kelola = false) {
   const nav = `<div class="mr-seg dj-seg dj-arm__nav" role="group" aria-label="Bagian Armada">${SUB_ARMADA.map(([k, t]) => `<button type="button" class="mr-chip${sub === k ? " is-aktif" : ""}" data-dj="arm-sub" data-v="${k}">${t}</button>`).join("")}</div>`;
-  const isi = sub === "kendaraan" ? tabKendaraan(arm, now, ubah) : sub === "sewa" ? tabSewa(arm, now, ubah) : sub === "riwayat" ? tabRiwayat(arm) : tabTindakan(arm, now, ubah);
+  const isi = sub === "kendaraan" ? tabKendaraan(arm, now, ubah) : sub === "sewa" ? tabSewa(arm, now, ubah) : sub === "riwayat" ? tabRiwayat(arm) : sub === "uangjalan" ? htmlTabTarif(tarif, kelola, ubah) : tabTindakan(arm, now, ubah);
   return `<div class="dj-arm"><div class="dj-arm__kep">${nav}${ubah ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="arm-baru">+ Kendaraan</button>` : ""}</div>${isi}</div>`;
 }
 const f = (l, i, k = "") => `<label class="mr-f ${k}"><span>${l}</span>${i}</label>`;

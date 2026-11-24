@@ -203,6 +203,11 @@ describe("Pendaftaran akun: hanya sales, dengan nomor WhatsApp", () => {
 describe("Daily Job: akses per kelompok", () => {
   const dj1 = () => ctx("uid-dj1", "dj1@isl.test"), dj2 = () => ctx("uid-dj2", "dj2@isl.test"), job = (k, judul = "Baru") => ({ kelompokId: k, judul, status: "baru" });
   const arm = (k) => ({ kelompokId: k, plat: "B 1234 XYZ", jenisArmada: "CDD" });
+  const tarif = (k, st = "menunggu") => ({ kelompokId: k, rute: "Cikarang → Bandung", jenisArmada: "CDD", nominal: 650000, status: st, diajukanOleh: "uid-dj1" });
+  it("anggota mengajukan tarif uang jalan (menunggu)", () => assertSucceeds(setDoc(doc(dj1(), "dj_tarif/t1"), tarif("k1"))));
+  it("anggota tidak langsung menyetujui tarif sendiri", () => assertFails(setDoc(doc(dj1(), "dj_tarif/t2"), tarif("k1", "setuju"))));
+  it("anggota tidak mengubah status tarif", async () => { await assertSucceeds(setDoc(doc(dj1(), "dj_tarif/t3"), tarif("k1"))); await assertFails(updateDoc(doc(dj1(), "dj_tarif/t3"), { status: "setuju" })); });
+  it("anggota kelompok lain tidak membaca tarif k1", async () => { await assertSucceeds(setDoc(doc(dj1(), "dj_tarif/t4"), tarif("k1"))); await assertFails(getDoc(doc(dj2(), "dj_tarif/t4"))); });
   it("anggota membuat dan membaca armada kelompoknya", async () => { await assertSucceeds(setDoc(doc(dj1(), "dj_armada/a1"), arm("k1"))); await assertSucceeds(getDoc(doc(dj1(), "dj_armada/a1"))); });
   it("anggota tidak membuat armada di kelompok lain", () => assertFails(setDoc(doc(dj1(), "dj_armada/a2"), arm("k2"))));
   it("anggota tidak membuat armada tanpa plat", () => assertFails(setDoc(doc(dj1(), "dj_armada/a3"), { kelompokId: "k1", plat: "" })));
