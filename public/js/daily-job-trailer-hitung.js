@@ -82,3 +82,10 @@ export function cocokTindakan(j, id, now = hariIni()) {
   if (id === "armada") return n === 0 && !r.vendor && !r.plat && !r.driver;
   return false;
 }
+
+/** Pembanding tarif per rute: rata-rata cost per ritase tiap vendor/internal pada rute yang sama; hanya rute dengan 2 pelaku atau lebih. murah = pelaku dengan rata-rata terendah. */
+export function bandingTarif(jobs, r) {
+  const rit = jobs.filter((j) => j.status !== "batal" && jenisTrailer(j) && dlm(rinci(j).tglKirim || tglOrder(j), r) && kemajuan(j) >= 2 && cost(j) > 0), m = new Map();
+  rit.forEach((j) => { const q = rinci(j), rute = [q.asal, q.tujuan].filter(Boolean).join(" → "), nama = internal(j) ? "Internal" : q.vendor; if (!rute) return; const v = m.get(rute) || new Map(), o = v.get(nama) || { nama, n: 0, total: 0 }; o.n++; o.total += cost(j); v.set(nama, o); m.set(rute, v); });
+  return [...m].map(([rute, v]) => { const l = [...v.values()].map((o) => ({ nama: o.nama, n: o.n, rata: Math.round(o.total / o.n) })).sort((a, b) => a.rata - b.rata); return { rute, pelaku: l, murah: l[0].nama, n: l.reduce((a, o) => a + o.n, 0) }; }).filter((x) => x.pelaku.length >= 2).sort((a, b) => b.n - a.n).slice(0, 6);
+}
