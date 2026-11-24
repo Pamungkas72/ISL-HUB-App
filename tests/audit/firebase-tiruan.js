@@ -36,7 +36,7 @@ export const getStorage = () => ({}); export const ref = (s, p) => ({ p });
 export const uploadBytes = async () => ({}); export const uploadString = async () => ({}); export const deleteObject = async () => {};
 export const getDownloadURL = async () => 'data:image/gif;base64,R0lGODlhAQABAAAAACw='; export const getBytes = async () => new ArrayBuffer(0);
 `;
-const FN = `export const getFunctions = () => ({}); export const httpsCallable = () => async () => ({ data: {} });`;
+const FN = `export const getFunctions = () => ({}); export const httpsCallable = (_, n) => async () => ({ data: (globalThis.__FN && globalThis.__FN[n]) || {} });`;
 const MODUL = { 'firebase-functions': FN, 'firebase-app': APP, 'firebase-auth': AUTH, 'firebase-firestore': FS, 'firebase-storage': ST };
 
 // Pasang ke sebuah halaman Playwright: berkas aplikasi dari folder public/ di origin http://isl.test, modul Firebase diganti tiruan.
