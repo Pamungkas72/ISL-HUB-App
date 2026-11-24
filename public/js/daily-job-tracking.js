@@ -84,3 +84,15 @@ export function htmlDistribusiDetail(j, ubah, now) {
   return `<div class="mr-kartu dj-kartu dj-trl"><h3>Pengiriman · ${e(DZ.pola(j) || "")} · ${e([j.kategori, r.bak].filter(Boolean).join(" "))}</h3><ol class="dj-stp">${stp}</ol><h3>Titik</h3><ul class="dj-ttkl">${tt}</ul>
     ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-titik" data-id="${id}">Tandai ${e(b.label)} selesai</button>` : ""}${n > 1 || r.pod === "kembali" ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan langkah terakhir</button>` : ""}</div>` : ""}${risiko}</div>`;
 }
+
+/** Performa "Semua" subdivisi: ringkasan gabungan Tracking Trailer dan Truk Distribusi; rincian ada di tiap subdivisi. kt = hitungTrailer, kd = hitungDistribusi, armada = { lewat, urusan }. */
+export function htmlPerformaGabungan(kt, kd, armada) {
+  const tanpa = kt.tanpaPod + kd.tanpaPod, tunggu = kt.tungguPod + kd.tungguPod, order = kt.order + kd.order, rit = kt.ritase + kd.ritase, cost = kt.cost + kd.cost;
+  const risiko = tanpa || tunggu || kt.siapTagih ? `<div class="dj-tind">${tanpa ? `<span class="dj-chip dj-chip--bahaya">Dibayar, POD belum <b>${tanpa}</b></span>` : ""}${tunggu ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${tunggu}</b></span>` : ""}${kt.siapTagih ? `<span class="dj-chip dj-chip--ok">Siap ditagih (Trailer) <b>${kt.siapTagih}</b></span>` : ""}</div>` : "";
+  const kpi = (jd, n, ket) => `<div class="dj-kpi dj-kpi--statis"><span>${jd}</span><b>${n}</b><small>${ket}</small></div>`;
+  const baris = (l) => l.map(([a, b]) => `<div class="dj-uj__r"><span>${a}</span><b>${b}</b></div>`).join("");
+  const kartu = (jd, sub, isi) => `<section class="mr-kartu dj-kartu"><div class="dj-kh"><h3>${jd}</h3><button type="button" class="mr-btn" data-dj="sub" data-v="${sub}">Lihat rincian</button></div>${isi}</section>`;
+  return `<div id="dj-dash">${risiko}<div class="dj-kpis">${kpi("Order masuk", order, `${rit} terlaksana`)}${kpi("Ritase", rit, `Trailer ${kt.ritase} · Distribusi ${kd.ritase}`)}${kpi("Cost total", rpJt(cost), `Trailer ${jt(kt.cost)} · Distribusi ${jt(kd.cost)}`)}${kpi("Cost / ritase", rpJt(rit ? Math.round(cost / rit) : 0), "rata-rata gabungan")}</div>
+  <div class="dj-grid2e">${kartu("Tracking Trailer", "besar", baris([["Order masuk", kt.order], ["Ritase", kt.ritase], ["Cost total", rpJt(kt.cost)], ["Cost / ritase", rpJt(kt.costPerRitase)], ["Tunggu POD", kt.tungguPod], ["Dibayar, POD belum", kt.tanpaPod ? `<span class="dj-merah">${kt.tanpaPod} · ${rpJt(kt.nilaiTanpaPod)}</span>` : 0]]))}
+  ${kartu("Truk Distribusi", "kecil", baris([["Order masuk", kd.order], ["Ritase", `${kd.ritase} · ${kd.drop} titik drop`], ["Cost total", rpJt(kd.cost)], ["Cost / ritase", rpJt(kd.costPerRitase)], ["Dibayar, POD belum", kd.tanpaPod ? `<span class="dj-merah">${kd.tanpaPod}</span>` : 0], ["Armada: urusan 30 hari", armada.lewat ? `<span class="dj-merah">${armada.urusan} · ${armada.lewat} lewat</span>` : armada.urusan]]))}</div></div>`;
+}
