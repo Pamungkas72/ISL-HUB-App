@@ -387,3 +387,11 @@ describe("Izin per modul (pengguna.akses): hanya membatasi", () => {
     await assertSucceeds(updateDoc(doc(master(), "pengguna/uid-admin"), { akses: { mr: 1 } }));
   });
 });
+
+describe("Master Uang Jalan (uj_master, uj_riwayat): master dan admin tulis, hanya master hapus", () => {
+  const baris = { pickup: "Cikarang", tujuan: "Subang", armada: "cdd", total: 646000 };
+  it("master dan admin menulis dan membaca baris", async () => { await assertSucceeds(setDoc(doc(master(), "uj_master/u1"), baris)); await assertSucceeds(setDoc(doc(admin(), "uj_master/u2"), baris)); await assertSucceeds(getDoc(doc(admin(), "uj_master/u1"))); });
+  it("hapus baris hanya master (admin ditolak)", async () => { await assertFails(deleteDoc(doc(admin(), "uj_master/u2"))); await assertSucceeds(deleteDoc(doc(master(), "uj_master/u2"))); });
+  it("sales dan lihat saja tidak membaca atau menulis", async () => { await assertFails(getDoc(doc(sales(), "uj_master/u1"))); await assertFails(setDoc(doc(sales(), "uj_master/u3"), baris)); await assertFails(setDoc(doc(lihat(), "uj_master/u4"), baris)); });
+  it("riwayat: admin menambah, tidak bisa mengubah atau menghapus", async () => { await assertSucceeds(setDoc(doc(admin(), "uj_riwayat/r1"), { kunci: "u1", lama: 1 })); await assertFails(updateDoc(doc(admin(), "uj_riwayat/r1"), { lama: 2 })); await assertFails(deleteDoc(doc(admin(), "uj_riwayat/r1"))); });
+});

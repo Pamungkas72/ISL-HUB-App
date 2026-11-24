@@ -2696,3 +2696,77 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
   .pr-bar > span:first-child { flex-basis: 100%; }
   .pr-bar .mr-btn { flex: 1; justify-content: center; }
 }
+
+/* ===== Master Rate: tab Uang Jalan (daftar + formulir kalkulator). Warna lewat variabel tema; slip kertas boleh putih. ===== */
+.ujm-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0; }
+.ujm-bar select { width: auto; min-width: 180px; }
+.ujm-pil { border: 1px solid var(--mr-border); background: var(--mr-surface); color: var(--mr-muted); border-radius: 999px; padding: 7px 13px; font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.ujm-pil b { color: var(--mr-ink); }
+.ujm-pil:hover { border-color: var(--mr-navy); }
+.ujm-tbl td small { display: block; color: var(--mr-muted); font-size: 12px; }
+.ujm-tbl .ujm-r { text-align: right; font-variant-numeric: tabular-nums; }
+.ujm-tbl .ujm-rin { color: var(--mr-muted); font-size: 12.5px; }
+.ujm-baris { cursor: pointer; }
+.ujm-baris:hover td { background: var(--mr-navy-soft); }
+.ujm-tag { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 6px; padding: 2px 8px; }
+.ujm-tag--h { background: color-mix(in srgb, var(--mr-ok) 14%, var(--mr-surface)); color: var(--mr-ok); }
+.ujm-tag--m { background: var(--mr-warn-bg); color: var(--mr-warn); }
+.ujm-meta { margin: 8px 4px 0; }
+.ujm-info { display: flex; gap: 8px; align-items: flex-start; margin: 12px 0 0; padding: 10px 14px; border: 1px solid var(--mr-border); border-radius: var(--mr-r); background: var(--mr-navy-soft); color: var(--mr-muted); font-weight: 400; }
+.ujm-info b { color: var(--mr-ink); }
+.ujm-info svg { flex: none; margin-top: 2px; }
+.ujm-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--mr-border); cursor: pointer; }
+.ujm-row:last-child { border-bottom: 0; }
+.ujm-row__t { min-width: 0; } .ujm-row__t b { display: block; font-size: 14.5px; color: var(--mr-ink); }
+.ujm-row__t small { display: block; margin-top: 3px; font-size: 12px; color: var(--mr-muted); }
+.ujm-row__v { text-align: right; flex: none; } .ujm-row__v b { display: block; font-size: 15px; color: var(--mr-ink); font-variant-numeric: tabular-nums; }
+/* formulir */
+.ujm-sec { border: 1px solid var(--mr-border); border-radius: var(--mr-rl); padding: 12px 14px 8px; margin-bottom: 12px; }
+.ujm-sec h5 { margin: 0 0 10px; font-size: 11.5px; letter-spacing: .05em; color: var(--mr-muted); text-transform: uppercase; font-weight: 700; }
+.ujm-in { display: flex; align-items: center; gap: 6px; border: 1px solid var(--mr-border); border-radius: var(--mr-r); background: var(--mr-surface); padding: 0 11px; min-height: 40px; min-width: 0; }
+.ujm-in:focus-within { border-color: var(--mr-navy); }
+.ujm-in input { flex: 1; width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--mr-ink); font: inherit; font-size: 14px; padding: 8px 0; }
+.ujm-in em { font-style: normal; color: var(--mr-muted); font-size: 12.5px; white-space: nowrap; }
+.ujm-in--rp input { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ujm-opsi { font-style: normal; font-weight: 400; color: var(--mr-muted); font-size: 12px; }
+.ujm-lab { font-size: 11px; font-weight: 600; color: var(--mr-muted); margin: 2px 0 5px; }
+.ujm-chs, .ujm-add { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.ujm-ch, .ujm-add button, .ujm-add__k { border: 1px solid var(--mr-border); background: var(--mr-surface); color: var(--mr-ink); border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.ujm-ch.is-on { background: var(--mr-navy); border-color: var(--mr-navy); color: #fff; font-weight: 600; }
+.ujm-add button { border-style: dashed; font-weight: 600; } .ujm-add button:hover { border-color: var(--mr-navy); }
+.ujm-add__k { opacity: .5; cursor: not-allowed; display: inline-flex; align-items: center; gap: 4px; }
+.ujm-tambah { border: 1px dashed var(--mr-muted); background: transparent; color: var(--mr-ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; margin: 6px 0 8px; }
+.ujm-b { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--mr-border); min-height: 52px; }
+.ujm-b:first-of-type { border-top: 0; }
+.ujm-b__l { flex: 1; min-width: 0; } .ujm-b__l b { display: block; font-size: 14px; color: var(--mr-ink); }
+.ujm-b__l small { display: block; font-size: 11.5px; color: var(--mr-muted); margin-top: 1px; }
+.ujm-b__v { flex: none; width: 150px; text-align: right; } .ujm-b__v b { font-size: 15px; color: var(--mr-ink); font-variant-numeric: tabular-nums; }
+.ujm-b.is-mati .ujm-b__l b { color: var(--mr-muted); } .ujm-b.is-mati .ujm-in { background: var(--mr-bg); }
+.ujm-nama { width: 100%; border: 1px solid var(--mr-border); border-radius: var(--mr-r); background: var(--mr-surface); color: var(--mr-ink); font: inherit; font-size: 14px; padding: 9px 11px; min-width: 0; }
+.ujm-x { flex: none; width: 32px; height: 32px; }
+.ujm-sw { flex: none; position: relative; width: 38px; height: 22px; border: 0; border-radius: 99px; background: var(--mr-border); cursor: pointer; padding: 0; }
+.ujm-sw::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--mr-surface); box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: left .12s; }
+.ujm-sw.is-on { background: var(--mr-navy); } .ujm-sw.is-on::after { left: 19px; }
+.ujm-sw:disabled { opacity: .45; cursor: not-allowed; }
+.ujm-sum { padding: 2px 0 6px; } .ujm-sum div { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13.5px; color: var(--mr-muted); font-variant-numeric: tabular-nums; }
+.ujm-sum .t { border-top: 1px solid var(--mr-border); margin-top: 4px; padding-top: 9px; font-weight: 700; font-size: 15px; color: var(--mr-ink); }
+.ujm-peringatan { border: 1px solid var(--mr-warn-garis); background: var(--mr-warn-bg); color: var(--mr-warn); border-radius: var(--mr-r); padding: 9px 12px; font-size: 12.5px; margin-bottom: 12px; }
+.ujm-peringatan b { color: var(--mr-ink); }
+.ujm-hist { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 13px; color: var(--mr-muted); border-top: 1px solid var(--mr-border); }
+.ujm-hist:first-of-type { border-top: 0; } .ujm-hist b { color: var(--mr-ink); font-variant-numeric: tabular-nums; }
+.ujm-kaki { align-items: center; }
+.ujm-tot { margin-right: auto; } .ujm-tot small { display: block; color: var(--mr-muted); font-size: 11.5px; } .ujm-tot b { font-size: 21px; color: var(--mr-navy); font-variant-numeric: tabular-nums; }
+.ujm-lihat { margin: 6px 0 4px; }
+.ujm-aksi { display: flex; gap: 10px; margin: 0 0 12px; } .ujm-aksi .mr-btn { flex: 1; justify-content: center; }
+.ujm-slip { margin: 8px 0; background: #fff; color: #14202e; border: 1px solid #d8dee6; border-radius: 8px; padding: 16px 16px 12px; font-size: 12.5px; box-shadow: 0 4px 18px rgba(8, 20, 38, .12); }
+.ujm-slip h6 { margin: 0 0 2px; font-size: 14px; letter-spacing: .04em; }
+.ujm-slip .k { color: #66768a; display: flex; justify-content: space-between; padding: 2px 0; } .ujm-slip .k b { color: #14202e; }
+.ujm-slip hr { border: 0; border-top: 1px solid #d8dee6; margin: 8px 0; }
+.ujm-slip .b { display: flex; justify-content: space-between; padding: 3px 0; font-variant-numeric: tabular-nums; } .ujm-slip .b.m { color: #66768a; }
+.ujm-slip .t { display: flex; justify-content: space-between; font-weight: 700; font-size: 15px; padding-top: 6px; }
+@media (max-width: 760px) {
+  .ujm-kaki .ujm-tot { order: -2; flex: 1 0 100%; display: flex; justify-content: space-between; align-items: baseline; margin: 0; }
+  .ujm-tot small { font-size: 12.5px; }
+  .ujm-b__v { width: 128px; }
+}
+@media (min-width: 761px) { .ujm-sec .mr-form { grid-template-columns: 1fr 1fr; } }

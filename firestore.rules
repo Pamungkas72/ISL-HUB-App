@@ -178,6 +178,12 @@ service cloud.firestore {
       allow write: if kelola('mr') && (isKelola()); }
     match /uj_pengaturan/{id} { allow read: if baca('mr') && (isKelola());
       allow write: if kelola('mr') && (isKelola()); }
+    // Master Uang Jalan di Master Rate (24 Nov 2026): satu baris per rute x armada + riwayat angka lama.
+    match /uj_master/{id}     { allow read: if baca('mr') && (isKelola());
+      allow create, update: if kelola('mr') && (isKelola());
+      allow delete: if kelola('mr') && (isMaster()); }
+    match /uj_riwayat/{id}    { allow read: if baca('mr') && (isKelola());
+      allow create: if kelola('mr') && (isKelola()); }
 
     // ---------------- Legal: kontrak berjalan (master dan admin) dan MOM (tiap akun mencatat miliknya) ----------------
     match /lg_kontrak/{id} {

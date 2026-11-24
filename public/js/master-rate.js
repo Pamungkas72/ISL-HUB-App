@@ -29,6 +29,7 @@ import { htmlFasilitas, isiOpsiFasilitas, pasangFasilitas, pilihFasilitasBaru, J
 import { LINI_ASING, htmlNilaiAsing, pasangNilaiAsing, bacaNilaiAsing, teksNilaiAsing } from "./asing.js";
 import { tarifPerluVerifikasi, acuanVerifikasi, labelUmur, ATURAN_PENGINGAT } from "./pengingat.js";
 import { ambilTujuan } from "./notifikasi.js";
+import { pasangUJ, muatUJ, htmlUJ, htmlUJHP, cariDesk, cariHPUJ, aksiUJ } from "./uang-jalan-master.js";
 
 const DEMO = DB.MODE === "demo";
 const PER_HALAMAN = 50;
@@ -37,6 +38,7 @@ const PER_HALAMAN = 50;
 const KET_TAB = {
   tarif: "Daftar tarif per layanan beserta modal, vendor, dan lini bisnisnya. Klik baris untuk melihat atau mengubah.",
   vendor: "Vendor beserta PIC, legalitas, dan syarat (T&C). Vendor Internal dipakai untuk tarif milik perusahaan.",
+  uj: "Uang jalan armada sendiri per rute dan jenis armada: BBM, tol, TKBM, helper, asuransi, dan lainnya. Tiap baris otomatis tercatat di tab Tarif.",
   lini: "Lini bisnis bisa ditambah kapan saja saat bisnis berkembang. Lini yang masih punya tarif tidak bisa dihapus. Markup harga jual diatur di halaman Quotation (Pengaturan dokumen).",
   lokasi: "Depo, open yard, gudang dry, dan pendingin. Alamat dan PIC hanya internal; kartu customer otomatis menyamarkannya. Harga sewa diatur di tab Tarif.",
 };
@@ -239,16 +241,17 @@ function render() {
   const isiHtml = `
     ${banners.join("")}
     <div class="mr-tabs" role="tablist">
-      ${[["tarif", "Tarif", "tarif"], ["vendor", "Vendor", "vendor"], ["lini", "Lini Bisnis", "lini"], ["lokasi", "Lokasi", "pin"]]
+      ${[["tarif", "Tarif", "tarif"], ["vendor", "Vendor", "vendor"], ["lini", "Lini Bisnis", "lini"], ["lokasi", "Lokasi", "pin"], ...(S.kelola ? [["uj", "Uang Jalan", "truk"]] : [])]
         .map(([id, label, ic]) => `<button role="tab" class="mr-tab ${S.tab === id ? "is-aktif" : ""}" data-aksi="tab" data-v="${id}" data-ket="${e(KET_TAB[id] || "")}">${ikon(ic, 16)}${label}</button>`)
         .join("")}
-      ${S.tab === "tarif" ? `<label class="mr-cari mr-cari--atas">${ikon("cari", 16)}<input id="mr-cari" type="search" placeholder="Cari layanan, vendor, lokasi…" value="${e(S.f.cari)}" autocomplete="off"></label>` : ""}
+      ${S.tab === "tarif" ? `<label class="mr-cari mr-cari--atas">${ikon("cari", 16)}<input id="mr-cari" type="search" placeholder="Cari layanan, vendor, lokasi…" value="${e(S.f.cari)}" autocomplete="off"></label>` : S.tab === "uj" ? cariDesk() : ""}
     </div>
     ${S.kelola && S.tab === "tarif" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="tambah" aria-label="Tambah item">${ikon("koin", 24)}<span class="fab-teks">Tambah item</span></button>` : ""}
     ${S.kelola && S.tab === "vendor" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="vendor-tambah" aria-label="Tambah vendor">${ikon("vendor", 24)}<span class="fab-teks">Tambah vendor</span></button>` : ""}
     ${S.kelola && S.tab === "lokasi" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="lokasi-tambah" aria-label="Tambah fasilitas">${ikon("pin", 24)}<span class="fab-teks">Tambah fasilitas</span></button>` : ""}
+    ${S.kelola && S.tab === "uj" && !HP() ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="uj-tambah" aria-label="Tambah uang jalan">${ikon("truk", 24)}<span class="fab-teks">Tambah uang jalan</span></button>` : ""}
     ${S.kelola && S.tab === "lini" ? `<button type="button" class="mr-fab fab-d fab--tarif" data-aksi="lini-tambah" aria-label="Tambah lini bisnis">${ikon("lini", 24)}<span class="fab-teks">Tambah lini bisnis</span></button>` : ""}
-    <div id="mr-isi">${S.tab === "tarif" ? htmlTarif() : S.tab === "vendor" ? htmlVendor() : S.tab === "lini" ? htmlLini() : barPilihTab(S.pilihLok.size, profilTampil(S, namaVendor).filter((p) => !p.lama).length) + htmlTabProfil(S, namaVendor)}</div>`;
+    <div id="mr-isi">${S.tab === "tarif" ? htmlTarif() : S.tab === "vendor" ? htmlVendor() : S.tab === "lini" ? htmlLini() : S.tab === "uj" ? htmlUJ() : barPilihTab(S.pilihLok.size, profilTampil(S, namaVendor).filter((p) => !p.lama).length) + htmlTabProfil(S, namaVendor)}</div>`;
   if (window.ISLMorph) window.ISLMorph(root, isiHtml); else root.innerHTML = isiHtml;
 }
 
@@ -1524,7 +1527,8 @@ function pasangEvent() {
     const k = el.dataset.k;
     const v = el.dataset.v;
     if (a === "tutup-layer") return tutupLayer();
-    if (a === "tab") (ganti(false), (S.tab = v), render());
+    if (a.indexOf("uj-") === 0) return aksiUJ(a, el);
+    if (a === "tab") (ganti(false), (S.tab = v), render(), v === "uj" && muatUJ());
     else if (a === "view") ((S.view = v), (S.hal = 1), render());
     else if (a === "grup") {
       const g = el.dataset.g;
@@ -1671,10 +1675,10 @@ const mqHP = window.matchMedia("(max-width: 760px)");
 const HP = () => mqHP.matches;
 const MH = { ringkas: false, pilih: false, pilihTab: "", tahanSampai: 0, tahanId: "", pending: "", intipSelesai: false, cariLini: "", pickUntuk: "f", sheet: "" };
 const pilihAktif = () => S.kelola && ((MH.pilih && MH.pilihTab === S.tab) || pilihTabAktif().size > 0);
-const ikonTab = { tarif: "tarif", vendor: "vendor", lini: "lini", lokasi: "pin" };
+const ikonTab = { tarif: "tarif", vendor: "vendor", lini: "lini", lokasi: "pin", uj: "truk" };
 const WIDTH_AKSI_MR = 68, WIDTH_AKSI_MR_ = 68;
 
-const tabsHP = () => `<div class="mr-m-tabs" role="tablist">${[["tarif", "Tarif"], ["vendor", "Vendor"], ["lini", "Lini Bisnis"], ["lokasi", "Lokasi"]]
+const tabsHP = () => `<div class="mr-m-tabs" role="tablist" ${S.kelola ? 'style="grid-template-columns:repeat(5,1fr)"' : ""}>${[["tarif", "Tarif"], ["vendor", "Vendor"], ["lini", "Lini Bisnis"], ["lokasi", "Lokasi"], ...(S.kelola ? [["uj", "Uang Jalan"]] : [])]
   .map(([id, l]) => `<button type="button" role="tab" aria-selected="${S.tab === id}" class="mr-m-tab ${S.tab === id ? "is-aktif" : ""}" data-aksi="tab" data-v="${id}">${ikon(ikonTab[id], 19)}<span>${l}</span></button>`).join("")}</div>`;
 const cariHP = ({ id, ph, nilai, filterAktif = null, menu = false, badge = 0 }) => `<div class="mr-m-cari">
   <label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="${id}" type="search" placeholder="${e(ph)}" value="${e(nilai)}" autocomplete="off" enterkeyhint="search"></label>
@@ -1691,7 +1695,7 @@ const pilihBarHP = (n, total, tipe) => {
 };
 const fabHP = () => {
   if (!S.kelola || pilihAktif()) return "";
-  const [aksi, label, ik] = { tarif: ["tambah", "Tambah item", "koin"], vendor: ["vendor-tambah", "Tambah vendor", "vendor"], lokasi: ["lokasi-tambah", "Tambah fasilitas", "pin"], lini: ["lini-tambah", "Tambah lini bisnis", "lini"] }[S.tab];
+  const [aksi, label, ik] = { tarif: ["tambah", "Tambah item", "koin"], vendor: ["vendor-tambah", "Tambah vendor", "vendor"], lokasi: ["lokasi-tambah", "Tambah fasilitas", "pin"], lini: ["lini-tambah", "Tambah lini bisnis", "lini"], uj: ["uj-tambah", "Tambah uang jalan", "truk"] }[S.tab];
   return `<button type="button" class="mr-fab fab-d fab--tarif mr-fab--m" data-aksi="${aksi}" aria-label="${label}">${ikon(ik, 24)}</button>`;
 };
 
@@ -1820,6 +1824,7 @@ function htmlHP(h, banners) {
   if (S.tab === "tarif") isi = htmlTarifHP(h);
   else if (S.tab === "vendor") isi = htmlVendorHP();
   else if (S.tab === "lini") isi = htmlLiniHP();
+  else if (S.tab === "uj") isi = htmlUJHP();
   else {
     const tampilLok = profilTampil(S, namaVendor).filter((p) => !p.lama);
     isi = pilihBarHP(S.pilihLok.size, tampilLok.length, "lokasi") + htmlTabProfilHP(S, namaVendor, { pilih });
@@ -1827,6 +1832,7 @@ function htmlHP(h, banners) {
   const perlu = h.kosong + h.tanpaLini + (S.kelola ? h.verifikasi : 0);
   const cari = S.tab === "tarif" ? cariHP({ id: "mr-cari-bar", ph: "Cari layanan, vendor, lokasi…", nilai: S.f.cari, filterAktif: S.f.lini !== "semua" || S.f.vendor !== "semua", menu: true, badge: perlu })
     : S.tab === "vendor" ? cariHP({ id: "mr-v-cari", ph: "Cari vendor, PIC, telepon…", nilai: S.fv.cari, filterAktif: S.fv.lini !== "semua" || S.fv.status !== "semua", menu: S.kelola, badge: S.vendor.filter((v) => kurangVendor(v).length).length })
+    : S.tab === "uj" ? cariHPUJ()
     : S.tab === "lini" ? `<div class="mr-m-cari"><label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="mr-l-cari" type="search" placeholder="Cari lini bisnis…" value="${e(MH.cariLini)}" autocomplete="off" enterkeyhint="search"></label></div>` : "";
   return `<div class="mr-m">${banners.join("")}${cari}${tabsHP()}<div id="mr-isi">${isi}</div></div>${fabHP()}`;
 }
@@ -2186,6 +2192,7 @@ export function mulaiMR(user, profil) {
   S.master = adalahMaster(user.email);
   S.kelola = S.master || adalahKelola(profil);
   window.__ISL_KELOLA = S.kelola;
+  pasangUJ({ S, DB, HP, render });
   renderNav("master-rate"); // menu menyesuaikan peran setelah profil diketahui
   const el = $("#user-email");
   if (el) el.textContent = labelAkun(user.email, user.displayName);
