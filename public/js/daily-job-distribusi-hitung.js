@@ -89,6 +89,8 @@ export function hitungDistribusi(jobs, r, now = hariIni()) {
   return { order: order.length, ritase: rit.length, drop: rit.reduce((a, j) => a + jmlTitik(j).d, 0), cost: biaya(rit), costInternal: biaya(rit.filter(internal)), costVendor: biaya(rit.filter((j) => !internal(j))), ritaseInternal: rit.filter(internal).length, ritaseVendor: rit.filter((j) => !internal(j)).length, costPerRitase: rit.length ? Math.round(biaya(rit) / rit.length) : 0,
     perJenis: JENIS_ARMADA.map((n) => ({ n, ...(kel((j) => rinci(j).jenisArmada).find((o) => o.nama === n) || { ritase: 0, cost: 0, perRitase: 0 }) })), perBak: kel((j) => rinci(j).bak), perVendor: kel((j) => (internal(j) ? "Internal (uang jalan)" : rinci(j).vendor)),
     perRute: kel((j) => { const t = titikDari(j); const p = t.find((x) => x.t === "P"), d = [...t].reverse().find((x) => x.t === "D"); return p && d ? `${p.kota || p.nama} → ${d.kota || d.nama}` : ""; }).slice(0, 8),
+    perHari: Object.entries(rit.reduce((m, j) => { const t = String(rinci(j).tglKirim || j.tglMasuk).slice(0, 10); m[t] = (m[t] || 0) + 1; return m; }, {})).sort((x, y) => x[0].localeCompare(y[0])).map(([k, n]) => ({ k, n })),
+    pola: { satu: rit.filter((j) => kodePola(j) === "1-1").length, banyak: rit.filter((j) => kodePola(j) !== "1-1").length },
     tanpaPod: js.filter(dibayarTanpaPod).length, tungguPod: js.filter((j) => kemajuan(j) === 3).length };
 }
 export { tambahHari };
@@ -112,4 +114,11 @@ export function batalkanBerikut(j) {
   const t = titikDari(j).map((x) => ({ ...x })); let k = -1;
   for (const jenis of ["D", "P"]) { for (let i = t.length - 1; i >= 0; i--) if (t[i].t === jenis && t[i].selesai) { k = i; break; } if (k >= 0) break; }
   if (k >= 0) t[k].selesai = null; return { ...r, titik: t };
+}
+
+/** Ringkasan kegiatan Armada pada periode r dari riwayat: servis, perpanjangan dokumen (biaya), dan visit. */
+export function ringkasRiwayat(kendaraan, r) {
+  const l = (kendaraan || []).flatMap((k) => k.riwayat || []).filter((x) => dalam(x.tgl, r)), h = (f) => l.filter(f), biaya = (a) => a.reduce((n, x) => n + (Number(x.biaya) || 0), 0);
+  const sv = h((x) => x.tipe === "servis"), dk = h((x) => ["kir", "stnk", "pajak"].includes(x.tipe)), vs = h((x) => x.tipe === "visit");
+  return { servis: { n: sv.length, biaya: biaya(sv) }, dokumen: { n: dk.length, biaya: biaya(dk) }, visit: { n: vs.length } };
 }
