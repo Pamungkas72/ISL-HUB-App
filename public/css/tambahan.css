@@ -1206,6 +1206,11 @@ input, textarea, select, [contenteditable="true"] { -webkit-user-select: text; u
   .qt-pgfoot > .mr-btn--utama { grid-column: 1 / -1; order: -1; }
 }
 
+/* Pengaturan dokumen: Batalkan dan Simpan kecil di kepala halaman (sebaris dengan judul), tanpa kartu aksi bawah */
+.qt-pgaksi { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.qt-kepala-sebaris h2 { flex: 1 1 auto; min-width: 0; }
+.qt-pgaksi__batal { border-color: transparent; background: transparent; color: var(--mr-muted, var(--muted)); }
+
 /* Pengaturan dokumen: daftar bagian (tiap bagian punya halaman sendiri) */
 .qt-daftar-bagian { display: flex; flex-direction: column; gap: 8px; }
 .qt-bagian { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 52px; padding: 12px 16px; border: 1px solid var(--mr-border); border-radius: 10px; background: var(--mr-surface); color: var(--mr-ink); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }

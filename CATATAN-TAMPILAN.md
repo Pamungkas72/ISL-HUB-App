@@ -501,3 +501,12 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 - **Uang jalan per rute (Variabel Cost)** kembali, **hanya tipe operasional** (mengubah keputusan 21 Okt 2026): kolom Rute plus 1 sampai 3 kolom zona dengan nama bebas (mis. Kalijati, Wanasari). PDF: "A. Sewa Unit + Driver (Fix Cost)" dan "B. Uang Jalan per Rute (Variabel Cost)". Contoh acuan: penawaran Trailer Medlog-ISL.
 - **S&K** daftar datar 1, 2, 3 (sama dengan lini lain). Bawaan per tipe ada di `SU_SK` (`formulir-lini.js`, angka tertulis di teks); bila Master Rate > Lini Bisnis > Sewa Unit diisi, teks master menggantikan bawaan tipe itu. Asuransi (Include/Exclude) dan batas wilayah mengikuti isian formulir. Tilang dan kerusakan menjadi tanggung jawab penyewa hanya di lepas kunci.
 - Mesin tabel: bagian bisa punya `tampil(st)` dan `kolomB(st, b, bi)` (kolom aktif menurut pilihan formulir).
+
+## 2026-11-23 (sisa data tes "UJI format …" disembunyikan)
+
+- Lini berawalan **"UJI "** (sisa tes e2e di database sungguhan) tidak lagi muncul di panel "Buat quotation", Quotation manual (Word), dan daftar Template lini. Datanya tetap ada di Master Rate; hapus permanen lewat Master Rate → Lini bisnis bila perlu.
+- Tombol **"+ Tambah format lini bisnis baru"** (master/admin) dan ikon pengaturan ⚙ (atur template per lini) di panel itu tetap ada.
+
+## 2026-11-23 (Pengaturan dokumen: tombol aksi kompak)
+
+- Kartu aksi bawah (Batalkan perubahan, Kembali, Simpan pengaturan) dihapus. **Batalkan** (teks) dan **Simpan** (kecil) kini sebaris dengan judul; **Kembali** jadi ikon ‹ di kiri judul. Berlaku di HP dan desktop.
