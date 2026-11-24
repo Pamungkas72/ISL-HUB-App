@@ -304,3 +304,8 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-arm__kt { display: none; } .dj-arm__tb tr[data-dj] { cursor: pointer; } .dj-arm__sel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0; } .dj-arm__sel small { display: block; color: var(--muted); font-size: 10.5px; } .dj-kp { margin: 6px 2px; }
 .dj-cek { display: flex; flex-direction: row; gap: 8px; align-items: center; } .dj-cek input { width: auto; }
 @media (max-width: 760px) { .dj-arm__tb { display: none; } .dj-arm__kt { display: grid; gap: 8px; } .dj-arm__t { flex-wrap: wrap; } .dj-arm__t .mr-btn { width: 100%; } }
+/* Uang jalan Distribusi: tarif tetap dan kalkulator di formulir */
+.dj-uj { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 4px 0 8px; } .dj-uj[hidden] { display: none; }
+.dj-uj__tarif { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--success-soft); border-radius: 8px; padding: 8px 10px; } .dj-uj__tarif small { display: block; color: var(--muted); font-size: 12px; } .dj-uj__tarif b { font: 700 20px var(--font-head); color: var(--success); }
+.dj-uj__tb { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 0; } .dj-uj__k { margin-top: 10px; } .dj-uj__hasil { margin-top: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; }
+.dj-uj__r { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; } .dj-uj__r:first-child { border-top: 0; } .dj-uj__r small { color: var(--muted); } .dj-uj__tot { font-size: 15px; } .dj-uj__tot b { color: var(--head); }
