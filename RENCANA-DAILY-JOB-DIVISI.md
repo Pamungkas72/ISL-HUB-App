@@ -90,3 +90,10 @@ Menggantikan bagian "Divisi Tracking" 19 Nov untuk subdivisi Mobil besar. Mobil 
 - **Ekspor Excel shipment** (menu ⋮ > Ekspor Excel shipment): satu lembar per subdivisi, satu baris per shipment (`daily-job-ekspor.js`).
 - **Ditunda:** impor Excel Tracking (menunggu contoh Excel tim), revisi hasil pakai pemilik. Tipe bak (Box Reefer, Bak, Losbak) perlu dikonfirmasi pemilik.
 - **Deploy:** otomatis dari `main` (aturan, hosting, Cloud Function) lewat `deploy-firebase.yml`.
+
+## Tampilan awal Daftar job Tracking: desain A "Antrean" (dipilih 24 Nov 2026)
+- **Urutan halaman:** judul (kelompok di bawah judul, master/admin bisa mengganti lewat "Tracking ▾"), tab, kolom cari paling atas (+ Filter, ⋮), chip antrean, daftar.
+- **Antrean** menggantikan status Aktif/Tertunda/Selesai/Dibatalkan khusus Tracking: Semua aktif, Perlu tindakan, Belum jalan, Di lapangan, Tunggu POD, Bayar vendor, Selesai. Fase turun dari tahap pengiriman (`faseTr` di `daily-job.js`). Marketing dan BD tetap memakai status.
+- **Strip tindakan dihapus**: alasan (Dibayar POD belum, POD terlambat, berangkat hari ini, tanpa armada) tampil sebagai chip di kartu/baris dan menandai garis kiri; job perlu tindakan diurutkan paling atas. Tab Armada bertitik merah bila ada urusan lewat tempo.
+- **Subdivisi** (Semua, Truk Distribusi, Tracking Trailer) pindah ke menu ⋮ (juga berlaku di Performa); bila dipilih muncul chip "× nama" di bawah cari. Pemilih kelompok lama dihapus.
+- **Pengaturan** hanya tampil dan bisa dibuka oleh master/admin.

@@ -315,3 +315,22 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 @media (max-width: 760px) { .dj-dok { grid-template-columns: 120px 1fr auto; } }
 .dj-dok select, .dj-dok input, .dj-ttk input { font: inherit; font-size: 14px; color: var(--mr-ink); background: var(--mr-surface); border: 1px solid var(--mr-border); border-radius: var(--mr-r); padding: 9px 10px; width: 100%; }
 .dj-dok select:focus, .dj-dok input:focus, .dj-ttk input:focus { outline: none; border-color: var(--mr-navy); box-shadow: 0 0 0 3px var(--mr-navy-soft); }
+
+/* Tracking: antrean, kartu, tabel, kelompok di bawah judul (desain A, 24 Nov 2026) */
+.app-topbar h1 { line-height: 1.15; } .dj-kelt { position: relative; display: flex; align-items: center; gap: 3px; width: max-content; max-width: 60vw; margin-top: 2px; font: 600 12.5px var(--font-body); color: var(--dj-tx-aksen); white-space: nowrap; }
+.dj-kelt__s { position: absolute; inset: -6px -8px; width: calc(100% + 16px); height: calc(100% + 12px); opacity: 0; cursor: pointer; font-size: 16px; } .dj-kelt--g:focus-within { outline: 2px solid var(--sky); outline-offset: 3px; border-radius: 6px; }
+.dj-antre { margin: 0; } .dj-antre .mr-chip span { margin-left: 6px; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--bg); color: var(--muted); font-size: 12px; text-align: center; } .dj-antre .mr-chip.is-aktif span { background: rgba(255,255,255,.22); color: inherit; }
+.dj-antre .dj-antre__w:not(.is-aktif) { border-color: var(--warn-border, #f5cf9c); background: var(--accent-soft); color: var(--dj-tx-aksen); } .dj-antre .dj-antre__w:not(.is-aktif) span { background: var(--accent-soft); }
+.dj-tdot { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: var(--danger); vertical-align: middle; }
+.dj-mn__h { padding: 6px 10px 2px; font: 600 11.5px var(--font-body); color: var(--muted); text-transform: uppercase; letter-spacing: .3px; } .dj-mn__sp { width: 100%; height: 1px; margin: 6px 0; border: 0; background: var(--border); }
+.dj-rad { width: 16px; height: 16px; border: 2px solid var(--muted); border-radius: 50%; flex: none; box-sizing: border-box; } .dj-mn__i.is-aktif { color: var(--head); } .dj-mn__i.is-aktif .dj-rad { border-color: var(--sky); box-shadow: inset 0 0 0 3px var(--surface); background: var(--sky); }
+.dj-jn { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 5px; font: 700 11.5px var(--font-body); white-space: nowrap; flex: none; --jh: 215; background: color-mix(in srgb, hsl(var(--jh) 65% 50%) 16%, var(--surface)); color: color-mix(in srgb, hsl(var(--jh) 70% 45%) 55%, var(--text)); }
+.dj-jn--impor { --jh: 212; } .dj-jn--ekspor { --jh: 150; } .dj-jn--domestik { --jh: 40; } .dj-jn--repo { --jh: 265; } .dj-jn--distribusi { --jh: 185; } .dj-jn--lain { --jh: 215; }
+.dj-job__a { display: flex; align-items: center; gap: 7px; min-width: 0; } .dj-job__a b { flex: 1; min-width: 0; } .dj-job__st { display: flex; align-items: center; margin-top: 4px; font-size: 12.5px; color: var(--muted); min-height: 14px; } .dj-job__st .dj-dots { margin-right: 0; } .dj-lk { margin-left: 8px; white-space: nowrap; }
+.dj-job__pic small { margin: 0; flex: 0 1 auto; min-width: 0; } .dj-job__pic .dj-chip { flex: none; }
+.dj-job2.dj-u { box-shadow: inset 4px 0 0 var(--accent); } .dj-job2.dj-u--bahaya { box-shadow: inset 4px 0 0 var(--danger); }
+.dj-tb tr.dj-u td:first-child { box-shadow: inset 4px 0 0 var(--accent); } .dj-tb tr.dj-u--bahaya td:first-child { box-shadow: inset 4px 0 0 var(--danger); }
+.dj-tb__r { text-align: right; white-space: nowrap; } .dj-tb__st { white-space: nowrap; } .dj-tb__st .dj-dots { margin-right: 0; } .dj-tb td b { display: block; } .dj-tb__sb { display: block; color: var(--muted); font-size: 12.5px; }
+.dj-job__isi small small, .dj-tb td small small { display: inline; margin: 0; font-size: inherit; }
+.dj-tabs button { white-space: nowrap; } @media (max-width: 760px) { .dj-tabs { gap: 0; overflow-x: auto; } .dj-tabs button { padding: 10px 12px; flex: none; } }
+.dj-job__pic .dj-chip ~ small { margin-left: auto; }
