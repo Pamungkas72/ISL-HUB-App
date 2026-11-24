@@ -279,3 +279,13 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 /* kategori: baris ubah/hapus, tambah, lencana ajuan */
 .dj-tgtk__r .mr-ikonbtn { flex: none; width: 32px; height: 32px; } .dj-katbaru { display: flex; gap: 8px; margin-top: 14px; } .dj-katbaru input { flex: 1; height: 40px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0 10px; }
 .dj-bdg { display: inline-block; min-width: 20px; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; text-align: center; vertical-align: middle; }
+/* Tracking Trailer: stepper tahap shipment, risiko POD, blok khusus Trailer di formulir */
+.dj-stp { list-style: none; margin: 0 0 10px; padding: 0; } .dj-stp li { display: flex; gap: 10px; position: relative; padding: 6px 0; }
+.dj-stp li i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); margin-top: 4px; flex: none; z-index: 1; }
+.dj-stp li::before { content: ""; position: absolute; left: 5px; top: 20px; bottom: -6px; width: 2px; background: var(--border); } .dj-stp li:last-child::before { display: none; }
+.dj-stp li.is-ok i { background: var(--success); border-color: var(--success); } .dj-stp li.is-ok::before { background: var(--success); } .dj-stp li.is-now i { border-color: var(--sky); border-width: 3px; }
+.dj-stp b { font-size: 14px; } .dj-stp small { display: block; color: var(--muted); font-size: 12px; } .dj-stp li:not(.is-ok):not(.is-now) b { color: var(--muted); font-weight: 500; }
+.dj-trl__aksi { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; } .dj-trl h3 + .dj-seg, .dj-trl .dj-risiko + h3 { margin-top: 12px; }
+.dj-risiko { background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; margin: 0 0 10px; } .dj-risiko--bahaya { background: var(--danger-soft); color: var(--danger); }
+.dj-lng__sub { font-weight: 600; font-size: 12.5px; color: var(--head); margin-top: 6px; } .dj-besar.dj-sembunyi, .dj-kecil.dj-sembunyi { display: none; } .dj-besar, .dj-kecil { display: contents; } .dj-besar.dj-lebar { display: block; grid-column: 1 / -1; }
+.dj-g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } @media (max-width: 760px) { .dj-g2 { grid-template-columns: 1fr; } }

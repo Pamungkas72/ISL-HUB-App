@@ -3,12 +3,14 @@ import { aktif, terlambat, dalam, hariIni } from "./daily-job-hitung.js";
 
 export const SUBDIVISI = {
   kecil: { nama: "Truk Distribusi", kategori: ["CDE", "CDD", "Fuso", "Tronton", "Grand Max Blind Van"] },
-  besar: { nama: "Tracking Trailer", kategori: ["Trailer Ekspor", "Trailer Impor", "Trailer Domestik"] },
+  besar: { nama: "Tracking Trailer", kategori: ["Trailer Impor", "Trailer Ekspor", "Trailer Repo", "Trailer Domestik"] },
 };
 export const PROFIL = { marketing: "Marketing dan BD", tracking: "Tracking" };
 export const TAGIHAN = { belum: "Belum dikirim", dikirim: "Dikirim", konfirmasi: "Dikonfirmasi" };
 export const BAYAR = { cash: "Cash", top: "TOP" };
 export const subdivisiDari = (kat) => Object.keys(SUBDIVISI).find((k) => SUBDIVISI[k].kategori.includes(kat)) || "";
+/** Jenis shipment Trailer dari nama kategori (data lama memakai kategori saja). */
+export const jenisDariKategori = (kat) => ({ "Trailer Impor": "impor", "Trailer Ekspor": "ekspor", "Trailer Repo": "repo", "Trailer Domestik": "domestik" })[kat] || "";
 export const rinci = (j) => (j && j.rinci) || {};
 export const podKembali = (j) => rinci(j).pod === "kembali";
 const tglKirim = (j) => rinci(j).tglKirim || j.tglMasuk || "";

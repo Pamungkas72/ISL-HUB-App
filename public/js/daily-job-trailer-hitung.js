@@ -25,6 +25,11 @@ export function tandaiTahap(j, waktu) {
   if (b[0] === "pod") { n.pod = "kembali"; n.tglPod = String(waktu).slice(0, 10); }
   return n;
 }
+/** Batalkan tahap terakhir yang selesai (salah tekan); pembatalan POD mengosongkan pod/tglPod. */
+export function batalkanTahap(j) {
+  const r = rinci(j), n = kemajuan(j); if (!n) return r; const k = tahapJenis(r.jenis)[n - 1][0], t = { ...r.tahap }; delete t[k];
+  return { ...r, tahap: t, ...(k === "pod" ? { pod: "belum", tglPod: null } : {}) };
+}
 export const podKembali = (j) => rinci(j).pod === "kembali";
 const tglOperasional = (j) => { const r = rinci(j), t = tahapJenis(r.jenis), a = r.tahap && r.tahap[t[t.length - 2][0]]; return a ? String(a).slice(0, 10) : ""; };
 /** Operasional selesai = semua tahap sebelum POD selesai. */
