@@ -13,7 +13,7 @@ import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 import * as TR from "./daily-job-tracking-hitung.js";
-import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail } from "./daily-job-tracking.js";
+import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail, htmlPerformaTrailer } from "./daily-job-tracking.js";
 import * as TL from "./daily-job-trailer-hitung.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
@@ -461,6 +461,7 @@ function htmlPemilihKel() {
 }
 /** Performa Tracking (desain A): KPI pengiriman, volume per armada, beban per PIC. */
 function htmlPerformaTracking(now) {
+  if (S.sub === "besar") { const r = rentangAktif(), js = tampak(); return htmlPerformaTrailer(TL.hitungTrailer(js, r, now), TL.bandingTarif(js, r), (k) => "Mgg " + pBln(k)); }
   const k = TR.hitungTracking(tampak(), rentangAktif(), now), p = (v) => (v == null ? "–" : v + "%"), maks = Math.max(1, ...k.volume.map((v) => v.n));
   const kpi = (jd, nilai, ket) => `<div class="dj-kpi"><span>${jd}</span><b>${nilai}</b><small>${ket}</small></div>`;
   const vol = k.volume.length ? k.volume.map((v) => `<div class="dj-vol"><span>${e(v.nama)} · ${v.n}</span><div class="dj-vol__b"><i style="width:${Math.round((v.n / maks) * 100)}%"></i></div></div>`).join("") : `<p class="mr-sub">Belum ada pengiriman pada periode ini.</p>`;
@@ -478,7 +479,7 @@ function render() {
   const btnFilter = `<button type="button" class="mr-btn dj-ib" data-dj="filter" title="Filter"  aria-label="Filter">${ikon("filter", 16)}${bukanBawaan ? `<i class="dj-dot"></i>` : ""}</button>`;
   const BEL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
   const mn = (a, i, t) => `<button type="button" role="menuitem" class="dj-mn__i" data-dj="${a}">${i} ${t}</button>`;
-  const menuAlat = `<span class="dj-mw"><button type="button" class="mr-btn dj-ib" data-dj="menu" data-id="__alat" aria-haspopup="menu" aria-expanded="${S.menu === "__alat"}" title="Lainnya" aria-label="Lainnya">${ikon("titik", 18)}</button>${S.menu === "__alat" ? `<div class="dj-mn" role="menu">${mn("push", BEL, pushOn ? "Matikan notifikasi" : "Aktifkan notifikasi")}${S.kelola && profilAktif() !== "tracking" ? mn("impor", ikon("upload", 15), "Impor dari Excel") : ""}${profilAktif() !== "tracking" ? mn("pdf", ikon("download", 15), "Unduh laporan PDF") : ""}</div>` : ""}</span>`;
+  const menuAlat = `<span class="dj-mw"><button type="button" class="mr-btn dj-ib" data-dj="menu" data-id="__alat" aria-haspopup="menu" aria-expanded="${S.menu === "__alat"}" title="Lainnya" aria-label="Lainnya">${ikon("titik", 18)}</button>${S.menu === "__alat" ? `<div class="dj-mn" role="menu">${mn("push", BEL, pushOn ? "Matikan notifikasi" : "Aktifkan notifikasi")}${S.kelola && profilAktif() !== "tracking" ? mn("impor", ikon("upload", 15), "Impor dari Excel") : ""}${profilAktif() !== "tracking" || S.sub === "besar" ? mn("pdf", ikon("download", 15), "Unduh laporan PDF") : ""}</div>` : ""}</span>`;
   const r = rentangAktif(), p = periodeAktif(), kelNama = namaKel(S.kelAktif);
   const ringkas = [kelNama, S.fPic || "semua PIC", S.fKat || "semua kategori"].filter(Boolean).map(e).join(" · ");
   const kepalaP = `<div class="dj-kepala"><div class="dj-kepala__t"><div class="dj-ttl">Performa</div><p class="mr-sub" style="margin:4px 0 0;font-size:14px">Menampilkan <b style="color:var(--text)">${e(judulPeriode(r))}</b> · ${ringkas} &nbsp;<button type="button" class="mr-link" data-dj="filter">Ubah</button></p></div><span class="dj-kepala__a">${menuAlat}</span></div>`;
@@ -721,6 +722,7 @@ async function unduhPdf() {
     const { buatLaporanPdf } = await import("./daily-job-pdf.js"), r = rentangAktif(), p = periodeAktif();
     const kel = S.fKel ? namaKel(S.fKel) : S.kelola ? "Semua kelompok" : namaKel(S.kelompokSaya);
     const filter = [S.fPic && "PIC: " + S.fPic, S.fKat && "Kategori: " + S.fKat].filter(Boolean).join(", ");
+    if (profilAktif() === "tracking" && S.sub === "besar") { const { buatLaporanTrailerPdf } = await import("./daily-job-pdf-trailer.js"); const js = tampak(), pdf = buatLaporanTrailerPdf({ jsPDF: window.jspdf.jsPDF, jobs: js, r, periode: p, now: H.hariIni(), pembuat: S.u.nama || S.u.email, filter, k: TL.hitungTrailer(js, r, H.hariIni()), banding: TL.bandingTarif(js, r) }); return pdf.save(`laporan-tracking-trailer-${p === "bulan" ? r[0].slice(0, 7) : r[0] + "_" + r[1]}.pdf`); }
     const pdf = buatLaporanPdf({ jsPDF: window.jspdf.jsPDF, jobs: tampak(), r, periode: p, kelompok: kel, filter, now: H.hariIni(), pembuat: S.u.nama || S.u.email });
     pdf.save(`laporan-kinerja-daily-job-${p === "bulan" ? r[0].slice(0, 7) : r[0] + "_" + r[1]}.pdf`);
   } catch (err) { console.error(err); toast("PDF belum jadi: " + e(err.message || err), "bahaya"); }

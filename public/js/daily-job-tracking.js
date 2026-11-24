@@ -48,3 +48,18 @@ export function htmlTrailerDetail(j, ubah, now) {
     ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-tahap" data-id="${id}">Tandai ${e(b[1])} selesai</button>` : ""}${n ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan tahap terakhir</button>` : ""}</div>` : ""}${risiko}
     <h3>Dokumen</h3><div class="dj-seg mr-seg">${dok}</div></div>`;
 }
+
+const rpJt = (n) => (n >= 1e6 ? "Rp " + (Math.round(n / 1e5) / 10).toLocaleString("id-ID") + " jt" : "Rp " + Math.round(n).toLocaleString("id-ID"));
+const jt = (n) => (n ? (Math.round(n / 1e4) / 100).toLocaleString("id-ID") + " jt" : "–");
+const tab = (judul, kolom, baris, ket = "") => `<section class="mr-kartu dj-kartu"><div class="dj-kh"><h3>${judul}</h3>${ket ? `<small class="mr-sub">${ket}</small>` : ""}</div><div class="dj-tw"><table class="dj-tbl"><thead><tr>${kolom.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${baris.length ? baris.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${kolom.length}" class="mr-sub">Belum ada data pada periode ini.</td></tr>`}</tbody></table></div></section>`;
+/** Performa Tracking Trailer: volume order, jenis, vendor, rute, cost, pembanding tarif; risiko POD dalam satu strip. k = hitungTrailer, banding = bandingTarif, bulanan = label minggu. */
+export function htmlPerformaTrailer(k, banding, labelMinggu) {
+  const kpi = (jd, nilai, ket, kelas = "") => `<div class="dj-kpi dj-kpi--statis ${kelas}"><span>${jd}</span><b>${nilai}</b><small>${ket}</small></div>`;
+  const risiko = k.tanpaPod || k.tungguPod || k.siapTagih ? `<div class="dj-tind">${k.tanpaPod ? `<span class="dj-chip dj-chip--bahaya">Dibayar, POD belum <b>${k.tanpaPod}</b> · ${rpJt(k.nilaiTanpaPod)}</span>` : ""}${k.tungguPod ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${k.tungguPod}</b></span>` : ""}${k.siapTagih ? `<span class="dj-chip dj-chip--ok">Siap ditagih <b>${k.siapTagih}</b></span>` : ""}</div>` : "";
+  const mingguan = k.perMinggu.map((m) => [e(labelMinggu(m.k)), m.order, m.ritase]);
+  const bd = banding.map((b) => `<div class="dj-bt"><b>${e(b.rute)}</b><span>${b.pelaku.map((o) => `<i class="${o.nama === b.murah ? "is-murah" : ""}">${e(o.nama)} ${jt(o.rata)}${o.nama === b.murah ? " ✓" : ""}</i>`).join("")}</span></div>`).join("");
+  return `<div id="dj-dash">${risiko}<div class="dj-kpis">${kpi("Order masuk", k.order, `${k.ritase} terlaksana${k.persenTerlaksana != null ? ` (${k.persenTerlaksana}%)` : ""}`)}${kpi("Ritase", k.ritase, "shipment berjalan")}${kpi("Cost total", rpJt(k.cost), `Vendor ${jt(k.costVendor)} · uang jalan ${jt(k.costInternal)}`)}${kpi("Cost / ritase", rpJt(k.costPerRitase), "rata-rata")}</div>
+  <div class="dj-grid2e">${tab("Volume order per minggu", ["Minggu", "Order", "Ritase"], mingguan)}${tab("Jenis pengiriman", ["Jenis", "Order", "Ritase", "Vendor / Int.", "Cost", "Per rit"], k.perJenis.map((o) => [e(o.nama), o.order, o.ritase, `${o.vendor} / ${o.internal}`, jt(o.cost), jt(o.perRitase)]))}</div>
+  <div class="dj-grid2e">${tab("Vendor yang dipakai", ["Vendor", "Ritase", "Cost", "Tarif rata²", "POD telat"], k.perVendor.map((o) => [e(o.nama), o.ritase, jt(o.cost), jt(o.perRitase), o.pod ? `<b class="dj-merah">${o.pod}</b>` : 0]))}${tab("Rute teratas", ["Rute", "Ritase", "Cost", "Per ritase"], k.perRute.map((o) => [e(o.nama), o.ritase, jt(o.cost), jt(o.perRitase)]))}</div>
+  <section class="mr-kartu dj-kartu"><h3>Tarif per rute: siapa termurah</h3>${bd || `<p class="mr-sub">Muncul bila satu rute dikerjakan oleh dua vendor atau lebih (atau internal).</p>`}</section></div>`;
+}
