@@ -13,8 +13,9 @@ import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 import * as TR from "./daily-job-tracking-hitung.js";
-import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail, htmlPerformaTrailer } from "./daily-job-tracking.js";
+import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail, htmlPerformaTrailer, htmlDistribusiDetail, htmlTitik, titikAwal } from "./daily-job-tracking.js";
 import * as TL from "./daily-job-trailer-hitung.js";
+import * as DZ from "./daily-job-distribusi-hitung.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 import { bukaFormKelompok, hapusKelompok } from "./akun-divisi.js";
@@ -158,8 +159,9 @@ const ikonSt = (j, now, kecil) => { const k = kelasSt(j, now); return `<span cla
 const chip = (k, t) => `<span class="dj-chip dj-chip--${k}">${t}</span>`;
 const chipPod = (j, now) => (TR.podKembali(j) ? chip("ok", "POD kembali") : chip(H.terlambat(j, now) ? "bahaya" : "warn", "POD belum"));
 const dotsTr = (j) => { const t = TL.tahapJenis(TL.jenisTrailer(j)), n = TL.kemajuan(j); return `<span class="dj-dots" aria-label="Tahap ${n} dari ${t.length}">${t.map((_, i) => `<i class="${i < n ? "is-ok" : i === n ? "is-now" : ""}"></i>`).join("")}</span>`; };
-const chipTagih = (j) => { if (TL.jenisTrailer(j)) return dotsTr(j) + (TL.dibayarTanpaPod(j) ? chip("bahaya", "Dibayar · POD belum") : TL.podKembali(j) ? chip("ok", TL.fase(j) === "siapTagih" ? "Siap ditagih" : "Selesai") : chip("info", ((TL.tahapBerikut(j) || [])[1] || "–"))); const t = TR.rinci(j).tagihan || "belum"; return chip(t === "konfirmasi" ? "ok" : t === "dikirim" ? "info" : "mu", t === "belum" ? "Tagihan –" : TR.TAGIHAN[t]); };
-const rute = (j) => { const r = TR.rinci(j); return [r.asal, r.tujuan].filter(Boolean).map(e).join(" → ") || "–"; };
+const dotsDz = (j) => { const n = DZ.kemajuan(j); return `<span class="dj-dots" aria-label="Tahap ${n} dari 4">${[0, 1, 2, 3].map((i) => `<i class="${i < n ? "is-ok" : i === n ? "is-now" : ""}"></i>`).join("")}</span>`; };
+const chipTagih = (j) => { if (TR.rinci(j).jenis === "distribusi") return dotsDz(j) + (DZ.dibayarTanpaPod(j) ? chip("bahaya", "Dibayar · POD belum") : DZ.podKembali(j) ? chip("ok", DZ.selesaiOtomatis(j) ? "Selesai" : "Siap ditagih") : chip("info", e(DZ.labelTahap(j)))); if (TL.jenisTrailer(j)) return dotsTr(j) + (TL.dibayarTanpaPod(j) ? chip("bahaya", "Dibayar · POD belum") : TL.podKembali(j) ? chip("ok", TL.fase(j) === "siapTagih" ? "Siap ditagih" : "Selesai") : chip("info", ((TL.tahapBerikut(j) || [])[1] || "–"))); const t = TR.rinci(j).tagihan || "belum"; return chip(t === "konfirmasi" ? "ok" : t === "dikirim" ? "info" : "mu", t === "belum" ? "Tagihan –" : TR.TAGIHAN[t]); };
+const rute = (j) => { const t = DZ.titikDari(j); if (t.length) { const p = t.find((x) => x.t === "P"), d = [...t].reverse().find((x) => x.t === "D"), lain = t.length - 2; return [p && (p.kota || p.nama), d && (d.kota || d.nama)].filter(Boolean).map(e).join(" → ") + (lain > 0 ? ` <small>+${lain} titik</small>` : ""); } const r = TR.rinci(j); return [r.asal, r.tujuan].filter(Boolean).map(e).join(" → ") || "–"; };
 /** Isi tengah kartu HP menurut profil kelompok. */
 function isiKartu(j, now) {
   if (profilAktif() === "tracking") return `<div class="dj-job__isi"><b>${e(j.judul)}</b><small>${rute(j)} · ${e(j.kategori || "")}</small><span class="dj-job__pic">${chipPod(j, now)}${chipTagih(j)}${infoJob(j)}</span></div>`;
@@ -242,8 +244,8 @@ function htmlBerkasDetail(j) {
 function htmlInfoDetail(j) {
   const kv = (k, v) => `<div><span>${k}</span><b>${v || "–"}</b></div>`;
   if (profilKel(j.kelompokId) === "tracking") { const r = TR.rinci(j), cost = r.cost ? "Rp" + Number(r.cost).toLocaleString("id-ID") : "";
-    const trl = htmlTrailerDetail(j, !S.lihatSaja, H.hariIni()), tambah = TL.jenisTrailer(j) ? kv("Kontainer", e([r.kontainer, r.ukuran && r.ukuran + "′"].filter(Boolean).join(" · "))) + kv("Pelayaran · Depo MT", e([r.pelayaran, r.depo].filter(Boolean).join(" · "))) + kv("Tanggal bayar vendor", e(fmtTgl(r.tglBayar))) + kv("Janji POD", e(fmtTgl(r.janjiPod))) : "";
-    return trl + `<div class="mr-kartu dj-kartu dj-info"><div class="dj-kv">${kv("Customer", e(j.customer))}${kv("Rute", rute(j))}${tambah}${kv("No. DO", e(r.noDo))}${kv("Armada", e([j.kategori, r.plat].filter(Boolean).join(" · ")))}${kv("Vendor", e(r.vendor || "Internal"))}${kv("Driver", e([r.driver, r.telp].filter(Boolean).join(" · ")))}${kv("Pembayaran · Cost", e([TR.BAYAR[r.bayar], cost].filter(Boolean).join(" · ")))}${kv("Kirim", e(fmtTgl(r.tglKirim)))}${kv("Target tiba", e(fmtTgl(j.tglTarget)))}${kv("POD", r.pod === "kembali" ? "Kembali " + e(fmtTgl(r.tglPod)) : "Belum kembali")}${TL.jenisTrailer(j) ? "" : kv("Tagihan vendor", e(TR.TAGIHAN[r.tagihan || "belum"]))}${kv("PIC", e(j.pic))}</div>${j.deskripsi ? `<p class="dj-desk">${e(j.deskripsi)}</p>` : ""}</div>`; }
+    const trl = htmlTrailerDetail(j, !S.lihatSaja, H.hariIni()) + htmlDistribusiDetail(j, !S.lihatSaja, H.hariIni()), tambah = TL.jenisTrailer(j) ? kv("Kontainer", e([r.kontainer, r.ukuran && r.ukuran + "′"].filter(Boolean).join(" · "))) + kv("Pelayaran · Depo MT", e([r.pelayaran, r.depo].filter(Boolean).join(" · "))) + kv("Tanggal bayar vendor", e(fmtTgl(r.tglBayar))) + kv("Janji POD", e(fmtTgl(r.janjiPod))) : "";
+    return trl + `<div class="mr-kartu dj-kartu dj-info"><div class="dj-kv">${kv("Customer", e(j.customer))}${kv("Rute", rute(j))}${tambah}${kv("No. DO", e(r.noDo))}${kv("Armada", e([j.kategori, r.plat].filter(Boolean).join(" · ")))}${kv("Vendor", e(r.vendor || "Internal"))}${kv("Driver", e([r.driver, r.telp].filter(Boolean).join(" · ")))}${kv("Pembayaran · Cost", e([TR.BAYAR[r.bayar], cost].filter(Boolean).join(" · ")))}${kv("Kirim", e(fmtTgl(r.tglKirim)))}${kv("Target tiba", e(fmtTgl(j.tglTarget)))}${kv("POD", r.pod === "kembali" ? "Kembali " + e(fmtTgl(r.tglPod)) : "Belum kembali")}${TR.rinci(j).jenis ? "" : kv("Tagihan vendor", e(TR.TAGIHAN[r.tagihan || "belum"]))}${kv("PIC", e(j.pic))}</div>${j.deskripsi ? `<p class="dj-desk">${e(j.deskripsi)}</p>` : ""}</div>`; }
   return `<div class="mr-kartu dj-kartu dj-info"><div class="dj-kv">${kv("Customer", e(j.customer))}${kv("Kategori", e(katJob(j)))}${kv("Masuk", e(fmtTgl(j.tglMasuk)))}${kv(j.status === "selesai" ? "Selesai" : "Mulai", e(fmtTgl(j.status === "selesai" ? j.tglSelesai : j.tglMulai)))}${kv("Prioritas · Bobot", e((H.PRIORITAS[j.prioritas] || "–") + " · " + (H.BOBOT[j.bobot] || "–")))}${kv("Kelompok", e(namaKel(j.kelompokId)))}</div>${j.deskripsi ? `<p class="dj-desk">${e(j.deskripsi)}</p>` : ""}</div>`;
 }
 function entriThread(j) {
@@ -634,7 +636,7 @@ function formJob(j) {
     ${tr ? htmlFormTracking(d, { picList: daftarPic(), vendorList: daftarVendor(), targetLabel: `Target tiba *${d.id && !bolehUbahTarget(d) ? ` <small>(ditetapkan ${LABEL_TINGKAT[d.targetTingkat]})</small>` : ""} <small id="djf-tgt-info"></small>`, targetKunci: !!d.id && !bolehUbahTarget(d), status: bagStatus(d, f), tunda: bagTunda(d, f), berkas: htmlBerkasForm(d), lain: htmlLainnyaForm(d, f) }) : isiMarketing(d, f, baru) + htmlBerkasForm(d) + htmlLainnyaForm(d, f)}
   </div></div>
   <footer class="mr-panel__kaki dj-kaki">${baru ? "" : `<button class="mr-btn dj-ib dj-bhy" data-dj="hapus" data-id="${e(d.id)}" title="Hapus job" aria-label="Hapus job">${ikon("tong", 16)}</button>`}<span class="mr-ruang"></span>${tr ? `<button type="button" class="mr-btn dj-t-prev" data-dj="t-prev" hidden>‹ Kembali</button><button type="button" class="mr-btn mr-btn--utama dj-t-next" data-dj="t-next">Lanjut ›</button>` : ""}<button class="mr-btn dj-t-batal" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="simpan" id="dj-simpan">Simpan</button></footer>`);
-  $("#dj-form")._d = d; if (tr) langkahTracking(1);
+  $("#dj-form")._d = d; if (tr) { langkahTracking(1); polaTitik(); }
   let manual = false; // target otomatis dari kategori hanya untuk job baru dan selama target belum diketik sendiri
   const isiTarget = () => { if (!baru || manual) return; const kid = S.kelola ? $("#djf-kel").value : S.kelompokSaya, kat = $("#djf-kat").value, hr = +((petaTarget(kid) || {})[kat]) || 0, t = H.targetKategori(petaTarget(kid), kat, ($("#djt-kirim") && $("#djt-kirim").value) || $("#djf-masuk").value || H.hariIni()), i = $("#djf-tgt-info");
     if (t) $("#djf-target").value = t; i.textContent = t ? `otomatis ${hr} hari dari kategori, bisa diubah` : ""; };
@@ -649,13 +651,23 @@ function formJob(j) {
 async function ubahTahap(a, id, i) {
   const j = jobId(id); if (!j || S.lihatSaja) return; let r = TR.rinci(j);
   const sekarang = new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 16); // WIB
-  if (a === "t-tahap") { if (!TL.tahapBerikut(j)) return; r = TL.tandaiTahap(j, sekarang); }
-  else if (a === "t-undo") { if (!(await konfirmasi("Batalkan tahap terakhir?", "Tahap terakhir yang selesai dikembalikan ke belum.", "Batalkan tahap"))) return; r = TL.batalkanTahap(j); }
+  const dz = r.jenis === "distribusi";
+  if (a === "t-titik") { if (!DZ.berikut(j)) return; r = DZ.tandaiBerikut(j, sekarang); }
+  else if (a === "t-tahap") { if (!TL.tahapBerikut(j)) return; r = TL.tandaiTahap(j, sekarang); }
+  else if (a === "t-undo") { if (!(await konfirmasi("Batalkan tahap terakhir?", "Tahap terakhir yang selesai dikembalikan ke belum.", "Batalkan tahap"))) return; r = dz ? DZ.batalkanBerikut(j) : TL.batalkanTahap(j); }
   else r = { ...r, dok: { ...(r.dok || {}), [i]: !(r.dok && r.dok[i]) } };
   const baru = { ...j, rinci: r }, selesai = TL.selesaiOtomatis(baru) && j.status !== "batal", data = { rinci: r, diubah: serverTimestamp(), ...(selesai ? { status: "selesai", tglSelesai: r.tglPod || H.hariIni() } : j.status === "selesai" && !TL.selesaiOtomatis(baru) ? { status: "proses", tglSelesai: null } : {}) };
   try { await updateDoc(doc(db, "dj_job", id), data); Object.assign(j, { ...data, diubah: null }); segarkanKop(); segarkanKanan(); render(); }
   catch (err) { console.error(err); toast("Belum tersimpan: " + pesanUnggah(err), "bahaya"); }
 }
+/** Editor titik pick up/drop (Distribusi): baca isian ke form._titik, tambah atau hapus, lalu gambar ulang tanpa kehilangan isian. */
+function bacaTitik() { return [...document.querySelectorAll("#djt-titik .dj-ttk")].map((x) => ({ t: x.dataset.t, nama: x.querySelector(".djt-tn").value.trim(), kota: x.querySelector(".djt-tk").value.trim(), selesai: x.dataset.selesai || null })); }
+function ubahTitik(a, t) {
+  let l = bacaTitik();
+  if (a === "t-tambah") l.push({ t: t.dataset.v, nama: "", kota: "", selesai: null }); else l.splice(+t.dataset.i, 1);
+  l.sort((x, y) => (x.t === y.t ? 0 : x.t === "P" ? -1 : 1)); $("#djt-titik").innerHTML = htmlTitik(l); polaTitik();
+}
+const polaTitik = () => { const l = bacaTitik(), p = l.filter((x) => x.t === "P").length, d = l.length - p, el = $("#djt-pola"); if (el) el.textContent = `· ${p} pick up → ${d} drop`; };
 /** HP: formulir Tracking tiga langkah; desktop: semua bagian terlihat. */
 function langkahTracking(n) {
   const form = $("#dj-form"); if (!form || form.dataset.profil !== "tracking") return; const hp = layarHp(); form._lg = n;
@@ -671,12 +683,15 @@ function aturChipTracking(t) {
   if (k === "sub") { document.querySelectorAll(".dj-besar").forEach((x) => x.classList.toggle("dj-sembunyi", v !== "besar")); document.querySelectorAll(".dj-kecil").forEach((x) => x.classList.toggle("dj-sembunyi", v === "besar")); const kat = $("#djf-kat"); kat.innerHTML = TR.SUBDIVISI[v].kategori.map((x) => `<option>${e(x)}</option>`).join(""); kat.dispatchEvent(new Event("change")); }
   if (k === "pod") { const w = $(".dj-tglpod"); if (w) w.classList.toggle("dj-sembunyi", v !== "kembali"); if (v === "kembali" && !$("#djt-tglpod").value) $("#djt-tglpod").value = H.hariIni(); }
 }
-const rinciDariForm = (form, v) => ({ ...(form._d && form._d.rinci), ...(form.dataset.sub === "besar" ? { jenis: TR.jenisDariKategori(v("djf-kat")) || undefined, kontainer: v("djt-kont").trim().toUpperCase(), ukuran: v("djt-ukuran"), pelayaran: v("djt-pelayaran").trim(), depo: v("djt-depo").trim(), tglBayar: v("djt-tglbayar") || null, janjiPod: v("djt-janji") || null } : {}), sub: form.dataset.sub || "", asal: v("djt-asal").trim(), tujuan: v("djt-tujuan").trim(), noDo: v("djt-do").trim(), tglKirim: v("djt-kirim") || null, vendor: v("djt-vendor").trim(), driver: v("djt-driver").trim(), telp: v("djt-telp").trim(), plat: v("djt-plat").trim().toUpperCase(), bayar: form.dataset.bayar || "cash", cost: Number(v("djt-cost").replace(/\D/g, "")) || 0, pod: form.dataset.pod || "belum", tglPod: form.dataset.pod === "kembali" ? v("djt-tglpod") || H.hariIni() : null, tagihan: form.dataset.tagihan || "belum" });
+/** Rinci khusus Distribusi: titik, jenis armada, tipe bak; asal dan tujuan diturunkan dari titik pertama dan terakhir agar daftar dan laporan lama tetap jalan. */
+const titikRinci = (v) => { const t = bacaTitik(), p = t.find((x) => x.t === "P"), d = [...t].reverse().find((x) => x.t === "D"), arm = v("djf-kat"); return { jenis: "distribusi", titik: t, jenisArmada: arm === "Grand Max Blind Van" ? "Blind Van" : arm, bak: v("djt-bak"), asalTitik: p && (p.nama || p.kota), tujuanTitik: d && (d.nama || d.kota) }; };
+const rinciDariForm = (form, v) => ({ ...(form._d && form._d.rinci), ...(form.dataset.sub === "besar" ? { jenis: TR.jenisDariKategori(v("djf-kat")) || undefined, kontainer: v("djt-kont").trim().toUpperCase(), ukuran: v("djt-ukuran"), pelayaran: v("djt-pelayaran").trim(), depo: v("djt-depo").trim() } : titikRinci(v)), tglBayar: v("djt-tglbayar") || null, janjiPod: v("djt-janji") || null, sub: form.dataset.sub || "", asal: v("djt-asal").trim(), tujuan: v("djt-tujuan").trim(), noDo: v("djt-do").trim(), tglKirim: v("djt-kirim") || null, vendor: v("djt-vendor").trim(), driver: v("djt-driver").trim(), telp: v("djt-telp").trim(), plat: v("djt-plat").trim().toUpperCase(), bayar: form.dataset.bayar || "cash", cost: Number(v("djt-cost").replace(/\D/g, "")) || 0, pod: form.dataset.pod || "belum", tglPod: form.dataset.pod === "kembali" ? v("djt-tglpod") || H.hariIni() : null, tagihan: form.dataset.tagihan || "belum" });
 const tampilBaru = () => { const w = $("#djf-file"); w.querySelectorAll(".dj-fl--baru").forEach((x) => x.remove()); berkasBaru.forEach((b, i) => w.insertAdjacentHTML("beforeend", `<div class="dj-fl dj-fl--baru"><span>${ikon("upload", 13)} ${e(b.name)} <small>(baru)</small></span><button type="button" class="mr-ikonbtn" data-dj="baru-lepas" data-i="${i}" aria-label="Batalkan">${ikon("tutup", 14)}</button></div>`)); };
 
 async function simpanJob() {
   const form = $("#dj-form"), d = form._d, v = (id) => ($("#" + id) || {}).value || "";
   const tr = form.dataset.profil === "tracking", rinci = tr ? rinciDariForm(form, v) : null;
+  if (tr && rinci.jenis === "distribusi") { rinci.asal = rinci.asalTitik || ""; rinci.tujuan = rinci.tujuanTitik || ""; delete rinci.asalTitik; delete rinci.tujuanTitik; }
   const judul = tr ? TR.judulTracking(rinci.noDo, v("djt-cust")) : v("djf-judul").trim(), target = v("djf-target"), kel = S.kelola ? v("djf-kel") || d.kelompokId : S.kelompokSaya;
   if (tr && rinci.jenis) { const t = rinci.tahap || {}; if ((rinci.vendor || rinci.plat || rinci.driver) && !t.siap) rinci.tahap = { ...t, siap: new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 16) }; } // armada terisi = Siap
   if (tr && rinci.jenis && rinci.tglBayar && rinci.pod !== "kembali" && rinci.vendor && !/^internal$/i.test(rinci.vendor) && !rinci.janjiPod) { langkahTracking(3); return toast("Sudah dibayar sebelum POD kembali: isi janji POD kembali.", "bahaya"); }
@@ -857,7 +872,8 @@ document.addEventListener("click", async (ev) => {
   if (a === "kat") { S.fKat = S.fKat === v ? "" : v; return render(); }
   if (a === "pic") { S.fPic = S.fPic === v ? "" : v; return render(); }
   if (a === "t-set") return aturChipTracking(t);
-  if (a === "t-tahap" || a === "t-undo" || a === "t-dok") return ubahTahap(a, id, t.dataset.i);
+  if (a === "t-tahap" || a === "t-undo" || a === "t-dok" || a === "t-titik") return ubahTahap(a, id, t.dataset.i);
+  if (a === "t-tambah" || a === "t-hapus") return ubahTitik(a, t);
   if (a === "tind") { S.tind = S.tind === v ? "" : v; S.status = "aktif"; S.hal = 0; return render(); }
   if (a === "t-next") { const f = $("#dj-form"); return langkahTracking(Math.min(3, (f._lg || 1) + 1)); }
   if (a === "t-prev") { const f = $("#dj-form"); return langkahTracking(Math.max(1, (f._lg || 1) - 1)); }

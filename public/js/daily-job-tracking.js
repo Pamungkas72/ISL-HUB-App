@@ -2,6 +2,7 @@
 import { e } from "./ui.js";
 import { SUBDIVISI, TAGIHAN, BAYAR, subdivisiDari, rinci } from "./daily-job-tracking-hitung.js";
 import * as TL from "./daily-job-trailer-hitung.js";
+import * as DZ from "./daily-job-distribusi-hitung.js";
 
 const f = (lab, isi, kelas = "") => `<label class="mr-f ${kelas}"><span>${lab}</span>${isi}</label>`;
 const inp = (id, v, ph = "", ekstra = "") => `<input id="${id}" value="${e(v ?? "")}" placeholder="${e(ph)}" ${ekstra}>`;
@@ -17,9 +18,11 @@ export function htmlFormTracking(d, c) {
   return `<div class="dj-lng" data-lng="1"><h4 class="dj-lng__h">1. Pengiriman</h4>
     ${f("Customer *", inp("djt-cust", d.customer, "Nama customer"), "dj-lebar")}
     <div class="mr-f dj-lebar"><span>Subdivisi</span>${chipPil("sub", st.sub, Object.entries(SUBDIVISI).map(([k, s]) => [k, s.nama]))}</div>
-    ${f("Asal *", inp("djt-asal", r.asal, "mis. Cikarang"))}${f("Tujuan *", inp("djt-tujuan", r.tujuan, "mis. Surabaya"))}
+    <div class="dj-besar${st.sub === "besar" ? "" : " dj-sembunyi"}">${f("Asal *", inp("djt-asal", r.asal, "mis. Lini 1 Tj. Priok"))}${f("Tujuan *", inp("djt-tujuan", r.tujuan, "mis. Cikarang"))}</div>
+    <div class="dj-kecil dj-lebar${st.sub === "besar" ? " dj-sembunyi" : ""}"><div class="dj-lng__sub">Titik pick up dan drop <small id="djt-pola" class="mr-sub"></small></div><div id="djt-titik">${htmlTitik(titikAwal(d))}</div><div class="dj-ttk__tb"><button type="button" class="mr-btn" data-dj="t-tambah" data-v="P">+ Pick up</button><button type="button" class="mr-btn" data-dj="t-tambah" data-v="D">+ Drop</button></div></div>
     ${f("No. DO / surat jalan *", inp("djt-do", r.noDo, "mis. DO-2026-1187"))}${f("Kategori armada / jenis shipment *", `<select id="djf-kat">${opsiKat(st.sub, d.kategori)}</select>`)}
     <div class="dj-besar dj-lebar${st.sub === "besar" ? "" : " dj-sembunyi"}"><div class="dj-lng__sub">Kontainer</div><div class="dj-g2">${f("No. kontainer", inp("djt-kont", r.kontainer, "mis. ABCU 1234567"))}${f("Ukuran", `<select id="djt-ukuran"><option value="">–</option>${TL.UKURAN.map((u) => `<option${u === r.ukuran ? " selected" : ""} value="${u}">${u === "40HC" ? "40 HC" : u + "\u2032"}</option>`).join("")}</select>`)}${f("Pelayaran", inp("djt-pelayaran", r.pelayaran))}${f("Depo MT (nama depo)", inp("djt-depo", r.depo))}</div></div>
+    <div class="dj-kecil${st.sub === "besar" ? " dj-sembunyi" : ""}">${f("Tipe bak", `<select id="djt-bak"><option value="">–</option>${DZ.TIPE_BAK.map((b) => `<option${b === r.bak ? " selected" : ""}>${b}</option>`).join("")}</select>`)}</div>
     ${f("Tanggal kirim", `<input type="date" id="djt-kirim" value="${e(r.tglKirim || d.tglMasuk || "")}">`)}${f(c.targetLabel, `<input type="date" id="djf-target" value="${e(d.tglTarget || "")}"${c.targetKunci ? " disabled" : ""}>`)}
     ${f("PIC", `<input id="djf-pic" list="djf-piclist" value="${e(d.pic || "")}"><datalist id="djf-piclist">${c.picList.map((p) => `<option value="${e(p)}">`).join("")}</datalist>`)}</div>
   <div class="dj-lng" data-lng="2"><h4 class="dj-lng__h">2. Armada dan vendor</h4>
@@ -30,12 +33,18 @@ export function htmlFormTracking(d, c) {
     ${f("Cost (Rp) <small id=\"djt-costinfo\">uang jalan bila armada internal</small>", inp("djt-cost", rp(r.cost), "mis. 2.500.000", 'inputmode="numeric"'))}
     <div class="mr-f dj-lebar"><span>POD</span>${chipPil("pod", st.pod, [["belum", "Belum kembali"], ["kembali", "Sudah kembali"]])}</div>
     ${f("Tanggal POD kembali", `<input type="date" id="djt-tglpod" value="${e(r.tglPod || "")}">`, "dj-tglpod" + (st.pod === "kembali" ? "" : " dj-sembunyi"))}
-    <div class="mr-f dj-lebar dj-kecil${st.sub === "besar" ? " dj-sembunyi" : ""}"><span>Tagihan vendor</span>${chipPil("tagihan", st.tagihan, Object.entries(TAGIHAN))}</div>
-    <div class="dj-besar${st.sub === "besar" ? "" : " dj-sembunyi"}">${f("Tanggal bayar vendor <small>kosongkan bila belum dibayar</small>", `<input type="date" id="djt-tglbayar" value="${e(r.tglBayar || "")}">`)}${f("Janji POD kembali <small>wajib bila sudah dibayar sebelum POD kembali</small>", `<input type="date" id="djt-janji" value="${e(r.janjiPod || "")}">`)}</div>
+    <div class="dj-lng__dua">${f("Tanggal bayar vendor <small>kosongkan bila belum dibayar</small>", `<input type="date" id="djt-tglbayar" value="${e(r.tglBayar || "")}">`)}${f("Janji POD kembali <small>wajib bila sudah dibayar sebelum POD kembali</small>", `<input type="date" id="djt-janji" value="${e(r.janjiPod || "")}">`)}</div>
     ${c.status}${c.tunda}
     ${f("Catatan", `<textarea id="djf-desk" rows="2">${e(d.deskripsi || "")}</textarea>`, "dj-lebar")}${c.berkas}${c.lain}</div>`;
 }
 
+/** Titik awal formulir Distribusi: dari rinci.titik; job lama (asal/tujuan) jadi satu pick up dan satu drop; job baru dua titik kosong. */
+export const titikAwal = (d) => { const r = rinci(d), t = DZ.titikDari(d); return t.length ? t : [{ t: "P", nama: r.asal || "", kota: "", selesai: null }, { t: "D", nama: r.tujuan || "", kota: "", selesai: null }]; };
+/** Baris editor titik; titik yang sudah selesai terkunci (tidak bisa dihapus). */
+export function htmlTitik(titik) {
+  const n = { P: 0, D: 0 };
+  return titik.map((x, i) => { n[x.t]++; const jml = titik.filter((y) => y.t === x.t).length; return `<div class="dj-ttk" data-i="${i}" data-t="${x.t}" data-selesai="${x.selesai || ""}"><span class="dj-chip dj-chip--${x.t === "P" ? "info" : "ok"}">${x.t === "P" ? "Pick up" : "Drop"} ${n[x.t]}</span><input class="djt-tn" value="${e(x.nama || "")}" placeholder="Nama lokasi" aria-label="Nama lokasi"><input class="djt-tk" value="${e(x.kota || "")}" placeholder="Kota" aria-label="Kota"><button type="button" class="mr-ikonbtn" data-dj="t-hapus" data-i="${i}" ${jml < 2 || x.selesai ? "disabled" : ""} aria-label="Hapus titik">✕</button></div>`; }).join("");
+}
 const fmtW = (w) => { const d = new Date(String(w).length === 16 ? w + ":00+07:00" : w); return isNaN(d) ? "" : d.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" }).replace(".", ":"); };
 /** Panel detail Trailer: stepper tahap bertanda waktu, tombol tahap berikut, risiko POD, dan daftar dokumen. ubah = boleh mengubah job. */
 export function htmlTrailerDetail(j, ubah, now) {
@@ -62,4 +71,15 @@ export function htmlPerformaTrailer(k, banding, labelMinggu) {
   <div class="dj-grid2e">${tab("Volume order per minggu", ["Minggu", "Order", "Ritase"], mingguan)}${tab("Jenis pengiriman", ["Jenis", "Order", "Ritase", "Vendor / Int.", "Cost", "Per rit"], k.perJenis.map((o) => [e(o.nama), o.order, o.ritase, `${o.vendor} / ${o.internal}`, jt(o.cost), jt(o.perRitase)]))}</div>
   <div class="dj-grid2e">${tab("Vendor yang dipakai", ["Vendor", "Ritase", "Cost", "Tarif rata²", "POD telat"], k.perVendor.map((o) => [e(o.nama), o.ritase, jt(o.cost), jt(o.perRitase), o.pod ? `<b class="dj-merah">${o.pod}</b>` : 0]))}${tab("Rute teratas", ["Rute", "Ritase", "Cost", "Per ritase"], k.perRute.map((o) => [e(o.nama), o.ritase, jt(o.cost), jt(o.perRitase)]))}</div>
   <section class="mr-kartu dj-kartu"><h3>Tarif per rute: siapa termurah</h3>${bd || `<p class="mr-sub">Muncul bila satu rute dikerjakan oleh dua vendor atau lebih (atau internal).</p>`}</section></div>`;
+}
+
+/** Panel detail Truk Distribusi: stepper (Siap, Pick up, Drop, POD), daftar titik bertanda waktu, tombol langkah berikut, dan risiko POD. */
+export function htmlDistribusiDetail(j, ubah, now) {
+  const r = rinci(j); if (r.jenis !== "distribusi") return "";
+  const n = DZ.kemajuan(j), b = DZ.berikut(j), id = e(j.id), titik = DZ.titikDari(j), nama = ["Siap", "Pick up", "Drop", "POD"];
+  const stp = DZ.TAHAP.map(([k, l], i) => `<li class="${i < n ? "is-ok" : i === n ? "is-now" : ""}"><i></i><div><b>${l}</b><small>${i === n ? e(DZ.labelTahap(j)) : i < n ? "Selesai" : "–"}</small></div></li>`).join("");
+  const tt = titik.map((x) => `<li class="${x.selesai ? "is-ok" : ""}"><span class="dj-chip dj-chip--${x.t === "P" ? "info" : "ok"}">${x.t === "P" ? "Pick up" : "Drop"}</span><div><b>${e(x.nama || "–")}</b><small>${e([x.kota, x.selesai ? fmtW(x.selesai) : ""].filter(Boolean).join(" · "))}</small></div><span>${x.selesai ? "✓" : ""}</span></li>`).join("");
+  const risiko = DZ.dibayarTanpaPod(j) ? `<p class="dj-risiko dj-risiko--bahaya"><b>Berisiko:</b> sudah dibayar ${e(r.tglBayar)}, POD belum kembali.${r.janjiPod ? ` Janji POD: ${e(r.janjiPod)}.` : " Isi janji POD kembali."}</p>` : n === 3 ? `<p class="dj-risiko">POD belum kembali. Syarat penagihan ke customer.</p>` : "";
+  return `<div class="mr-kartu dj-kartu dj-trl"><h3>Pengiriman · ${e(DZ.pola(j) || "")} · ${e([j.kategori, r.bak].filter(Boolean).join(" "))}</h3><ol class="dj-stp">${stp}</ol><h3>Titik</h3><ul class="dj-ttkl">${tt}</ul>
+    ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-titik" data-id="${id}">Tandai ${e(b.label)} selesai</button>` : ""}${n > 1 || r.pod === "kembali" ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan langkah terakhir</button>` : ""}</div>` : ""}${risiko}</div>`;
 }
