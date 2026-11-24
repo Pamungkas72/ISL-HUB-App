@@ -90,3 +90,8 @@ Menggantikan bagian "Divisi Tracking" 19 Nov untuk subdivisi Mobil besar. Mobil 
 - **Ekspor Excel shipment** (menu ⋮ > Ekspor Excel shipment): satu lembar per subdivisi, satu baris per shipment (`daily-job-ekspor.js`).
 - **Ditunda:** impor Excel Tracking (menunggu contoh Excel tim), revisi hasil pakai pemilik. Tipe bak (Box Reefer, Bak, Losbak) perlu dikonfirmasi pemilik.
 - **Deploy:** otomatis dari `main` (aturan, hosting, Cloud Function) lewat `deploy-firebase.yml`.
+
+## Revisi formulir Tracking Trailer (24 Nov 2026, aturan pemilik)
+- **Urutan formulir:** Customer → Subdivisi → **Jenis shipment** (Impor, Ekspor, Repo, Domestik; untuk Distribusi: Jenis armada) → rute. Jenis ditentukan sebelum rute.
+- **Multi drop (hanya Domestik):** tombol **+ Tujuan** menambah Tujuan 2 sampai 4 (maks. 4 tujuan, bisa dihapus). Tanpa tombol + Pick up (satu asal). Disimpan di `rinci.tujuanLain`; jenis lain mengosongkannya. Rute di Daftar, Excel, Performa, dan pembanding tarif memakai semua tujuan (`ruteTrailer`).
+- **Belum:** tahap Bongkar masih satu untuk semua tujuan (belum per drop).

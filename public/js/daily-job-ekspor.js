@@ -20,7 +20,7 @@ const bayar = (r) => (r.bayar === "top" ? "TOP" : "Cash");
 export function lembarTrailer(jobs, now = hariIni()) {
   const l = jobs.filter((j) => TL.jenisTrailer(j)).sort((a, b) => String(rinci(a).tglKirim || a.tglMasuk).localeCompare(String(rinci(b).tglKirim || b.tglMasuk)));
   return [KOLOM_TRAILER, ...l.map((j) => { const r = rinci(j), ber = TL.tahapBerikut(j);
-    return [r.noDo || j.judul, j.customer || "", TL.JENIS[r.jenis].nama, r.kontainer || "", r.ukuran || "", r.asal || "", r.tujuan || "", TL.internal(j) ? "Internal" : "Vendor", TL.internal(j) ? "" : r.vendor, r.plat || "", r.driver || "", r.telp || "", tgl(j.tglMasuk), tgl(r.tglKirim), tgl(j.tglTarget), tahap(r, posisi.siap), tahap(r, posisi.t2), tahap(r, posisi.t3), tahap(r, posisi.t4),
+    return [r.noDo || j.judul, j.customer || "", TL.JENIS[r.jenis].nama, r.kontainer || "", r.ukuran || "", r.asal || "", TL.semuaTujuan(j).join("; "), TL.internal(j) ? "Internal" : "Vendor", TL.internal(j) ? "" : r.vendor, r.plat || "", r.driver || "", r.telp || "", tgl(j.tglMasuk), tgl(r.tglKirim), tgl(j.tglTarget), tahap(r, posisi.siap), tahap(r, posisi.t2), tahap(r, posisi.t3), tahap(r, posisi.t4),
       TL.podKembali(j) ? "POD kembali" : ber ? ber[1] : "Selesai operasional", bayar(r), Number(r.cost) || 0, tgl(r.tglBayar), tgl(r.janjiPod), TL.podKembali(j) ? "Kembali" : "Belum", tgl(r.tglPod), TL.umurPod(j, now), dok(j), (r.dokNomor || []).map((x) => `${x.jenis} ${x.no}`).join("; "), STATUS[j.status] || j.status || "", j.pic || "", j.deskripsi || ""]; })];
 }
 const namaTitik = (x) => [x.nama, x.kota && x.kota !== x.nama ? `(${x.kota})` : ""].filter(Boolean).join(" ");
