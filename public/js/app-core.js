@@ -1934,6 +1934,16 @@ function pastikanSyaratTrailer() {
   SYARAT_TRAILER_BAWAAN.forEach((tx, i) => { if (!ada.has(norm(tx))) PENG.tnc.push({ id: 'trB' + (i + 1), kat: 'trucking_trailer', kategori: /pembayaran|reimbursement|Keterlambatan|transfer bank/i.test(tx) ? 'pembayaran' : /^Pembatalan/.test(tx) ? 'pembatalan' : /^Informasi order/.test(tx) ? 'order' : 'lainnya', teks: { id: tx, en: SYARAT_TRAILER_EN[i] || '' }, aktif: true }); });
   PENG.syaratTrailerVer = 1;
 }
+/* 24 Nov 2026: S&K cold storage (kat warehouse_frozen) mengikuti contoh penawaran pemilik (FL.TNC_LINI, 13 butir). Sekali untuk data tersimpan: butir bawaan lama yang belum disunting diganti; butir sunting atau buatan pengguna dipertahankan dan tetap bisa diubah di Pengaturan dokumen. */
+const COLD_LAMA = ['Tarif storage dihitung sesuai jumlah pallet, ton, revenue ton, atau CBM yang tercatat saat barang masuk gudang.', 'Handling in dan handling out dihitung per revenue ton atau per CBM sesuai realisasi barang.', 'Tarif stripping dari kontainer berlaku khusus untuk gudang ini dan terpisah dari tarif depo.', 'Gudang pendingin disewa per chamber, per pallet, atau per m² sesuai perjanjian. Suhu dijaga sesuai klasifikasi gudang.', 'Layanan tambahan (mis. repacking) dihitung sesuai kesepakatan dan ditagihkan terpisah.'];
+function pastikanSyaratCold() {
+  const FL = window.ISLFL, baru = FL && FL.TNC_LINI && FL.TNC_LINI.warehouse_frozen; if (!baru || PENG.syaratColdVer >= 1) return;
+  const idDari = t => String((t.teks && t.teks.id) || ''), lama = new Set([...COLD_LAMA, ...baru].map(norm)), en = (FL.TNC_LINI_EN || {}).warehouse_frozen || [];
+  PENG.tnc = PENG.tnc.filter(t => !(t.kat === 'warehouse_frozen' && lama.has(norm(idDari(t)))));
+  const ada = new Set(PENG.tnc.filter(t => t.kat === 'warehouse_frozen').map(t => norm(idDari(t))));
+  baru.forEach((tx, i) => { if (!ada.has(norm(tx))) PENG.tnc.push({ id: 'cold' + (i + 1), kat: 'warehouse_frozen', kategori: /pembayaran|transfer/i.test(tx) ? 'pembayaran' : 'lainnya', teks: { id: tx, en: en[i] || '' }, aktif: true }); });
+  PENG.syaratColdVer = 1;
+}
 /* lini yang syarat dan kalimatnya dibuat per quotation; isi awalnya dari contoh PDF masing-masing lini */
 /* Trucking Distribusi (4 Nov 2026): S&K bawaan dari contoh PDF pemilik. Tanpa aturan reimbursement. Harga FOT: TKBM dan asuransi tidak termasuk kecuali rute ditandai di tabel.
    Nominal pembatalan, biaya inap, dan waktu tunggu berupa teks biasa (diubah lewat daftar S&K). Blind Van ikut kelompok CDE dan CDD. */
@@ -2077,6 +2087,7 @@ function pastikanSyaratDistribusi(dariDb) {
 function pastikanSyaratCC(dariDb = false) {
   if (!Array.isArray(PENG.tnc)) PENG.tnc = [];
   pastikanSyaratDistribusi(dariDb);
+  if (dariDb) pastikanSyaratCold();
   if (dariDb) pastikanSyaratTrailer();   /* hanya data tersimpan: PENG bawaan (modul baru dimuat) tidak boleh memberi tanda sudah dimigrasi, karena tanda itu ikut tergabung ke data tersimpan */
   /* 3 Nov 2026: pasal "Penawaran ini berlaku sampai {berlaku}." dihapus dari S&K Depo karena sudah ada di kalimat penutup baku.
      Hanya pasal yang persis sama dan belum diubah yang dibuang; S&K lain (yang mungkin sudah disesuaikan) tidak disentuh. */
