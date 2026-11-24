@@ -54,7 +54,7 @@ export const DOK = [["kir", "KIR"], ["stnk", "STNK"], ["pajak", "Pajak"]];
 /** Tingkat urgensi dari sisa hari: lewat (<0), mendesak (<=7), segera (<=14), bulan (<=30), aman. */
 export const tingkat = (sisa) => (sisa == null ? "aman" : sisa < 0 ? "lewat" : sisa <= 7 ? "mendesak" : sisa <= 14 ? "segera" : sisa <= 30 ? "bulan" : "aman");
 const URUT = { lewat: 0, mendesak: 1, segera: 2, bulan: 3, aman: 4 };
-const tambahBulan = (s, n) => { const d = new Date(s + "T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 10); };
+export const tambahBulan = (s, n) => { const d = new Date(s + "T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 10); };
 /** Tanggal visit berikut tiap bulan dari visit terakhir (atau tanggal mulai sewa). */
 export const visitBerikut = (k) => { const s = k.sewa; return s && s.mulai && (!s.akhir || s.akhir >= hariIni()) ? tambahBulan(s.visitTerakhir || s.mulai, 1) : ""; };
 /** Servis jatuh tempo bila tanggal berikut mendekat atau odometer mendekati km berikut (sisa <= 1.000 km). */

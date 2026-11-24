@@ -16,11 +16,12 @@ import * as TR from "./daily-job-tracking-hitung.js";
 import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail, htmlPerformaTrailer, htmlDistribusiDetail, htmlTitik, titikAwal } from "./daily-job-tracking.js";
 import * as TL from "./daily-job-trailer-hitung.js";
 import * as DZ from "./daily-job-distribusi-hitung.js";
+import { htmlArmada, htmlFormKendaraan, htmlFormTugas, judulTugas } from "./daily-job-armada.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 import { bukaFormKelompok, hapusKelompok } from "./akun-divisi.js";
 
-const S = { lihatSaja: false, ajuanKat: [], u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", tind: "", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAktif: "", sub: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
+const S = { lihatSaja: false, ajuanKat: [], u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", masalah: "", tind: "", armada: [], subArm: "tindakan", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAktif: "", sub: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 const namaKel = (id) => ((S.kelompokSemua || S.kelompok).find((k) => k.id === id) || {}).nama || "–";
@@ -35,6 +36,7 @@ async function muat() {
     S.kelompok = S.kelompokSemua.filter((k) => !k.arsip); // kelompok diarsipkan tidak muncul di pilihan; job lamanya tetap terbaca lewat kelompokSemua
     const q = S.kelola ? collection(db, "dj_job") : S.kelompokSaya ? query(collection(db, "dj_job"), where("kelompokId", "==", S.kelompokSaya)) : null;
     S.jobs = q ? (await getDocs(q)).docs.map((d) => H.dariDok(d.id, d.data())) : [];
+    try { const qr = S.kelola ? collection(db, "dj_armada") : S.kelompokSaya ? query(collection(db, "dj_armada"), where("kelompokId", "==", S.kelompokSaya)) : null; S.armada = qr ? (await getDocs(qr)).docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.plat).localeCompare(String(b.plat))) : []; } catch (_) { S.armada = []; } // aturan dj_armada mungkin belum dipasang
     if (!S.kelompok.some((k) => k.id === S.kelAktif)) { let simpan = ""; try { simpan = localStorage.getItem("dj-kel") || ""; } catch (_) {} S.kelAktif = S.kelola ? (S.kelompok.some((k) => k.id === simpan) ? simpan : (S.kelompok[0] || {}).id || "") : S.kelompokSaya || ""; }
     try { const qa = S.kelola ? collection(db, "dj_kategori_ajuan") : S.kelompokSaya ? query(collection(db, "dj_kategori_ajuan"), where("kelompokId", "==", S.kelompokSaya)) : null; S.ajuanKat = qa ? (await getDocs(qa)).docs.map((d) => ({ id: d.id, ...d.data() })) : []; } catch (_) { S.ajuanKat = []; } // aturan baru belum dipasang: ajuan kosong
     if (S.kelola) S.akun = (await getDocs(collection(db, "pengguna"))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.status === "aktif").sort((a, b) => String(a.nama || a.email).localeCompare(String(b.nama || b.email), "id"));
@@ -474,7 +476,7 @@ function htmlPerformaTracking(now) {
 function render() {
   const el = $("#dj-root"); if (!el) return;
   const now = H.hariIni(), perlu = S.kelola || S.kelompokSaya;
-  const tabs = [["job", "Daftar job"], ["performa", "Performa"], ...(S.kelola ? [["kelompok", "Pengaturan"]] : [])];
+  const tabs = [["job", "Daftar job"], ...(profilAktif() === "tracking" ? [["armada", "Armada"]] : []), ["performa", "Performa"], ...(S.kelola ? [["kelompok", "Pengaturan"]] : [])];
   const pushOn = statusPush(S.u.uid) === "aktif";
   const bukanBawaan = S.tab === "job" ? bukanBawaanDaftar() : periodeAktif() !== "bulan" || S.fPic || S.fKat || (S.kelola && S.fKel);
   const ikb = (aksi, ikn, judul, kelas = "") => `<button type="button" class="mr-btn dj-ib ${kelas}" data-dj="${aksi}" title="${judul}" aria-label="${judul}">${ikn}</button>`;
@@ -493,9 +495,9 @@ function render() {
   else if (S.galat) isi = `<div class="dj-alert dj-alert--bahaya">${e(S.galat)}</div>`;
   else if (!perlu) isi = `<section class="mr-kartu dj-kartu"><h3>Akun ini belum masuk kelompok</h3><p class="mr-sub">Minta master atau admin menetapkan kelompok Daily Job untuk akun Anda.</p></section>`;
   else if (S.detail && S.tab === "job") isi = htmlDetail(now);
-  else isi = S.tab === "performa" ? htmlPemilihKel() + kepalaP + (profilAktif() === "tracking" ? htmlPerformaTracking(now) : htmlPengingat(now) + htmlPerforma(now)) : S.tab === "job" ? htmlPemilihKel() + kepalaD + htmlDaftar(now) : htmlKelompok();
+  else isi = S.tab === "performa" ? htmlPemilihKel() + kepalaP + (profilAktif() === "tracking" ? htmlPerformaTracking(now) : htmlPengingat(now) + htmlPerforma(now)) : S.tab === "armada" ? htmlPemilihKel() + htmlArmada(armadaKel(), S.subArm, now, !S.lihatSaja) : S.tab === "job" ? htmlPemilihKel() + kepalaD + htmlDaftar(now) : htmlKelompok();
   el.innerHTML = `${tabs.length > 1 ? `<div class="dj-tabs" role="tablist">${tabs.map(([k, t]) => `<button type="button" role="tab" class="${S.tab === k ? "is-aktif" : ""}" data-dj="tab" data-v="${k}">${t}</button>`).join("")}</div>`: ""}${isi}
-    ${perlu && !S.muat && !S.detail && !S.lihatSaja ? `<button type="button" class="mr-fab fab-d fab--job" data-dj="baru" aria-label="Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"} baru">${ikon("papan-plus", 24)}<span class="fab-teks">Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"}</span></button>` : ""}`;
+    ${perlu && !S.muat && !S.detail && !S.lihatSaja && S.tab !== "armada" ? `<button type="button" class="mr-fab fab-d fab--job" data-dj="baru" aria-label="Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"} baru">${ikon("papan-plus", 24)}<span class="fab-teks">Catat ${profilAktif() === "tracking" ? "pengiriman" : "job"}</span></button>` : ""}`;
   if (S.detail && S.tab === "job" && !S.muat) muatPratinjau();
   if (layarHp() && S.tab === "job" && !S.muat && !S.detail && !pilihAktif()) intipGeser();
 }
@@ -659,6 +661,44 @@ async function ubahTahap(a, id, i) {
   const baru = { ...j, rinci: r }, selesai = TL.selesaiOtomatis(baru) && j.status !== "batal", data = { rinci: r, diubah: serverTimestamp(), ...(selesai ? { status: "selesai", tglSelesai: r.tglPod || H.hariIni() } : j.status === "selesai" && !TL.selesaiOtomatis(baru) ? { status: "proses", tglSelesai: null } : {}) };
   try { await updateDoc(doc(db, "dj_job", id), data); Object.assign(j, { ...data, diubah: null }); segarkanKop(); segarkanKanan(); render(); }
   catch (err) { console.error(err); toast("Belum tersimpan: " + pesanUnggah(err), "bahaya"); }
+}
+/* ---------- Armada Truk Distribusi: kendaraan, dokumen, servis, sewa (koleksi dj_armada) ---------- */
+const armadaKel = () => S.armada.filter((k) => !S.kelAktif || k.kelompokId === S.kelAktif);
+const armadaId = (id) => S.armada.find((k) => k.id === id);
+const angka = (x) => Number(String(x || "").replace(/\D/g, "")) || 0;
+function formKendaraan(k) {
+  const baru = !k; k = k || { aktif: true };
+  bukaLayer(`<header class="mr-panel__kepala"><div><h2>${baru ? "Tambah kendaraan" : "Ubah kendaraan"}</h2>${baru ? "" : `<p class="mr-sub">${e(k.plat)}</p>`}</div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
+  <div class="mr-panel__isi">${htmlFormKendaraan(k)}</div>
+  <footer class="mr-panel__kaki dj-kaki">${baru ? "" : `<button class="mr-btn dj-bhy" data-dj="arm-hapus" data-id="${e(k.id)}">Hapus</button>`}<span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="arm-simpan" data-id="${e(k.id || "")}">Simpan</button></footer>`);
+  const cb = $("#arm-sewa-on"); if (cb) cb.onchange = () => { $(".dj-arm__sewa").hidden = !cb.checked; };
+}
+async function simpanKendaraan(id) {
+  const v = (x) => ($("#" + x) || {}).value || "", lama = id ? armadaId(id) : null, plat = v("arm-plat").trim().toUpperCase(), kel = lama ? lama.kelompokId : S.kelAktif || S.kelompokSaya;
+  if (!plat) return toast("Isi plat nomor.", "bahaya"); if (!kel) return toast("Pilih kelompok dulu.", "bahaya");
+  if (!lama && S.armada.some((k) => k.plat === plat && k.kelompokId === kel)) return toast("Plat ini sudah terdaftar.", "bahaya");
+  const sewa = $("#arm-sewa-on").checked ? { customer: v("arm-sw-cust").trim(), kota: v("arm-sw-kota").trim(), bentuk: v("arm-sw-bentuk"), mulai: v("arm-sw-mulai") || null, akhir: v("arm-sw-akhir") || null, visitTerakhir: v("arm-sw-visit") || null } : null;
+  const data = { kelompokId: kel, plat, jenisArmada: v("arm-jenis"), bak: v("arm-bak"), kir: v("arm-kir") || null, stnk: v("arm-stnk") || null, pajak: v("arm-pajak") || null, servis: { ...((lama || {}).servis || {}), odo: angka(v("arm-odo")) || null, tglBerikut: v("arm-sv-tgl") || null, kmBerikut: angka(v("arm-sv-km")) || null, intervalBln: angka(v("arm-sv-bln")) || null, intervalKm: angka(v("arm-sv-ikm")) || null }, sewa, catatan: v("arm-cat").trim(), aktif: $("#arm-aktif").checked, riwayat: (lama || {}).riwayat || [], diubah: serverTimestamp() };
+  try { const kid = id || uid(); await setDoc(doc(db, "dj_armada", kid), data); const baru = { id: kid, ...data, diubah: null }; const i = S.armada.findIndex((k) => k.id === kid); if (i >= 0) S.armada[i] = baru; else S.armada.push(baru); S.armada.sort((a, b) => String(a.plat).localeCompare(String(b.plat))); tutupLayer(); render(); toast("Kendaraan tersimpan."); }
+  catch (err) { console.error(err); toast("Belum tersimpan: " + pesanUnggah(err), "bahaya"); }
+}
+async function hapusKendaraan(id) {
+  const k = armadaId(id); if (!k || !(await konfirmasi("Hapus kendaraan?", `<b>${e(k.plat)}</b> dan riwayatnya dihapus. Job pengiriman tidak terpengaruh.`, "Hapus"))) return;
+  try { await deleteDoc(doc(db, "dj_armada", id)); S.armada = S.armada.filter((x) => x.id !== id); tutupLayer(); render(); toast("Kendaraan dihapus."); } catch (err) { console.error(err); toast("Belum terhapus: " + pesanUnggah(err), "bahaya"); }
+}
+function panelTugas(id, tipe) {
+  const k = armadaId(id); if (!k) return;
+  bukaLayer(`<header class="mr-panel__kepala"><div><h2>${judulTugas(tipe)}</h2><p class="mr-sub">${e(k.plat)} · ${e([k.jenisArmada, k.bak].filter(Boolean).join(" "))}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
+  <div class="mr-panel__isi">${htmlFormTugas(tipe, k)}</div><footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="arm-tugas-simpan" data-id="${e(id)}" data-v="${tipe}">Simpan</button></footer>`);
+}
+async function simpanTugas(id, tipe) {
+  const k = armadaId(id), v = (x) => ($("#" + x) || {}).value || ""; if (!k) return; const h = H.hariIni(), tgl = v("tg-tgl") || h, sv = k.servis || {};
+  const log = { tipe, judul: judulTugas(tipe), tgl, biaya: angka(v("tg-biaya")) || null, catatan: v("tg-cat").trim(), oleh: S.u.nama || S.u.email, waktu: Date.now() }; let data;
+  if (tipe === "servis") { const odo = angka(v("tg-odo")) || sv.odo || null; data = { servis: { ...sv, odo, terakhir: tgl, tglBerikut: v("tg-next-tgl") || (sv.intervalBln ? DZ.tambahBulan(tgl, sv.intervalBln) : null), kmBerikut: angka(v("tg-next-km")) || (sv.intervalKm && odo ? odo + sv.intervalKm : null) } }; }
+  else if (tipe === "visit") { const odo = angka(v("tg-odo")) || sv.odo || null; data = { sewa: { ...(k.sewa || {}), visitTerakhir: tgl }, servis: { ...sv, odo } }; }
+  else { const baru = v("tg-baru"); if (!baru) return toast("Isi tanggal berlaku yang baru.", "bahaya"); data = { [tipe]: baru }; log.baru = baru; }
+  data.riwayat = [...(k.riwayat || []), log].slice(-100); data.diubah = serverTimestamp();
+  try { await updateDoc(doc(db, "dj_armada", id), data); Object.assign(k, { ...data, diubah: null }); tutupLayer(); render(); toast("Tersimpan."); } catch (err) { console.error(err); toast("Belum tersimpan: " + pesanUnggah(err), "bahaya"); }
 }
 /** Editor titik pick up/drop (Distribusi): baca isian ke form._titik, tambah atau hapus, lalu gambar ulang tanpa kehilangan isian. */
 function bacaTitik() { return [...document.querySelectorAll("#djt-titik .dj-ttk")].map((x) => ({ t: x.dataset.t, nama: x.querySelector(".djt-tn").value.trim(), kota: x.querySelector(".djt-tk").value.trim(), selesai: x.dataset.selesai || null })); }
@@ -854,7 +894,7 @@ function intipGeser() {
   setTimeout(() => { el.parentElement.classList.add("is-buka"); el.classList.add("is-intip"); setTimeout(() => { el.classList.remove("is-intip"); tutupRw(el.parentElement); }, 900); }, 600);
 }
 document.addEventListener("contextmenu", (ev) => { if (window.__rute === "dailyjob" && ev.target.closest(".dj-job2")) ev.preventDefault(); });
-const UBAH_DJ = new Set(["baru", "simpan", "hapus", "a-selesai", "a-ubah", "a-hapus", "m-selesai", "m-pic", "m-hapus", "pic-simpan", "d-nilai", "d-target", "target-simpan", "d-unggah", "file-lepas", "tautan-lepas", "tautan-tambah", "impor", "impor-jalan", "masalah-hapus", "b-toggle", "b-cabut", "a-bagikan", "m-bagikan"]);
+const UBAH_DJ = new Set(["arm-baru", "arm-ubah", "arm-simpan", "arm-hapus", "arm-tugas", "arm-tugas-simpan", "baru", "simpan", "hapus", "a-selesai", "a-ubah", "a-hapus", "m-selesai", "m-pic", "m-hapus", "pic-simpan", "d-nilai", "d-target", "target-simpan", "d-unggah", "file-lepas", "tautan-lepas", "tautan-tambah", "impor", "impor-jalan", "masalah-hapus", "b-toggle", "b-cabut", "a-bagikan", "m-bagikan"]);
 const periksa = (ev) => window.__rute === "dailyjob" || ev.target.closest("#mr-layer");
 document.addEventListener("click", async (ev) => {
   if (!periksa(ev)) return;
@@ -872,6 +912,12 @@ document.addEventListener("click", async (ev) => {
   if (a === "kat") { S.fKat = S.fKat === v ? "" : v; return render(); }
   if (a === "pic") { S.fPic = S.fPic === v ? "" : v; return render(); }
   if (a === "t-set") return aturChipTracking(t);
+  if (a === "arm-sub") { S.subArm = v; return render(); }
+  if (a === "arm-baru" || a === "arm-ubah") return formKendaraan(a === "arm-ubah" ? armadaId(id) : null);
+  if (a === "arm-simpan") return simpanKendaraan(id);
+  if (a === "arm-hapus") return hapusKendaraan(id);
+  if (a === "arm-tugas") return panelTugas(id, v);
+  if (a === "arm-tugas-simpan") return simpanTugas(id, v);
   if (a === "t-tahap" || a === "t-undo" || a === "t-dok" || a === "t-titik") return ubahTahap(a, id, t.dataset.i);
   if (a === "t-tambah" || a === "t-hapus") return ubahTitik(a, t);
   if (a === "tind") { S.tind = S.tind === v ? "" : v; S.status = "aktif"; S.hal = 0; return render(); }
