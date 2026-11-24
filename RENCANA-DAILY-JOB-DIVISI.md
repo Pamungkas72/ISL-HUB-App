@@ -116,3 +116,6 @@ Aturan murni di `daily-job-pod.js` (diuji `tests/unit/daily-job-pod.test.mjs`).
 - **Daftar dan formulir:** sudah satu kode (desain A).
 - **Detail:** judul kartu sejajar ("Pengiriman · 1→n · Jenis") dan daftar **Titik** (pick up + drop) juga di Trailer; dokumen dan POD/bayar tetap per logika.
 - **Performa (desain gabungan Opsi 2):** satu tampilan untuk dua subdivisi (`daily-job-performa-hitung.js`, `daily-job-performa.js`). **Subdivisi adalah filter** di panel Ubah (Semua, Truk Distribusi, Tracking Trailer; juga tetap di menu ⋮). Tab **Pengiriman** (KPI, volume per minggu, jenis, vendor, rute, tarif termurah, tipe bak bila ada Distribusi) dan tab **Armada dan sewa** (kepatuhan, kegiatan, sewa unit; tersembunyi bila filter = Trailer). Menggantikan Performa terpisah, ringkasan gabungan, dan tiga tab Distribusi.
+
+## Uang jalan dihapus dari Daily Job (24 Nov 2026)
+Uang jalan kini diurus di Master Rate. Dihapus: sub-tab Armada > Uang jalan (tarif tetap, persetujuan), blok uang jalan di formulir pengiriman (tarif tetap, kalkulator, slip, ajukan), dan `daily-job-uangjalan.js`. Cost pengiriman internal diisi manual di kolom Cost. Koleksi `dj_tarif` dan aturannya di `firestore.rules` tidak disentuh (data lama tetap aman).
