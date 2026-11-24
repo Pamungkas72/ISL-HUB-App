@@ -304,7 +304,6 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-arm__kt { display: none; } .dj-arm__tb tr[data-dj] { cursor: pointer; } .dj-arm__sel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0; } .dj-arm__sel small { display: block; color: var(--muted); font-size: 10.5px; } .dj-kp { margin: 6px 2px; }
 .dj-cek { display: flex; flex-direction: row; gap: 8px; align-items: center; } .dj-cek input { width: auto; }
 @media (max-width: 760px) { .dj-arm__tb { display: none; } .dj-arm__kt { display: grid; gap: 8px; } .dj-arm__t { flex-wrap: wrap; } .dj-arm__t .mr-btn { width: 100%; } }
-/* Uang jalan Distribusi: tarif tetap dan kalkulator di formulir */
 /* Tracking Trailer: baris dokumen dan nomor referensi */
 .dj-dok { display: grid; grid-template-columns: 140px 1fr auto; gap: 6px; align-items: center; margin-bottom: 6px; } .dj-dok select, .dj-dok input { min-width: 0; }
 .dj-dok__tb { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0 10px; } .dj-dok__tb > span { display: contents; }
