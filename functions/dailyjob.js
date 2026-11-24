@@ -3,14 +3,15 @@
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { bangunPesan } = require("./dailyjob-pesan");
+const { pesanTracking } = require("./dailyjob-tracking-pesan");
 
 const EMAIL_MASTER = "codcodan1@gmail.com";
 const TOKEN_MATI = ["messaging/registration-token-not-registered", "messaging/invalid-registration-token"];
 
 exports.notifDailyJob = onSchedule({ schedule: "0 9,14,17 * * 1-5", timeZone: "Asia/Jakarta", region: "asia-southeast2" }, async (ev) => {
   const db = admin.firestore(), sekarang = ev.scheduleTime ? new Date(ev.scheduleTime) : new Date();
-  const [tok, peng, js] = await Promise.all([db.collection("dj_token").get(), db.collection("pengguna").get(), db.collection("dj_job").get()]);
-  const akun = new Map(peng.docs.map((d) => [d.id, d.data()])), jobs = js.docs.map((d) => d.data());
+  const [tok, peng, js, ar] = await Promise.all([db.collection("dj_token").get(), db.collection("pengguna").get(), db.collection("dj_job").get(), db.collection("dj_armada").get().catch(() => ({ docs: [] }))]);
+  const akun = new Map(peng.docs.map((d) => [d.id, d.data()])), jobs = js.docs.map((d) => d.data()), armada = ar.docs.map((d) => d.data());
   const perUid = new Map();
   tok.docs.forEach((d) => { const u = d.get("uid"); (perUid.get(u) || perUid.set(u, []).get(u)).push(d); });
   for (const [uid, dokumen] of perUid) {
@@ -19,7 +20,8 @@ exports.notifDailyJob = onSchedule({ schedule: "0 9,14,17 * * 1-5", timeZone: "A
     const semua = String(p.email || "").toLowerCase() === EMAIL_MASTER || p.peran === "admin";
     if (!semua && !p.kelompokDJ) continue;
     const lingkup = semua ? jobs : jobs.filter((j) => j.kelompokId === p.kelompokDJ);
-    for (const m of bangunPesan(lingkup, sekarang)) {
+    const armadaLingkup = semua ? armada : armada.filter((k) => k.kelompokId === p.kelompokDJ);
+    for (const m of [...bangunPesan(lingkup, sekarang), ...pesanTracking(lingkup, armadaLingkup, sekarang)]) {
       const r = await admin.messaging().sendEachForMulticast({ tokens: dokumen.map((d) => d.get("token")), data: { title: m.title, body: m.body, tag: m.tag, url: "app.html#dailyjob" }, webpush: { headers: { Urgency: "high", TTL: "7200" } } });
       await Promise.all(r.responses.map((x, i) => (!x.success && x.error && TOKEN_MATI.includes(x.error.code) ? dokumen[i].ref.delete() : null)));
     }
