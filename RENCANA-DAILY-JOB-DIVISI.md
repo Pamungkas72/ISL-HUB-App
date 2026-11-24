@@ -106,3 +106,7 @@ Aturan murni di `daily-job-pod.js` (diuji `tests/unit/daily-job-pod.test.mjs`).
 - **Antrean:** "Tunggu POD" (belum sampai), "Perlu dibayar" (Cash, resi ada, belum transfer), Selesai.
 - **Peringatan** (menggantikan "Dibayar, POD belum" dan Janji POD yang dihapus): Perlu dibayar; Resi POD belum diisi (3 hari setelah operasional selesai); POD belum sampai (5 hari sejak resi). Internal tidak diperingatkan. Push 09.00 mengikuti aturan yang sama.
 - Data lama: job internal yang sudah menunggu POD tidak diubah otomatis; tandai POD manual.
+## Revisi formulir Tracking Trailer (24 Nov 2026, aturan pemilik)
+- **Urutan formulir:** Customer → Subdivisi → **Jenis shipment** (Impor, Ekspor, Repo, Domestik; untuk Distribusi: Jenis armada) → rute. Jenis ditentukan sebelum rute.
+- **Multi drop (hanya Domestik):** tombol **+ Tujuan** menambah Tujuan 2 sampai 4 (maks. 4 tujuan, bisa dihapus). Tanpa tombol + Pick up (satu asal). Disimpan di `rinci.tujuanLain`; jenis lain mengosongkannya. Rute di Daftar, Excel, Performa, dan pembanding tarif memakai semua tujuan (`ruteTrailer`).
+- **Belum:** tahap Bongkar masih satu untuk semua tujuan (belum per drop).

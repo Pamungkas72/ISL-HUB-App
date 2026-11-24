@@ -42,4 +42,7 @@ eq("tindakan: bayar (Cash, resi ada), resi belum diisi, POD belum sampai, berang
   T.cocokTindakan(tj(7, { jenis: "impor", vendor: "X", tglKirim: hr, tahap: t("siap") }), "berangkat", now), T.cocokTindakan(tj(8, { jenis: "impor", tglKirim: hr }), "armada", now), T.cocokTindakan(jobs[3], "pod", now)], [true, true, false, false, true, false, true, true, false]);
 const bt = T.bandingTarif([J(11, { jenis: "impor", vendor: "A", cost: 2400000, tahap: t("siap", "pickup") }), J(12, { jenis: "impor", vendor: "B", cost: 2100000, tahap: t("siap", "pickup") }), J(13, { jenis: "impor", vendor: "A", cost: 2600000, tahap: t("siap", "pickup") }), J(14, { jenis: "impor", vendor: "A", cost: 2600000, tahap: t("siap", "pickup"), tujuan: "Bekasi" })], r);
 eq("pembanding tarif: hanya rute dengan 2 pelaku, termurah di depan", bt.map((x) => [x.rute, x.murah, x.pelaku.map((o) => [o.nama, o.rata])]), [["Lini 1 → Cikarang", "B", [["B", 2100000], ["A", 2500000]]]]);
+const md = J(9, { jenis: "domestik", tujuan: "Bekasi", tujuanLain: ["Karawang", "Cikampek"] });
+eq("multi drop: semua tujuan dan rute", [T.semuaTujuan(md), T.ruteTrailer(md)], [["Bekasi", "Karawang", "Cikampek"], "Lini 1 → Bekasi → Karawang → Cikampek"]);
+eq("tanpa tujuan lain: rute lama tetap", T.ruteTrailer(J(8, { jenis: "impor" })), "Lini 1 → Cikarang");
 process.exit(gagal ? 1 : 0);

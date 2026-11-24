@@ -13,6 +13,10 @@ export const JENIS = {
 export const UKURAN = ["20", "40", "40HC"];
 export const jenisTrailer = (j) => (JENIS[rinci(j).jenis] ? rinci(j).jenis : "");
 export const tahapJenis = (jenis) => (JENIS[jenis] || JENIS.impor).tahap;
+/** Tujuan Trailer: tujuan pertama + tujuan lain (multi drop, hanya Domestik, maks. 4 tujuan). */
+export const MAKS_TUJUAN = 4;
+export const semuaTujuan = (j) => { const r = rinci(j); return [r.tujuan, ...(r.tujuanLain || [])].filter(Boolean); };
+export const ruteTrailer = (j) => [rinci(j).asal, ...semuaTujuan(j)].filter(Boolean).join(" → ");
 export const internal = P.internal;
 const tahapSelesai = (j) => { const r = rinci(j), t = tahapJenis(r.jenis); return t.filter(([k]) => r.tahap && r.tahap[k]).length; };
 /** Tahap yang sudah selesai berurutan: tahap tidak boleh dilompati. */
@@ -63,7 +67,7 @@ export function hitungTrailer(jobs, r, now = hariIni()) {
   return {
     order: order.length, ritase: rit.length, persenTerlaksana: order.length ? Math.round((rit.length / order.length) * 100) : null,
     cost: biaya(rit), costVendor: biaya(vend), costInternal: biaya(int), costPerRitase: rit.length ? Math.round(biaya(rit) / rit.length) : 0,
-    perJenis, perVendor: kelompok(rit, (j) => (internal(j) ? "Internal (uang jalan)" : rinci(j).vendor)), perRute: kelompok(rit, (j) => [rinci(j).asal, rinci(j).tujuan].filter(Boolean).join(" → ")).slice(0, 8),
+    perJenis, perVendor: kelompok(rit, (j) => (internal(j) ? "Internal (uang jalan)" : rinci(j).vendor)), perRute: kelompok(rit, ruteTrailer).slice(0, 8),
     perMinggu: [...minggu.values()].sort((a, b) => a.k.localeCompare(b.k)),
     tungguPod: tunggu.length, perluBayar: bayar.length, nilaiPerluBayar: bayar.reduce((a, j) => a + cost(j), 0),
     umurPod: [["0-3", 0, 3], ["4-7", 4, 7], ["8-14", 8, 14], [">14", 15, 1e9]].map(([l, a, b]) => ({ l, n: tunggu.filter((j) => umurPod(j, now) >= a && umurPod(j, now) <= b).length })),
@@ -85,6 +89,6 @@ export function cocokTindakan(j, id, now = hariIni()) {
 /** Pembanding tarif per rute: rata-rata cost per ritase tiap vendor/internal pada rute yang sama; hanya rute dengan 2 pelaku atau lebih. murah = pelaku dengan rata-rata terendah. */
 export function bandingTarif(jobs, r) {
   const rit = jobs.filter((j) => j.status !== "batal" && jenisTrailer(j) && dlm(rinci(j).tglKirim || tglOrder(j), r) && kemajuan(j) >= 2 && cost(j) > 0), m = new Map();
-  rit.forEach((j) => { const q = rinci(j), rute = [q.asal, q.tujuan].filter(Boolean).join(" → "), nama = internal(j) ? "Internal" : q.vendor; if (!rute) return; const v = m.get(rute) || new Map(), o = v.get(nama) || { nama, n: 0, total: 0 }; o.n++; o.total += cost(j); v.set(nama, o); m.set(rute, v); });
+  rit.forEach((j) => { const q = rinci(j), rute = ruteTrailer(j), nama = internal(j) ? "Internal" : q.vendor; if (!rute) return; const v = m.get(rute) || new Map(), o = v.get(nama) || { nama, n: 0, total: 0 }; o.n++; o.total += cost(j); v.set(nama, o); m.set(rute, v); });
   return [...m].map(([rute, v]) => { const l = [...v.values()].map((o) => ({ nama: o.nama, n: o.n, rata: Math.round(o.total / o.n) })).sort((a, b) => a.rata - b.rata); return { rute, pelaku: l, murah: l[0].nama, n: l.reduce((a, o) => a + o.n, 0) }; }).filter((x) => x.pelaku.length >= 2).sort((a, b) => b.n - a.n).slice(0, 6);
 }
