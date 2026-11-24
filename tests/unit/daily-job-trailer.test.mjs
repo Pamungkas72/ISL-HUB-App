@@ -27,4 +27,6 @@ eq("per jenis", k.perJenis.map((o) => [o.nama, o.order, o.ritase, o.cost]), [["I
 eq("vendor dan internal", k.perVendor.map((o) => [o.nama, o.ritase]), [["CV A", 2], ["Internal (uang jalan)", 2], ["CV B", 1]]);
 eq("risiko: tunggu POD, dibayar tanpa POD, siap tagih", [k.tungguPod, k.tanpaPod, k.nilaiTanpaPod, k.siapTagih], [2, 1, 2000000, 1]);
 eq("umur POD per kelompok", k.umurPod.map((o) => o.n), [0, 0, 2, 0]);
+const u = T.batalkanTahap(jobs[5]);
+eq("batalkan tahap terakhir (POD) mengosongkan pod", [u.pod, u.tglPod, !!u.tahap.pod, !!u.tahap.mtreturn], ["belum", null, false, true]);
 process.exit(gagal ? 1 : 0);

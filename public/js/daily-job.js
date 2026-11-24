@@ -13,7 +13,8 @@ import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 import * as TR from "./daily-job-tracking-hitung.js";
-import { htmlFormTracking, chipPil, dataFormTracking } from "./daily-job-tracking.js";
+import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail } from "./daily-job-tracking.js";
+import * as TL from "./daily-job-trailer-hitung.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 import { bukaFormKelompok, hapusKelompok } from "./akun-divisi.js";
@@ -156,7 +157,7 @@ const kelasSt = (j, now) => (j.status === "selesai" ? "ok" : j.status === "batal
 const ikonSt = (j, now, kecil) => { const k = kelasSt(j, now); return `<span class="dj-ik dj-ik--${k}${kecil ? " dj-ik--k" : ""}" aria-hidden="true">${IK_ST[k]}</span>`; };
 const chip = (k, t) => `<span class="dj-chip dj-chip--${k}">${t}</span>`;
 const chipPod = (j, now) => (TR.podKembali(j) ? chip("ok", "POD kembali") : chip(H.terlambat(j, now) ? "bahaya" : "warn", "POD belum"));
-const chipTagih = (j) => { const t = TR.rinci(j).tagihan || "belum"; return chip(t === "konfirmasi" ? "ok" : t === "dikirim" ? "info" : "mu", t === "belum" ? "Tagihan –" : TR.TAGIHAN[t]); };
+const chipTagih = (j) => { if (TL.jenisTrailer(j)) return TL.dibayarTanpaPod(j) ? chip("bahaya", "Dibayar · POD belum") : TL.podKembali(j) ? chip("ok", TL.fase(j) === "siapTagih" ? "Siap ditagih" : "Selesai") : chip("info", ((TL.tahapBerikut(j) || [])[1] || "–")); const t = TR.rinci(j).tagihan || "belum"; return chip(t === "konfirmasi" ? "ok" : t === "dikirim" ? "info" : "mu", t === "belum" ? "Tagihan –" : TR.TAGIHAN[t]); };
 const rute = (j) => { const r = TR.rinci(j); return [r.asal, r.tujuan].filter(Boolean).map(e).join(" → ") || "–"; };
 /** Isi tengah kartu HP menurut profil kelompok. */
 function isiKartu(j, now) {
@@ -186,7 +187,7 @@ const WARNA_ST = { aktif: "var(--sky)", tunggu: "var(--accent)", selesai: "var(-
 /** Tabel desktop Tracking: Pengiriman, Rute, Armada, Vendor, Tiba, POD, Tagihan. */
 function htmlTabelTracking(l, now) {
   const ada = pilihAktif(), semua = l.length > 0 && l.every((j) => S.pilih.has(j.id));
-  return `<div class="mr-kartu dj-kartu dj-tbw"><table class="dj-tb"><thead><tr>${ada ? `<th class="dj-tb__c mr-th-cek">${cbx(semua, "cb-semua")}</th>` : `<th class="dj-tb__c"></th>`}<th>Pengiriman</th><th>Rute</th><th>Armada</th><th>Vendor</th><th>Tiba</th><th>POD</th><th>Tagihan</th><th class="dj-tb__m"></th></tr></thead><tbody>
+  return `<div class="mr-kartu dj-kartu dj-tbw"><table class="dj-tb"><thead><tr>${ada ? `<th class="dj-tb__c mr-th-cek">${cbx(semua, "cb-semua")}</th>` : `<th class="dj-tb__c"></th>`}<th>Pengiriman</th><th>Rute</th><th>Armada</th><th>Vendor</th><th>Tiba</th><th>POD</th><th>Tahap · bayar</th><th class="dj-tb__m"></th></tr></thead><tbody>
   ${l.map((j, i) => { const r = TR.rinci(j); return `<tr class="${S.pilih.has(j.id) ? "is-pilih" : ""}" data-dj="buka" data-id="${e(j.id)}" tabindex="0">${ada ? `<td class="dj-tb__c mr-td-cek">${cbx(S.pilih.has(j.id), "cb", j.id)}</td>` : `<td class="dj-tb__c"><button type="button" class="dj-cb0" data-dj="cb0" data-id="${e(j.id)}" title="Pilih pengiriman" aria-label="Pilih pengiriman"></button></td>`}
     <td><div class="dj-tb__j">${ikonSt(j, now, true)}<div><b>${e(r.noDo || j.judul)}</b><small>${e(j.customer || "")}${infoJob(j)}</small></div></div></td><td>${rute(j)}</td><td>${e(j.kategori || "–")}<small class="dj-tb__sb">${e(r.plat || "")}</small></td><td>${e(r.vendor || "Internal")}</td>
     <td class="dj-tb__t"><span>${tglPendek(j)}</span>${badgeTarget(j, now)}</td><td>${chipPod(j, now)}</td><td>${chipTagih(j)}</td><td class="dj-tb__m">${ada ? "" : menuJob(j, l.length > 3 && i >= l.length - 2)}</td></tr>`; }).join("")}</tbody></table></div>`;
@@ -234,7 +235,8 @@ function htmlBerkasDetail(j) {
 function htmlInfoDetail(j) {
   const kv = (k, v) => `<div><span>${k}</span><b>${v || "–"}</b></div>`;
   if (profilKel(j.kelompokId) === "tracking") { const r = TR.rinci(j), cost = r.cost ? "Rp" + Number(r.cost).toLocaleString("id-ID") : "";
-    return `<div class="mr-kartu dj-kartu dj-info"><div class="dj-kv">${kv("Customer", e(j.customer))}${kv("Rute", rute(j))}${kv("No. DO", e(r.noDo))}${kv("Armada", e([j.kategori, r.plat].filter(Boolean).join(" · ")))}${kv("Vendor", e(r.vendor || "Internal"))}${kv("Driver", e([r.driver, r.telp].filter(Boolean).join(" · ")))}${kv("Pembayaran · Cost", e([TR.BAYAR[r.bayar], cost].filter(Boolean).join(" · ")))}${kv("Kirim", e(fmtTgl(r.tglKirim)))}${kv("Target tiba", e(fmtTgl(j.tglTarget)))}${kv("POD", r.pod === "kembali" ? "Kembali " + e(fmtTgl(r.tglPod)) : "Belum kembali")}${kv("Tagihan vendor", e(TR.TAGIHAN[r.tagihan || "belum"]))}${kv("PIC", e(j.pic))}</div>${j.deskripsi ? `<p class="dj-desk">${e(j.deskripsi)}</p>` : ""}</div>`; }
+    const trl = htmlTrailerDetail(j, !S.lihatSaja, H.hariIni()), tambah = TL.jenisTrailer(j) ? kv("Kontainer", e([r.kontainer, r.ukuran && r.ukuran + "′"].filter(Boolean).join(" · "))) + kv("Pelayaran · Depo MT", e([r.pelayaran, r.depo].filter(Boolean).join(" · "))) + kv("Tanggal bayar vendor", e(fmtTgl(r.tglBayar))) + kv("Janji POD", e(fmtTgl(r.janjiPod))) : "";
+    return trl + `<div class="mr-kartu dj-kartu dj-info"><div class="dj-kv">${kv("Customer", e(j.customer))}${kv("Rute", rute(j))}${tambah}${kv("No. DO", e(r.noDo))}${kv("Armada", e([j.kategori, r.plat].filter(Boolean).join(" · ")))}${kv("Vendor", e(r.vendor || "Internal"))}${kv("Driver", e([r.driver, r.telp].filter(Boolean).join(" · ")))}${kv("Pembayaran · Cost", e([TR.BAYAR[r.bayar], cost].filter(Boolean).join(" · ")))}${kv("Kirim", e(fmtTgl(r.tglKirim)))}${kv("Target tiba", e(fmtTgl(j.tglTarget)))}${kv("POD", r.pod === "kembali" ? "Kembali " + e(fmtTgl(r.tglPod)) : "Belum kembali")}${TL.jenisTrailer(j) ? "" : kv("Tagihan vendor", e(TR.TAGIHAN[r.tagihan || "belum"]))}${kv("PIC", e(j.pic))}</div>${j.deskripsi ? `<p class="dj-desk">${e(j.deskripsi)}</p>` : ""}</div>`; }
   return `<div class="mr-kartu dj-kartu dj-info"><div class="dj-kv">${kv("Customer", e(j.customer))}${kv("Kategori", e(katJob(j)))}${kv("Masuk", e(fmtTgl(j.tglMasuk)))}${kv(j.status === "selesai" ? "Selesai" : "Mulai", e(fmtTgl(j.status === "selesai" ? j.tglSelesai : j.tglMulai)))}${kv("Prioritas · Bobot", e((H.PRIORITAS[j.prioritas] || "–") + " · " + (H.BOBOT[j.bobot] || "–")))}${kv("Kelompok", e(namaKel(j.kelompokId)))}</div>${j.deskripsi ? `<p class="dj-desk">${e(j.deskripsi)}</p>` : ""}</div>`;
 }
 function entriThread(j) {
@@ -635,6 +637,17 @@ function formJob(j) {
   $("#djf-target").oninput = (ev) => { manual = true; $("#djf-tgt-info").textContent = ""; const a = $(".dj-alasan"); if (a) a.hidden = !d.tglTarget || ev.target.value === d.tglTarget; };
   $("#djf-berkas").onchange = (ev) => { berkasBaru.push(...ev.target.files); ev.target.value = ""; tampilBaru(); };
 }
+/** Tahap Trailer dari detail: tandai tahap berikut, batalkan tahap terakhir, atau centang dokumen. Menyimpan ke Firestore lalu menyegarkan tampilan. */
+async function ubahTahap(a, id, i) {
+  const j = jobId(id); if (!j || S.lihatSaja) return; let r = TR.rinci(j);
+  const sekarang = new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 16); // WIB
+  if (a === "t-tahap") { if (!TL.tahapBerikut(j)) return; r = TL.tandaiTahap(j, sekarang); }
+  else if (a === "t-undo") { if (!(await konfirmasi("Batalkan tahap terakhir?", "Tahap terakhir yang selesai dikembalikan ke belum.", "Batalkan tahap"))) return; r = TL.batalkanTahap(j); }
+  else r = { ...r, dok: { ...(r.dok || {}), [i]: !(r.dok && r.dok[i]) } };
+  const baru = { ...j, rinci: r }, selesai = TL.selesaiOtomatis(baru) && j.status !== "batal", data = { rinci: r, diubah: serverTimestamp(), ...(selesai ? { status: "selesai", tglSelesai: r.tglPod || H.hariIni() } : j.status === "selesai" && !TL.selesaiOtomatis(baru) ? { status: "proses", tglSelesai: null } : {}) };
+  try { await updateDoc(doc(db, "dj_job", id), data); Object.assign(j, { ...data, diubah: null }); segarkanKop(); segarkanKanan(); render(); }
+  catch (err) { console.error(err); toast("Belum tersimpan: " + pesanUnggah(err), "bahaya"); }
+}
 /** HP: formulir Tracking tiga langkah; desktop: semua bagian terlihat. */
 function langkahTracking(n) {
   const form = $("#dj-form"); if (!form || form.dataset.profil !== "tracking") return; const hp = layarHp(); form._lg = n;
@@ -647,16 +660,18 @@ function langkahTracking(n) {
 function aturChipTracking(t) {
   const form = $("#dj-form"), k = t.dataset.k, v = t.dataset.v; if (!form) return; form.dataset[k] = v;
   t.closest(".mr-seg").querySelectorAll(".mr-chip").forEach((c) => c.classList.toggle("is-aktif", c === t));
-  if (k === "sub") { const kat = $("#djf-kat"); kat.innerHTML = TR.SUBDIVISI[v].kategori.map((x) => `<option>${e(x)}</option>`).join(""); kat.dispatchEvent(new Event("change")); }
+  if (k === "sub") { document.querySelectorAll(".dj-besar").forEach((x) => x.classList.toggle("dj-sembunyi", v !== "besar")); document.querySelectorAll(".dj-kecil").forEach((x) => x.classList.toggle("dj-sembunyi", v === "besar")); const kat = $("#djf-kat"); kat.innerHTML = TR.SUBDIVISI[v].kategori.map((x) => `<option>${e(x)}</option>`).join(""); kat.dispatchEvent(new Event("change")); }
   if (k === "pod") { const w = $(".dj-tglpod"); if (w) w.classList.toggle("dj-sembunyi", v !== "kembali"); if (v === "kembali" && !$("#djt-tglpod").value) $("#djt-tglpod").value = H.hariIni(); }
 }
-const rinciDariForm = (form, v) => ({ sub: form.dataset.sub || "", asal: v("djt-asal").trim(), tujuan: v("djt-tujuan").trim(), noDo: v("djt-do").trim(), tglKirim: v("djt-kirim") || null, vendor: v("djt-vendor").trim(), driver: v("djt-driver").trim(), telp: v("djt-telp").trim(), plat: v("djt-plat").trim().toUpperCase(), bayar: form.dataset.bayar || "cash", cost: Number(v("djt-cost").replace(/\D/g, "")) || 0, pod: form.dataset.pod || "belum", tglPod: form.dataset.pod === "kembali" ? v("djt-tglpod") || H.hariIni() : null, tagihan: form.dataset.tagihan || "belum" });
+const rinciDariForm = (form, v) => ({ ...(form._d && form._d.rinci), ...(form.dataset.sub === "besar" ? { jenis: TR.jenisDariKategori(v("djf-kat")) || undefined, kontainer: v("djt-kont").trim().toUpperCase(), ukuran: v("djt-ukuran"), pelayaran: v("djt-pelayaran").trim(), depo: v("djt-depo").trim(), tglBayar: v("djt-tglbayar") || null, janjiPod: v("djt-janji") || null } : {}), sub: form.dataset.sub || "", asal: v("djt-asal").trim(), tujuan: v("djt-tujuan").trim(), noDo: v("djt-do").trim(), tglKirim: v("djt-kirim") || null, vendor: v("djt-vendor").trim(), driver: v("djt-driver").trim(), telp: v("djt-telp").trim(), plat: v("djt-plat").trim().toUpperCase(), bayar: form.dataset.bayar || "cash", cost: Number(v("djt-cost").replace(/\D/g, "")) || 0, pod: form.dataset.pod || "belum", tglPod: form.dataset.pod === "kembali" ? v("djt-tglpod") || H.hariIni() : null, tagihan: form.dataset.tagihan || "belum" });
 const tampilBaru = () => { const w = $("#djf-file"); w.querySelectorAll(".dj-fl--baru").forEach((x) => x.remove()); berkasBaru.forEach((b, i) => w.insertAdjacentHTML("beforeend", `<div class="dj-fl dj-fl--baru"><span>${ikon("upload", 13)} ${e(b.name)} <small>(baru)</small></span><button type="button" class="mr-ikonbtn" data-dj="baru-lepas" data-i="${i}" aria-label="Batalkan">${ikon("tutup", 14)}</button></div>`)); };
 
 async function simpanJob() {
   const form = $("#dj-form"), d = form._d, v = (id) => ($("#" + id) || {}).value || "";
   const tr = form.dataset.profil === "tracking", rinci = tr ? rinciDariForm(form, v) : null;
   const judul = tr ? TR.judulTracking(rinci.noDo, v("djt-cust")) : v("djf-judul").trim(), target = v("djf-target"), kel = S.kelola ? v("djf-kel") || d.kelompokId : S.kelompokSaya;
+  if (tr && rinci.jenis) { const t = rinci.tahap || {}; if ((rinci.vendor || rinci.plat || rinci.driver) && !t.siap) rinci.tahap = { ...t, siap: new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 16) }; } // armada terisi = Siap
+  if (tr && rinci.jenis && rinci.tglBayar && rinci.pod !== "kembali" && rinci.vendor && !/^internal$/i.test(rinci.vendor) && !rinci.janjiPod) { langkahTracking(3); return toast("Sudah dibayar sebelum POD kembali: isi janji POD kembali.", "bahaya"); }
   if (tr) { const kurang = [[1, !v("djt-cust").trim(), "customer"], [1, !rinci.asal, "asal"], [1, !rinci.tujuan, "tujuan"], [1, !rinci.noDo, "no. DO / surat jalan"]].find((x) => x[1]); if (kurang) { langkahTracking(kurang[0]); return toast("Isi " + kurang[2] + ".", "bahaya"); } }
   const baruKat = !tr && v("djf-kat") === "__baru", kat = baruKat ? H.rapikanKategori(v("djf-kat-baru"), katDari(kel)) : v("djf-kat");
   if (!judul) return toast("Isi judul job.", "bahaya");
@@ -675,7 +690,7 @@ async function simpanJob() {
     for (const b of berkasBaru) { const path = `dailyjob/${kel}/${id}/${Date.now()}-${b.name.replace(/[^\w.\-]+/g, "_")}`; file.push({ nama: b.name, path, url: await unggahBlob(path, b, b.type || "application/octet-stream"), ukuran: b.size, tipe: b.type || "", oleh: S.u.nama || S.u.email, tgl: H.hariIni() }); }
     const berubahTarget = !!d.id && !!d.tglTarget && d.tglTarget !== target, alasan = v("djf-alasan").trim();
     if (berubahTarget && !alasan && !adalahKepala(d)) { tombol.disabled = false; tombol.textContent = "Simpan"; return toast("Isi alasan perubahan target.", "bahaya"); }
-    const status = tr && TR.selesaiOtomatis(rinci) && v("djf-status") !== "batal" ? "selesai" : v("djf-status"), data = {
+    const status = tr && (rinci.jenis ? TL.selesaiOtomatis({ rinci }) : TR.selesaiOtomatis(rinci)) && v("djf-status") !== "batal" ? "selesai" : v("djf-status"), data = {
       judul, kategori: kat, kategoriAjuan: ajuanId, customer: tr ? v("djt-cust").trim() : v("djf-cust").trim(), ...(tr ? { rinci } : {}), pic: v("djf-pic").trim(), kelompokId: kel, deskripsi: v("djf-desk").trim(), tglMasuk: v("djf-masuk") || H.hariIni(), tglMulai: v("djf-mulai") || null, tglTarget: target,
       status, alasanTunda: status === "tunggu" ? v("djf-tunda").trim() : null, ...(!d.id || target !== d.tglTarget ? { targetTingkat: tingkatSaya(kel) } : {}), tglSelesai: status === "selesai" ? v("djf-selesai") || (tr && rinci.tglPod) || H.hariIni() : null, prioritas: v("djf-prio"), bobot: +v("djf-bobot") || 2, file, tautan: d.tautan, catatan: d.catatan || [],
       dibuatOleh: d.dibuatOleh || S.u.uid, dibuatNama: d.dibuatNama || S.u.nama || S.u.email, dibuatPada: d.dibuatPada || H.hariIni(), diubah: serverTimestamp(),
@@ -833,6 +848,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "kat") { S.fKat = S.fKat === v ? "" : v; return render(); }
   if (a === "pic") { S.fPic = S.fPic === v ? "" : v; return render(); }
   if (a === "t-set") return aturChipTracking(t);
+  if (a === "t-tahap" || a === "t-undo" || a === "t-dok") return ubahTahap(a, id, t.dataset.i);
   if (a === "t-next") { const f = $("#dj-form"); return langkahTracking(Math.min(3, (f._lg || 1) + 1)); }
   if (a === "t-prev") { const f = $("#dj-form"); return langkahTracking(Math.max(1, (f._lg || 1) - 1)); }
   if (a === "sub") { S.sub = v; S.hal = 0; S.fKat = ""; return render(); }
