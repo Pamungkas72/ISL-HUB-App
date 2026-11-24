@@ -5,7 +5,7 @@ import * as DZ from "./daily-job-distribusi-hitung.js";
 
 const rp = (n) => "Rp" + Math.round(n || 0).toLocaleString("id-ID");
 const f = (l, i, k = "") => `<label class="mr-f ${k}"><span>${l}</span>${i}</label>`;
-const num = (id, v, ph = "") => `<input id="${id}" inputmode="numeric" value="${e(v ?? "")}" placeholder="${e(ph)}">`;
+const num = (id, v, ph = "") => `<input id="${id}" inputmode="numeric" value="${e(v || "")}" placeholder="${e(ph)}">`;
 const chip = (k, t) => `<span class="dj-chip dj-chip--${k}">${t}</span>`;
 const tglP = (s) => (s ? new Date(String(s).slice(0, 10) + "T00:00:00Z").toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 
@@ -17,7 +17,7 @@ export function htmlUangJalan({ tarif, menunggu, rute, jenis, buka, nilai = {} }
 }
 export function htmlKalkulator(rute, jenis, n = {}) {
   const rasio = n.rasio ?? DZ.RASIO_BBM[jenis === "Grand Max Blind Van" ? "Blind Van" : jenis] ?? "";
-  return `<div class="dj-uj__k"><div class="dj-g2">${f("Rute", `<input id="uj-rute" value="${e(n.rute ?? rute ?? "")}" placeholder="mis. Cikarang → Garut">`, "dj-lebar")}${f("Jarak pulang-pergi (km)", num("uj-jarak", n.jarak))}${f(`Rasio BBM (1 liter = … km)${jenis ? ` <small>${e(jenis)}</small>` : ""}`, num("uj-rasio", rasio))}${f("Harga solar / liter (Rp)", num("uj-solar", n.solar ?? 6800))}${f("Tol (Rp)", num("uj-tol", n.tol))}${f("TKBM (Rp) <small>opsional</small>", num("uj-tkbm", n.tkbm))}${f("Retribusi / mel (Rp)", num("uj-retr", n.retribusi))}${f("Insentif driver borongan (Rp)", num("uj-ins", n.insentif))}</div>
+  return `<div class="dj-uj__k"><div class="dj-g2">${f("Rute", `<input id="uj-rute" value="${e(n.rute ?? rute ?? "")}" placeholder="mis. Cikarang → Garut">`, "dj-lebar")}${f("Jarak pulang-pergi (km)", num("uj-jarak", n.jarak))}${f(`Rasio BBM (1 liter = … km)${jenis ? ` <small>${e(jenis)}</small>` : ""}`, num("uj-rasio", rasio))}${f("Harga solar / liter (Rp)", num("uj-solar", n.solar || 6800))}${f("Tol (Rp)", num("uj-tol", n.tol))}${f("TKBM (Rp) <small>opsional</small>", num("uj-tkbm", n.tkbm))}${f("Retribusi / mel (Rp)", num("uj-retr", n.retribusi))}${f("Insentif driver borongan (Rp)", num("uj-ins", n.insentif))}</div>
   <div id="uj-hasil" class="dj-uj__hasil"></div>
   <div class="dj-uj__tb"><button type="button" class="mr-btn" data-dj="uj-slip">Cetak slip untuk driver</button><button type="button" class="mr-btn" data-dj="uj-ajukan">Ajukan sebagai tarif tetap</button><button type="button" class="mr-btn mr-btn--utama" data-dj="uj-pakai-hitung">Pakai untuk pengiriman ini</button></div><p class="mr-sub">Tarif tetap baru berlaku setelah disetujui admin.</p></div>`;
 }
