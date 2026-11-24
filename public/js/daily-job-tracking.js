@@ -84,7 +84,8 @@ export function htmlTrailerDetail(j, ubah, now) {
   const t = TL.tahapJenis(jn), n = TL.kemajuan(j), b = TL.tahapBerikut(j), id = e(j.id), umur = TL.umurPod(j, now);
   const stp = t.map(([k, l], i) => `<li class="${i < n ? "is-ok" : i === n ? "is-now" : ""}"><i></i><div><b>${l}</b><small>${r.tahap && r.tahap[k] ? fmtW(r.tahap[k]) : i === n ? "Berikutnya" : "–"}</small></div></li>`).join("");
   const dok = TL.JENIS[jn].dok.map((x, i) => `<button type="button" class="mr-chip${r.dok && r.dok[i] ? " is-aktif" : ""}" ${ubah ? `data-dj="t-dok" data-id="${id}" data-i="${i}"` : "disabled"} aria-pressed="${!!(r.dok && r.dok[i])}">${r.dok && r.dok[i] ? "✓ " : ""}${e(x)}</button>`).join("");
-  return `<div class="mr-kartu dj-kartu dj-trl"><h3>Tahap shipment · ${TL.JENIS[jn].nama}</h3><ol class="dj-stp">${stp}</ol>
+  const tj = TL.semuaTujuan(j), titik = [["P", "Pick up", r.asal], ...tj.map((x) => ["D", "Drop", x])].map(([k, l, x]) => `<li><span class="dj-chip dj-chip--${k === "P" ? "info" : "ok"}">${l}</span><div><b>${e(x || "–")}</b></div><span></span></li>`).join("");
+  return `<div class="mr-kartu dj-kartu dj-trl"><h3>Pengiriman · 1→${Math.max(1, tj.length)} · ${TL.JENIS[jn].nama}${r.ukuran ? ` ${r.ukuran === "40HC" ? "40 HC" : r.ukuran + "\u2032"}` : ""}</h3><ol class="dj-stp">${stp}</ol><h3>Titik</h3><ul class="dj-ttkl">${titik}</ul>
     ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-tahap" data-id="${id}">Tandai ${e(b[1])} selesai</button>` : ""}${n ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan tahap terakhir</button>` : ""}</div>` : ""}
     ${htmlPodBayar(j, ubah, TL.operasionalSelesai(j), umur)}<h3>Dokumen</h3><div class="dj-seg mr-seg">${dok}</div></div>`;
 }
@@ -92,18 +93,6 @@ export function htmlTrailerDetail(j, ubah, now) {
 export const rpJt = (n) => (n >= 1e6 ? "Rp " + (Math.round(n / 1e5) / 10).toLocaleString("id-ID") + " jt" : "Rp " + Math.round(n).toLocaleString("id-ID"));
 export const jt = (n) => (n ? (Math.round(n / 1e4) / 100).toLocaleString("id-ID") + " jt" : "–");
 export const tab = (judul, kolom, baris, ket = "") => `<section class="mr-kartu dj-kartu"><div class="dj-kh"><h3>${judul}</h3>${ket ? `<small class="mr-sub">${ket}</small>` : ""}</div><div class="dj-tw"><table class="dj-tbl"><thead><tr>${kolom.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${baris.length ? baris.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") : `<tr><td colspan="${kolom.length}" class="mr-sub">Belum ada data pada periode ini.</td></tr>`}</tbody></table></div></section>`;
-/** Performa Tracking Trailer: volume order, jenis, vendor, rute, cost, pembanding tarif; risiko POD dalam satu strip. k = hitungTrailer, banding = bandingTarif, bulanan = label minggu. */
-export function htmlPerformaTrailer(k, banding, labelMinggu) {
-  const kpi = (jd, nilai, ket, kelas = "") => `<div class="dj-kpi dj-kpi--statis ${kelas}"><span>${jd}</span><b>${nilai}</b><small>${ket}</small></div>`;
-  const risiko = k.perluBayar || k.tungguPod ? `<div class="dj-tind">${k.perluBayar ? `<span class="dj-chip dj-chip--bahaya">Perlu dibayar <b>${k.perluBayar}</b> · ${rpJt(k.nilaiPerluBayar)}</span>` : ""}${k.tungguPod ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${k.tungguPod}</b></span>` : ""}</div>` : "";
-  const mingguan = k.perMinggu.map((m) => [e(labelMinggu(m.k)), m.order, m.ritase]);
-  const bd = banding.map((b) => `<div class="dj-bt"><b>${e(b.rute)}</b><span>${b.pelaku.map((o) => `<i class="${o.nama === b.murah ? "is-murah" : ""}">${e(o.nama)} ${jt(o.rata)}${o.nama === b.murah ? " ✓" : ""}</i>`).join("")}</span></div>`).join("");
-  return `<div id="dj-dash">${risiko}<div class="dj-kpis">${kpi("Order masuk", k.order, `${k.ritase} terlaksana${k.persenTerlaksana != null ? ` (${k.persenTerlaksana}%)` : ""}`)}${kpi("Ritase", k.ritase, "shipment berjalan")}${kpi("Cost total", rpJt(k.cost), `Vendor ${jt(k.costVendor)} · uang jalan ${jt(k.costInternal)}`)}${kpi("Cost / ritase", rpJt(k.costPerRitase), "rata-rata")}</div>
-  <div class="dj-grid2e">${tab("Volume order per minggu", ["Minggu", "Order", "Ritase"], mingguan)}${tab("Jenis pengiriman", ["Jenis", "Order", "Ritase", "Vendor / Int.", "Cost", "Per rit"], k.perJenis.map((o) => [e(o.nama), o.order, o.ritase, `${o.vendor} / ${o.internal}`, jt(o.cost), jt(o.perRitase)]))}</div>
-  <div class="dj-grid2e">${tab("Vendor yang dipakai", ["Vendor", "Ritase", "Cost", "Tarif rata²", "POD telat"], k.perVendor.map((o) => [e(o.nama), o.ritase, jt(o.cost), jt(o.perRitase), o.pod ? `<b class="dj-merah">${o.pod}</b>` : 0]))}${tab("Rute teratas", ["Rute", "Ritase", "Cost", "Per ritase"], k.perRute.map((o) => [e(o.nama), o.ritase, jt(o.cost), jt(o.perRitase)]))}</div>
-  <section class="mr-kartu dj-kartu"><h3>Tarif per rute: siapa termurah</h3>${bd || `<p class="mr-sub">Muncul bila satu rute dikerjakan oleh dua vendor atau lebih (atau internal).</p>`}</section></div>`;
-}
-
 /** Panel detail Truk Distribusi: stepper (Siap, Pick up, Drop, POD), daftar titik bertanda waktu, tombol langkah berikut, dan risiko POD. */
 export function htmlDistribusiDetail(j, ubah, now) {
   const r = rinci(j); if (r.jenis !== "distribusi") return "";
@@ -112,16 +101,4 @@ export function htmlDistribusiDetail(j, ubah, now) {
   const tt = titik.map((x) => `<li class="${x.selesai ? "is-ok" : ""}"><span class="dj-chip dj-chip--${x.t === "P" ? "info" : "ok"}">${x.t === "P" ? "Pick up" : "Drop"}</span><div><b>${e(x.nama || "–")}</b><small>${e([x.kota, x.selesai ? fmtW(x.selesai) : ""].filter(Boolean).join(" · "))}</small></div><span>${x.selesai ? "✓" : ""}</span></li>`).join("");
   return `<div class="mr-kartu dj-kartu dj-trl"><h3>Pengiriman · ${e(DZ.pola(j) || "")} · ${e([j.kategori, r.bak].filter(Boolean).join(" "))}</h3><ol class="dj-stp">${stp}</ol><h3>Titik</h3><ul class="dj-ttkl">${tt}</ul>
     ${ubah ? `<div class="dj-trl__aksi">${b ? `<button type="button" class="mr-btn mr-btn--utama" data-dj="t-titik" data-id="${id}">Tandai ${e(b.label)} selesai</button>` : ""}${n > 1 || r.pod === "kembali" ? `<button type="button" class="mr-btn" data-dj="t-undo" data-id="${id}">Batalkan langkah terakhir</button>` : ""}</div>` : ""}${htmlPodBayar(j, ubah, n >= 3, DZ.umurPod(j, now))}</div>`;
-}
-
-/** Performa "Semua" subdivisi: ringkasan gabungan Tracking Trailer dan Truk Distribusi; rincian ada di tiap subdivisi. kt = hitungTrailer, kd = hitungDistribusi, armada = { lewat, urusan }. */
-export function htmlPerformaGabungan(kt, kd, armada) {
-  const tanpa = kt.perluBayar + kd.perluBayar, tunggu = kt.tungguPod + kd.tungguPod, order = kt.order + kd.order, rit = kt.ritase + kd.ritase, cost = kt.cost + kd.cost;
-  const risiko = tanpa || tunggu ? `<div class="dj-tind">${tanpa ? `<span class="dj-chip dj-chip--bahaya">Perlu dibayar <b>${tanpa}</b></span>` : ""}${tunggu ? `<span class="dj-chip dj-chip--warn">Tunggu POD <b>${tunggu}</b></span>` : ""}</div>` : "";
-  const kpi = (jd, n, ket) => `<div class="dj-kpi dj-kpi--statis"><span>${jd}</span><b>${n}</b><small>${ket}</small></div>`;
-  const baris = (l) => l.map(([a, b]) => `<div class="dj-uj__r"><span>${a}</span><b>${b}</b></div>`).join("");
-  const kartu = (jd, sub, isi) => `<section class="mr-kartu dj-kartu"><div class="dj-kh"><h3>${jd}</h3><button type="button" class="mr-btn" data-dj="sub" data-v="${sub}">Lihat rincian</button></div>${isi}</section>`;
-  return `<div id="dj-dash">${risiko}<div class="dj-kpis">${kpi("Order masuk", order, `${rit} terlaksana`)}${kpi("Ritase", rit, `Trailer ${kt.ritase} · Distribusi ${kd.ritase}`)}${kpi("Cost total", rpJt(cost), `Trailer ${jt(kt.cost)} · Distribusi ${jt(kd.cost)}`)}${kpi("Cost / ritase", rpJt(rit ? Math.round(cost / rit) : 0), "rata-rata gabungan")}</div>
-  <div class="dj-grid2e">${kartu("Tracking Trailer", "besar", baris([["Order masuk", kt.order], ["Ritase", kt.ritase], ["Cost total", rpJt(kt.cost)], ["Cost / ritase", rpJt(kt.costPerRitase)], ["Tunggu POD", kt.tungguPod], ["Perlu dibayar", kt.perluBayar ? `<span class="dj-merah">${kt.perluBayar} · ${rpJt(kt.nilaiPerluBayar)}</span>` : 0]]))}
-  ${kartu("Truk Distribusi", "kecil", baris([["Order masuk", kd.order], ["Ritase", `${kd.ritase} · ${kd.drop} titik drop`], ["Cost total", rpJt(kd.cost)], ["Cost / ritase", rpJt(kd.costPerRitase)], ["Perlu dibayar", kd.perluBayar ? `<span class="dj-merah">${kd.perluBayar}</span>` : 0], ["Armada: urusan 30 hari", armada.lewat ? `<span class="dj-merah">${armada.urusan} · ${armada.lewat} lewat</span>` : armada.urusan]]))}</div></div>`;
 }
