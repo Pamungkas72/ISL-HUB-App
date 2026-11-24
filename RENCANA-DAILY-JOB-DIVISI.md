@@ -110,3 +110,9 @@ Aturan murni di `daily-job-pod.js` (diuji `tests/unit/daily-job-pod.test.mjs`).
 - **Urutan formulir:** Customer → Subdivisi → **Jenis shipment** (Impor, Ekspor, Repo, Domestik; untuk Distribusi: Jenis armada) → rute. Jenis ditentukan sebelum rute.
 - **Multi drop (hanya Domestik):** tombol **+ Tujuan** menambah Tujuan 2 sampai 4 (maks. 4 tujuan, bisa dihapus). Tanpa tombol + Pick up (satu asal). Disimpan di `rinci.tujuanLain`; jenis lain mengosongkannya. Rute di Daftar, Excel, Performa, dan pembanding tarif memakai semua tujuan (`ruteTrailer`).
 - **Belum:** tahap Bongkar masih satu untuk semua tujuan (belum per drop).
+
+## Samakan Trailer dan Distribusi (24 Nov 2026, aturan pemilik)
+- **Prinsip:** tampilan Tracking Trailer dan Truk Distribusi sama; yang berbeda hanya logika dan data.
+- **Daftar dan formulir:** sudah satu kode (desain A).
+- **Detail:** judul kartu sejajar ("Pengiriman · 1→n · Jenis") dan daftar **Titik** (pick up + drop) juga di Trailer; dokumen dan POD/bayar tetap per logika.
+- **Performa (desain gabungan Opsi 2):** satu tampilan untuk dua subdivisi (`daily-job-performa-hitung.js`, `daily-job-performa.js`). **Subdivisi adalah filter** di panel Ubah (Semua, Truk Distribusi, Tracking Trailer; juga tetap di menu ⋮). Tab **Pengiriman** (KPI, volume per minggu, jenis, vendor, rute, tarif termurah, tipe bak bila ada Distribusi) dan tab **Armada dan sewa** (kepatuhan, kegiatan, sewa unit; tersembunyi bila filter = Trailer). Menggantikan Performa terpisah, ringkasan gabungan, dan tiga tab Distribusi.

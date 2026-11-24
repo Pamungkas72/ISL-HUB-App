@@ -13,14 +13,15 @@ import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 import * as TR from "./daily-job-tracking-hitung.js";
-import { htmlFormTracking, htmlTujuanLain, chipPil, dataFormTracking, htmlTrailerDetail, htmlPerformaTrailer, htmlDistribusiDetail, htmlTitik, titikAwal, htmlPerformaGabungan, htmlDokRows, htmlSaranDok, ringkasDok } from "./daily-job-tracking.js";
+import { htmlFormTracking, htmlTujuanLain, chipPil, dataFormTracking, htmlTrailerDetail, htmlDistribusiDetail, htmlTitik, titikAwal, htmlDokRows, htmlSaranDok, ringkasDok } from "./daily-job-tracking.js";
 import * as TL from "./daily-job-trailer-hitung.js";
 import * as DZ from "./daily-job-distribusi-hitung.js";
 import { htmlArmada, htmlFormKendaraan, htmlFormTugas, judulTugas } from "./daily-job-armada.js";
 import { namaAkun, tentukanPic } from "./daily-job-pic.js";
 import { aturHuruf, awalKalimat, kapital } from "./daily-job-huruf.js";
 import { lembarEkspor, namaBerkas } from "./daily-job-ekspor.js";
-import { htmlPerformaDistribusi } from "./daily-job-performa-dz.js";
+import { htmlPerformaTracking as htmlPerfTracking } from "./daily-job-performa.js";
+import { hitungPerforma } from "./daily-job-performa-hitung.js";
 import { htmlUangJalan, htmlHasilUj, buatSlipPdf } from "./daily-job-uangjalan.js";
 import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from "./daily-job-viewer.js";
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
@@ -488,13 +489,10 @@ function judulKelompok() {
   const ganti = S.kelola && S.kelompok.length > 1, nama = namaKel(S.kelAktif);
   h.innerHTML = `Daily Job${S.kelAktif ? `<span class="dj-kelt${ganti ? " dj-kelt--g" : ""}">${e(nama)}${ganti ? `${ikon("turun", 13)}<select class="dj-kelt__s" data-dj="kel-aktif" aria-label="Ganti kelompok">${opsi(S.kelompok.map((k) => [k.id, k.nama]), S.kelAktif)}</select>` : ""}</span>` : ""}`;
 }
-/** Performa Tracking (desain A): KPI pengiriman, volume per armada, beban per PIC. */
+/** Performa Tracking (desain gabungan Opsi 2): satu tampilan Trailer dan Distribusi, isinya mengikuti filter subdivisi. */
 function htmlPerformaTracking(now) {
-  const r = rentangAktif(), js = tampak(), ar = armadaKel();
-  if (S.sub === "kecil") return htmlPerformaDistribusi(DZ.hitungDistribusi(js, r, now), ar, DZ.ringkasRiwayat(ar, r), S.subPdz, now);
-  if (S.sub === "besar") return htmlPerformaTrailer(TL.hitungTrailer(js, r, now), TL.bandingTarif(js, r), (k) => "Mgg " + pBln(k));
-  const tg = DZ.tugasArmada(ar, now);
-  return htmlPerformaGabungan(TL.hitungTrailer(js, r, now), DZ.hitungDistribusi(js, r, now), { urusan: tg.length, lewat: tg.filter((x) => x.tingkat === "lewat").length });
+  const r = rentangAktif(), ar = armadaKel();
+  return htmlPerfTracking(hitungPerforma(tampak(), r, S.sub, now), ar, DZ.ringkasRiwayat(ar, r), S.subPdz, now, (k) => "Mgg " + pBln(k));
 }
 
 function render() {
@@ -504,7 +502,7 @@ function render() {
   const armLewat = profilAktif() === "tracking" && DZ.tugasArmada(armadaKel(), now).some((x) => x.tingkat === "lewat");
   const tabs = [["job", "Daftar job"], ...(profilAktif() === "tracking" ? [["armada", "Armada" + (armLewat ? '<i class="dj-tdot" title="Ada urusan lewat tempo" aria-label="Ada urusan lewat tempo"></i>' : "")]] : []), ["performa", "Performa"], ...(S.kelola ? [["kelompok", "Pengaturan"]] : [])];
   const pushOn = statusPush(S.u.uid) === "aktif";
-  const bukanBawaan = S.tab === "job" ? bukanBawaanDaftar() : periodeAktif() !== "bulan" || S.fPic || S.fKat || (S.kelola && S.fKel);
+  const bukanBawaan = S.tab === "job" ? bukanBawaanDaftar() : periodeAktif() !== "bulan" || S.fPic || S.fKat || S.sub || (S.kelola && S.fKel);
   const ikb = (aksi, ikn, judul, kelas = "") => `<button type="button" class="mr-btn dj-ib ${kelas}" data-dj="${aksi}" title="${judul}" aria-label="${judul}">${ikn}</button>`;
   const btnFilter = `<button type="button" class="mr-btn dj-ib" data-dj="filter" title="Filter"  aria-label="Filter">${ikon("filter", 16)}${bukanBawaan ? `<i class="dj-dot"></i>` : ""}</button>`;
   const BEL = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
@@ -513,7 +511,7 @@ function render() {
   const menuAlat = `<span class="dj-mw"><button type="button" class="mr-btn dj-ib" data-dj="menu" data-id="__alat" aria-haspopup="menu" aria-expanded="${S.menu === "__alat"}" title="Lainnya" aria-label="Lainnya">${ikon("titik", 18)}</button>${S.menu === "__alat" ? `<div class="dj-mn" role="menu">${subMenu}${mn("push", BEL, pushOn ? "Matikan notifikasi" : "Aktifkan notifikasi")}${profilAktif() === "tracking" ? mn("ekspor", ikon("download", 15), "Ekspor Excel shipment") : ""}${S.kelola && profilAktif() !== "tracking" ? mn("impor", ikon("upload", 15), "Impor dari Excel") : ""}${profilAktif() !== "tracking" || S.sub ? mn("pdf", ikon("download", 15), "Unduh laporan PDF") : ""}</div>` : ""}</span>`;
   const r = rentangAktif(), p = periodeAktif(), kelNama = namaKel(S.kelAktif);
   const ringkas = [kelNama, S.sub && TR.SUBDIVISI[S.sub].nama, S.fPic || "semua PIC", S.fKat || "semua kategori"].filter(Boolean).map(e).join(" · ");
-  const kepalaP = `<div class="dj-kepala"><div class="dj-kepala__t"><div class="dj-ttl">Performa</div><p class="mr-sub" style="margin:4px 0 0;font-size:14px">Menampilkan <b style="color:var(--text)">${e(judulPeriode(r))}</b> · ${ringkas} &nbsp;<button type="button" class="mr-link" data-dj="filter">Ubah</button></p></div><span class="dj-kepala__a">${menuAlat}</span></div>`;
+  const kepalaP = `<div class="dj-kepala"><div class="dj-kepala__t"><div class="dj-ttl">Performa</div><p class="mr-sub" style="margin:4px 0 0;font-size:14px;white-space:normal;overflow:visible">Menampilkan <b style="color:var(--text)">${e(judulPeriode(r))}</b> · ${ringkas} &nbsp;<button type="button" class="mr-link" data-dj="filter">Ubah</button></p></div><span class="dj-kepala__a">${menuAlat}</span></div>`;
   const n = S.pilih.size, bs = (a, i, t, k = "") => `<button type="button" class="mr-btn dj-bp${k ? " " + k : ""}" data-dj="${a}" title="${t}" aria-label="${t}">${ikon(i, 16)}<span class="dj-bp__t"> ${t}</span></button>`;
   const kepalaD = pilihAktif() ? `<div class="dj-kepala dj-kepala--d dj-kepala--pilih"><button type="button" class="mr-ikonbtn" data-dj="pilih-batal" title="Batal pilih" aria-label="Batal pilih">${ikon("tutup", 16)}</button><b class="dj-bp__n">${n} dipilih</b><button type="button" class="mr-link" data-dj="cb-semua">Semua</button><span class="mr-ruang"></span>${n ? `${bs("m-selesai", "cek", "Selesai")}${bs("m-pic", "orang", "Ubah PIC")}${bs("m-bagikan", "salin", "Bagikan")}${bs("m-hapus", "tong", "Hapus", "dj-bp--hapus")}` : ""}</div>`
     : `<div class="dj-kepala dj-kepala--d"><input type="search" id="dj-cari" class="dj-cari" placeholder="${profilAktif() === "tracking" ? "Cari customer, DO, kontainer, plat…" : "Cari judul, customer, PIC…"}" value="${e(S.cari)}" aria-label="Cari job">${btnFilter}${menuAlat}</div>`;
@@ -616,7 +614,7 @@ const bagKat = () => bagF("Kategori", `<select class="dj-sel" data-dj="f-kat" ar
 const bagTgl = (dari, sampai, vd, vs) => `<div class="dj-tgl"><input type="date" id="${dari}" value="${e(vd)}" aria-label="Dari"><input type="date" id="${sampai}" value="${e(vs)}" aria-label="Sampai"></div>`;
 /** Filter dashboard performa (desain Q2): periode, PIC, kategori. Status tidak dipakai agar angka tetap utuh. */
 function panelFilter() {
-  bukaSheet(`${bagF("Periode", segF("periode", [["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]], S.periode) + (S.periode === "rentang" ? bagTgl("dj-dari", "dj-sampai", S.dari, S.sampai) : ""))}${bagPic()}${bagKat()}`, "Selesai");
+  bukaSheet(`${bagF("Periode", segF("periode", [["bulan", "Bulan ini"], ["tahun", "Tahun ini"], ["rentang", "Rentang"]], S.periode) + (S.periode === "rentang" ? bagTgl("dj-dari", "dj-sampai", S.dari, S.sampai) : ""))}${profilAktif() === "tracking" ? bagF("Subdivisi", segF("f-sub", [["", "Semua"], ...Object.entries(TR.SUBDIVISI).map(([k, v]) => [k, v.nama])], S.sub)) : ""}${bagPic()}${bagKat()}`, "Selesai");
 }
 /** Filter daftar job: periode job dibuat (tglMasuk), PIC, kategori. Status ada di halaman daftar. */
 function panelFilterJob() {
@@ -1055,6 +1053,7 @@ document.addEventListener("click", async (ev) => {
   if (a === "t-tuj-tambah" || a === "t-tuj-hapus") return ubahTujuanLain(a, t);
   if (a === "t-next") { const f = $("#dj-form"); return langkahTracking(Math.min(3, (f._lg || 1) + 1)); }
   if (a === "t-prev") { const f = $("#dj-form"); return langkahTracking(Math.max(1, (f._lg || 1) - 1)); }
+  if (a === "f-sub") { S.sub = v; S.fKat = ""; S.hal = 0; render(); return panelFilter(); }
   if (a === "sub") { S.sub = v; S.menu = ""; S.hal = 0; S.fKat = ""; return render(); }
   if (a === "antre") { S.antre = v; S.hal = 0; S.pilih.clear(); return render(); }
   if (a === "hal" || a === "hal-ke") { S.hal = Math.max(0, a === "hal" ? S.hal + +v : +v); render(); return window.scrollTo({ top: 0 }); }
