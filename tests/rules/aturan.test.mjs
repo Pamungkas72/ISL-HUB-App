@@ -202,6 +202,11 @@ describe("Pendaftaran akun: hanya sales, dengan nomor WhatsApp", () => {
 
 describe("Daily Job: akses per kelompok", () => {
   const dj1 = () => ctx("uid-dj1", "dj1@isl.test"), dj2 = () => ctx("uid-dj2", "dj2@isl.test"), job = (k, judul = "Baru") => ({ kelompokId: k, judul, status: "baru" });
+  const arm = (k) => ({ kelompokId: k, plat: "B 1234 XYZ", jenisArmada: "CDD" });
+  it("anggota membuat dan membaca armada kelompoknya", async () => { await assertSucceeds(setDoc(doc(dj1(), "dj_armada/a1"), arm("k1"))); await assertSucceeds(getDoc(doc(dj1(), "dj_armada/a1"))); });
+  it("anggota tidak membuat armada di kelompok lain", () => assertFails(setDoc(doc(dj1(), "dj_armada/a2"), arm("k2"))));
+  it("anggota tidak membuat armada tanpa plat", () => assertFails(setDoc(doc(dj1(), "dj_armada/a3"), { kelompokId: "k1", plat: "" })));
+  it("anggota kelompok lain tidak membaca armada k1", async () => { await assertSucceeds(setDoc(doc(dj1(), "dj_armada/a4"), arm("k1"))); await assertFails(getDoc(doc(dj2(), "dj_armada/a4"))); });
   it("anggota membaca job kelompoknya", () => assertSucceeds(getDoc(doc(dj1(), "dj_job/j-k1"))));
   it("anggota tidak membaca job kelompok lain", () => assertFails(getDoc(doc(dj1(), "dj_job/j-k2"))));
   it("anggota menyaring daftar job kelompoknya", async () => { const { query, where } = await import("firebase/firestore"); await assertSucceeds(getDocs(query(collection(dj1(), "dj_job"), where("kelompokId", "==", "k1")))); });

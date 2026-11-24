@@ -460,6 +460,15 @@ service cloud.firestore {
         && request.resource.data.oleh == request.auth.uid && request.resource.data.nama is string && request.resource.data.nama.size() > 0 && request.resource.data.nama.size() <= 40);
       allow update, delete: if kelola('dj') && (isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && resource.data.oleh == request.auth.uid));
     }
+    // Armada Truk Distribusi (24 Nov 2026): kendaraan, masa berlaku KIR/STNK/pajak, jadwal servis, sewa unit, riwayat. Akses seperti dj_job: per kelompok.
+    match /dj_armada/{id} {
+      allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
+      allow create: if kelola('dj') && ((isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
+        && request.resource.data.plat is string && request.resource.data.plat.size() > 0 && request.resource.data.plat.size() <= 20);
+      allow update: if kelola('dj') && ((isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && djAnggota(request.resource.data.get('kelompokId', null))))
+        && request.resource.data.plat is string && request.resource.data.plat.size() > 0 && request.resource.data.plat.size() <= 20);
+      allow delete: if kelola('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
+    }
     match /dj_job/{id} {
       allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
       allow create: if kelola('dj') && ((isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
