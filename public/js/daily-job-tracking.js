@@ -1,6 +1,6 @@
 // Profil Tracking Daily Job: formulir pengiriman (desktop satu form berbagian, HP tiga langkah). Tampilan murni; logika di daily-job.js.
 import { e } from "./ui.js";
-import { SUBDIVISI, TAGIHAN, BAYAR, subdivisiDari, rinci } from "./daily-job-tracking-hitung.js";
+import { SUBDIVISI, TAGIHAN, BAYAR, subdivisiDari, rinci, jenisDariKategori } from "./daily-job-tracking-hitung.js";
 import * as TL from "./daily-job-trailer-hitung.js";
 import * as DZ from "./daily-job-distribusi-hitung.js";
 
@@ -20,14 +20,15 @@ export function htmlFormTracking(d, c) {
     <div class="mr-f dj-lebar"><span>Subdivisi</span>${chipPil("sub", st.sub, Object.entries(SUBDIVISI).map(([k, s]) => [k, s.nama]))}</div>
     <div class="dj-besar${st.sub === "besar" ? "" : " dj-sembunyi"}">${f("Asal *", inp("djt-asal", r.asal, "mis. Lini 1 Tj. Priok"))}${f("Tujuan *", inp("djt-tujuan", r.tujuan, "mis. Cikarang"))}</div>
     <div class="dj-kecil dj-lebar${st.sub === "besar" ? " dj-sembunyi" : ""}"><div class="dj-lng__sub">Titik pick up dan drop <small id="djt-pola" class="mr-sub"></small></div><div id="djt-titik">${htmlTitik(titikAwal(d))}</div><div class="dj-ttk__tb"><button type="button" class="mr-btn" data-dj="t-tambah" data-v="P">+ Pick up</button><button type="button" class="mr-btn" data-dj="t-tambah" data-v="D">+ Drop</button></div></div>
-    ${f("No. DO / surat jalan *", inp("djt-do", r.noDo, "mis. DO-2026-1187"))}${f("Kategori armada / jenis shipment *", `<select id="djf-kat">${opsiKat(st.sub, d.kategori)}</select>`)}
-    <div class="dj-besar dj-lebar${st.sub === "besar" ? "" : " dj-sembunyi"}"><div class="dj-lng__sub">Kontainer</div><div class="dj-g2">${f("No. kontainer", inp("djt-kont", r.kontainer, "mis. ABCU 1234567"))}${f("Ukuran", `<select id="djt-ukuran"><option value="">–</option>${TL.UKURAN.map((u) => `<option${u === r.ukuran ? " selected" : ""} value="${u}">${u === "40HC" ? "40 HC" : u + "\u2032"}</option>`).join("")}</select>`)}${f("Pelayaran", inp("djt-pelayaran", r.pelayaran))}${f("Depo MT (nama depo)", inp("djt-depo", r.depo))}</div></div>
+    <div class="dj-kecil${st.sub === "besar" ? " dj-sembunyi" : ""}">${f("No. DO / surat jalan *", inp("djt-do", r.noDo, "mis. DO-2026-1187", 'data-huruf="besar"'))}</div>${f("Kategori armada / jenis shipment *", `<select id="djf-kat">${opsiKat(st.sub, d.kategori)}</select>`)}
+    <div class="dj-besar dj-lebar${st.sub === "besar" ? "" : " dj-sembunyi"}"><div class="dj-lng__sub">Dokumen dan nomor referensi * <small class="mr-sub">isi minimal satu; surat jalan boleh menyusul</small></div><div id="djt-dok">${htmlDokRows(dokAwal(d))}</div><div class="dj-dok__tb"><button type="button" class="mr-btn" data-dj="t-dok-tambah" data-v="">+ Dokumen</button><span id="djt-dok-saran">${htmlSaranDok(d.kategori)}</span></div>
+    <div class="dj-lng__sub">Kontainer</div><div class="dj-g2">${f("No. kontainer", inp("djt-kont", r.kontainer, "mis. ABCU 1234567", 'data-huruf="besar"'))}${f("Ukuran", `<select id="djt-ukuran"><option value="">–</option>${TL.UKURAN.map((u) => `<option${u === r.ukuran ? " selected" : ""} value="${u}">${u === "40HC" ? "40 HC" : u + "\u2032"}</option>`).join("")}</select>`)}</div></div>
     <div class="dj-kecil${st.sub === "besar" ? " dj-sembunyi" : ""}">${f("Tipe bak", `<select id="djt-bak"><option value="">–</option>${DZ.TIPE_BAK.map((b) => `<option${b === r.bak ? " selected" : ""}>${b}</option>`).join("")}</select>`)}</div>
     ${f("Tanggal kirim", `<input type="date" id="djt-kirim" value="${e(r.tglKirim || d.tglMasuk || "")}">`)}${f(c.targetLabel, `<input type="date" id="djf-target" value="${e(d.tglTarget || "")}"${c.targetKunci ? " disabled" : ""}>`)}
     ${f("PIC", `<input id="djf-pic" list="djf-piclist" value="${e(d.pic || "")}"><datalist id="djf-piclist">${c.picList.map((p) => `<option value="${e(p)}">`).join("")}</datalist>`)}</div>
   <div class="dj-lng" data-lng="2"><h4 class="dj-lng__h">2. Armada dan vendor</h4>
     ${f("Vendor <small>kosongkan atau isi \"Internal\" bila armada sendiri</small>", `<input id="djt-vendor" list="djt-vendorlist" value="${e(r.vendor || "")}" placeholder="Nama vendor"><datalist id="djt-vendorlist">${c.vendorList.map((p) => `<option value="${e(p)}">`).join("")}</datalist>`, "dj-lebar")}
-    ${f("Nama driver", inp("djt-driver", r.driver))}${f("Telepon driver", inp("djt-telp", r.telp, "", 'inputmode="tel"'))}${f("Plat nomor", inp("djt-plat", r.plat, "mis. B 1234 XYZ"))}</div>
+    ${f("Nama driver", inp("djt-driver", r.driver))}${f("Telepon driver", inp("djt-telp", r.telp, "", 'inputmode="tel"'))}${f("Plat nomor", inp("djt-plat", r.plat, "mis. B 1234 XYZ", 'data-huruf="besar"'))}</div>
   <div class="dj-lng" data-lng="3"><h4 class="dj-lng__h">3. Biaya dan status</h4>
     <div id="djt-uj" class="dj-uj dj-lebar" hidden></div>
     <div class="mr-f dj-lebar"><span>Pembayaran vendor</span>${chipPil("bayar", st.bayar, Object.entries(BAYAR))}</div>
@@ -39,6 +40,16 @@ export function htmlFormTracking(d, c) {
     ${f("Catatan", `<textarea id="djf-desk" rows="2">${e(d.deskripsi || "")}</textarea>`, "dj-lebar")}${c.berkas}${c.lain}</div>`;
 }
 
+/** Dokumen dan nomor referensi Trailer (impor/repo/ekspor/domestik): satu baris = jenis dokumen + nomor. Judul job memakai nomor pertama; surat jalan boleh menyusul (wajib saat POD kembali). */
+export const DOK_JENIS = ["SPPB", "TILA", "PIB", "BL", "DO pelayaran", "Surat jalan", "PEB", "NPE", "Booking", "Lainnya"];
+const SARAN = { impor: ["SPPB", "TILA", "PIB", "BL", "DO pelayaran", "Surat jalan"], repo: ["SPPB", "TILA", "PIB", "BL", "DO pelayaran", "Surat jalan"], ekspor: ["PEB", "NPE", "Booking", "Surat jalan"], domestik: ["Surat jalan"] };
+export const saranDok = (kat) => SARAN[jenisDariKategori(kat)] || SARAN.impor;
+/** Baris awal: dari rinci.dokNomor; job lama dengan noDo jadi satu baris Surat jalan; job baru satu baris kosong berjenis saran pertama. */
+export const dokAwal = (d) => { const r = rinci(d); return Array.isArray(r.dokNomor) && r.dokNomor.length ? r.dokNomor : r.noDo ? [{ jenis: "Surat jalan", no: r.noDo }] : [{ jenis: saranDok(d.kategori || "Trailer Impor")[0], no: "" }]; };
+export const htmlDokRows = (rows) => rows.map((x, i) => `<div class="dj-dok" data-i="${i}"><select class="djt-dj" aria-label="Jenis dokumen">${[...new Set([...DOK_JENIS, x.jenis])].map((j) => `<option${j === x.jenis ? " selected" : ""}>${e(j)}</option>`).join("")}</select><input class="djt-dn" data-huruf="besar" value="${e(x.no || "")}" placeholder="Nomor dokumen" aria-label="Nomor dokumen"><button type="button" class="mr-ikonbtn" data-dj="t-dok-hapus" data-i="${i}" aria-label="Hapus dokumen">\u2715</button></div>`).join("");
+export const htmlSaranDok = (kat) => saranDok(kat).slice(0, 5).map((j) => `<button type="button" class="dj-chip dj-chip--mu dj-chip--btn" data-dj="t-dok-tambah" data-v="${e(j)}">+ ${e(j)}</button>`).join(" ");
+/** Ringkasan untuk judul dan kolom No. DO: nomor pertama yang terisi; jenis ikut ditulis kecuali Surat jalan dan DO pelayaran. */
+export const ringkasDok = (rows) => { const x = (rows || []).find((y) => String(y.no || "").trim()); return x ? (["Surat jalan", "DO pelayaran"].includes(x.jenis) ? x.no.trim() : `${x.jenis} ${x.no.trim()}`) : ""; };
 /** Titik awal formulir Distribusi: dari rinci.titik; job lama (asal/tujuan) jadi satu pick up dan satu drop; job baru dua titik kosong. */
 export const titikAwal = (d) => { const r = rinci(d), t = DZ.titikDari(d); return t.length ? t : [{ t: "P", nama: r.asal || "", kota: "", selesai: null }, { t: "D", nama: r.tujuan || "", kota: "", selesai: null }]; };
 /** Baris editor titik; titik yang sudah selesai terkunci (tidak bisa dihapus). */

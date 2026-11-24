@@ -56,8 +56,8 @@ const opsi = (l, pilih, kosong) => `${kosong ? `<option value="">${kosong}</opti
 /** Isi panel tambah/ubah kendaraan. */
 export function htmlFormKendaraan(k) {
   const s = k.servis || {}, w = k.sewa || {};
-  return `<div class="mr-form dj-form" style="grid-template-columns:1fr 1fr">
-  ${f("Plat nomor *", inp("arm-plat", k.plat, 'placeholder="B 1234 XYZ"'))}${f("Jenis armada", `<select id="arm-jenis">${opsi(DZ.JENIS_ARMADA, k.jenisArmada)}</select>`)}
+  return `<div class="mr-form dj-form dj-huruf" style="grid-template-columns:1fr 1fr">
+  ${f("Plat nomor *", inp("arm-plat", k.plat, 'placeholder="B 1234 XYZ" data-huruf="besar"'))}${f("Jenis armada", `<select id="arm-jenis">${opsi(DZ.JENIS_ARMADA, k.jenisArmada)}</select>`)}
   ${f("Tipe bak", `<select id="arm-bak">${opsi(DZ.TIPE_BAK, k.bak, "–")}</select>`)}${f("Odometer saat ini (km)", inp("arm-odo", s.odo, 'inputmode="numeric"'))}
   <div class="dj-lng__sub dj-lebar">Masa berlaku dokumen</div>${f("KIR sampai", tg("arm-kir", k.kir))}${f("STNK sampai", tg("arm-stnk", k.stnk))}${f("Pajak sampai", tg("arm-pajak", k.pajak))}<span></span>
   <div class="dj-lng__sub dj-lebar">Jadwal servis (mana yang lebih dulu)</div>${f("Servis berikut: tanggal", tg("arm-sv-tgl", s.tglBerikut))}${f("Servis berikut: km", inp("arm-sv-km", s.kmBerikut, 'inputmode="numeric"'))}${f("Interval (bulan)", inp("arm-sv-bln", s.intervalBln, 'inputmode="numeric" placeholder="3"'))}${f("Interval (km)", inp("arm-sv-ikm", s.intervalKm, 'inputmode="numeric" placeholder="10000"'))}
@@ -71,7 +71,7 @@ export const judulTugas = (t) => JUDUL[t];
 /** Isi panel catat tugas (perpanjangan dokumen, servis, visit). */
 export function htmlFormTugas(tipe, k) {
   const s = k.servis || {}, h = hariIni();
-  if (tipe === "servis") return `<div class="mr-form dj-form" style="grid-template-columns:1fr 1fr">${f("Tanggal servis", tg("tg-tgl", h))}${f("Odometer (km)", inp("tg-odo", s.odo, 'inputmode="numeric"'))}${f("Biaya (Rp)", inp("tg-biaya", "", 'inputmode="numeric"'))}<span></span>${f("Servis berikut: tanggal", tg("tg-next-tgl", ""))}${f("Servis berikut: km", inp("tg-next-km", "", 'inputmode="numeric"'))}${f("Catatan", `<textarea id="tg-cat" rows="2" placeholder="mis. ganti oli, kampas rem"></textarea>`, "dj-lebar")}</div><p class="mr-sub">Tanggal dan km berikutnya terisi dari interval kendaraan bila dikosongkan.</p>`;
-  if (tipe === "visit") return `<div class="mr-form dj-form" style="grid-template-columns:1fr 1fr">${f("Tanggal visit", tg("tg-tgl", h))}${f("Odometer (km)", inp("tg-odo", s.odo, 'inputmode="numeric"'))}${f("Kondisi dan temuan", `<textarea id="tg-cat" rows="3" placeholder="kondisi unit, dokumen, perawatan"></textarea>`, "dj-lebar")}</div>`;
-  return `<div class="mr-form dj-form" style="grid-template-columns:1fr 1fr">${f(`${JUDUL[tipe].replace("Perpanjangan ", "")} berlaku sampai (baru) *`, tg("tg-baru", ""))}${f("Biaya (Rp)", inp("tg-biaya", "", 'inputmode="numeric"'))}${f("Catatan", `<textarea id="tg-cat" rows="2"></textarea>`, "dj-lebar")}</div>`;
+  if (tipe === "servis") return `<div class="mr-form dj-form dj-huruf" style="grid-template-columns:1fr 1fr">${f("Tanggal servis", tg("tg-tgl", h))}${f("Odometer (km)", inp("tg-odo", s.odo, 'inputmode="numeric"'))}${f("Biaya (Rp)", inp("tg-biaya", "", 'inputmode="numeric"'))}<span></span>${f("Servis berikut: tanggal", tg("tg-next-tgl", ""))}${f("Servis berikut: km", inp("tg-next-km", "", 'inputmode="numeric"'))}${f("Catatan", `<textarea id="tg-cat" rows="2" placeholder="mis. ganti oli, kampas rem"></textarea>`, "dj-lebar")}</div><p class="mr-sub">Tanggal dan km berikutnya terisi dari interval kendaraan bila dikosongkan.</p>`;
+  if (tipe === "visit") return `<div class="mr-form dj-form dj-huruf" style="grid-template-columns:1fr 1fr">${f("Tanggal visit", tg("tg-tgl", h))}${f("Odometer (km)", inp("tg-odo", s.odo, 'inputmode="numeric"'))}${f("Kondisi dan temuan", `<textarea id="tg-cat" rows="3" placeholder="kondisi unit, dokumen, perawatan"></textarea>`, "dj-lebar")}</div>`;
+  return `<div class="mr-form dj-form dj-huruf" style="grid-template-columns:1fr 1fr">${f(`${JUDUL[tipe].replace("Perpanjangan ", "")} berlaku sampai (baru) *`, tg("tg-baru", ""))}${f("Biaya (Rp)", inp("tg-biaya", "", 'inputmode="numeric"'))}${f("Catatan", `<textarea id="tg-cat" rows="2"></textarea>`, "dj-lebar")}</div>`;
 }
