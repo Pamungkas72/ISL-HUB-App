@@ -55,6 +55,7 @@ jobs:
           node tests/unit/daily-job-tracking.test.mjs
           node tests/unit/daily-job-kategori.test.mjs
           node tests/unit/halaman-akses.test.mjs
+          node tests/unit/uang-jalan-master.test.mjs
 
       - name: Pasang Playwright dan Chromium
         run: |
@@ -90,6 +91,12 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
         run: node tests/asap/uji-distribusi.js
+      - name: Uji tab Uang Jalan di Master Rate (HP dan desktop)
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: |
+          node tests/asap/uji-uj-master.js hp
+          node tests/asap/uji-uj-master.js desktop
       - name: Uji menu Uang Jalan
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
