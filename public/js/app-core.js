@@ -1783,7 +1783,7 @@ const RINCIAN_LINI = {
   depo: ['tarif jasa depo kontainer', 'our container depot service rates'],
   trucking_trailer: ['tarif trailer per trip untuk layanan Import, Export, REPO, dan Domestik', 'our trailer rates per trip for Import, Export, REPO, and Domestic services'],
   distribusi_kecil: ['tarif trucking distribusi per unit per ritase untuk beberapa tipe body dan kelas kendaraan', 'our distribution trucking rates per unit per trip for several body types and vehicle classes'],
-  sewa_unit: ['tarif sewa unit kendaraan (tarif sewa unit dan tarif driver dicantumkan terpisah)', 'our vehicle unit rental rates (unit rental and driver rates are listed separately)'],
+  sewa_unit: ['tarif sewa unit kendaraan', 'our vehicle unit rental rates'],
   sewa_container_empty: ['tarif sewa kontainer kosong', 'our empty container rental rates'],
   gudang_plb: ['tarif jasa gudang Pusat Logistik Berikat (PLB)', 'our bonded logistics center (PLB) warehousing service rates'],
   gudang: ['tarif jasa pergudangan untuk gudang berikut', 'our warehousing service rates for the following warehouses'],
@@ -5953,6 +5953,28 @@ function enIsi(o, teksId) { const en = terjemahOtomatis(teksId); if (en) { o.en 
 /* ===== Dokumen berbahasa Inggris: SEMUA teks di dokumen harus English (aturan pemilik, 4 Nov 2026) =====
    Teks statis blok lini (judul, kolom, label, catatan, satuan) dan butir S&K dari mesin formulir diterjemahkan di sini. Isian bebas user (nama rute, lokasi, nama layanan buatan sendiri) tetap apa adanya. */
 const DOK_EN = new Map(Object.entries({
+  /* Sewa Unit: tiga tipe (lepas kunci, driver, driver + operasional) */
+  'Tipe kendaraan': 'Vehicle type', 'Tahun': 'Year', 'Tipe box': 'Body type', 'Kubikasi': 'Volume', 'Tonase': 'Tonnage', 'Deposit (Rp)': 'Deposit (IDR)', 'Tipe sewa': 'Rental type',
+  'Lepas kunci': 'Bare rental (no driver)', 'Dengan driver': 'With driver', 'Driver + operasional': 'Driver + operations',
+  'A. Sewa Unit + Driver (Fix Cost)': 'A. Unit Rental + Driver (Fixed Cost)', 'B. Uang Jalan per Rute (Variabel Cost)': 'B. Trip Allowance by Route (Variable Cost)',
+  'Tarif belum termasuk pajak (PPN) dan pajak lainnya yang berlaku.': 'Rates exclude VAT and other applicable taxes.',
+  'Keterlambatan pembayaran dikenakan denda administrasi 2% per bulan dari nilai tagihan.': 'Late payment is subject to an administrative penalty of 2% per month of the invoice value.',
+  'Kerusakan minor (penyok atau baret) dikenakan denda Rp 500.000 per panel.': 'Minor damage (dents or scratches) is charged IDR 500,000 per panel.',
+  'Kerusakan di luar panel (kaca, lampu, atau mekanikal) ditagihkan terpisah sesuai nota bengkel.': 'Damage other than body panels (glass, lights, or mechanical parts) is billed separately according to the workshop invoice.',
+  'Deposit dibayar sebelum serah terima unit (minimum 2 kali harga sewa per unit) dan dikembalikan di akhir masa sewa setelah dikurangi kewajiban yang belum diselesaikan.': 'The deposit is paid before the unit is handed over (minimum 2 times the rental rate per unit) and refunded at the end of the rental period after deducting any outstanding obligations.',
+  'Penyewa bertanggung jawab atas kerusakan, kehilangan, denda tilang, dan pelanggaran lalu lintas selama masa sewa.': 'The lessee is responsible for damage, loss, traffic fines, and traffic violations during the rental period.',
+  'Tarif driver dikenakan per orang per bulan, di luar tarif sewa unit.': 'The driver rate is charged per person per month, in addition to the unit rental rate.',
+  'Harga fix cost sudah termasuk unit, driver untuk operasional harian, maintenance unit, dan GPS tracking.': 'The fixed cost rate includes the unit, a driver for daily operations, unit maintenance, and GPS tracking.',
+  'Tarif uang jalan sudah termasuk solar, tol, uang makan driver, dan mel per trip.': 'The trip allowance rate includes fuel, tolls, driver meals, and mail fees per trip.',
+  'Biaya pihak ketiga dari kegiatan operasional ditagihkan sesuai bukti (at cost) ditambah fee manajemen 10%. Fee tidak dikenakan atas tarif uang jalan.': 'Third-party costs arising from operations are billed at cost, supported by receipts, plus a 10% management fee. The fee does not apply to trip allowance rates.',
+  'Waktu kerja driver 12 jam per hari (dihitung sejak pick up), Senin – Sabtu.': 'Driver working hours are 12 hours per day (counted from pick up), Monday – Saturday.',
+  'Lembur Rp 25.000 per jam, termasuk waktu tunggu yang melewati 12 jam kerja.': 'Overtime is IDR 25,000 per hour, including waiting time beyond the 12 working hours.',
+  'Pekerjaan pada hari libur (Minggu atau libur nasional) dikenakan tambahan Rp 350.000 per hari.': 'Work on holidays (Sundays or national holidays) is charged an additional IDR 350,000 per day.',
+  'Standby charge Rp 100.000 per hari per unit apabila unit dan driver standby di luar jadwal operasional normal atas permintaan customer.': 'A standby charge of IDR 100,000 per day per unit applies when the unit and driver stand by outside the normal operating schedule at the customer’s request.',
+  'Pergerakan unit di luar rute yang disepakati (moving) dikenakan Rp 1.000.000 per moving.': 'Unit movement outside the agreed route (moving) is charged IDR 1,000,000 per move.',
+  'Perubahan harga solar sebesar Rp 500 per liter atau lebih, atau perubahan tarif tol resmi, menyesuaikan tarif uang jalan dengan pemberitahuan tertulis.': 'A diesel price change of IDR 500 per liter or more, or an official toll rate change, adjusts the trip allowance rates with written notice.',
+  'Fix cost: TOP 30 hari setelah invoice diterima. Uang jalan: TOP 14 hari setelah ritase selesai dan dokumen lengkap.': 'Fixed cost: payment terms 30 days after the invoice is received. Trip allowance: payment terms 14 days after the trip is completed and documents are complete.',
+  'Asuransi unit sudah termasuk dalam tarif sewa.': 'Unit insurance is included in the rental rate.', 'Asuransi unit belum termasuk dalam tarif sewa.': 'Unit insurance is not included in the rental rate.',
   'per hari / per container': 'per day / per container', 'Fee administrasi': 'Administration fee','Belum termasuk biaya gatepass pelabuhan yang berlaku': 'Excludes applicable port gate pass fees', 'per container · Belum termasuk biaya gatepass pelabuhan yang berlaku': 'per container · Excludes applicable port gate pass fees',
   'Sewa / bulan (Rp)': 'Rent / month (IDR)', 'Driver / orang (Rp)': 'Driver / person (IDR)', 'Jumlah (Rp)': 'Amount (IDR)', 'Harga jual (Rp)': 'Selling price (IDR)', 'Impor & ekspor': 'Import & export', 'Impor': 'Import', 'Ekspor': 'Export', 'Suhu ruang': 'Room temperature', '-18 °C atau lebih rendah': '-18 °C or lower', '0 s.d. +5 °C': '0 to +5 °C',
   'Layanan': 'Services', 'Satuan': 'Unit', 'Keterangan': 'Remarks', 'Rute': 'Route', 'Tipe': 'Type', 'Grup': 'Group', 'Ukuran': 'Size', 'Periode': 'Period', 'Harian': 'Daily', 'Mingguan': 'Weekly', 'Bulanan': 'Monthly', 'harian': 'daily', 'mingguan': 'weekly', 'bulanan': 'monthly',
@@ -5988,6 +6010,7 @@ const DOK_EN = new Map(Object.entries({
   'Berat dan volume dasar penghitungan sesuai tabel. Jika realisasi berbeda, tarif menyesuaikan.': 'Weight and volume used as the calculation basis are as stated in the table. If actuals differ, the rates will be adjusted.'
 }));
 const DOK_EN_POLA = [
+  [/^(.+) \(Rp \/ rit\)$/, '$1 (IDR / trip)'], [/^Tarif per rit$/, 'Rate per trip'], [/^Batas wilayah pemakaian unit: (.+)\.$/, 'Unit usage area limit: $1.'],
   [/^Tipe (.+)$/, 'Type $1'], [/^Trailer (.+?): (.+)$/, (m, a, b) => `Trailer ${terjemahTeksDok(a, false)}: ${b}`], [/^Sewa container (.+) \((Harian|Mingguan|Bulanan)\)$/, (m, a, b) => `Container rental ${a} (${DOK_EN.get(b)})`], [/^Sewa unit (.+)$/, 'Unit rental $1'],
   [/^(\d+) bulan$/, '$1 months'], [/^(\d+) bulan sewa(, .+)?$/, '$1 months’ rent$2'], [/^(\d+) hari$/, '$1 days'],
   [/^Jumlah driver (.+) per unit\. Tarif driver adalah tambahan di luar tarif sewa unit\.$/, (m, a) => `Number of drivers: ${a.replace(/ atau /g, ' or ').replace(/ orang$/, '')} per unit. Driver rates are in addition to the unit rental rate.`],

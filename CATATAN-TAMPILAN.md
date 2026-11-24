@@ -495,6 +495,13 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 - **Alias login `dj_login` tanpa uid:** dokumen publik hanya berisi email. Kepemilikan alias saat ubah data dicek dari daftar `alias` di dokumen pengguna (`kunciBentrok`, ada uji). Dokumen lama yang masih memuat uid tertimpa otomatis saat data akun diubah.
 - **CORS Storage** untuk pratinjau berkas belum otomatis: jalankan sekali `gsutil cors set cors-storage.json gs://system-marketing-bd-isl-2026.firebasestorage.app` (Cloud Shell, akun pemilik proyek).
 
+## 23 Nov 2026: Sewa Unit tiga tipe (desain B, tabel + galeri)
+- **Satu tipe per quotation**: Lepas kunci, Dengan driver, Driver + operasional (`opsi.tipeSewa`; draf lama: ada tarif driver = Dengan driver, selain itu Lepas kunci).
+- **Kolom tabel unit**: Tipe kendaraan, Tahun, Tipe box, Kubikasi, Tonase, Sewa per bulan, lalu **Deposit** (hanya lepas kunci, diisi manual; peringatan bila kurang dari 2× sewa), **Driver / orang** dan Jumlah driver (driver dan operasional), Keterangan. Kolom yang kosong di semua baris tidak tampil di PDF. Foto unit lewat Galeri foto yang sudah ada.
+- **Uang jalan per rute (Variabel Cost)** kembali, **hanya tipe operasional** (mengubah keputusan 21 Okt 2026): kolom Rute plus 1 sampai 3 kolom zona dengan nama bebas (mis. Kalijati, Wanasari). PDF: "A. Sewa Unit + Driver (Fix Cost)" dan "B. Uang Jalan per Rute (Variabel Cost)". Contoh acuan: penawaran Trailer Medlog-ISL.
+- **S&K** daftar datar 1, 2, 3 (sama dengan lini lain). Bawaan per tipe ada di `SU_SK` (`formulir-lini.js`, angka tertulis di teks); bila Master Rate > Lini Bisnis > Sewa Unit diisi, teks master menggantikan bawaan tipe itu. Asuransi (Include/Exclude) dan batas wilayah mengikuti isian formulir. Tilang dan kerusakan menjadi tanggung jawab penyewa hanya di lepas kunci.
+- Mesin tabel: bagian bisa punya `tampil(st)` dan `kolomB(st, b, bi)` (kolom aktif menurut pilihan formulir).
+
 ## 2026-11-23 (sisa data tes "UJI format …" disembunyikan)
 
 - Lini berawalan **"UJI "** (sisa tes e2e di database sungguhan) tidak lagi muncul di panel "Buat quotation", Quotation manual (Word), dan daftar Template lini. Datanya tetap ada di Master Rate; hapus permanen lewat Master Rate → Lini bisnis bila perlu.

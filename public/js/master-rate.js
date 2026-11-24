@@ -552,8 +552,8 @@ const SK_TIPE = {
     tipe: [["boxdry", "Box dry"], ["reefer", "Reefer"], ["bak", "Bak"], ["lostbak", "Lost bak"], ["threeway", "Three way"], ["towing", "Towing"]] },
   trucking_trailer: { tombol: "S&K tipe buntut", ket: "Wajib. Penawaran Trailer tidak bisa diterbitkan kalau buntut yang dipakai belum punya S&K.", wajib: true,
     tipe: [["rangka", "Rangka"], ["flatbed", "Flatbed"], ["lowbed", "Lowbed"], ["dolly", "Dolly"]] },
-  sewa_unit: { tombol: "S&K per varian", ket: "Peringatan saja (tidak memblokir). Varian dengan driver memuat jam kerja dan insentif driver.", wajib: false,
-    tipe: [["lepas", "Sewa unit lepas kunci"], ["driver", "Sewa unit dengan driver"]] },
+  sewa_unit: { tombol: "S&K per varian", ket: "Opsional: bila kosong, penawaran memakai S&K bawaan tipe itu. Isi untuk mengganti seluruh butir tipe tersebut.", wajib: false,
+    tipe: [["lepas", "Sewa unit lepas kunci"], ["driver", "Sewa unit dengan driver"], ["operasional", "Sewa unit driver + operasional"]] },
 };
 const skTerisi = (l) => { const d = SK_TIPE[l.id]; if (!d) return ""; const sk = l.skTipe || {}; const n = d.tipe.filter(([k]) => String(sk[k] || "").trim()).length; return `${n}/${d.tipe.length}`; };
 async function bukaSkTipe(id) {
