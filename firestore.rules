@@ -469,13 +469,6 @@ service cloud.firestore {
         && request.resource.data.plat is string && request.resource.data.plat.size() > 0 && request.resource.data.plat.size() <= 20);
       allow delete: if kelola('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
     }
-    // Tarif uang jalan tetap Truk Distribusi (24 Nov 2026): anggota mengajukan (status "menunggu"); hanya master/admin yang menyetujui, mengubah, atau menghapus.
-    match /dj_tarif/{id} {
-      allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
-      allow create: if kelola('dj') && (isKelola() || (djAnggota(request.resource.data.get('kelompokId', null)) && request.resource.data.get('status', '') == 'menunggu' && request.resource.data.get('diajukanOleh', '') == request.auth.uid))
-        && request.resource.data.rute is string && request.resource.data.rute.size() > 0 && request.resource.data.rute.size() <= 120 && request.resource.data.nominal is number && request.resource.data.nominal > 0;
-      allow update, delete: if kelola('dj') && isKelola();
-    }
     match /dj_job/{id} {
       allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
       allow create: if kelola('dj') && ((isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))

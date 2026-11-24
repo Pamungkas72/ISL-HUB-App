@@ -1,11 +1,10 @@
-// Truk Distribusi: aturan murni (titik pick up/drop, Armada dan pengingat, uang jalan, KPI). Diuji di tests/unit/daily-job-distribusi.test.mjs.
+// Truk Distribusi: aturan murni (titik pick up/drop, Armada dan pengingat, KPI). Diuji di tests/unit/daily-job-distribusi.test.mjs.
 import { dalam, hariIni, selisihHari, tambahHari } from "./daily-job-hitung.js";
 import { rinci } from "./daily-job-tracking-hitung.js";
 import * as P from "./daily-job-pod.js";
 
 export const JENIS_ARMADA = ["Blind Van", "CDE", "CDD", "Fuso", "Tronton"];
 export const TIPE_BAK = ["Box", "Box Reefer", "Wing Box", "Bak", "Losbak", "Three Way"];
-export const RASIO_BBM = { "Blind Van": 10, CDE: 7, CDD: 5, Fuso: 4, Tronton: 3 }; // km per liter, bawaan; bisa diubah di Pengaturan
 export const POLA = { "1-1": "1 pick up, 1 drop", "1-n": "1 pick up, banyak drop", "n-1": "Banyak pick up, 1 drop", "n-n": "Banyak pick up, banyak drop" };
 export const TAHAP = [["siap", "Siap"], ["pickup", "Pick up"], ["drop", "Drop"], ["pod", "POD"]];
 
@@ -46,15 +45,6 @@ export function fase(j) {
   return n <= 1 && !selesaiTitik(j, "P") ? "belum" : "jalan";
 }
 
-/** Uang jalan: BBM = jarak PP / rasio x harga solar; ditambah tol, TKBM (opsional), retribusi, insentif borongan, dan komponen lain. */
-export function hitungUangJalan(i) {
-  const rasio = Number(i.rasio) || RASIO_BBM[i.jenisArmada] || 0, jarak = Number(i.jarak) || 0, solar = Number(i.solar) || 0, liter = rasio ? jarak / rasio : 0, bbm = Math.round(liter * solar);
-  const baris = [["BBM", bbm], ["Tol", Number(i.tol) || 0], ["TKBM", i.tkbm ? Number(i.tkbm) || 0 : 0], ["Retribusi / mel", Number(i.retribusi) || 0], ["Insentif driver borongan", Number(i.insentif) || 0], ...Object.entries(i.lain || {}).map(([n, v]) => [n, Number(v) || 0])];
-  return { liter: Math.round(liter * 10) / 10, rasio, baris, total: baris.reduce((a, b) => a + b[1], 0) };
-}
-/** Tarif tetap: peta { "rute|jenisArmada": nominal }; hanya tarif berstatus "setuju" yang dipakai. */
-export const kunciTarif = (rute, jenis) => `${String(rute).trim().toLowerCase()}|${jenis}`;
-export const cariTarif = (daftar, rute, jenis) => (daftar || []).find((t) => t.status === "setuju" && kunciTarif(t.rute, t.jenisArmada) === kunciTarif(rute, jenis)) || null;
 
 /* ---------- Armada: kendaraan, dokumen, servis, sewa ---------- */
 export const DOK = [["kir", "KIR"], ["stnk", "STNK"], ["pajak", "Pajak"]];
