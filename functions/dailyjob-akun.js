@@ -16,7 +16,7 @@ async function pemanggil(req) {
   if (String(a.token.email || "").toLowerCase() === EMAIL_MASTER) return { uid: a.uid, nama: "Master", kelola: true };
   const p = await db().doc(`pengguna/${a.uid}`).get();
   if (!p.exists || p.get("status") !== "aktif") throw new HttpsError("permission-denied", "Akun tidak aktif.");
-  return { uid: a.uid, nama: p.get("nama") || a.token.email || "", kelola: p.get("peran") === "admin" };
+  return { uid: a.uid, nama: p.get("nama") || a.token.email || "", kelola: p.get("peran") === "admin", kelompok: p.get("kelompokDJ") || null };
 }
 async function pastikanKepala(c, kelompokId) {
   if (c.kelola) return;
@@ -64,6 +64,14 @@ exports.djBuatAnggota = onCall(OPSI, async (req) => {
   if (jadiKepala) await db().doc(`dj_kelompok/${kelompokId}`).update({ kepala: [uid] }); // satu kepala per kelompok: yang lama kembali jadi anggota
   await catat(c, uid, email, "dj-tambah");
   return { uid, username, email };
+});
+
+/** Nama anggota aktif satu kelompok untuk memilih dan memvalidasi PIC. Boleh dipanggil anggota kelompok itu, admin, atau master; hanya nama yang dikembalikan (tanpa telepon, email, atau akses). */
+exports.djNamaTim = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req), kelompokId = String((req.data && req.data.kelompokId) || "");
+  if (!kelompokId || !(c.kelola || c.kelompok === kelompokId)) throw new HttpsError("permission-denied", "Hanya anggota kelompok ini yang boleh melihat daftar PIC.");
+  const s = await db().collection("pengguna").where("kelompokDJ", "==", kelompokId).get();
+  return { nama: s.docs.filter((x) => x.get("status") === "aktif").map((x) => String(x.get("nama") || "").trim()).filter(Boolean).sort((a, b) => a.localeCompare(b, "id")) };
 });
 
 exports.djDaftarTim = onCall(OPSI, async (req) => {
