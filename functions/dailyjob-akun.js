@@ -66,6 +66,20 @@ exports.djBuatAnggota = onCall(OPSI, async (req) => {
   return { uid, username, email };
 });
 
+/** Setujui pendaftar sendiri (email asli, status menunggu) sebagai kepala atau anggota divisi. Hanya master atau admin. */
+exports.djSetujuiPendaftar = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req); if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin.");
+  const d = req.data || {}, uid = String(d.uid || ""), kelompokId = String(d.kelompokId || ""), kepala = d.jabatan === "kepala";
+  const ref = db().doc(`pengguna/${uid}`), s = await ref.get();
+  if (!s.exists || s.get("status") !== "menunggu") throw new HttpsError("failed-precondition", "Akun ini tidak sedang menunggu persetujuan.");
+  const kel = kelompokId ? await db().doc(`dj_kelompok/${kelompokId}`).get() : null;
+  if (!kel || !kel.exists || kel.get("arsip")) throw new HttpsError("not-found", "Pilih kelompok yang masih aktif.");
+  await ref.update({ peran: "dj", status: "aktif", kelompokDJ: kelompokId, kodeUnit: await kodeUnitKelompok(kelompokId), disetujuiPada: admin.firestore.FieldValue.serverTimestamp() });
+  if (kepala) await kel.ref.update({ kepala: [uid] }); // satu kepala per kelompok
+  await catat(c, uid, s.get("email"), kepala ? "dj-setujui-kepala" : "dj-setujui-anggota");
+  return { ok: true };
+});
+
 /** Nama anggota aktif satu kelompok untuk memilih dan memvalidasi PIC. Boleh dipanggil anggota kelompok itu, admin, atau master; hanya nama yang dikembalikan (tanpa telepon, email, atau akses). */
 exports.djNamaTim = onCall(OPSI, async (req) => {
   const c = await pemanggil(req), kelompokId = String((req.data && req.data.kelompokId) || "");

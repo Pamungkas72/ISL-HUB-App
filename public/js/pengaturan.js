@@ -12,6 +12,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { kirimResetSandi } from "./auth.js";
 import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
@@ -39,6 +40,7 @@ function render() {
 
     <section class="st-kartu"><h3>Akun saya</h3><p>Masuk sebagai <b>${e(S.email)}</b>.</p>
       <div class="st-stat">Peran: <span class="st-badge ${S.kelola ? "st-badge--ok" : ""}">${S.master ? "Pemilik (bisa mengubah semua data)" : S.admin ? "Admin (mengelola Master Rate, modal, dan akun sales)" : "Lihat saja"}</span></div>
+      <div class="st-baris"><button class="mr-btn" data-st="sandi-saya">Ubah kata sandi lewat email</button><span class="mr-sub">Tautan atur kata sandi dikirim ke ${e(S.email)}.</span></div>
     </section>`;
   const kAkses = S.kelola ? htmlAkun() : "";
   const kSistem = `${htmlModal()}
@@ -382,6 +384,7 @@ document.addEventListener("click", async (ev) => {
   if (t.dataset.st === "bag") { S.bag = t.dataset.v; render(); return window.scrollTo({ top: 0 }); }
   if (t.dataset.st === "bag-kembali") { S.bag = ""; render(); return window.scrollTo({ top: 0 }); }
   const a = t.dataset.st;
+  if (a === "sandi-saya") { t.disabled = true; try { await kirimResetSandi(S.email); toast(`Email atur kata sandi terkirim ke <b>${e(S.email)}</b>. Periksa juga folder spam.`); } catch (er) { toast(`Email belum terkirim (${e(er.code || er.message)}).`, "bahaya"); } t.disabled = false; return; }
   if (a === "bersih-koreksi") {
     if (!S.master) return;
     if (!(await konfirmasi("Bersihkan nilai modal dari riwayat koreksi?", "Baris Modal di teks koreksi lama dihapus. Nilai rate, dokumen, dan tanggal tidak berubah.", "Bersihkan"))) return;
