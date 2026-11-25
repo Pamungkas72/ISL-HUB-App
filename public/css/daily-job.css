@@ -354,3 +354,19 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-lk--pod { border-color: var(--success); color: var(--success); background: var(--success-soft); } .dj-lk--bayar { border-color: var(--sky); color: var(--head); background: var(--sky-soft); } .dj-lk--terkirim { border-color: var(--accent); color: var(--dj-tx-aksen); background: var(--accent-soft); }
 .dj-bp--lk { border-color: var(--success); color: var(--success); }
 .mr-toast__aksi { border: 0; background: none; color: var(--mr-navy, var(--head)); font: 700 13px var(--font-body); cursor: pointer; padding: 4px 8px; margin-left: auto; white-space: nowrap; }
+
+/* Roadmap perjalanan shipment (25 Nov 2026): HP = ikon mini + kalimat, desktop = rel berlabel */
+.dj-nd { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none; border: 2px solid var(--border); color: var(--muted); background: var(--bg); }
+.dj-nd--k { width: 24px; height: 24px; border-width: 1.5px; }
+.dj-nd--ok { background: var(--success); border-color: var(--success); color: var(--bg); }
+.dj-nd--jalan { border-color: var(--sky); color: var(--head); background: var(--sky-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sky) 22%, transparent); }
+.dj-nd--now { border-color: var(--accent); color: var(--dj-tx-aksen); background: var(--accent-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.dj-nd--tunggu { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent); }
+.dj-mini { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.dj-job__st { display: flex; align-items: center; gap: 10px; margin-top: 4px; min-height: 26px; }
+.dj-kal { flex: 1; min-width: 0; text-align: right; font: 600 12.5px var(--font-body); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .dj-kal--berhenti { color: var(--danger); } .dj-kal--selesai { color: var(--success); } .dj-kal--batal { color: var(--muted); }
+.dj-rel { display: inline-flex; align-items: center; width: 100%; min-width: 250px; } .dj-lb { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; flex: none; width: 44px; } .dj-lb small { font-size: 10.5px; color: var(--muted); white-space: nowrap; } .dj-lb--ok { color: var(--success) !important; } .dj-lb--jalan, .dj-lb--now { color: var(--dj-tx-aksen) !important; font-weight: 700; } .dj-lb--tunggu { color: var(--danger) !important; font-weight: 700; }
+.dj-gr { flex: 1; height: 3px; min-width: 8px; background: var(--border); border-radius: 2px; margin-bottom: 15px; } .dj-gr.is-ok { background: var(--success); } .dj-gr.is-now { background: linear-gradient(90deg, var(--success), var(--accent)); }
+.dj-tb__st { min-width: 270px; } .dj-tb__st .dj-kal { display: block; text-align: left; margin-top: 2px; font-size: 12px; }
+.dj-job__st { flex-direction: column; align-items: flex-start; gap: 5px; } .dj-job__st .dj-kal { text-align: left; white-space: normal; flex: none; width: 100%; }
+.dj-tb__st .dj-kal { margin-top: 6px; }

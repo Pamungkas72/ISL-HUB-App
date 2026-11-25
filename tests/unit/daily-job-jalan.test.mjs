@@ -1,0 +1,23 @@
+// Jalankan: node tests/unit/daily-job-jalan.test.mjs
+import * as J from "../../public/js/daily-job-jalan.js";
+let gagal = 0; const eq = (n, a, b) => { const ok = JSON.stringify(a) === JSON.stringify(b); if (!ok) gagal++; console.log(ok ? "LULUS" : "GAGAL", n, ok ? "" : `dapat ${JSON.stringify(a)}, harus ${JSON.stringify(b)}`); };
+const now = "2026-11-25", W = "2026-11-25T09:00", titik = (a, b) => [{ t: "P", nama: "A", kota: "J", selesai: a }, { t: "D", nama: "B", kota: "S", selesai: b }, { t: "D", nama: "C", kota: "M", selesai: b }];
+const mk = (rinci, o = {}) => ({ status: "proses", ...o, rinci: { jenis: "distribusi", noDo: "D1", tahap: { siap: W }, titik: titik(null, null), ...rinci } });
+const st = (j) => J.perjalanan(j, now).langkah.map((m) => m.k + ":" + (m.st || "-")).join(" ");
+eq("baru, internal: Siap selesai, Jalan berikut; tanpa POD dan Bayar", st(mk({})), "siap:ok jalan:now tiba:-");
+eq("sudah menjemput: Jalan bergerak; kalimat posisi", [st(mk({ titik: titik(W, null) })), J.perjalanan(mk({ titik: titik(W, null) }), now).kalimat], ["siap:ok jalan:jalan tiba:-", "Menuju tujuan"]);
+eq("drop sebagian: kalimat Drop n dari total", J.perjalanan(mk({ titik: [{ t: "P", selesai: W }, { t: "D", selesai: W }, { t: "D", selesai: null }, { t: "D", selesai: null }] }), now).kalimat, "Drop 1 dari 3");
+eq("internal terkirim otomatis POD: selesai, semua hijau", [st(mk({ titik: titik(W, W), pod: "kembali" }, { status: "selesai" })), J.perjalanan(mk({ titik: titik(W, W), pod: "kembali" }, { status: "selesai" }), now).jenis], ["siap:ok jalan:ok tiba:ok", "selesai"]);
+const v = (o, tgl = "2026-11-25") => mk({ vendor: "CV X", titik: titik(tgl + "T08:00", tgl + "T09:00"), ...o });
+eq("vendor Cash baru tiba: POD berikut; Bayar belum", [st(v({})), J.perjalanan(v({}), now).kalimat], ["siap:ok jalan:ok tiba:ok pod:now bayar:-", "Terkirim, menunggu POD"]);
+const lama = v({}, "2026-11-22");
+eq("vendor 3 hari tanpa POD: node POD merah (berhenti)", [st(lama), J.perjalanan(lama, now).berhenti, J.perjalanan(lama, now).kalimat, J.perjalanan(lama, now).jenis], ["siap:ok jalan:ok tiba:ok pod:tunggu bayar:-", true, "Menunggu POD 3 hari", "berhenti"]);
+const resi = v({ podKirim: { ekspedisi: "JNE", resi: "R9", tgl: "2026-11-24" } });
+eq("resi ada: POD sedang bergerak, Bayar berikut; kalimat memuat ekspedisi dan resi", [st(resi), J.perjalanan(resi, now).kalimat], ["siap:ok jalan:ok tiba:ok pod:jalan bayar:now", "POD dikirim JNE · R9"]);
+eq("POD kembali belum dibayar: Bayar berikut", [st(v({ pod: "kembali" })), J.perjalanan(v({ pod: "kembali" }), now).kalimat], ["siap:ok jalan:ok tiba:ok pod:ok bayar:now", "POD kembali · perlu dibayar"]);
+eq("vendor TOP: tanpa langkah Bayar, selesai saat POD kembali", [st(v({ bayar: "top", pod: "kembali" }, { status: "selesai" })), J.perjalanan(v({ bayar: "top", pod: "kembali" }, { status: "selesai" }), now).kalimat], ["siap:ok jalan:ok tiba:ok pod:ok", "Selesai"]);
+eq("Cash lunas dan POD kembali: selesai semua hijau", st(v({ pod: "kembali", tglBayar: "2026-11-25" }, { status: "selesai" })), "siap:ok jalan:ok tiba:ok pod:ok bayar:ok");
+eq("batal", J.perjalanan(mk({}, { status: "batal" }), now).kalimat, "Dibatalkan");
+const tr = (tahap, o = {}) => ({ status: "proses", rinci: { jenis: "impor", vendor: "CV A", asal: "A", tujuan: "B", tahap, ...o } });
+eq("Trailer: tahap berjalan, lalu operasional selesai menunggu POD", [st(tr({ siap: W, pickup: W })), J.perjalanan(tr({ siap: W, pickup: W }), now).kalimat, st(tr({ siap: W, pickup: W, bongkar: W, mtreturn: W }))], ["siap:ok jalan:jalan tiba:- pod:- bayar:-", "Berikut: Bongkar", "siap:ok jalan:ok tiba:ok pod:now bayar:-"]);
+process.exit(gagal ? 1 : 0);
