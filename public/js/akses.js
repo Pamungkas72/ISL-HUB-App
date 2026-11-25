@@ -6,7 +6,7 @@
 // ===========================================================
 import { auth, db } from "./firebase-config.js";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { adalahMaster } from "./config-akses.js";
+import { adalahMaster, NAMA_MASTER } from "./config-akses.js";
 import { navItems, SEMBUNYI_PERAN } from "./nav-config.js";
 import { WA_ADMIN_TAMPILAN, linkWaAdmin, pesanDaftarSales } from "./kontak-admin.js";
 
@@ -35,7 +35,7 @@ export function kodeUnit(peran, terpakai = []) {
 export const STATUS_AKUN = { menunggu: "Menunggu persetujuan", aktif: "Aktif", nonaktif: "Nonaktif" };
 
 export async function muatProfil(user) {
-  if (adalahMaster(user.email)) return { uid: user.uid, email: user.email, nama: "Master", peran: "master", status: "aktif" };
+  if (adalahMaster(user.email)) return { uid: user.uid, email: user.email, nama: NAMA_MASTER, peran: "master", status: "aktif" };
   const ref = doc(db, "pengguna", user.uid);
   const s = await getDoc(ref);
   if (s.exists()) return { uid: user.uid, ...s.data() };
