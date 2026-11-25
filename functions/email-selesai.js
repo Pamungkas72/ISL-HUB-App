@@ -5,7 +5,7 @@ const admin = require("firebase-admin");
 const { cariPenerima, susunEmail } = require("./email-selesai-isi");
 
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
-const DARI = "ISL Notifikasi <notifikasi@indosukseslogistik.com>", BALAS = "market@indosukseslogistik.com";
+const DARI = "ISL Notifikasi <notifikasi@notif.islogistik.id>", BALAS = "market@indosukseslogistik.com";
 
 exports.emailPengirimanSelesai = onDocumentUpdated({ document: "dj_job/{id}", region: "asia-southeast2", secrets: [RESEND_API_KEY] }, async (ev) => {
   const a = ev.data.before.data(), b = ev.data.after.data();
