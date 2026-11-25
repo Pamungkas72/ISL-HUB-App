@@ -156,9 +156,15 @@ watchAuthState(
       };
       const pasangData = (d) => { window.__islMR = bangunMR(d, user); window.__ISL_DATA = d.fase2; };
       /* Koleksi yang ditolak aturan untuk akun ini: sebutkan namanya, halaman lain tetap berjalan. */
-      const tampilkanTidakTerbaca = () => { const t = window.__islTidakTerbaca; if (t && t.size) bannerSinkron("Sebagian data tidak bisa dibaca akun ini: " + [...t].join(", ") + ". Beri tahu pemilik untuk memeriksa aturan Firestore.", "gagal"); };
+      /* Akun yang aksesnya sengaja dibatasi (ada modul bernilai 0) wajar ditolak di sebagian koleksi: tanpa peringatan. Selain itu peringatan tampil 10 detik lalu hilang sendiri. */
+      const tampilkanTidakTerbaca = () => {
+        const t = window.__islTidakTerbaca; if (!t || !t.size) return;
+        const dibatasi = !!profil && !!profil.akses && Object.values(profil.akses).some((v) => v === 0);
+        if (dibatasi) { console.info("Koleksi di luar akses akun ini:", [...t].join(", ")); return; }
+        bannerSinkron("Sebagian data tidak bisa dibaca akun ini. Beri tahu pemilik bila ada yang kurang.", "info", 10);
+      };
       const salinan = await ambilSalinan(kunci);
-      if (salinan) { pasangData(salinan); window.__islSegar = false; bannerSinkron("Menampilkan data tersimpan. Memperbarui dari server…", "info"); }
+      if (salinan) { pasangData(salinan); window.__islSegar = false; bannerSinkron("Menampilkan data tersimpan. Memperbarui dari server…", "info", 10); }
       else { const d = await ambilServer(); pasangData(d); simpanSalinan(kunci, d); }
       tampilkanTidakTerbaca();
       MRDB.muatPolaSk().then((p) => { window.__islSkPola = p; }).catch(() => {});
