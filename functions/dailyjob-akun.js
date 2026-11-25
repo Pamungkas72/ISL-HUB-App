@@ -115,6 +115,15 @@ exports.loginTeleponSinkron = onCall(OPSI, async (req) => {
   return { jumlah: n };
 });
 
+/** Nonaktifkan semua akun anggota lama yang dibuat dengan username (email @dj.isl-hub.app); anggota mendaftar ulang dengan email. Hanya master. { hitung: true } hanya menghitung. */
+exports.djNonaktifkanAkunUsername = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req); if (String((req.auth.token.email) || "").toLowerCase() !== EMAIL_MASTER) throw new HttpsError("permission-denied", "Hanya master.");
+  const s = await db().collection("pengguna").where("peran", "==", "dj").get(), target = s.docs.filter((x) => String(x.get("email") || "").toLowerCase().endsWith("@" + U.DOMAIN) && x.get("status") === "aktif");
+  if (req.data && req.data.hitung) return { jumlah: target.length, nama: target.map((x) => x.get("nama") || x.get("username") || "").slice(0, 30) };
+  for (const x of target) { await admin.auth().updateUser(x.id, { disabled: true }).catch(() => {}); await admin.auth().revokeRefreshTokens(x.id).catch(() => {}); await x.ref.update({ status: "nonaktif" }); await catat(c, x.id, x.get("email"), "dj-nonaktif-username"); }
+  return { jumlah: target.length };
+});
+
 /** Nama anggota aktif satu kelompok untuk memilih dan memvalidasi PIC. Boleh dipanggil anggota kelompok itu, admin, atau master; hanya nama yang dikembalikan (tanpa telepon, email, atau akses). */
 exports.djNamaTim = onCall(OPSI, async (req) => {
   const c = await pemanggil(req), kelompokId = String((req.data && req.data.kelompokId) || "");

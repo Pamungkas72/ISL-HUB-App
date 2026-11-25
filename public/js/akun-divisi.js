@@ -28,7 +28,7 @@ async function muat() {
     const lain = (await getDocs(query(collection(db, "pengguna"), where("peran", "in", ["lihat", "sales"])))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.status === "aktif");
     const berdivisi = (await getDocs(query(collection(db, "pengguna"), where("divisiId", ">=", "")))).docs.map((d) => ({ id: d.id, ...d.data() })), ada = new Set(A.akun.map((a) => a.id));
     /* calon = sudah disetujui tetapi belum punya divisi atau kelompok: peran Lihat saja, atau peran siap pakai (jabatan) tanpa divisi; Sales biasa tidak ikut */
-    const calon = lain.filter((a) => !a.kelompokDJ && !a.divisiId && (a.peran === "lihat" || (a.akses && a.akses.jabatan))).map((a) => ({ ...a, calon: true }));
+    const calon = lain.filter((a) => !a.kelompokDJ && !a.divisiId && (a.peran === "lihat" || a.peran === "sales" || (a.akses && a.akses.jabatan))).map((a) => ({ ...a, calon: true }));
     A.akun = [...A.akun, ...berdivisi.filter((a) => a.divisiId && !ada.has(a.id) && !a.kelompokDJ)];
     A.akun = [...A.akun, ...urutNama(calon)];
     await muatPeran().catch(() => {}); A.div = await muatDivisi();
@@ -66,7 +66,7 @@ const divAktif = () => A.div.filter((d) => !d.arsip);
 const jabatanKepalaDiv = (a) => ((divById(a.divisiId) || {}).kepala || []).includes(a.id);
 const anggotaDiv = (id) => [...A.akun.filter((a) => a.divisiId === id)].sort((x, y) => jabatanKepalaDiv(y) - jabatanKepalaDiv(x) || String(x.nama).localeCompare(String(y.nama), "id"));
 const namaKepalaDiv = (d) => { const a = A.akun.find((x) => x.id === (d.kepala || [])[0]); return a ? a.nama : "—"; };
-const namaPreset = (d) => { const p = presetById(d.presetId); return p ? p.nama : "belum dipilih"; };
+const namaPreset = (d) => { const p = d.presetId ? presetById(d.presetId) : null; return p ? p.nama : "hak akun tidak diubah"; };
 const identAkun = (a) => e(a.username ? "@" + a.username : a.email || "");
 function detailDivisi(d) {
   const l = anggotaDiv(d.id), kosong = !l.length;
@@ -75,13 +75,13 @@ function detailDivisi(d) {
   return `<div class="kd-detail" data-k="d:${e(d.id)}"><div class="kd-judul"><div class="kd-judul__t"><h3>${e(d.nama)}</h3><div class="kd-mini"><span>Peran siap pakai <b>${e(namaPreset(d))}</b></span><span>Tanpa Daily Job</span></div></div>
     <div class="kd-judul__a"><button type="button" class="mr-btn mr-btn--kecil" data-ad="div-ubah" data-k="${e(d.id)}">Ubah</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="div-arsip" data-k="${e(d.id)}">Arsipkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya${kosong ? "" : " kd-redup"}" data-ad="div-hapus" data-k="${e(d.id)}" title="${kosong ? "" : "Pindahkan anggota dulu, atau arsipkan"}">Hapus</button></div></div>
     <div class="kd-stat"><div><span class="st-badge st-badge--warn">Kepala divisi</span><b>${e(namaKepalaDiv(d))}</b></div><div><span class="st-badge">Anggota</span><b>${l.length}</b></div></div>
-    <div class="kd-ang-kepala"><h4>Anggota</h4><span class="mr-sub">Izin anggota mengikuti peran siap pakai divisi. Tambah lewat Tanpa divisi &rsaquo; Pindah</span></div>
+    <div class="kd-ang-kepala"><h4>Anggota</h4><span class="mr-sub">${d.presetId ? "Izin anggota mengikuti peran siap pakai divisi." : "Hak akun anggota tidak diubah."} Tambah lewat Tanpa divisi &rsaquo; Pindah</span></div>
     <div class="kd-daftar">${l.map(baris3).join("") || `<p class="mr-sub" style="margin:10px 0">Belum ada anggota.</p>`}</div></div>`;
 }
 /* Bagan: semua divisi dan kelompok Daily Job, kepala lalu staf */
 function bagan() {
   const kartu = (nama, ket, kepalaNama, staf) => `<div class="kd-detail kd-bagan"><div class="kd-judul__t"><h3>${e(nama)}</h3><div class="kd-mini"><span>${e(ket)}</span></div></div><div class="kd-stat"><div><span class="st-badge st-badge--warn">Kepala</span><b>${e(kepalaNama)}</b></div><div><span class="st-badge">Staf</span><b>${staf.length}</b></div></div><div class="kd-staf">${staf.map((a) => `<span class="ad-bd">${e(a.nama || a.email || "-")}</span>`).join("") || `<span class="mr-sub">Belum ada staf</span>`}</div></div>`;
-  const dj = kelAktif().map((k) => kartu(k.nama, `Daily Job · ${profilNama(k)}`, namaKepala(k), anggotaKel(k.id).filter((a) => !jabatanKepala(a)))), um = divAktif().map((d) => kartu(d.nama, `Peran ${namaPreset(d)}`, namaKepalaDiv(d), anggotaDiv(d.id).filter((a) => !jabatanKepalaDiv(a))));
+  const dj = kelAktif().map((k) => kartu(k.nama, `Daily Job · ${profilNama(k)}`, namaKepala(k), anggotaKel(k.id).filter((a) => !jabatanKepala(a)))), um = divAktif().map((d) => kartu(d.nama, (d.presetId ? `Peran ${namaPreset(d)}` : "Hak akun tidak diubah"), namaKepalaDiv(d), anggotaDiv(d.id).filter((a) => !jabatanKepalaDiv(a))));
   const tanpa = A.akun.filter((a) => a.calon);
   return `<div class="kd-bagan-grid">${[...dj, ...um].join("") || `<p class="mr-sub">Belum ada divisi.</p>`}</div>${tanpa.length ? `<p class="mr-sub" style="margin-top:12px">Belum dikelompokkan: ${tanpa.map((a) => e(a.nama || a.email)).join(", ")}</p>` : ""}`;
 }
@@ -224,19 +224,19 @@ const nilai = (id) => (($("#" + id) || {}).value || "").trim();
 
 /* ---------- divisi non-Daily Job (Finance, Legal, CS, dll.): data di divisi-umum.js, satu akun satu divisi ---------- */
 const kodeTerpakai = async () => (await getDocs(collection(db, "pengguna"))).docs.map((d) => d.data().kodeSales).filter(Boolean);
-const opsiPreset = (pilih) => `<option value="">— pilih peran siap pakai —</option>${semuaPreset().map((p) => `<option value="${e(p.id)}"${p.id === pilih ? " selected" : ""}>${e(p.nama)}</option>`).join("")}`;
+const opsiPreset = (pilih) => `<option value="">Tanpa peran siap pakai (hak akun tidak diubah)</option>${semuaPreset().map((p) => `<option value="${e(p.id)}"${p.id === pilih ? " selected" : ""}>${e(p.nama)}</option>`).join("")}`;
 function formDivisi(d) {
-  bukaLayer(`${kepalaPanel(d ? "Ubah divisi" : "Divisi baru", "Divisi tanpa Daily Job: Finance, Legal, CS, dll.")}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="dv-form" data-id="${e(d ? d.id : "")}">
+  bukaLayer(`${kepalaPanel(d ? "Ubah divisi" : "Divisi baru", "Divisi tanpa Daily Job: Sales, Finance, Legal, CS, dll.")}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="dv-form" data-id="${e(d ? d.id : "")}">
     ${fld("Nama divisi", `<input id="dv-nama" maxlength="40" value="${e(d ? d.nama : "")}" autocomplete="off">`)}
-    ${fld("Peran siap pakai <small>izin modul semua anggota divisi ini</small>", `<select id="dv-preset">${opsiPreset(d && d.presetId)}</select>`)}
+    ${fld("Peran siap pakai <small>izin modul semua anggota; kosong = hak akun tidak diubah</small>", `<select id="dv-preset">${opsiPreset(d && d.presetId)}</select>`)}
     <p class="mr-sub">Izin tiap peran diatur di bagian Peran di halaman Pengaturan ini; halaman atau modul baru muncul di sana otomatis. Divisi yang punya Daily Job dibuat sebagai Kelompok Daily Job.</p></div></div>
     <footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-ad="div-simpan">Simpan</button></footer>`);
 }
 async function simpanFormDivisi(t) {
   const f = $("#dv-form"), id = f.dataset.id, nama = nilai("dv-nama"), presetId = $("#dv-preset").value, lama = id ? divById(id) : null;
-  if (!nama) return toast("Isi nama divisi.", "bahaya"); if (!presetId) return toast("Pilih peran siap pakai untuk divisi ini.", "bahaya");
+  if (!nama) return toast("Isi nama divisi.", "bahaya");
   if (A.div.some((x) => x.id !== id && String(x.nama).toLowerCase() === nama.toLowerCase())) return toast("Nama divisi ini sudah ada.", "bahaya");
-  const anggota = lama ? anggotaDiv(id) : [], ganti = lama && lama.presetId !== presetId && anggota.length;
+  const anggota = lama ? anggotaDiv(id) : [], ganti = lama && presetId && lama.presetId !== presetId && anggota.length;
   if (ganti && !(await konfirmasi("Ganti peran siap pakai?", `Izin ${anggota.length} anggota <b>${e(lama.nama)}</b> diganti mengikuti peran <b>${e(presetById(presetId).nama)}</b>. Izin yang pernah diubah per akun ikut tertimpa.`, "Terapkan"))) return;
   t.disabled = true;
   try {
@@ -250,7 +250,7 @@ function panelPindah(id) {
   bukaLayer(`${kepalaPanel("Pindahkan akun", `${e(a.nama || a.email)} · satu akun satu divisi`)}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="ad-pindah-form" data-id="${e(id)}" data-cur="${e(cur)}" data-kep="${kep ? 1 : 0}">
     ${fld("Divisi atau kelompok", `<select id="ad-tujuan"><option value="">Tanpa divisi (hanya Beranda)</option><optgroup label="Divisi">${divAktif().map((d) => `<option value="d:${e(d.id)}"${cur === "d:" + d.id ? " selected" : ""}>${e(d.nama)} · ${e(namaPreset(d))}</option>`).join("")}</optgroup><optgroup label="Kelompok Daily Job">${kelAktif().map((k) => `<option value="k:${e(k.id)}"${cur === "k:" + k.id ? " selected" : ""}>${e(k.nama)}</option>`).join("")}</optgroup></select>`)}
     ${fld("Jabatan <small>satu kepala per divisi</small>", segJabatan(kep ? "kepala" : "anggota"))}
-    <p class="mr-sub">Izin modul mengikuti peran siap pakai divisi (kelompok Daily Job: akses Daily Job kelola, bisa diubah di panel akun). Perpindahan tercatat di riwayat akun dan sesi login akun berakhir.</p></div></div>
+    <p class="mr-sub">Izin modul mengikuti peran siap pakai divisi, atau tetap bila divisi tanpa peran siap pakai (kelompok Daily Job: akses Daily Job kelola, bisa diubah di panel akun). Perpindahan tercatat di riwayat akun dan sesi login akun berakhir.</p></div></div>
     <footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-ad="pindah-ok">Pindahkan</button></footer>`);
 }
 async function simpanPindah(t) {
