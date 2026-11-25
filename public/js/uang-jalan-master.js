@@ -2,8 +2,9 @@
 // Desktop: formulir bergulir bagian bernomor (F1). HP: komponen ditambah lewat chip + pratinjau slip (F3). Hitungan: uang-jalan-hitung.js.
 // Tiap baris otomatis tercatat di tab Tarif (vendor Internal, lini Uang Jalan). Koleksi: uj_master, uj_riwayat, uj_pengaturan/umum (db-firebase.js).
 import { ikon } from "./ikon.js";
-import { e, $, tgl, toast, bukaLayer, tutupLayer, konfirmasi } from "./ui.js";
+import { e, $, $$, tgl, toast, bukaLayer, tutupLayer, konfirmasi } from "./ui.js";
 import { buatKunci, slug } from "./kunci.js";
+import { bacaFile, buatRencana, unduhTemplate, eksporData } from "./uang-jalan-impor.js";
 import { ARMADA, OPSIONAL, SOLAR_AWAL, BULAT_AWAL, armadaDari, rp, angkaRp, desimal, rasioAwal, kunciUJ, namaRute, hitung, rincianSingkat } from "./uang-jalan-hitung.js";
 
 const U = { muat: "belum", pesan: "", master: [], peng: { solar: SOLAR_AWAL, bulat: BULAT_AWAL, rasio: {} }, f: { armada: "semua", cari: "" } };
@@ -40,7 +41,8 @@ function tampil() {
 }
 const hasilBaris = (r) => hitung({ ...r, opsi: r.opsi, manual: r.manual });
 const pilSolar = () => `<button type="button" class="ujm-pil" data-aksi="uj-peng">Solar <b>${rp(U.peng.solar)}</b>/liter · Ubah</button>`;
-const tagSumber = (r) => (r.manual ? '<span class="ujm-tag ujm-tag--m">Manual</span>' : '<span class="ujm-tag ujm-tag--h">Hitung</span>');
+const tagSumber = (r) => (r.sumber === "impor" ? '<span class="ujm-tag ujm-tag--i">Impor</span>' : r.manual ? '<span class="ujm-tag ujm-tag--m">Manual</span>' : '<span class="ujm-tag ujm-tag--h">Hitung</span>');
+const ringkasBaris = (r) => (r.rincian === false ? "Nominal langsung (tanpa rincian)" : rincianSingkat(hasilBaris(r)));
 const kosong = () => `<div class="mr-kosong">${ikon("truk", 28)}<p>${U.master.length ? "Tidak ada uang jalan yang cocok dengan filter." : "Belum ada uang jalan. Hitung rute pertama, hasilnya tersimpan di sini dan di tab Tarif."}</p>${X.S.kelola && !U.master.length ? `<button type="button" class="mr-btn mr-btn--utama" data-aksi="uj-tambah">${ikon("plus", 16)}Tambah uang jalan</button>` : ""}</div>`;
 function status() {
   if (U.muat === "memuat" || U.muat === "belum") return `<div class="mr-kosong">${ikon("riwayat", 28)}<p>Memuat uang jalan…</p></div>`;
@@ -55,33 +57,35 @@ export function htmlUJ() {
   const d = tampil(), f = U.f.armada;
   const seg = (v, t) => `<button type="button" class="mr-seg__btn ${f === v ? "is-aktif" : ""}" data-aksi="uj-filter" data-v="${v}">${t}</button>`;
   return `<div class="mr-toolbar ujm-bar"><div class="mr-seg mr-seg--kecil" role="group" aria-label="Kelompok armada">${seg("semua", "Semua")}${seg("g:kecil", "Mobil kecil")}${seg("g:trailer", "Trailer")}</div>
-    <select id="uj-f-armada" class="mr-select" aria-label="Armada"><option value="semua">Semua armada</option>${ARMADA.map((a) => `<option value="${a.k}" ${f === a.k ? "selected" : ""}>${e(a.nama)}</option>`).join("")}</select>${pilSolar()}</div>
+    <select id="uj-f-armada" class="mr-select" aria-label="Armada"><option value="semua">Semua armada</option>${ARMADA.map((a) => `<option value="${a.k}" ${f === a.k ? "selected" : ""}>${e(a.nama)}</option>`).join("")}</select>${pilSolar()}<span style="flex:1"></span><button type="button" class="mr-btn" data-aksi="uj-impor">${ikon("upload", 16)}Impor / ekspor Excel</button></div>
     ${d.length ? `<div class="mr-kartu mr-tabelkartu"><table class="mr-table ujm-tbl"><thead><tr><th>Rute (pick up → tujuan)</th><th>Armada</th><th>Rincian</th><th class="ujm-r">Uang jalan</th><th>Diperbarui</th><th>Sumber</th></tr></thead><tbody>
-    ${d.map((r) => `<tr class="ujm-baris" data-aksi="uj-buka" data-k="${e(r.id)}" tabindex="0"><td><b>${e(r.rute)}</b><small>${e(r.jarak)} km PP</small></td><td><span class="mr-tag">${e(r.armadaNama)}</span></td><td class="ujm-rin">${e(rincianSingkat(hasilBaris(r)))}</td><td class="ujm-r"><b>${fmt(r.total)}</b></td><td>${r.diperbaruiPada ? e(tgl(r.diperbaruiPada)) : "–"}</td><td>${tagSumber(r)}</td></tr>`).join("")}</tbody></table></div>
+    ${d.map((r) => `<tr class="ujm-baris" data-aksi="uj-buka" data-k="${e(r.id)}" tabindex="0"><td><b>${e(r.rute)}</b><small>${r.jarak ? `${e(r.jarak)} km PP` : "Jarak –"}</small></td><td><span class="mr-tag">${e(r.armadaNama)}</span></td><td class="ujm-rin">${e(ringkasBaris(r))}</td><td class="ujm-r"><b>${fmt(r.total)}</b></td><td>${r.diperbaruiPada ? e(tgl(r.diperbaruiPada)) : "–"}</td><td>${tagSumber(r)}</td></tr>`).join("")}</tbody></table></div>
     <p class="mr-sub ujm-meta">${fmt(d.length)} dari ${fmt(U.master.length)} uang jalan · Rp per trip pulang-pergi</p>` : kosong()}${infoTarif()}`;
 }
 export function htmlUJHP() {
   const s = status(); if (s) return s;
   const d = tampil(), f = U.f.armada, ch = (v, t) => `<button type="button" class="mr-m-chip ${f === v ? "is-on" : ""}" data-aksi="uj-filter" data-v="${v}" aria-pressed="${f === v}">${t}</button>`;
   return `<div class="mr-m-chips" role="group" aria-label="Armada">${ch("semua", "Semua")}${ch("g:kecil", "Mobil kecil")}${ch("g:trailer", "Trailer")}${ARMADA.map((a) => ch(a.k, e(a.pendek))).join("")}</div>
-    <div class="mr-m-meta"><span>${fmt(d.length)} dari ${fmt(U.master.length)} uang jalan</span><span class="mr-ruang"></span>${pilSolar()}</div>
-    ${d.length ? `<section class="mr-m-box">${d.map((r) => { const h = hasilBaris(r), lain = h.baris.length - 3; return `<div class="ujm-row" data-aksi="uj-buka" data-k="${e(r.id)}" role="button" tabindex="0"><div class="ujm-row__t"><b>${e(r.rute)}</b><small><span class="mr-tag">${e(r.armadaNama)}</span> ${e(r.jarak)} km PP</small><small>BBM ${fmt(h.bbm)} · Tol ${fmt(angkaRp(r.tol))}${lain > 0 ? ` · +${lain} lain` : ""}</small></div><div class="ujm-row__v"><b>${fmt(r.total)}</b>${r.manual ? tagSumber(r) : ""}</div></div>`; }).join("")}</section>` : kosong()}${infoTarif()}`;
+    <div class="mr-m-meta"><span>${fmt(d.length)} dari ${fmt(U.master.length)} uang jalan</span><span class="mr-ruang"></span><button type="button" class="mr-m-link" data-aksi="uj-impor">${ikon("upload", 15)}Impor / ekspor</button></div><div class="mr-m-meta" style="padding-top:0">${pilSolar()}</div>
+    ${d.length ? `<section class="mr-m-box">${d.map((r) => { const h = hasilBaris(r), lain = h.baris.length - 3; return `<div class="ujm-row" data-aksi="uj-buka" data-k="${e(r.id)}" role="button" tabindex="0"><div class="ujm-row__t"><b>${e(r.rute)}</b><small><span class="mr-tag">${e(r.armadaNama)}</span> ${r.jarak ? `${e(r.jarak)} km PP` : "Jarak –"}</small><small>${r.rincian === false ? "Nominal langsung" : `BBM ${fmt(h.bbm)} · Tol ${fmt(angkaRp(r.tol))}${lain > 0 ? ` · +${lain} lain` : ""}`}</small></div><div class="ujm-row__v"><b>${fmt(r.total)}</b>${r.manual || r.sumber === "impor" ? tagSumber(r) : ""}</div></div>`; }).join("")}</section>` : kosong()}${infoTarif()}`;
 }
 export const cariHPUJ = () => `<div class="mr-m-cari"><label class="mr-cari mr-m-cari__in">${ikon("cari", 16)}<input id="uj-cari-bar" type="search" placeholder="Cari rute, armada…" value="${e(U.f.cari)}" autocomplete="off" enterkeyhint="search"></label></div>`;
 
 // ---------- formulir ----------
 const rupiah = (k, v, label, extra = "") => `<div class="ujm-in ujm-in--rp"><em>Rp</em><input ${extra} data-ribuan-live inputmode="numeric" value="${e(ribu(v))}" placeholder="0" autocomplete="off" aria-label="${e(label)}"></div>`;
-const hitungF = () => hitung({ jarak: F.jarak, rasio: F.rasio, solar: F.solar, tol: F.tol, mel: F.mel, digaji: F.digaji, bulat: U.peng.bulat,
+const hitungF = () => hitung({ jarak: F.jarak, rasio: F.rasio, solar: F.solar, bbmNominal: F.modeBbm === "nominal" ? F.bbmNominal : 0, tol: F.tol, mel: F.mel, digaji: F.digaji, bulat: U.peng.bulat,
   opsi: Object.fromEntries(OPSIONAL.map((c) => [c.k, F.aktif[c.k] ? F.opsi[c.k] : 0])), lain: F.lain, manual: F.pakaiManual ? F.manual : 0 });
 const formDari = (r) => {
   const a = r ? armadaDari(r.armada) : null, o = (r && r.opsi) || {};
   return { asal: r ? r.id : "", pickup: r ? r.pickup : "", tujuan: r ? r.tujuan : "", jarak: r ? String(r.jarak || "").replace(".", ",") : "", armada: r ? r.armada : "cdd", digaji: r ? r.digaji !== false : true,
     rasio: r ? String(r.rasio || "").replace(".", ",") : String(rasioAwal("cdd", U.peng)).replace(".", ","), solar: r ? String(r.solar) : String(U.peng.solar), tol: r ? String(r.tol || "") : "", mel: r ? String(r.mel || "") : "",
     aktif: Object.fromEntries(OPSIONAL.map((c) => [c.k, angkaRp(o[c.k]) > 0])), opsi: Object.fromEntries(OPSIONAL.map((c) => [c.k, angkaRp(o[c.k]) > 0 ? String(o[c.k]) : ""])),
-    lain: r ? (r.lain || []).map((c) => ({ nama: c.nama, v: String(c.v) })) : [], pakaiManual: !!(r && r.manual), manual: r && r.manual ? String(r.manual) : "", catatan: r ? r.catatan || "" : "", hp: X.HP(), sudah: !!r };
+    lain: r ? (r.lain || []).map((c) => ({ nama: c.nama, v: String(c.v) })) : [], modeBbm: r && angkaRp(r.bbmNominal) > 0 ? "nominal" : "hitung", bbmNominal: r && r.bbmNominal ? String(r.bbmNominal) : "", pakaiManual: !!(r && r.manual), manual: r && r.manual ? String(r.manual) : "", catatan: r ? r.catatan || "" : "", hp: X.HP(), sudah: !!r };
 };
 const baris = (nama, ket, kanan, o = {}) => `<div class="ujm-b ${o.mati ? "is-mati" : ""}">${o.sw !== undefined ? `<button type="button" role="switch" aria-checked="${o.sw}" aria-label="${e(nama)}" class="ujm-sw ${o.sw ? "is-on" : ""}" ${o.mati ? "disabled" : ""} data-ujt="sw" data-v="${o.k}"></button>` : ""}<div class="ujm-b__l"><b>${e(nama)}</b>${ket ? `<small>${e(ket)}</small>` : ""}</div><div class="ujm-b__v">${kanan}</div>${o.x ? `<button type="button" class="mr-ikonbtn ujm-x" data-ujt="sw" data-v="${o.k}" aria-label="Hapus ${e(nama)}">${ikon("tutup", 15)}</button>` : ""}</div>`;
-const bbmBaris = (h) => `<div class="ujm-b"><div class="ujm-b__l"><b>BBM</b><small>${h.liter ? `${fmt(desimal(F.jarak))} km ÷ ${e(F.rasio)} = ${(Math.round(h.liter * 10) / 10).toLocaleString("id-ID")} liter × ${rp(angkaRp(F.solar))}` : "Isi jarak, rasio, dan harga solar"}</small></div><div class="ujm-b__v"><b>${rp(h.bbm)}</b></div></div>`;
+const bbmBaris = (h) => F.modeBbm === "nominal"
+  ? `<div class="ujm-b"><div class="ujm-b__l"><b>BBM</b><small>Nominal langsung (mis. dari impor Excel)</small><button type="button" class="ujm-link" data-ujt="bbm-hitung">Hitung dari jarak</button></div><div class="ujm-b__v">${rupiah("bbm", F.bbmNominal, "BBM nominal", 'data-uj="bbmNominal"')}</div></div>`
+  : `<div class="ujm-b"><div class="ujm-b__l"><b>BBM</b><small>${h.liter ? `${fmt(desimal(F.jarak))} km ÷ ${e(F.rasio)} = ${(Math.round(h.liter * 10) / 10).toLocaleString("id-ID")} liter × ${rp(angkaRp(F.solar))}` : "Isi jarak, rasio, dan harga solar"}</small><button type="button" class="ujm-link" data-ujt="bbm-nominal">Isi BBM nominal</button></div><div class="ujm-b__v"><b>${rp(h.bbm)}</b></div></div>`;
 const barisLain = () => F.lain.map((c, i) => `<div class="ujm-b"><div class="ujm-b__l"><input class="ujm-nama" data-ujl="nama" data-i="${i}" value="${e(c.nama)}" placeholder="Nama komponen" autocomplete="off" aria-label="Nama komponen"></div><div class="ujm-b__v">${rupiah("", c.v, "Nominal " + (c.nama || "komponen"), `data-ujl="v" data-i="${i}"`)}</div><button type="button" class="mr-ikonbtn ujm-x" data-ujt="lain-hapus" data-i="${i}" aria-label="Hapus komponen">${ikon("tutup", 15)}</button></div>`).join("");
 function htmlKomp() {
   const h = hitungF(), dasar = baris("Tol", "", rupiah("tol", F.tol, "Tol", 'data-uj="tol"')) + baris("Biaya mel", "Retribusi, parkir, dan sejenisnya", rupiah("mel", F.mel, "Biaya mel", 'data-uj="mel"'));
@@ -115,7 +119,7 @@ const kunciF = () => kunciUJ(F.pickup, F.tujuan, F.armada);
 function segar(struktur) {
   if (!panelAktif) return;
   const h = hitungF(), tot = $("#ujm-tot", panelAktif), ada = $("#ujm-ada", panelAktif), k = F.pickup.trim() && F.tujuan.trim() ? kunciF() : "", lama = k && k !== F.asal ? U.master.find((r) => r.id === k) : null;
-  if (struktur) $("#ujm-komp", panelAktif).innerHTML = htmlKomp(); else { const b = $("#ujm-komp .ujm-b__l small", panelAktif); if (b) b.outerHTML = `<small>${h.liter ? `${fmt(desimal(F.jarak))} km ÷ ${e(F.rasio)} = ${(Math.round(h.liter * 10) / 10).toLocaleString("id-ID")} liter × ${rp(angkaRp(F.solar))}` : "Isi jarak, rasio, dan harga solar"}</small>`; const v = $("#ujm-komp .ujm-b__v b", panelAktif); if (v) v.textContent = rp(h.bbm); }
+  if (struktur) $("#ujm-komp", panelAktif).innerHTML = htmlKomp(); else if (F.modeBbm !== "nominal") { const b = $("#ujm-komp .ujm-b__l small", panelAktif); if (b) b.outerHTML = `<small>${h.liter ? `${fmt(desimal(F.jarak))} km ÷ ${e(F.rasio)} = ${(Math.round(h.liter * 10) / 10).toLocaleString("id-ID")} liter × ${rp(angkaRp(F.solar))}` : "Isi jarak, rasio, dan harga solar"}</small>`; const v = $("#ujm-komp .ujm-b__v b", panelAktif); if (v) v.textContent = rp(h.bbm); }
   $("#ujm-sum", panelAktif).innerHTML = htmlSum(); if (struktur) $("#ujm-man", panelAktif).innerHTML = htmlMan();
   tot.textContent = rp(h.total);
   ada.innerHTML = lama ? `<div class="ujm-peringatan">Sudah ada di master: <b>${e(lama.rute)} · ${e(lama.armadaNama)} · ${rp(lama.total)}</b>${lama.diperbaruiPada ? ` (diubah ${e(tgl(lama.diperbaruiPada))})` : ""}. Menyimpan memperbarui baris itu; angka lama masuk riwayat.</div>` : "";
@@ -141,6 +145,8 @@ function bukaForm(r) {
     else if (t === "driver") { F.digaji = v === "1"; if (F.digaji) { F.aktif.insentif = false; F.opsi.insentif = ""; } panelAktif.querySelectorAll('[data-ujt="driver"]').forEach((c) => c.classList.toggle("is-aktif", (c.dataset.v === "1") === F.digaji)); segar(true); }
     else if (t === "sw") { F.aktif[v] = !F.aktif[v]; if (!F.aktif[v]) F.opsi[v] = ""; segar(true); }
     else if (t === "lain") { F.lain.push({ nama: "", v: "" }); segar(true); const n = panelAktif.querySelectorAll(".ujm-nama"); if (n.length) n[n.length - 1].focus(); }
+    else if (t === "bbm-nominal") { F.modeBbm = "nominal"; F.bbmNominal = String(hitung({ jarak: F.jarak, rasio: F.rasio, solar: F.solar }).bbm || ""); segar(true); }
+    else if (t === "bbm-hitung") { F.modeBbm = "hitung"; F.bbmNominal = ""; segar(true); }
     else if (t === "lain-hapus") { F.lain.splice(+b.dataset.i, 1); segar(true); }
     else if (t === "manual") { F.pakaiManual = !F.pakaiManual; if (!F.pakaiManual) F.manual = ""; segar(true); }
     else if (t === "slip") { const s = $("#ujm-slip", panelAktif); s.hidden = !s.hidden; if (!s.hidden) { s.innerHTML = slipHtml(hitungF()); s.scrollIntoView({ block: "nearest" }); } }
@@ -158,14 +164,14 @@ async function bukaRiwayat() {
     w.innerHTML = `<div class="ujm-sec"><h5>Riwayat angka</h5>${d.length ? d.map((x) => `<div class="ujm-hist"><span>${e(tgl(x.tanggal))} · ${e(x.oleh || "")}</span><b>${x.lamaTotal === null || x.lamaTotal === undefined ? "dibuat" : rp(x.lamaTotal) + " →"} ${rp(x.baruTotal)}</b></div>`).join("") : '<p class="mr-sub">Belum ada riwayat.</p>'}</div>`;
   } catch (err) { w.innerHTML = `<p class="mr-galat">Riwayat gagal dimuat: ${e(err.message)}</p>`; }
 }
-const dataBaris = (h) => ({ pickup: F.pickup.trim(), tujuan: F.tujuan.trim(), rute: namaRute(F.pickup, F.tujuan), armada: F.armada, armadaNama: armadaDari(F.armada).nama, grup: armadaDari(F.armada).grup, digaji: F.digaji, jarak: desimal(F.jarak), rasio: desimal(F.rasio), solar: angkaRp(F.solar), tol: angkaRp(F.tol), mel: angkaRp(F.mel),
+const dataBaris = (h) => ({ pickup: F.pickup.trim(), tujuan: F.tujuan.trim(), rute: namaRute(F.pickup, F.tujuan), armada: F.armada, armadaNama: armadaDari(F.armada).nama, grup: armadaDari(F.armada).grup, digaji: F.digaji, jarak: desimal(F.jarak), rasio: desimal(F.rasio), solar: angkaRp(F.solar), bbmNominal: F.modeBbm === "nominal" ? angkaRp(F.bbmNominal) : 0, rincian: true, tol: angkaRp(F.tol), mel: angkaRp(F.mel),
   opsi: Object.fromEntries(OPSIONAL.map((c) => [c.k, F.aktif[c.k] && !(c.k === "insentif" && F.digaji) ? angkaRp(F.opsi[c.k]) : 0])), lain: F.lain.filter((c) => c.nama.trim() && angkaRp(c.v) > 0).map((c) => ({ nama: c.nama.trim(), v: angkaRp(c.v) })), bulat: U.peng.bulat,
   manual: F.pakaiManual ? angkaRp(F.manual) : 0, bbm: h.bbm, subtotal: h.subtotal, pembulatan: h.pembulatan, total: h.total, sumber: h.manual ? "manual" : "hitung", catatan: F.catatan.trim() });
 async function simpan(tombol) {
   const g = $("#ujm-galat", panelAktif), salah = (m) => { g.textContent = m; g.hidden = false; g.scrollIntoView({ block: "nearest" }); };
   g.hidden = true;
   if (!F.pickup.trim() || !F.tujuan.trim()) return salah("Isi pick up dan tujuan.");
-  if (!(desimal(F.jarak) > 0) || !(desimal(F.rasio) > 0)) return salah("Isi jarak pulang-pergi dan rasio BBM supaya BBM terhitung.");
+  if (!F.pakaiManual && F.modeBbm !== "nominal" && (!(desimal(F.jarak) > 0) || !(desimal(F.rasio) > 0))) return salah("Isi jarak pulang-pergi dan rasio BBM supaya BBM terhitung (atau isi BBM nominal).");
   if (F.pakaiManual && !(angkaRp(F.manual) > 0)) return salah("Isi angka manual, atau matikan saklar timpa.");
   if (F.lain.some((c) => angkaRp(c.v) > 0 && !c.nama.trim())) return salah("Beri nama komponen lain yang sudah ada nominalnya.");
   const h = hitungF(); if (!(h.total > 0)) return salah("Uang jalan masih Rp0. Isi komponen biayanya.");
@@ -253,11 +259,77 @@ async function hitungUlangSemua(rows) {
   toast(`<b>${n} baris dihitung ulang.</b>${gagal ? ` ${gagal} gagal, coba lagi.` : ""}${pesan}`, gagal || pesan ? "peringatan" : "ok"); X.render();
 }
 
+// ---------- impor / ekspor Excel (pratinjau, kotak centang per baris, lalu simpan) ----------
+const LABEL = { baru: "Baru", ubah: "Ubah", sama: "Sama", kembar: "Kembar", error: "Error" };
+const tglFile = () => new Date().toISOString().slice(0, 10);
+function bukaImpor() {
+  if (!X.S.kelola) return;
+  const panel = bukaLayer(`<header class="mr-panel__kepala"><div><h2>Impor / ekspor Excel</h2><p class="mr-sub">Pratinjau dulu, baru disimpan setelah kamu konfirmasi.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
+    <div class="mr-panel__isi" id="ujx-isi">
+      <label class="mr-drop">${ikon("file", 28)}<b>Pilih file Excel (.xlsx)</b><span>Pakai template di bawah, atau hasil ekspor data saat ini.</span><input type="file" id="ujx-file" accept=".xlsx,.xls" hidden></label>
+      <div class="mr-banner">${ikon("info")}<div>Cukup isi <b>Uang jalan</b> untuk nominal langsung (mis. A → B, CDD Standar, 200.000). Bila ingin dirinci, isi juga BBM/Solar, Tol, Mel, TKBM, Checker, Helper, Asuransi, atau Insentif.
+        <span class="ujm-unduh"><button type="button" class="mr-btn mr-btn--kecil" id="ujx-templat">${ikon("download", 14)}Unduh template</button><button type="button" class="mr-btn mr-btn--kecil" id="ujx-ekspor" ${U.master.length ? "" : "disabled"}>${ikon("download", 14)}Ekspor data saat ini (${fmt(U.master.length)})</button></span></div></div>
+      <ul class="mr-aturan"><li>Uang jalan terisi = angka resmi. Kosong = rincian dijumlahkan. Bila keduanya terisi tapi berbeda, pratinjau memberi peringatan.</li><li>Insentif hanya untuk driver <b>tidak digaji</b>. Rute + armada yang sudah ada tampil sebagai <b>Ubah</b>; kamu yang memilih baris mana yang diterapkan.</li><li>Hasil impor bertanda <b>Impor</b> (bukan hitungan sistem), tidak ikut hitung ulang otomatis, dan ikut tercatat di tab Tarif.</li></ul>
+    </div><footer class="mr-panel__kaki"><button class="mr-btn" data-aksi="tutup-layer">Tutup</button></footer>`, { lebar: "lebar" });
+  const galat = (m, err) => toast(`<b>${m}</b><br>${e(err.message || err)}`, "bahaya");
+  $("#ujx-templat", panel).onclick = () => { try { unduhTemplate("template-uang-jalan.xlsx"); } catch (err) { galat("Template gagal dibuat.", err); } };
+  $("#ujx-ekspor", panel).onclick = () => { try { eksporData(U.master.slice().sort((a, b) => String(a.rute).localeCompare(String(b.rute), "id") || urutArmada(a.armada) - urutArmada(b.armada)), `uang-jalan_${tglFile()}.xlsx`); } catch (err) { galat("Ekspor gagal.", err); } };
+  $("#ujx-file", panel).onchange = async (ev) => {
+    const f = ev.target.files[0]; if (!f) return;
+    try { pratinjauImpor(panel, buatRencana(await bacaFile(f), { master: new Map(U.master.map((r) => [r.id, r])), peng: U.peng })); } catch (err) { galat("File tidak bisa dibaca.", err); }
+  };
+}
+function pratinjauImpor(panel, rencana) {
+  const cacah = { baru: 0, ubah: 0, sama: 0, kembar: 0, error: 0 }; rencana.forEach((r) => cacah[r.status]++);
+  const layak = rencana.filter((r) => r.status === "baru" || r.status === "ubah"), pilih = new Set(layak.map((r) => r.kunci)), bermasalah = cacah.kembar + cacah.error;
+  let saring = layak.length ? "semua-berubah" : "semua"; const isi = $("#ujx-isi", panel), kaki = $(".mr-panel__kaki", panel);
+  const tombol = () => { const b = $("#ujx-terapkan", kaki); if (b) { b.textContent = `Simpan ${fmt(pilih.size)} terpilih`; b.disabled = !pilih.size; } };
+  const sel = (r) => (r.status === "baru" || r.status === "ubah" ? `<input type="checkbox" data-ujx-k="${e(r.kunci)}" ${pilih.has(r.kunci) ? "checked" : ""} aria-label="Pilih ${e(r.ringkas)}">` : "");
+  const detail = (r) => r.status === "baru" ? `<div class="mr-riwayat__baris"><span>Uang jalan</span><span><b>${rp(r.data.total)}</b> ${r.data.rincian ? "(dengan rincian)" : "(nominal langsung)"}</span></div>`
+    : r.perubahan.map((p) => `<div class="mr-riwayat__baris"><span>${e(p.label)}</span><span>${e(p.lama)} <em>→</em> ${e(p.baru)}</span></div>`).join("") || (r.status === "sama" ? '<span class="mr-sub">Tidak ada perubahan</span>' : "");
+  const gambar = () => {
+    const tampil = rencana.filter((r) => (saring === "semua" ? true : saring === "semua-berubah" ? r.status !== "sama" : r.status === saring));
+    isi.innerHTML = `<div class="mr-ringkas">${["baru", "ubah", "sama", "kembar", "error"].map((k) => `<button type="button" class="mr-ringkas__item mr-s-${k} ${saring === k ? "is-aktif" : ""}" data-s="${k}"><b>${cacah[k]}</b><span>${LABEL[k]}</span></button>`).join("")}</div>
+      ${bermasalah ? `<div class="mr-banner mr-banner--peringatan">${ikon("peringatan")}<div><b>${bermasalah} baris bermasalah tidak akan disimpan.</b> Perbaiki di Excel lalu impor ulang, atau lanjutkan dengan baris yang valid.</div></div>` : ""}
+      ${rencana.length ? "" : `<div class="mr-banner mr-banner--bahaya">${ikon("peringatan")}<div>File tidak berisi baris data.</div></div>`}
+      ${layak.length ? `<div class="ujm-pilihbar"><button type="button" class="mr-m-link" data-ujx="semua">Pilih semua (${layak.length})</button><button type="button" class="mr-m-link" data-ujx="ubah-kosong">Lepas semua yang Ubah</button><button type="button" class="mr-m-link" data-ujx="kosong">Kosongkan</button></div>` : ""}
+      <div class="mr-kartu mr-tabelkartu"><table class="mr-table mr-table--import ujm-imp"><thead><tr><th></th><th>Baris</th><th>Status</th><th>Rute · armada</th><th>Perubahan</th></tr></thead><tbody>${tampil.slice(0, 300).map((r) => `<tr><td class="ujm-cek">${sel(r)}</td><td>${r.no}</td><td><span class="mr-lencana mr-s-${r.status}">${LABEL[r.status]}</span></td>
+        <td class="mr-td-nama"><div class="mr-nama">${e(r.ringkas || "—")}</div>${r.alasan ? `<div class="mr-galat-kecil">${e(r.alasan)}</div>` : ""}${r.peringatan ? `<div class="ujm-pering">${e(r.peringatan)}</div>` : ""}</td><td>${detail(r)}</td></tr>`).join("")}</tbody></table></div>
+      ${tampil.length > 300 ? `<p class="mr-sub">Menampilkan 300 baris pertama dari ${tampil.length}. Semua baris yang dicentang tetap ikut disimpan.</p>` : ""}`;
+    $$(".mr-ringkas__item", isi).forEach((b) => (b.onclick = () => { saring = saring === b.dataset.s ? "semua" : b.dataset.s; gambar(); }));
+    $$("[data-ujx-k]", isi).forEach((c) => (c.onchange = () => { c.checked ? pilih.add(c.dataset.ujxK) : pilih.delete(c.dataset.ujxK); tombol(); }));
+    $$("[data-ujx]", isi).forEach((b) => (b.onclick = () => { const a = b.dataset.ujx; if (a === "kosong") pilih.clear(); else if (a === "semua") layak.forEach((r) => pilih.add(r.kunci)); else layak.filter((r) => r.status === "ubah").forEach((r) => pilih.delete(r.kunci)); gambar(); tombol(); }));
+  };
+  gambar();
+  kaki.innerHTML = `<button type="button" class="mr-btn" data-aksi="tutup-layer">Batal</button><button type="button" class="mr-btn" id="ujx-ulang">Pilih file lain</button><button type="button" class="mr-btn mr-btn--utama" id="ujx-terapkan"></button>`; tombol();
+  $("#ujx-ulang", kaki).onclick = () => bukaImpor();
+  $("#ujx-terapkan", kaki).onclick = () => terapkanImpor(panel, rencana.filter((r) => pilih.has(r.kunci)));
+}
+async function terapkanImpor(panel, daftar) {
+  const isi = $("#ujx-isi", panel), kaki = $(".mr-panel__kaki", panel), baru = daftar.filter((r) => r.status === "baru").length, ubah = daftar.length - baru;
+  if (!daftar.length || !await konfirmasi("Simpan hasil impor?", `<b>${baru}</b> uang jalan baru dan <b>${ubah}</b> perubahan akan disimpan. Perubahan angka dicatat di riwayat dan tarif ikut diperbarui.`, "Simpan")) return;
+  isi.innerHTML = `<div class="mr-kosong"><div class="mr-progres"><span id="ujx-bar"></span></div><p id="ujx-teks">Menyimpan 0 dari ${daftar.length}…</p></div>`; kaki.innerHTML = "";
+  const ok = [], gagal = []; let n = 0, oleh = X.S.user.email;
+  for (let a = 0; a < daftar.length; a += 5) await Promise.all(daftar.slice(a, a + 5).map(async (r) => {
+    try {
+      const t = await X.DB.simpanUJ(r.kunci, r.data, { baru: r.status === "baru", oleh }), row = { ...t, id: r.kunci }, i = U.master.findIndex((x) => x.id === r.kunci);
+      if (i >= 0) U.master[i] = row; else U.master.push(row);
+      X.DB.catatRiwayatUJ({ kunci: r.kunci, rute: r.data.rute, armadaNama: r.data.armadaNama, jenis: "impor", lamaTotal: r.lama ? r.lama.total : null, baruTotal: r.data.total, sumber: "impor" }, { oleh }).catch(() => {});
+      ok.push(row);
+    } catch (err) { gagal.push({ r, alasan: err.message || String(err) }); }
+    n++; const b = $("#ujx-bar", panel), t = $("#ujx-teks", panel); if (b) b.style.width = `${Math.round((n / daftar.length) * 100)}%`; if (t) t.textContent = `Menyimpan & memverifikasi ${n} dari ${daftar.length}…`;
+  }));
+  let pesanTarif = ""; if (ok.length) { try { await sinkronTarif(ok); } catch (err) { pesanTarif = `Belum tersinkron ke tab Tarif: ${err.message}`; } }
+  isi.innerHTML = `<div class="mr-banner ${gagal.length || pesanTarif ? "mr-banner--peringatan" : ""}">${ikon(gagal.length || pesanTarif ? "peringatan" : "cek")}<div><b>${ok.length} dari ${daftar.length} baris tersimpan dan terverifikasi.</b>${gagal.length ? `<br>${gagal.length} gagal:` : ""}${gagal.slice(0, 10).map((g) => `<br>· ${e(g.r.ringkas)}: ${e(g.alasan)}`).join("")}${pesanTarif ? `<br>${e(pesanTarif)}` : ""}</div></div>`;
+  kaki.innerHTML = `<button type="button" class="mr-btn mr-btn--utama" data-aksi="tutup-layer">Tutup</button>`; X.render();
+}
+
 // ---------- aksi dari master-rate.js ----------
 export function aksiUJ(a, el) {
   if (a === "uj-tambah") bukaForm(null);
   else if (a === "uj-buka") bukaForm(U.master.find((r) => r.id === el.dataset.k) || null);
   else if (a === "uj-filter") { U.f.armada = el.dataset.v; X.render(); }
   else if (a === "uj-peng") bukaPeng();
+  else if (a === "uj-impor") bukaImpor();
   else if (a === "uj-muat") muatUJ(true);
 }

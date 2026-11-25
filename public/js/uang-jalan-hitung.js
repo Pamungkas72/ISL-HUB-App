@@ -34,10 +34,11 @@ export const rasioAwal = (k, peng) => desimal((peng && peng.rasio && peng.rasio[
 export const kunciUJ = (pickup, tujuan, armada) => `${slug(pickup)}__${slug(tujuan)}__${slug(armada)}`;
 export const namaRute = (pickup, tujuan) => `${String(pickup).trim()} → ${String(tujuan).trim()}`;
 
-/* i: { jarak, rasio, solar, tol, mel, digaji, opsi:{tkbm,checker,helper,asuransi,insentif}, lain:[{nama,v}], bulat, manual }
+/* i: { jarak, rasio, solar, bbmNominal, tol, mel, digaji, opsi:{tkbm,checker,helper,asuransi,insentif}, lain:[{nama,v}], bulat, manual }
    Keluaran: baris rincian (untuk slip/pratinjau), subtotal, pembulatan, total, dan penanda manual. */
 export function hitung(i) {
-  const jarak = desimal(i.jarak), rasio = desimal(i.rasio), solar = angkaRp(i.solar), liter = jarak > 0 && rasio > 0 ? jarak / rasio : 0, bbm = Math.round(liter * solar);
+  const jarak = desimal(i.jarak), rasio = desimal(i.rasio), solar = angkaRp(i.solar), nom = angkaRp(i.bbmNominal); // bbmNominal (dari impor Excel) menggantikan BBM hitungan
+  const liter = nom > 0 ? 0 : jarak > 0 && rasio > 0 ? jarak / rasio : 0, bbm = nom > 0 ? nom : Math.round(liter * solar);
   const o = i.opsi || {}, baris = [{ k: "bbm", n: "BBM", v: bbm, liter }, { k: "tol", n: "Tol", v: angkaRp(i.tol) }, { k: "mel", n: "Biaya mel", v: angkaRp(i.mel) }];
   OPSIONAL.forEach((c) => { if (c.k === "insentif" && i.digaji) return; const v = angkaRp(o[c.k]); if (v > 0) baris.push({ k: c.k, n: c.n, v }); });
   (i.lain || []).forEach((c) => { const v = angkaRp(c.v); if (c && c.nama && v > 0) baris.push({ k: "x:" + c.nama, n: c.nama, v }); });
