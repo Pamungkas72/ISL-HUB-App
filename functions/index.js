@@ -69,3 +69,4 @@ exports.loginTerakhir = onCallJelas({ region: "asia-southeast2" }, async (req) =
 });
 exports.notifDailyJob = require("./dailyjob").notifDailyJob;
 Object.assign(exports, require("./dailyjob-akun"));
+exports.emailCustomerDailyJob = require("./dailyjob-email").emailCustomerDailyJob;

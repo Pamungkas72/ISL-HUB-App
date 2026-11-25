@@ -37,6 +37,7 @@ export function htmlFormTracking(d, c) {
     <details class="dj-lain dj-lebar dj-lainform"${baru ? "" : " open"}><summary>Lainnya (opsional): target, PIC, driver, plat, cost, status, catatan</summary><div class="mr-form dj-form" style="margin-top:10px">
     <div class="dj-lebar dj-g2t">${f(c.targetLabel, `<input type="date" id="djf-target" value="${e(d.tglTarget || "")}"${c.targetKunci ? " disabled" : ""}>`)}${f("PIC", `<input id="djf-pic" list="djf-piclist" value="${e(d.pic || "")}"><datalist id="djf-piclist">${c.picList.map((p) => `<option value="${e(p)}">`).join("")}</datalist>`)}</div>
     ${f("Telepon driver", inp("djt-telp", r.telp, "", 'inputmode="tel"'))}
+    <label class="mr-f dj-lebar dj-cek"><input type="checkbox" id="djt-email" ${r.emailCust === false ? "" : "checked"}> <span>Kirim email ke customer <small>saat order diterima dan saat terkirim; butuh email di data customer</small></span></label>
     <div class="mr-f dj-lebar"><span>POD</span>${chipPil("pod", st.pod, [["belum", "Belum kembali"], ["kembali", "Sudah kembali"]])}</div>
     ${f("Tanggal POD kembali", `<input type="date" id="djt-tglpod" value="${e(r.tglPod || "")}">`, "dj-tglpod" + (st.pod === "kembali" ? "" : " dj-sembunyi"))}
     ${f("Tanggal transfer vendor <small>Cash; kosongkan bila belum. Resi POD dan bukti bayar dicatat di detail</small>", `<input type="date" id="djt-tglbayar" value="${e(r.tglBayar || "")}">`)}
