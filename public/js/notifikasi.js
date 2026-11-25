@@ -125,6 +125,19 @@ function pantauPendaftar(n = 0) {
   onSnapshot(query(collection(db, "pengguna"), where("status", "==", "menunggu")), () => muat(true), (e) => console.warn("Pantau pendaftar:", e && e.code));
 }
 
+/* Akun yang sudah disetujui tetapi belum dikelompokkan (semua modul tertutup, hanya Beranda): pengingat untuk master/admin. */
+async function akunBelumDikelompokkan() {
+  const u = auth.currentUser; if (!u || !(window.__ISL_KELOLA ?? adalahMaster(u.email))) return [];
+  try {
+    const snap = await getDocs(query(collection(db, "pengguna"), where("peran", "==", "lihat")));
+    const kosong = (a) => a && !a.jabatan && ["mr", "qt", "cu", "dj", "lg"].every((k) => !(a[k] > 0));
+    const daftar = snap.docs.map((d) => d.data()).filter((a) => a.status === "aktif" && !a.divisiId && !a.kelompokDJ && kosong(a.akses));
+    if (!daftar.length) return [];
+    const n = daftar.length, nama = daftar.slice(0, 3).map((x) => x.nama || x.email).join(", ") + (n > 3 ? " dan lainnya" : "");
+    return [{ id: "belum-dikelompokkan", jenis: "halaman", grup: "sistem", level: "warn", judul: `${n} akun belum dikelompokkan`, ket: `${nama} · hanya melihat Beranda sampai dikelompokkan di Pengaturan > Akun dan akses`, tujuan: { jenis: "halaman", hash: "#pengaturan" } }];
+  } catch (e) { console.warn("Akun belum dikelompokkan tidak termuat:", e && e.code); return []; }
+}
+
 /* Sales yang baru mendaftar dan belum disetujui. Hanya akun master yang boleh membaca daftar ini (aturan Firestore). */
 async function pendaftarMenunggu() {
   const u = auth.currentUser; if (!u || !(window.__ISL_KELOLA ?? adalahMaster(u.email))) return [];
@@ -177,7 +190,7 @@ export async function kumpulkan({ paksa = false } = {}) {
   }
   const urut = { bahaya: 0, warn: 1, info: 2 }, t = ditutup();
   const items = semua.filter((i) => true).sort((a, b) => urut[a.level] - urut[b.level]);
-  return { semua: [...items, ...dariCadangan(), ...(await pendaftarMenunggu()), ...(await dariKontrak()), ...(await dariTugasMom()), ...pwTerkumpul()], t };
+  return { semua: [...items, ...dariCadangan(), ...(await pendaftarMenunggu()), ...(await akunBelumDikelompokkan()), ...(await dariKontrak()), ...(await dariTugasMom()), ...pwTerkumpul()], t };
 }
 
 // ---------- tujuan: buka sumber masalahnya ----------

@@ -2781,3 +2781,10 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
   .ujm-imp td:nth-child(2) { display: none; }
   .ujm-imp td:nth-child(1), .ujm-imp td:nth-child(3) { display: inline-block; vertical-align: middle; width: auto; padding-right: 8px; }
 }
+
+/* Divisi dan bagan (Pengaturan > Akun dan akses) */
+.ad-aksi{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.kd-bagan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.kd-bagan{margin:0}
+.kd-staf{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+@media (max-width:760px){.ad-aksi{justify-content:flex-start}.kd-bagan-grid{grid-template-columns:1fr}}

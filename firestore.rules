@@ -358,7 +358,7 @@ service cloud.firestore {
         || (isAdmin() && uid != request.auth.uid
             && resource.data.peran in ['sales', 'lihat', null] && request.resource.data.peran in ['sales', 'lihat', null]
             && request.resource.data.status in ['aktif', 'nonaktif']
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['peran', 'kodeSales', 'status', 'targetBulanan', 'disetujuiPada', 'ditolakPada', 'kelompokDJ', 'akses'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['peran', 'kodeSales', 'status', 'targetBulanan', 'disetujuiPada', 'ditolakPada', 'kelompokDJ', 'akses', 'divisiId'])
             && request.resource.data.get('akses', {}) is map
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['targetBulanan']) || request.resource.data.targetBulanan == null))
         || (sesiBerlaku() && request.auth.uid == uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nama', 'telepon', 'ttd']))
@@ -372,6 +372,11 @@ service cloud.firestore {
                     && request.resource.data.sembunyi.get('template', []).size() <= 500 && request.resource.data.sembunyi.get('preset', []).size() <= 500
                     && request.resource.data.sembunyi.get('satuan', []).size() <= 500)));
       allow delete: if isMaster();
+    }
+    // Divisi non-Daily Job (Finance, Legal, CS, dll.; Pengaturan > Akun dan akses). Anggotanya ditandai pengguna.divisiId; kepala ada di divisi.kepala.
+    match /divisi/{id} {
+      allow read, delete: if isKelola();
+      allow create, update: if isKelola() && request.resource.data.keys().hasOnly(['nama', 'presetId', 'kepala', 'arsip', 'dibuat', 'bawaan']);
     }
     // Daftar nama sales aktif (untuk peringkat). Hanya nama dan kode; dibuat master saat menyetujui akun.
     match /sales_publik/{uid} {
