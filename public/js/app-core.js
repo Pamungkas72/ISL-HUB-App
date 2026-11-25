@@ -4653,7 +4653,7 @@ function formIsiModal(q, b) {
   return `<div class="qt-im" data-id="${esc(q.id)}" data-bid="${esc(b.id)}">
     <p class="mr-sub" style="display:block;margin:0 0 10px">${esc(b.item)} · harga jual <b>${rp(b.jual)}</b></p>
     <div class="mr-form">
-      <label class="mr-f"><span>Modal (Rp) *</span><input id="im-modal" inputmode="decimal" value="${R.adaModal(b) ? esc(b.modal) : ''}" placeholder="0" autocomplete="off"></label>
+      <label class="mr-f"><span>Modal (Rp) *</span><input id="im-modal" inputmode="decimal" data-ribuan-live value="${R.adaModal(b) ? esc(b.modal) : ''}" placeholder="0" autocomplete="off"></label>
       <label class="mr-f"><span>Lini bisnis *</span><select id="im-lini"><option value="">Pilih lini bisnis</option>${opt(Object.entries(liniResmi()), lid)}</select></label>
       <label class="mr-f mr-f--lebar"><span>Vendor *</span><select id="im-vendor"><option value="">Pilih vendor</option>${opt(vend.map(v => [v.id, v.nama]), vsel)}<option value="__baru" ${vsel === '__baru' ? 'selected' : ''}>+ Vendor baru</option></select></label>
       <label class="mr-f mr-f--lebar" id="im-vb-w" ${vsel === '__baru' ? '' : 'hidden'}><span>Nama vendor baru</span><input id="im-vb" value="${esc(b.vendorNama || '')}" autocomplete="off"><small>Masuk Master Rate sebagai vendor Draf, bisa dilengkapi di sana.</small></label>
@@ -5444,7 +5444,7 @@ function tlIcHtml() {
   return `<p class="mr-sub qt-ket">Template untuk tombol <b>Isi cepat &gt; Isi dari template</b> di quotation Trucking Distribusi (tipe Box). Rute dan pick up masuk sebagai baris, harga per kelas kendaraan diisi dari sini. Harga yang dikosongkan memakai tarif minimum Master Rate bila ada. Berlaku untuk semua akun.</p>
   <label class="mr-f"><span>Lokasi pick up</span><input data-tic="pickup" value="${esc(TL.ic.pickup || '')}" placeholder="mis. Jakarta" autocomplete="off" ${dis}></label>
   <div class="tl-ic">${TL.ic.rute.map((r, i) => `<div class="tl-ic__r"><div class="tl-ic__h"><input data-tic="n" data-i="${i}" value="${esc(r.n || '')}" placeholder="Nama rute atau kota tujuan" aria-label="Tujuan ${i + 1}" autocomplete="off" ${dis}>${dis ? '' : `<button type="button" class="mr-btn mr-btn--kecil" data-tl="ic-hapus" data-i="${i}" aria-label="Hapus rute ${esc(r.n || i + 1)}">Hapus</button>`}</div>
-    <div class="tl-ic__g">${kls.map(k => `<label><span>${esc(k)}</span><input inputmode="numeric" data-tic="h" data-i="${i}" data-k="${esc(k)}" value="${(r.h || {})[k] ? esc(String(r.h[k])) : ''}" placeholder="–" aria-label="${esc(r.n || 'Rute')} ${esc(k)}" ${dis}></label>`).join('')}</div></div>`).join('')}</div>
+    <div class="tl-ic__g">${kls.map(k => `<label><span>${esc(k)}</span><input inputmode="numeric" data-ribuan-live data-tic="h" data-i="${i}" data-k="${esc(k)}" value="${(r.h || {})[k] ? esc(String(r.h[k])) : ''}" placeholder="–" aria-label="${esc(r.n || 'Rute')} ${esc(k)}" ${dis}></label>`).join('')}</div></div>`).join('')}</div>
   ${dis ? '' : '<div class="fl-baris-tombol"><button type="button" class="mr-btn mr-btn--kecil" data-tl="ic-tambah">+ Tambah rute</button><button type="button" class="mr-btn mr-btn--kecil" data-tl="ic-awal">Kembalikan rute bawaan</button></div>'}`;
 }
 function tlAngka(v) { const d = String(v ?? '').replace(/[^0-9]/g, ''); return d ? Number(d) : null; }

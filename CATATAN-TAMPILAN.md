@@ -532,3 +532,9 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 ## Pemilih pilihan ringkas (25 Nov 2026, desain B pilihan pemilik)
 - Daftar bawaan peramban (terutama HP, menutupi layar) diganti `js/pemilih.js`: beri `data-pemilih` pada `<select>` (opsi boleh `data-ket` untuk keterangan singkat). HP = panel setengah layar dari bawah, desktop = popover; pencarian muncul bila pilihan lebih dari 6. Select asli tetap tersembunyi sebagai sumber nilai, jadi `.value` dan event `change` tidak berubah. Dipakai di pilihan peran (pop-up Pendaftar akun, kartu Akun dan akses, Tambah akun), Pindah akun, dan peran siap pakai divisi.
 - Akun dan akses: ikon garis tipis seragam (`ikon.js`: grup, setuju, tameng, daftar, bagan, plus), tombol Tambah di HP berbentuk ikon bulat, tombol tambah Divisi/Kelompok digabung jadi satu menu (`pilihDariMenu`).
+
+## Pemisah ribuan di semua kolom uang (25 Nov 2026)
+- `js/ribuan.js` memberi titik ribuan saat mengetik (5000000 jadi 5.000.000) untuk kolom uang. Kolom baru cukup diberi atribut `data-ribuan-live`; pembacaan nilai memakai `replace(/\D/g, "")` atau `parseAngka` sehingga titik tidak mengganggu.
+- Ditambahkan: Cost pengiriman Tracking, biaya servis/perpanjangan Armada, target revenue Dashboard, nilai kontrak Legal, modal baris impor Quotation, harga per kelas Isi cepat Distribusi.
+- Sengaja tanpa pemisah: tanggal, persen, hari (TOP, target), NPWP, nomor, jarak dan rasio BBM, volume, luas.
+- Diperiksa dengan memindai 98 tampilan Quotation, Master Rate, Legal, dan Daily Job: tidak ada lagi kolom uang tanpa pemisah.

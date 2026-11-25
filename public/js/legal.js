@@ -128,7 +128,7 @@ function formKontrak(k) {
       <label class="mr-f"><span>Lini bisnis</span><input id="lk-lini" list="lk-dll" value="${e(d.lini)}" maxlength="60"><datalist id="lk-dll">${opsiLini().map((l) => `<option value="${e(l)}">`).join("")}</datalist></label>
       <label class="mr-f"><span>Tanggal mulai</span><input type="date" id="lk-mulai" value="${e(d.mulai)}"></label>
       <label class="mr-f"><span>Tanggal berakhir <small>(kosong = tanpa batas)</small></span><input type="date" id="lk-akhir" value="${e(d.berakhir)}"></label>
-      <label class="mr-f"><span>Nilai (Rp) <small>opsional</small></span><input id="lk-nilai" inputmode="numeric" value="${d.nilai === "" ? "" : e(Number(d.nilai).toLocaleString("id-ID"))}"></label>
+      <label class="mr-f"><span>Nilai (Rp) <small>opsional</small></span><input id="lk-nilai" inputmode="numeric" data-ribuan-live value="${d.nilai === "" ? "" : e(Number(d.nilai).toLocaleString("id-ID"))}"></label>
       <label class="mr-f"><span>PIC internal</span><input id="lk-pic" value="${e(d.pic)}" maxlength="80"></label>
       <label class="mr-f mr-f--lebar"><span><input type="checkbox" id="lk-auto" ${d.autoRenew ? "checked" : ""}> Diperpanjang otomatis (auto-renew)</span></label>
       <label class="mr-f mr-f--lebar"><span>Catatan</span><textarea id="lk-cat" rows="3" maxlength="600">${e(d.catatan)}</textarea></label>
