@@ -70,6 +70,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
         run: node tests/asap/uji-asap.js
+      - name: Uji galat hilang otomatis 10 detik (semua halaman)
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-galat-otomatis.js
       - name: Uji alur akun sales (HP dan desktop)
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules

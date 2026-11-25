@@ -522,7 +522,7 @@ function render() {
     : `<div class="dj-kepala dj-kepala--d"><input type="search" id="dj-cari" class="dj-cari" placeholder="${profilAktif() === "tracking" ? "Cari customer, DO, kontainer, plat…" : "Cari judul, customer, PIC…"}" value="${e(S.cari)}" aria-label="Cari job">${btnFilter}${menuAlat}</div>`;
   let isi;
   if (S.muat) isi = `<p class="mr-sub">Memuat…</p>`;
-  else if (S.galat) isi = `<div class="dj-alert dj-alert--bahaya">${e(S.galat)}</div>`;
+  else if (S.galat) isi = `<div class="dj-alert dj-alert--bahaya" data-galat>${e(S.galat)}</div>`;
   else if (!perlu) isi = `<section class="mr-kartu dj-kartu"><h3>Akun ini belum masuk kelompok</h3><p class="mr-sub">Minta master atau admin menetapkan kelompok Daily Job untuk akun Anda.</p></section>`;
   else if (S.detail && S.tab === "job") isi = htmlDetail(now);
   else isi = S.tab === "performa" ? kepalaP + (profilAktif() === "tracking" ? htmlPerformaTracking(now) : htmlPengingat(now) + htmlPerforma(now)) : S.tab === "armada" ? htmlArmada(armadaKel(), S.subArm, now, !S.lihatSaja) : S.tab === "job" ? kepalaD + htmlDaftar(now) : htmlKelompok();

@@ -63,6 +63,7 @@ export function bannerSinkron(teks, jenis, detik = 0) {
   el.textContent = teks;
   el.style.background = jenis === "gagal" ? "#FCEAEA" : jenis === "ok" ? "#E4F5EE" : "#FFF4E0";
   el.style.color = jenis === "gagal" ? "#A12626" : jenis === "ok" ? "#1F6B4B" : "#7A4A00";
+  if (jenis === "gagal") el.setAttribute("data-galat", ""); else el.removeAttribute("data-galat"); // kegagalan hilang sendiri 10 detik (galat-otomatis.js)
   el.hidden = false;
   clearTimeout(el._tutup); if (detik > 0) el._tutup = setTimeout(() => { el.hidden = true; }, detik * 1000); // pemberitahuan nonkritis hilang sendiri
   return el;
