@@ -15,7 +15,7 @@ import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverT
 import { kirimResetSandi, sinkronLoginTelepon } from "./auth.js";
 import "./pemilih.js";
 import { ikon } from "./ikon.js";
-import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit, adalahSales, ringkasAkses } from "./akses.js";
+import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit, adalahSales, ringkasAkses, bisaBuat } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
@@ -36,12 +36,19 @@ function render() {
   const lama = umur === null ? "Belum pernah mengunduh cadangan di perangkat ini." : umur === 0 ? "Terakhir diunduh hari ini." : `Terakhir diunduh ${umur} hari lalu.`;
   const basi = umur === null || umur >= 7;
   const bagianTerbaru = ["master", "fase2"].map((b) => S.lokal.find((x) => x.bagian === b));
-  const kUmum = `<section class="st-kartu"><h3>Tampilan</h3><p>Berlaku di semua halaman pada perangkat ini.</p>
+  /* Peran akun yang sedang masuk, sesuai peran dasar, peran siap pakai (jabatan), dan akses Sales dari izin Quotation/Customer Kelola. */
+const peranSaya = () => {
+  if (S.master) return "Pemilik (bisa mengubah semua data)"; if (S.admin) return "Admin (mengelola Master Rate, modal, dan akun sales)";
+  const p = S.profil || {}, j = p.akses && p.akses.jabatan, kosong = !Object.keys(p.akses || {}).some((k) => p.akses[k] > 0), dasar = p.peran === "sales" ? "Sales (membuat quotation miliknya)" : p.peran === "dj" ? "Anggota Daily Job" : kosong && p.akses ? "Belum diatur (hanya Beranda)" : "Lihat saja";
+  return (j ? j + " · " : "") + dasar + (bisaBuat(p) && p.peran !== "sales" ? " + membuat quotation" : "");
+};
+const kUmum = `<section class="st-kartu"><h3>Tampilan</h3><p>Berlaku di semua halaman pada perangkat ini.</p>
       <div class="st-pil" role="group" aria-label="Tema">${[["otomatis", "Ikut perangkat"], ["terang", "Terang"], ["gelap", "Gelap"]].map(([k, l]) => `<button type="button" data-tema="${k}" class="${tema === k ? "is-aktif" : ""}">${l}</button>`).join("")}</div>
     </section>
 
     <section class="st-kartu"><h3>Akun saya</h3><p>Masuk sebagai <b>${e(S.email)}</b>.</p>
-      <div class="st-stat">Peran: <span class="st-badge ${S.kelola ? "st-badge--ok" : ""}">${S.master ? "Pemilik (bisa mengubah semua data)" : S.admin ? "Admin (mengelola Master Rate, modal, dan akun sales)" : "Lihat saja"}</span></div>
+      <div class="st-stat">Peran: <span class="st-badge ${S.kelola ? "st-badge--ok" : ""}">${e(peranSaya())}</span></div>
+      ${S.master || S.admin ? "" : `<div class="st-stat">Akses: <span class="mr-sub">${e(ringkasAkses(S.profil))}</span></div>`}
       <div class="st-baris"><button class="mr-btn" data-st="sandi-saya">Ubah kata sandi lewat email</button><span class="mr-sub">Tautan atur kata sandi dikirim ke ${e(S.email)}.</span></div>
     </section>`;
   const kAkses = S.kelola ? htmlAkun() : "";
@@ -76,7 +83,7 @@ function render() {
     { id: "umum", label: "Tampilan dan akun", ket: "Tema, peran akun", ikon: "umum", isi: kUmum },
     ...(S.sales ? [{ id: "profil", label: "Profil sales", ket: "Nama, telepon, tanda tangan", ikon: "profil", isi: `<section class="st-kartu"><h3>Profil sales</h3>${window.ISLSales ? window.ISLSales.kontenProfil() : ""}</section>` }] : []),
     ...(S.sales || S.kelola ? [{ id: "ajuan", label: "Pengajuan hapus quotation", ket: S.master ? (jmlAj ? `${jmlAj} menunggu keputusan` : "Tidak ada yang menunggu") : S.sales ? (jmlAj ? `${jmlAj} menunggu master` : "Status pengajuan milikmu") : "Daftar pengajuan sales", badge: jmlAj, ikon: "ajuan", isi: `<section class="st-kartu"><h3>Pengajuan hapus quotation${jmlAj ? ` <span class="cu-jml">${jmlAj}</span>` : ""}</h3><p>${S.master ? "Keputusan ada di tangan pemilik. Quotation yang sudah disetujui customer tidak bisa dihapus dari sini." : S.sales ? "Status pengajuan hapus yang kamu kirim. Master yang memutuskan." : "Pengajuan hapus dari sales. Keputusan ada di tangan pemilik."}</p>${window.ISLSales ? window.ISLSales.kontenAjuan() : ""}</section>` }] : []),
-    ...(!S.sales ? [{ id: "cadangan", label: "Cadangan data", ket: "Unduh dan pulihkan", ikon: "cad", isi: kCad }] : []),
+    ...(S.kelola ? [{ id: "cadangan", label: "Cadangan data", ket: "Unduh dan pulihkan", ikon: "cad", isi: kCad }] : []),
     ...(!S.kelola && (S.divisiSaya || []).length ? [{ id: "timdivisi", label: "Tim divisi saya", ket: (S.divisiSaya || []).map((d) => d.nama).join(", "), ikon: "akses", isi: htmlTimDivisi() }] : []),
     ...(S.kelola ? [{ id: "akses", label: "Akun dan akses", ket: "Divisi, sales, persetujuan", ikon: "akses", badge: S.akun.filter((a) => a.status === "menunggu").length, isi: kAkses }] : []),
     ...(S.kelola ? [{ id: "sistem", label: "Sistem dan data", ket: "Keamanan modal, pembersihan, cek Firebase", ikon: "cad", isi: kSistem }] : []),
@@ -485,7 +492,7 @@ document.addEventListener("click", (ev) => { if (window.__rute === "pengaturan" 
 let sudahMuat = false;
 /* Dipanggil router (app.html#pengaturan) setiap kali halaman ini dibuka. */
 export async function mulaiPengaturan(user, profil) {
-  S.email = user.email; S.master = adalahMaster(user.email); S.sales = adalahSales(profil);
+  S.email = user.email; S.master = adalahMaster(user.email); S.sales = adalahSales(profil); S.profil = profil || null;
   S.admin = !!profil && profil.peran === "admin" && profil.status === "aktif";
   S.kelola = S.master || S.admin;
   window.__ISL_KELOLA = S.kelola;

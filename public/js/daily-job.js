@@ -1164,6 +1164,7 @@ const TUTUP_PENGINGAT_MS = 30000; // pengingat 09.00, 14.00, 17.00 menutup sendi
 export function pasangPengingat(user, profil) {
   const kelompok = (profil && profil.kelompokDJ) || null, kelola = !!window.__ISL_KELOLA;
   if (!kelompok && !kelola) return;
+  if (!kelola && profil && profil.akses && profil.akses.dj < 2) return; // Daily Job lihat saja atau dimatikan: tidak ada yang perlu dicatat, tanpa pengingat Catat
   const kunci = "dj-pengingat:" + user.uid, baca = () => { try { return JSON.parse(localStorage.getItem(kunci) || "[]"); } catch (_) { return []; } };
   const tandai = (k) => { try { localStorage.setItem(kunci, JSON.stringify([...baca().filter((x) => x.startsWith(H.hariIni())), k])); } catch (_) { /* tanpa penyimpanan: pengingat muncul lagi saat dibuka */ } };
   const cek = async () => {

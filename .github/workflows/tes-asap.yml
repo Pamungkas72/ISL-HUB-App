@@ -70,6 +70,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
         run: node tests/asap/uji-asap.js
+      - name: Uji tampilan per peran
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-peran-tampilan.js
       - name: Uji galat hilang otomatis 10 detik (semua halaman)
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
