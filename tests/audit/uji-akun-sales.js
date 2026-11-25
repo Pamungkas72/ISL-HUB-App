@@ -66,7 +66,7 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   await p.evaluate(() => document.querySelectorAll('.ip-lapis').forEach(x => x.remove()));
   await p.click('[data-st=bag][data-v=akses]'); await p.waitForTimeout(500); // Pengaturan kini daftar bagian: buka "Akun sales dan akses"
   if (LAYAR.width <= 760) { await p.click('[data-st=ak-tab][data-v=menunggu]'); await p.waitForTimeout(200); }
-  cek('antrean menunggu: kode unit otomatis SLS-01', await p.evaluate(() => { const i = document.querySelector('.ak-tunggu[data-uid="u-budi"] [data-ak=prev]'); return i && i.textContent === 'SLS-01'; }));
+  cek('antrean menunggu: bawaan Belum diatur, kode unit LHT-01', await p.evaluate(() => { const k = document.querySelector('.ak-tunggu[data-uid="u-budi"]'), i = k && k.querySelector('[data-ak=prev]'); return !!i && i.textContent === 'LHT-01' && k.querySelector('[data-akun=peran]').value === 'belum'; }));
   await p.click('[data-st=akun-buka-tambah]'); await p.waitForTimeout(200);
   await p.fill('#ta-nama', 'Siti Aminah');
   cek('form tambah: kode unit otomatis SLS-01', await p.textContent('#ta-kode') === 'SLS-01');
