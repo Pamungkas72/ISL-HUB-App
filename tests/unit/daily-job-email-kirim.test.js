@@ -1,5 +1,5 @@
 // Jalankan: node tests/unit/daily-job-email-kirim.test.js
-const { kirim } = require("../../functions/dailyjob-email-kirim.js").kirimEmailBantu;
+const { kirim } = require("../../functions/dailyjob-email-kirim-isi.js");
 let gagal = 0; const eq = (n, a, b) => { const ok = JSON.stringify(a) === JSON.stringify(b); if (!ok) gagal++; console.log(ok ? "LULUS" : "GAGAL", n, ok ? "" : `dapat ${JSON.stringify(a)}, harus ${JSON.stringify(b)}`); };
 (async () => {
   const d = { jobId: "j1", tahap: "terkirim", ke: "a@b.co", subjek: "S", isi: "I", status: "antre" }; let req;
