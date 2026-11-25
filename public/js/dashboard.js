@@ -1,7 +1,7 @@
 import { renderNav } from "./nav.js";
 import { navItems as semuaNav, SEMBUNYI_PERAN } from "./nav-config.js";
 import { labelAkun } from "./config-akses.js";
-import { itemTersembunyi } from "./akses.js";
+import { itemTersembunyi, levelAkses, MODUL_NAV } from "./akses.js";
 import { semuaItem, muatUlang, bukaTujuan } from "./notifikasi.js";
 import { db } from "./firebase-config.js";
 import * as H from "./daily-job-hitung.js";
@@ -48,8 +48,10 @@ function blokTugas() {
 }
 function pintasan(peran) {
   const ada = (id) => St.navItems.some((i) => i.id === id), ikon = (id) => (St.navItems.find((i) => i.id === id) || semuaNav.find((i) => i.id === id) || {}).icon || "";
-  const d = [["quotation", "Buat quotation", "#quotation", true], ["dailyjob", "Catat Daily Job", "#dailyjob"], ["customer", "Customer", "#customer"], [peran === "sales" ? "legal" : "master-rate", peran === "sales" ? "MOM" : "Master Rate", peran === "sales" ? "#legal" : "#master-rate"]];
-  return `<section class="bd-kartu"><h3>Pintasan</h3><div class="bd-pin">${d.filter((x) => ada(x[0])).map((x) => `<a href="app.html${x[2]}" class="${x[3] ? "is-utama" : ""}"><svg viewBox="0 0 24 24">${ikon(x[0])}</svg>${x[1]}</a>`).join("")}</div></section>`;
+  const lv = (id) => (MODUL_NAV[id] ? levelAkses(window.__ISL_PROFIL, MODUL_NAV[id]) : 2); // Kelola = boleh membuat; Lihat = hanya membuka
+  const d = [["quotation", lv("quotation") >= 2 ? "Buat quotation" : "Quotation", "#quotation", lv("quotation") >= 2], ["dailyjob", lv("dailyjob") >= 2 ? "Catat Daily Job" : "Daily Job", "#dailyjob"], ["customer", "Customer", "#customer"], [peran === "sales" ? "legal" : "master-rate", peran === "sales" ? "MOM" : "Master Rate", peran === "sales" ? "#legal" : "#master-rate"]].filter((x) => ada(x[0]));
+  if (!d.length) return ""; // akun tanpa modul apa pun: tanpa kartu Pintasan
+  return `<section class="bd-kartu"><h3>Pintasan</h3><div class="bd-pin">${d.map((x) => `<a href="app.html${x[2]}" class="${x[3] ? "is-utama" : ""}"><svg viewBox="0 0 24 24">${ikon(x[0])}</svg>${x[1]}</a>`).join("")}</div></section>`;
 }
 
 function gambar() {
@@ -79,7 +81,7 @@ async function muatDJ(profil, kelola) {
 export async function mulaiBeranda(u, profil) {
   user = u; root = document.getElementById("bd-root");
   const nm = document.getElementById("user-email"); if (nm) nm.textContent = labelAkun(u.email, u.displayName);
-  St.navItems = semuaNav.filter((i) => !itemTersembunyi(profil, i));
+  St.navItems = semuaNav.filter((i) => !itemTersembunyi(profil, i) && !(MODUL_NAV[i.id] && profil && levelAkses(profil, MODUL_NAV[i.id]) === 0)); // modul yang dimatikan tidak tampil (sama dengan menu)
   St.nama = (profil && profil.nama) || u.displayName || "";
   if (!root.dataset.pasang) {
     root.dataset.pasang = "1";
