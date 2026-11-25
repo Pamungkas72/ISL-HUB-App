@@ -236,7 +236,7 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-rw { position: relative; overflow: hidden; border-bottom: 1px solid var(--border); } .dj-rw:last-child { border-bottom: 0; }
 .dj-job2 { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface); cursor: pointer; touch-action: pan-y; transition: transform .22s ease; -webkit-tap-highlight-color: transparent; }
 .dj-job2.is-pilih { background: var(--sky-soft); } .dj-job2:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
-.dj-job2.is-geser-aksi { transform: translateX(var(--dj-wa, 186px)); } .dj-job2.is-geser-hapus { transform: translateX(-80px); } .dj-job2.is-intip { transform: translateX(46px); }
+.dj-job2.is-geser-aksi { transform: translateX(var(--dj-wa, 186px)); } .dj-job2.is-geser-hapus { transform: translateX(calc(-1 * var(--dj-wh, 80px))); } .dj-job2.is-intip { transform: translateX(46px); }
 .dj-job__isi { flex: 1; min-width: 0; } .dj-job__isi b { display: block; font: 700 14.5px var(--font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dj-job__isi small { display: block; margin-top: 1px; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dj-job__pic { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--muted); font-size: 12.5px; min-width: 0; } .dj-job__pic .dj-av { width: 16px; height: 16px; font-size: 9px; }
@@ -245,7 +245,7 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-ik--telat { background: var(--danger-soft); color: var(--danger); } .dj-ik--hari { background: var(--accent-soft); color: var(--dj-tx-aksen, var(--accent)); } .dj-ik--ok { background: var(--success-soft); color: var(--success); } .dj-ik--mu { background: var(--bg); color: var(--muted); }
 .dj-ik--k { width: 30px; height: 30px; border-radius: 9px; } .dj-ik--k svg { width: 16px; height: 16px; }
 .dj-sw { position: absolute; top: 0; bottom: 0; display: flex; z-index: 0; opacity: 0; transition: opacity .12s; } .dj-rw.is-buka .dj-sw { opacity: 1; } .dj-sw--kiri { left: 0; } .dj-sw--kanan { right: 0; }
-.dj-sw button { width: 62px; border: 0; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: 700 10.5px var(--font-body); cursor: pointer; } .dj-sw--kanan button { width: 80px; }
+.dj-sw button { width: var(--dj-bw, 62px); border: 0; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: 700 10.5px var(--font-body); cursor: pointer; } .dj-sw--kanan button { width: 80px; }
 .dj-sw__ok { background: #2E9E6D; } .dj-sw__sky { background: #4B82C4; } .dj-sw__info { background: #2F8FDB; } .dj-sw__bahaya { background: #D64545; }
 .dj-tb__j { display: flex; align-items: center; gap: 10px; } .dj-tb td { padding: 7px 12px; }
 
@@ -346,3 +346,11 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-bu { color: var(--success); font-weight: 700; }
 .dj-form [hidden] { display: none !important; } .dj-kecil.dj-lebar { display: block; grid-column: 1 / -1; }
 .dj-form .dj-seg .mr-chip { padding: 0 14px; min-height: 38px; }
+
+/* Langkah cepat Distribusi: geser (HP), tombol baris (desktop), bar massal, Urungkan */
+.dj-sw__lk-terkirim { background: #C46F0F; } .dj-sw__lk-pod { background: #2E9E6D; } .dj-sw__lk-bayar { background: #2F8FDB; }
+.dj-tb__lk { white-space: nowrap; } .dj-tb__lk .dj-chip { margin-right: 6px; }
+.dj-lk { height: 32px; padding: 0 10px; font-size: 12.5px; margin-right: 6px; display: inline-flex; align-items: center; gap: 5px; }
+.dj-lk--pod { border-color: var(--success); color: var(--success); background: var(--success-soft); } .dj-lk--bayar { border-color: var(--sky); color: var(--head); background: var(--sky-soft); } .dj-lk--terkirim { border-color: var(--accent); color: var(--dj-tx-aksen); background: var(--accent-soft); }
+.dj-bp--lk { border-color: var(--success); color: var(--success); }
+.mr-toast__aksi { border: 0; background: none; color: var(--mr-navy, var(--head)); font: 700 13px var(--font-body); cursor: pointer; padding: 4px 8px; margin-left: auto; white-space: nowrap; }

@@ -16,7 +16,8 @@ export function tgl(v) {
   return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function toast(pesan, jenis = "ok") {
+/** opsi.aksi = { teks, fn }: tombol di notifikasi (mis. Urungkan); opsi.durasi = lama tampil (ms) untuk jenis ok. */
+export function toast(pesan, jenis = "ok", opsi = {}) {
   // Halaman tanpa wadah notifikasi (mis. dashboard) tetap bisa menampilkan pesan: wadahnya dibuat otomatis.
   let wadah = $("#mr-toasts");
   if (!wadah) { wadah = document.createElement("div"); wadah.id = "mr-toasts"; document.body.appendChild(wadah); }
@@ -24,8 +25,9 @@ export function toast(pesan, jenis = "ok") {
   el.className = `mr-toast mr-toast--${jenis}`;
   el.innerHTML = `<span class="mr-toast__ikon">${ikon(jenis === "ok" ? "cek" : "peringatan", 16)}</span><div class="mr-toast__isi">${pesan}</div><button class="mr-toast__x" aria-label="Tutup">${ikon("tutup", 14)}</button>`;
   $(".mr-toast__x", el).onclick = () => el.remove();
+  if (opsi.aksi) { const b = document.createElement("button"); b.type = "button"; b.className = "mr-toast__aksi"; b.textContent = opsi.aksi.teks; b.onclick = () => { el.remove(); opsi.aksi.fn(); }; el.insertBefore(b, $(".mr-toast__x", el)); }
   wadah.appendChild(el);
-  if (jenis === "ok") setTimeout(() => el.remove(), 4200);
+  if (jenis === "ok") setTimeout(() => el.remove(), opsi.durasi || 4200);
 }
 
 export function bukaLayer(html, { lebar = "drawer" } = {}) {
