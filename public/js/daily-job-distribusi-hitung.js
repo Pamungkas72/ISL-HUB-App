@@ -1,10 +1,10 @@
-// Truk Distribusi: aturan murni (titik pick up/drop, Armada dan pengingat, uang jalan, KPI). Diuji di tests/unit/daily-job-distribusi.test.mjs.
+// Truk Distribusi: aturan murni (titik pick up/drop, Armada dan pengingat, KPI). Diuji di tests/unit/daily-job-distribusi.test.mjs.
 import { dalam, hariIni, selisihHari, tambahHari } from "./daily-job-hitung.js";
 import { rinci } from "./daily-job-tracking-hitung.js";
+import * as P from "./daily-job-pod.js";
 
 export const JENIS_ARMADA = ["Blind Van", "CDE", "CDD", "Fuso", "Tronton"];
 export const TIPE_BAK = ["Box", "Box Reefer", "Wing Box", "Bak", "Losbak", "Three Way"];
-export const RASIO_BBM = { "Blind Van": 10, CDE: 7, CDD: 5, Fuso: 4, Tronton: 3 }; // km per liter, bawaan; bisa diubah di Pengaturan
 export const POLA = { "1-1": "1 pick up, 1 drop", "1-n": "1 pick up, banyak drop", "n-1": "Banyak pick up, 1 drop", "n-n": "Banyak pick up, banyak drop" };
 export const TAHAP = [["siap", "Siap"], ["pickup", "Pick up"], ["drop", "Drop"], ["pod", "POD"]];
 
@@ -34,20 +34,17 @@ export function tandaiTitik(j, waktu) {
   const r = rinci(j), t = titikDari(j).map((x) => ({ ...x })), i = t.findIndex((x) => x.t === "P" && !x.selesai), k = i >= 0 ? i : t.findIndex((x) => x.t === "D" && !x.selesai);
   if (k < 0) return r; t[k].selesai = waktu; return { ...r, titik: t };
 }
-export const internal = (j) => { const v = rinci(j).vendor; return !v || /^internal$/i.test(v); };
-export const podKembali = (j) => rinci(j).pod === "kembali";
-export const dibayarTanpaPod = (j) => j.status !== "batal" && !podKembali(j) && !internal(j) && !!rinci(j).tglBayar;
-export const selesaiOtomatis = (j) => podKembali(j) && (internal(j) || !!rinci(j).tglBayar);
-
-/** Uang jalan: BBM = jarak PP / rasio x harga solar; ditambah tol, TKBM (opsional), retribusi, insentif borongan, dan komponen lain. */
-export function hitungUangJalan(i) {
-  const rasio = Number(i.rasio) || RASIO_BBM[i.jenisArmada] || 0, jarak = Number(i.jarak) || 0, solar = Number(i.solar) || 0, liter = rasio ? jarak / rasio : 0, bbm = Math.round(liter * solar);
-  const baris = [["BBM", bbm], ["Tol", Number(i.tol) || 0], ["TKBM", i.tkbm ? Number(i.tkbm) || 0 : 0], ["Retribusi / mel", Number(i.retribusi) || 0], ["Insentif driver borongan", Number(i.insentif) || 0], ...Object.entries(i.lain || {}).map(([n, v]) => [n, Number(v) || 0])];
-  return { liter: Math.round(liter * 10) / 10, rasio, baris, total: baris.reduce((a, b) => a + b[1], 0) };
+export const internal = P.internal;
+export const podKembali = P.podKembali;
+export const perluBayar = P.perluBayar;
+export const selesaiOtomatis = P.selesaiOtomatis;
+/** Fase untuk antrean: belum, jalan, pod, bayar, selesai, batal. Operasional selesai = semua titik pick up dan drop selesai. */
+export function fase(j) {
+  if (j.status === "batal") return "batal";
+  const n = kemajuan(j); if (n >= 3 || podKembali(j)) return P.fasePasca(j);
+  return n <= 1 && !selesaiTitik(j, "P") ? "belum" : "jalan";
 }
-/** Tarif tetap: peta { "rute|jenisArmada": nominal }; hanya tarif berstatus "setuju" yang dipakai. */
-export const kunciTarif = (rute, jenis) => `${String(rute).trim().toLowerCase()}|${jenis}`;
-export const cariTarif = (daftar, rute, jenis) => (daftar || []).find((t) => t.status === "setuju" && kunciTarif(t.rute, t.jenisArmada) === kunciTarif(rute, jenis)) || null;
+
 
 /* ---------- Armada: kendaraan, dokumen, servis, sewa ---------- */
 export const DOK = [["kir", "KIR"], ["stnk", "STNK"], ["pajak", "Pajak"]];
@@ -91,7 +88,7 @@ export function hitungDistribusi(jobs, r, now = hariIni()) {
     perRute: kel((j) => { const t = titikDari(j); const p = t.find((x) => x.t === "P"), d = [...t].reverse().find((x) => x.t === "D"); return p && d ? `${p.kota || p.nama} → ${d.kota || d.nama}` : ""; }).slice(0, 8),
     perHari: Object.entries(rit.reduce((m, j) => { const t = String(rinci(j).tglKirim || j.tglMasuk).slice(0, 10); m[t] = (m[t] || 0) + 1; return m; }, {})).sort((x, y) => x[0].localeCompare(y[0])).map(([k, n]) => ({ k, n })),
     pola: { satu: rit.filter((j) => kodePola(j) === "1-1").length, banyak: rit.filter((j) => kodePola(j) !== "1-1").length },
-    tanpaPod: js.filter(dibayarTanpaPod).length, tungguPod: js.filter((j) => kemajuan(j) === 3).length };
+    perluBayar: js.filter(perluBayar).length, tungguPod: js.filter((j) => fase(j) === "pod").length };
 }
 export { tambahHari };
 
@@ -106,11 +103,13 @@ export function berikut(j) {
 /** Tandai langkah berikut selesai; mengembalikan rinci baru. */
 export function tandaiBerikut(j, waktu) {
   const b = berikut(j); if (!b) return rinci(j);
-  return b.jenis === "POD" ? { ...rinci(j), pod: "kembali", tglPod: String(waktu).slice(0, 10) } : tandaiTitik(j, waktu);
+  if (b.jenis === "POD") return { ...rinci(j), pod: "kembali", tglPod: String(waktu).slice(0, 10) };
+  const n = tandaiTitik(j, waktu), lanjut = berikut({ rinci: n });
+  return P.internal(j) && lanjut && lanjut.jenis === "POD" ? { ...n, pod: "kembali", tglPod: String(waktu).slice(0, 10) } : n; // internal: POD otomatis kembali saat titik terakhir selesai
 }
 /** Batalkan langkah terakhir (salah tekan): POD dulu, lalu drop terakhir, lalu pick up terakhir. */
 export function batalkanBerikut(j) {
-  const r = rinci(j); if (r.pod === "kembali") return { ...r, pod: "belum", tglPod: null };
+  const r = rinci(j); if (r.pod === "kembali") return P.internal(j) ? batalkanBerikut({ rinci: { ...r, pod: "belum", tglPod: null } }) : { ...r, pod: "belum", tglPod: null }; // internal: POD otomatis ikut dibatalkan
   const t = titikDari(j).map((x) => ({ ...x })); let k = -1;
   for (const jenis of ["D", "P"]) { for (let i = t.length - 1; i >= 0; i--) if (t[i].t === jenis && t[i].selesai) { k = i; break; } if (k >= 0) break; }
   if (k >= 0) t[k].selesai = null; return { ...r, titik: t };
@@ -124,15 +123,15 @@ export function ringkasRiwayat(kendaraan, r) {
 }
 
 /** Umur POD (hari) sejak titik terakhir selesai; 0 bila belum selesai semua titik atau POD sudah kembali. */
+export const tglOperasional = (j) => { const t = titikDari(j); return t.length && t.every((x) => x.selesai) ? String(t.map((x) => x.selesai).sort().pop()).slice(0, 10) : ""; };
 export function umurPod(j, now = hariIni()) {
-  const t = titikDari(j); if (!t.length || podKembali(j) || !t.every((x) => x.selesai)) return 0;
-  return Math.max(0, selisihHari(now, String(t.map((x) => x.selesai).sort().pop()).slice(0, 10)));
+  const t = tglOperasional(j); return !t || podKembali(j) ? 0 : Math.max(0, selisihHari(now, t));
 }
 /** Strip tindakan Distribusi (sama dengan Trailer): bayar, pod, berangkat, armada. */
 export function cocokTindakan(j, id, now = hariIni()) {
   const r = rinci(j); if (r.jenis !== "distribusi" || j.status === "selesai" || j.status === "batal") return false; const n = kemajuan(j);
-  if (id === "bayar") return dibayarTanpaPod(j);
-  if (id === "pod") return !dibayarTanpaPod(j) && n === 3 && umurPod(j, now) >= 3;
+  if (id === "bayar") return perluBayar(j);
+  if (id === "resi" || id === "pod") return P.peringatanPod(j, tglOperasional(j), now) === id;
   if (id === "berangkat") return n <= 1 && (r.tglKirim || j.tglMasuk) === now;
   if (id === "armada") return n === 0 && !r.vendor && !r.plat && !r.driver;
   return false;

@@ -48,6 +48,7 @@ jobs:
           node tests/unit/daily-job-huruf.test.mjs
           node tests/unit/daily-job-pic.test.mjs
           node tests/unit/daily-job-distribusi.test.mjs
+          node tests/unit/daily-job-performa.test.mjs
           node tests/unit/daily-job-notif.test.js
           node tests/unit/daily-job-notif-tracking.test.js
           node tests/unit/daily-job-akun.test.js

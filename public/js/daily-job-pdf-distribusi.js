@@ -47,7 +47,7 @@ export function buatLaporanDistribusiPdf({ jsPDF, r, periode, now, pembuat = "",
   if (k.perVendor.length) tabel([{ j: "Vendor", l: true, w: 70 }, { j: "Ritase" }, { j: "Cost" }, { j: "Tarif rata-rata" }], k.perVendor.map((o) => [o.nama, o.ritase, jt(o.cost), jt(o.perRitase)])); else kosong("Belum ada ritase pada periode ini.");
   bagian("Rute teratas");
   if (k.perRute.length) tabel([{ j: "Rute", l: true, w: 90 }, { j: "Ritase" }, { j: "Cost" }, { j: "Cost / ritase" }], k.perRute.map((o) => [o.nama.replace(/→/g, "-"), o.ritase, jt(o.cost), jt(o.perRitase)])); else kosong("Belum ada rute pada periode ini.");
-  if (k.tanpaPod || k.tungguPod) { perlu(16); d.setFillColor(255, 241, 224); d.roundedRect(ML, y, W, 11, 1.8, 1.8, "F"); teks("Perhatian", ML + 3, y + 4.6, { size: 7.5, bold: true, warna: [138, 82, 8] }); teks(`${k.tanpaPod ? `${k.tanpaPod} pengiriman sudah dibayar tetapi POD belum kembali. ` : ""}${k.tungguPod} pengiriman menunggu POD. POD wajib kembali sebelum penagihan.`, ML + 22, y + 4.6, { size: 7.5, warna: [138, 82, 8], maks: W - 25 }); y += 15; }
+  if (k.perluBayar || k.tungguPod) { perlu(16); d.setFillColor(255, 241, 224); d.roundedRect(ML, y, W, 11, 1.8, 1.8, "F"); teks("Perhatian", ML + 3, y + 4.6, { size: 7.5, bold: true, warna: [138, 82, 8] }); teks(`${k.perluBayar ? `${k.perluBayar} pengiriman vendor Cash perlu ditransfer. ` : ""}${k.tungguPod} pengiriman menunggu POD. POD wajib kembali sebelum penagihan.`, ML + 22, y + 4.6, { size: 7.5, warna: [138, 82, 8], maks: W - 25 }); y += 15; }
 
   d.addPage(); kepala(); y = ATAS; const kp = DZ.kepatuhan(arm, now), tugas = DZ.tugasArmada(arm, now), sw = DZ.ringkasSewa(arm);
   bagian(`Kepatuhan armada · ${arm.filter((x) => x.aktif !== false).length} kendaraan`);
