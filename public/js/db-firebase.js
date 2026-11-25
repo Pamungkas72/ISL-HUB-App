@@ -294,6 +294,20 @@ export const hapusSatuan = (kode) => hapusDokumen("satuan_baku", kode);
 export const simpanVendor = (id, data, opsi) => simpanDokumen(KOLEKSI.vendor, id, data, opsi);
 export const simpanLini = (id, data, opsi) => simpanDokumen(KOLEKSI.lini, id, data, opsi);
 
+// ---------- Uang Jalan (tab Master Rate): uj_master = satu baris per rute x armada, uj_riwayat = angka lama, uj_pengaturan/umum = solar, pembulatan, rasio ----------
+export const muatUangJalan = async () => {
+  const [master, peng] = await Promise.all([bacaKoleksi("uj_master"), getDocFromServer(doc(db, "uj_pengaturan", "umum")).then((d) => (d.exists() ? normalisasi(d.data()) : null)).catch(() => null)]);
+  return { master, peng };
+};
+export const simpanUJ = (id, data, opsi) => simpanDokumen("uj_master", id, data, opsi);
+export const simpanPengUJ = (data, { oleh }) => simpanDokumen("uj_pengaturan", "umum", data, { baru: false, oleh });
+export const catatRiwayatUJ = (data, { oleh }) => simpanDokumen("uj_riwayat", "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), { ...data, tanggal: new Date().toISOString() }, { baru: true, oleh });
+export async function muatRiwayatUJ(kunci) {
+  const snap = await getDocs(query(collection(db, "uj_riwayat"), where("kunci", "==", kunci)));
+  const hasil = []; snap.forEach((d) => hasil.push({ id: d.id, ...normalisasi(d.data()) }));
+  return hasil.sort((a, b) => String(b.tanggal).localeCompare(String(a.tanggal)));
+}
+
 // Markup lini diatur dari halaman Quotation. Setelah markup berubah, batas harga aman (hargaMin)
 // semua tarif di lini itu dihitung ulang supaya lampu margin akun sales tidak memakai angka lama.
 export async function simpanMarkupLini(liniId, markup, { oleh }) {
@@ -433,7 +447,7 @@ export async function hapusBanyak(kunciList, { oleh, onProgress }) {
 
 // Hapus dokumen master kecil (vendor, lini bisnis, lokasi open yard). Pemeriksaan
 // "masih dipakai atau tidak" dilakukan di tampilan sebelum fungsi ini dipanggil.
-const KOLEKSI_HAPUS = ["vendor", "vendor_rahasia", "lini_bisnis", "open_yard_lokasi", "profil_fasilitas", "satuan_baku"];
+const KOLEKSI_HAPUS = ["uj_master", "vendor", "vendor_rahasia", "lini_bisnis", "open_yard_lokasi", "profil_fasilitas", "satuan_baku"];
 export async function hapusDokumen(koleksi, id) {
   pastikanSegar();
   if (!KOLEKSI_HAPUS.includes(koleksi)) throw new Error(`Koleksi "${koleksi}" tidak boleh dihapus dari sini.`);

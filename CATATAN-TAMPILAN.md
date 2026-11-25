@@ -510,3 +510,13 @@ Desain 1 dipilih, TKBM memakai variasi 3. Mengganti tampilan Distribusi di atas 
 ## 2026-11-23 (Pengaturan dokumen: tombol aksi kompak)
 
 - Kartu aksi bawah (Batalkan perubahan, Kembali, Simpan pengaturan) dihapus. **Batalkan** (teks) dan **Simpan** (kecil) kini sebaris dengan judul; **Kembali** jadi ikon ‹ di kiri judul. Berlaku di HP dan desktop.
+
+## 24 Nov 2026: Master Uang Jalan (tab di Master Rate)
+- **Penempatan:** tab **Uang Jalan** di Master Rate (sejajar Tarif, Vendor, Lini Bisnis, Lokasi), hanya master/admin. Daftar datar, satu baris = satu **rute × armada** (kunci `pickup__tujuan__armada`). Armada dipilih di formulir, bukan kolom: Blind Van, CDE Std/Long, CDD Std/Long, Fuso, Tronton, Trailer 20ft/40ft. Filter: Semua, Mobil kecil, Trailer, per armada; pencarian rute.
+- **Formulir (desain pilihan pemilik):** desktop = satu form bergulir bagian bernomor (Rute dan armada, Biaya utama, Opsional dengan saklar, Hasil); HP = komponen ditambah lewat chip + tombol Lihat slip. Panel samping di desktop, layar penuh di HP.
+- **Rumus (`uang-jalan-hitung.js`):** BBM = (jarak PP ÷ rasio) × solar; total = BBM + tol + mel + opsional aktif + komponen lain, dibulatkan (bawaan Rp1.000), atau **angka manual** (ditandai Manual, tidak ikut hitung ulang). Opsional (nominal langsung, 0 = tidak dipakai): TKBM, checker, helper, asuransi, **insentif driver** (hanya driver **tidak digaji**; driver digaji = insentif otomatis 0).
+- **Pengaturan (pil "Solar … Ubah"):** harga solar, pembulatan, rasio BBM per armada (`uj_pengaturan/umum`). Rasio Long dan Trailer adalah perkiraan awal. Setelah solar/pembulatan berubah, ada tawaran hitung ulang semua baris non-manual.
+- **Data:** `uj_master` (baris), `uj_riwayat` (angka lama, dibuat/diubah/dihapus/hitung ulang), pengaturan di `uj_pengaturan/umum` (dipakai bersama modul lama). Aturan: master/admin baca-tulis, **hapus hanya master**. Rute sama + armada sama = memperbarui baris (peringatan "Sudah ada di master" muncul).
+- **Sinkron ke Tarif (satu arah):** tiap baris otomatis jadi tarif lini **Uang Jalan** (dibuat otomatis, kategori Transportasi), vendor **Internal**, satuan per trip, modal = total; `hargaJualSaran` = total supaya tidak muncul peringatan "harga jual kosong". Ubah angkanya di tab Uang Jalan; hapus baris ikut menghapus tarifnya.
+- **Belum dikerjakan:** slip PDF dari formulir baru (modul lama `uang-jalan.js` masih punya), migrasi `uj_rute`/`dj_tarif` lama, dan akses baca untuk Tracking/Distribusi (sekarang master/admin saja).
+- Uji: `tests/unit/uang-jalan-master.test.mjs` (rumus), `tests/asap/uji-uj-master.js hp|desktop` (alur penuh), uji aturan `uj_master`/`uj_riwayat` di `tests/rules`.
