@@ -93,7 +93,7 @@ Menggantikan bagian "Divisi Tracking" 19 Nov untuk subdivisi Mobil besar. Mobil 
 
 ## Tampilan awal Daftar job Tracking: desain A "Antrean" (dipilih 24 Nov 2026)
 - **Urutan halaman:** judul (kelompok di bawah judul, master/admin bisa mengganti lewat "Tracking ▾"), tab, kolom cari paling atas (+ Filter, ⋮), chip antrean, daftar.
-- **Antrean** menggantikan status Aktif/Tertunda/Selesai/Dibatalkan khusus Tracking: Semua aktif, Perlu tindakan, Belum jalan, Di lapangan, Tunggu POD, Bayar vendor, Selesai. Fase turun dari tahap pengiriman (`faseTr` di `daily-job.js`). Marketing dan BD tetap memakai status.
+- **Antrean** menggantikan status Aktif/Tertunda/Selesai/Dibatalkan khusus Tracking: Semua aktif, Perlu tindakan, Tunggu POD, Selesai (25 Nov 2026: Belum jalan, Di lapangan, Perlu dibayar dihapus). Dulu: Belum jalan, Di lapangan, Tunggu POD, Bayar vendor, Selesai. Fase turun dari tahap pengiriman (`faseTr` di `daily-job.js`). Marketing dan BD tetap memakai status.
 - **Strip tindakan dihapus**: alasan (Dibayar POD belum, POD terlambat, berangkat hari ini, tanpa armada) tampil sebagai chip di kartu/baris dan menandai garis kiri; job perlu tindakan diurutkan paling atas. Tab Armada bertitik merah bila ada urusan lewat tempo.
 - **Subdivisi** (Semua, Truk Distribusi, Tracking Trailer) pindah ke menu ⋮ (juga berlaku di Performa); bila dipilih muncul chip "× nama" di bawah cari. Pemilih kelompok lama dihapus.
 - **Pengaturan** hanya tampil dan bisa dibuka oleh master/admin.
@@ -147,3 +147,8 @@ Uang jalan kini diurus di Master Rate. Dihapus: sub-tab Armada > Uang jalan (tar
 - **HP:** geser kanan = langkah berikut (maks. 2 tombol; bila tak ada = Ubah), geser kiri = Ubah dan Hapus. **Desktop:** tombol di kolom "Perhatian · Langkah". **Massal:** pilih beberapa baris, bar atas menampilkan Terkirim/POD kembali/Dibayar (n). Trailer belum memakai ini.
 - **Penjaga:** POD (termasuk POD otomatis internal) butuh No. DO; bila kosong muncul pesan dan formulir Ubah terbuka.
 - **Formulir** satu layar tanpa langkah: Customer, Unit, Armada dan Tipe bak, Rute, Jumlah, Tanggal kirim, No. DO, dan **Status saat dicatat** (Baru dicatat, Sudah terkirim, POD sudah kembali) untuk catat mundur. Target tiba otomatis = tanggal kirim. Driver, plat, cost, POD, tanggal transfer, status, catatan ada di **Lainnya (opsional)** (terbuka saat Ubah).
+
+## Roadmap perjalanan, formulir awal, foto POD (25 Nov 2026; pilihan pemilik: desktop A, HP B)
+- **Roadmap** (`daily-job-jalan.js`, murni, diuji): langkah Siap, Jalan, Tiba, POD, Bayar dengan ikon. Hijau ✓ selesai, biru bergerak, oranye langkah berikut, **merah = berhenti** (menunggu POD vendor 3 hari atau lebih, atau peringatan resi/POD). Internal 3 langkah (POD otomatis), vendor TOP tanpa Bayar. **HP:** ikon mini + satu kalimat status; **desktop:** rel berlabel di kolom Tahap. Berlaku Distribusi dan Trailer.
+- **Formulir:** nama driver, plat, dan cost (uang jalan atau tarif vendor) dipindah ke bagian awal setelah Unit; **Tipe bak bawaan Box** untuk pengiriman baru.
+- **Foto POD:** tombol Unggah foto POD di kartu POD pada detail (`rinci.podBerkas`), juga untuk unit internal. Resi (ekspedisi, no. resi, foto) dan bukti bayar tetap di detail.
