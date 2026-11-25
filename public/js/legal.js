@@ -107,7 +107,7 @@ function gambar() {
   const [ik, lab] = FAB[S.tab] || FAB.mom, tab = TAB();
   r.innerHTML = `<div class="lg">
     <div class="lg-cari-w"><i>${ikon("cari", 18)}</i><input class="lg-cari" type="search" placeholder="${S.tab === "perusahaan" ? "Cari perusahaan, dokumen, atau nomor" : S.tab === "kontrak" ? "Cari pihak, nomor, atau lini" : "Cari judul, nomor, atau customer"}" value="${e(S.cari)}" data-lg-cari aria-label="Cari"></div>
-    ${S.galat ? `<div class="mr-banner mr-banner--bahaya">${e(S.galat)}</div>` : ""}
+    ${S.galat ? `<div class="mr-banner mr-banner--bahaya" data-galat>${e(S.galat)}</div>` : ""}
     ${tab.length > 1 ? `<div class="lg-tabs" role="tablist">${tab.map(([k, l]) => { const n = k === "perusahaan" ? S.pers.length : k === "kontrak" ? S.kontrak.filter((x) => x.jenis !== "perusahaan").length : S.mom.length; return `<button type="button" role="tab" class="${S.tab === k ? "is-aktif" : ""}" data-lg-tab="${k}">${l}${n ? `<em>${n}</em>` : ""}</button>`; }).join("")}</div>` : ""}
     ${S.muat ? `<p class="mr-sub">Memuat…</p>` : S.tab === "perusahaan" ? tabPerusahaan() : S.tab === "kontrak" ? tabKontrak() : tabMom()}
     ${pilihAktif() ? "" : `<button type="button" class="mr-fab fab-d fab--legal" data-lg="fab" aria-label="${lab}" title="${lab}">${ikon(ik, 24)}<span class="fab-teks">${lab}</span></button>`}</div>`;
