@@ -13,6 +13,8 @@ import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOu
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { kirimResetSandi, sinkronLoginTelepon } from "./auth.js";
+import "./pemilih.js";
+import { ikon } from "./ikon.js";
 import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
@@ -134,7 +136,7 @@ const presetDari = (v) => (String(v).startsWith("p:") ? semuaPreset().find((x) =
 const peranDasar = (v) => { const p = presetDari(v); return p ? p.peran : v === "belum" ? "lihat" : v; }; // "belum" = Lihat saja dengan semua modul tertutup (hanya Beranda)
 const pilihanAkun = (a) => { const j = a.akses && a.akses.jabatan, p = j && semuaPreset().find((x) => x.nama === j && x.peran === a.peran); return p ? "p:" + p.id : peranPilih(a); };
 const namaPeran = (a) => (a.akses && a.akses.jabatan) || PERAN[a.peran] || "-";
-const opsiPeran = (v, dis = "") => { const o = (k, l) => `<option value="${k}" ${v === k ? "selected" : ""}>${l}</option>`; return `<select data-akun="peran" ${dis}><optgroup label="Peran dasar">${o("belum", "Belum diatur (hanya Beranda)")}${o("sales", "Sales")}${o("lihat", "Lihat saja")}${S.master ? o("admin", "Admin") : ""}</optgroup><optgroup label="Peran siap pakai">${semuaPreset().map((x) => o("p:" + x.id, e(x.nama))).join("")}</optgroup></select>`; };
+const opsiPeran = (v, dis = "") => { const o = (k, l, ket) => `<option value="${k}" data-ket="${e(ket || "")}" ${v === k ? "selected" : ""}>${l}</option>`; return `<select data-akun="peran" data-pemilih aria-label="Peran" ${dis}><optgroup label="Peran dasar">${o("belum", "Belum diatur", "Hanya Beranda, diatur nanti")}${o("sales", "Sales", "Quotation dan customer")}${o("lihat", "Lihat saja", "Membaca data tanpa modal")}${S.master ? o("admin", "Admin", "Mengelola data dan akun") : ""}</optgroup><optgroup label="Peran siap pakai">${semuaPreset().map((x) => o("p:" + x.id, e(x.nama), x.ket)).join("")}</optgroup></select>`; };
 const dikunci = (a) => !S.master && (a.peran === "admin" || a.peran === "master");
 const kunciModal = () => (S.modal && S.modal.siap ? "" : " aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\"");
 const cocokAkun = (a) => { const q = S.cari.trim().toLowerCase(); if (q && !`${a.nama || ""} ${a.email || ""}`.toLowerCase().includes(q)) return false; const f = S.filter; return f === "semua" || (f === "nonaktif" ? a.status === "nonaktif" : a.peran === f); };
@@ -164,25 +166,25 @@ function htmlAkun() {
   const cari = `<input type="search" id="ak-cari" class="ak-cari" placeholder="Cari nama atau email" value="${e(S.cari)}" aria-label="Cari akun" autocomplete="off">`;
   const chip = `<div class="ak-chip" role="group" aria-label="Filter peran">${FILTER.map(([k, l]) => `<button type="button" data-st="ak-filter" data-v="${k}" class="${S.filter === k ? "is-aktif" : ""}">${l}</button>`).join("")}</div>`;
   const pilih = S.akun.find((a) => a.id === S.pilih && a.status !== "menunggu") || (hp ? null : lain[0]);
-  const tambah = `<button class="mr-btn mr-btn--utama" data-st="akun-buka-tambah">＋ Tambah akun</button>`;
+  const tambah = `<button class="mr-btn mr-btn--utama ak-tambah" data-st="akun-buka-tambah" aria-label="Tambah akun">${ikon("plus", 18)}<span class="ak-tambah__t">Tambah akun</span></button>`;
   const kepala = `<div class="ak-kepala"><div><h3>Akun dan akses</h3><p>Kelola siapa yang bisa masuk dan apa yang boleh mereka lakukan.</p></div>${tambah}</div>`;
   const statHtml = `<div class="ak-stat">${stat.map(([t, v, k]) => `<div class="ak-stat__k"><span class="st-badge ${k}">${t}</span><b>${v}</b></div>`).join("")}</div>`;
   const kosong = `<div class="st-stat">${S.akunMuat ? "Tidak ada akun yang cocok." : "Memuat akun…"}</div>`;
   let isi;
   if (!hp) {
     const tabel = lain.length ? `<table class="ak-tb"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Login terakhir</th></tr></thead><tbody>${lain.map((a) => `<tr data-uid="${e(a.id)}" data-st="ak-pilih" class="${pilih && pilih.id === a.id ? "is-pilih" : ""}"><td><div class="ak-orang">${avAk(a)}<div><b>${e(a.nama || "-")}</b><div class="mr-sub">${e(a.email)}</div></div></div></td><td>${e(namaPeran(a))}${a.status !== "aktif" ? ` <span class="st-badge">${e(STATUS_AKUN[a.status] || a.status)}</span>` : ""}</td><td>${kodeTampil(a)}</td><td class="mr-sub">${e(loginTxt(a.id))}</td></tr>`).join("")}</tbody></table>` : kosong;
-    isi = `${kepala}${statHtml}${peringatan}${menunggu.length ? `<div class="ak-antre"><h4>Menunggu persetujuan (${menunggu.length})</h4>${menunggu.map(kartuMenunggu).join("")}</div>` : ""}<div class="ak-alat">${cari}${chip}</div>
+    isi = `${kepala}${statHtml}${peringatan}${menunggu.length ? `<div class="ak-antre"><h4 class="ak-h">${ikon("setuju", 17)}Menunggu persetujuan (${menunggu.length})</h4>${menunggu.map(kartuMenunggu).join("")}</div>` : ""}<div class="ak-alat">${cari}${chip}</div>
       <div class="ak-dua"><div class="ak-daftar">${tabel}</div><aside class="ak-samping">${pilih ? panelAkun(pilih, false) : `<div class="st-stat">Pilih akun untuk melihat dan mengubah detailnya.</div>`}</aside></div>
       <details class="st-laci" open><summary><span>Peran dan akses halaman</span><span class="st-laci-jml">atur halaman tiap peran</span></summary><div class="st-laci-isi">${htmlPeran(false)}</div></details>
       <details class="st-laci"><summary><span>Riwayat perubahan akun</span><span class="st-laci-jml">${S.log.length} catatan terakhir</span></summary><div class="st-laci-isi">${htmlLog()}</div></details>`;
   } else if (pilih && S.tab === "anggota") isi = panelAkun(pilih, true);
   else {
-    const tab = [["anggota", "Anggota"], ["menunggu", `Persetujuan${menunggu.length ? ` ${menunggu.length}` : ""}`], ["peran", "Peran"]];
+    const tab = [["anggota", "Anggota", "grup"], ["menunggu", `Persetujuan${menunggu.length ? ` ${menunggu.length}` : ""}`, "setuju"], ["peran", "Peran", "tameng"]];
     const kartu = lain.map((a) => `<button type="button" class="ak-kartu" data-uid="${e(a.id)}" data-st="ak-pilih">${avAk(a, 40)}<span class="ak-kartu__t"><b>${e(a.nama || "-")}</b><small>${e(a.email)}</small><small>${a.status === "aktif" ? `Login ${e(loginTxt(a.id))}` : e(STATUS_AKUN[a.status] || a.status)}</small></span>${kodeTampil(a)}</button>`).join("");
     const badan = S.tab === "menunggu" ? (menunggu.length ? menunggu.map(kartuMenunggu).join("") : `<div class="st-stat">Tidak ada pendaftar yang menunggu.</div>`)
       : S.tab === "peran" ? `<div class="ak-peran-hp">${htmlPeran(true)}</div><h4 style="margin:14px 0 6px">Riwayat perubahan akun</h4>${htmlLog()}`
         : `${statHtml}${peringatan}${cari}${chip}<div class="ak-daftar-hp">${kartu || kosong}</div>`;
-    isi = `${kepala}<div class="ak-tab" role="tablist">${tab.map(([k, l]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" data-st="ak-tab" data-v="${k}" class="${S.tab === k ? "is-aktif" : ""}">${l}</button>`).join("")}</div>${badan}`;
+    isi = `${kepala}<div class="ak-tab" role="tablist">${tab.map(([k, l, ic]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" data-st="ak-tab" data-v="${k}" class="${S.tab === k ? "is-aktif" : ""}">${ikon(ic, 17)}${l}</button>`).join("")}</div>${badan}`;
   }
   return `<section class="st-kartu ak" style="grid-column:1/-1">${isi}</section>
   <section class="st-kartu" style="grid-column:1/-1"><div id="ad-root" class="ad-root"></div></section>`;
@@ -209,7 +211,7 @@ function dialogTambah() {
     <label class="ak-lbl">Nama lengkap</label><input id="ta-nama" autocomplete="off" style="width:100%;box-sizing:border-box">
     <label class="ak-lbl">Email</label><input id="ta-email" type="email" autocomplete="off" style="width:100%;box-sizing:border-box">
     <label class="ak-lbl">WhatsApp (opsional)</label><input id="ta-wa" type="tel" inputmode="tel" autocomplete="off" style="width:100%;box-sizing:border-box">
-    <label class="ak-lbl">Peran</label><select id="ta-peran" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option>${`<optgroup label="Peran siap pakai">${semuaPreset().map((x) => `<option value="p:${e(x.id)}">${e(x.nama)}</option>`).join("")}</optgroup>`}</select>
+    <label class="ak-lbl">Peran</label><select id="ta-peran" data-pemilih aria-label="Peran" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option>${`<optgroup label="Peran siap pakai">${semuaPreset().map((x) => `<option value="p:${e(x.id)}">${e(x.nama)}</option>`).join("")}</optgroup>`}</select>
     <p class="mr-sub" id="ta-info-divisi" hidden style="margin:10px 0 0">Nama, username, kelompok, dan jabatan (kepala divisi atau anggota) diisi di langkah berikutnya.</p>
     <p class="mr-sub" id="ta-info-staf" style="margin:10px 0 0">Kode unit <span class="ak-kode" id="ta-kode">${e(kodeUnit("sales", kodeTerpakai()))}</span> dibuat otomatis. Akun langsung aktif dengan kata sandi sementara yang tampil sekali untuk disalin atau dikirim lewat WhatsApp.</p></div>
     <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="batal">Batal</button><button class="mr-btn mr-btn--utama" data-st="akun-tambah" id="ta-ok">Buat akun</button></div></div>`;
