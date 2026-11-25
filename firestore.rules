@@ -487,6 +487,15 @@ service cloud.firestore {
         && request.resource.data.plat is string && request.resource.data.plat.size() > 0 && request.resource.data.plat.size() <= 20);
       allow delete: if kelola('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
     }
+    // Aktivitas Tracking non-pengiriman (25 Nov 2026): kunjungan, survei, perbaikan, dokumen, dll. Akses seperti dj_armada.
+    match /dj_kegiatan/{id} {
+      allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
+      allow create: if kelola('dj') && ((isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
+        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200);
+      allow update: if kelola('dj') && ((isKelola() || (djAnggota(resource.data.get('kelompokId', null)) && djAnggota(request.resource.data.get('kelompokId', null))))
+        && request.resource.data.judul is string && request.resource.data.judul.size() > 0 && request.resource.data.judul.size() <= 200);
+      allow delete: if kelola('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
+    }
     match /dj_job/{id} {
       allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
       allow create: if kelola('dj') && ((isKelola() || djAnggota(request.resource.data.get('kelompokId', null)))
