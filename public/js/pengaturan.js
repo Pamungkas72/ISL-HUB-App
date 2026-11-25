@@ -131,17 +131,17 @@ const kodeTerpakai = () => S.akun.map((a) => a.kodeSales).filter(Boolean);
 const peranPilih = (a) => a.peran || (a.peranDiminta === "admin" ? (S.master ? "admin" : "lihat") : "sales"); // admin tidak bisa mengangkat admin: permintaan admin jatuh ke Lihat saja
 /* Peran siap pakai: bawaan + buatan sendiri (sistem/peran_preset). Nilai pilihan di daftar: "sales" | "lihat" | "admin" atau "p:<id>". */
 const presetDari = (v) => (String(v).startsWith("p:") ? semuaPreset().find((x) => "p:" + x.id === v) || null : null);
-const peranDasar = (v) => { const p = presetDari(v); return p ? p.peran : v; };
+const peranDasar = (v) => { const p = presetDari(v); return p ? p.peran : v === "belum" ? "lihat" : v; }; // "belum" = Lihat saja dengan semua modul tertutup (hanya Beranda)
 const pilihanAkun = (a) => { const j = a.akses && a.akses.jabatan, p = j && semuaPreset().find((x) => x.nama === j && x.peran === a.peran); return p ? "p:" + p.id : peranPilih(a); };
 const namaPeran = (a) => (a.akses && a.akses.jabatan) || PERAN[a.peran] || "-";
-const opsiPeran = (v, dis = "") => { const o = (k, l) => `<option value="${k}" ${v === k ? "selected" : ""}>${l}</option>`; return `<select data-akun="peran" ${dis}><optgroup label="Peran dasar">${o("sales", "Sales")}${o("lihat", "Lihat saja")}${S.master ? o("admin", "Admin") : ""}</optgroup><optgroup label="Peran siap pakai">${semuaPreset().map((x) => o("p:" + x.id, e(x.nama))).join("")}</optgroup></select>`; };
+const opsiPeran = (v, dis = "") => { const o = (k, l) => `<option value="${k}" ${v === k ? "selected" : ""}>${l}</option>`; return `<select data-akun="peran" ${dis}><optgroup label="Peran dasar">${o("belum", "Belum diatur (hanya Beranda)")}${o("sales", "Sales")}${o("lihat", "Lihat saja")}${S.master ? o("admin", "Admin") : ""}</optgroup><optgroup label="Peran siap pakai">${semuaPreset().map((x) => o("p:" + x.id, e(x.nama))).join("")}</optgroup></select>`; };
 const dikunci = (a) => !S.master && (a.peran === "admin" || a.peran === "master");
 const kunciModal = () => (S.modal && S.modal.siap ? "" : " aria-disabled=\"true\" style=\"opacity:.55\" title=\"Terkunci: pisahkan modal dulu\"");
 const cocokAkun = (a) => { const q = S.cari.trim().toLowerCase(); if (q && !`${a.nama || ""} ${a.email || ""}`.toLowerCase().includes(q)) return false; const f = S.filter; return f === "semua" || (f === "nonaktif" ? a.status === "nonaktif" : a.peran === f); };
 const FILTER = [["semua", "Semua"], ["sales", "Sales"], ["admin", "Admin"], ["lihat", "Lihat saja"], ["nonaktif", "Nonaktif"]];
 
 function kartuMenunggu(a) {
-  const p = peranPilih(a);
+  const p = "belum"; // akun baru disetujui tanpa hak apa pun sampai dikelompokkan atau diberi akses
   return `<div class="ak-tunggu" data-uid="${e(a.id)}">${avAk(a, 40)}<div class="ak-tunggu__t"><b>${e(a.nama || "(tanpa nama)")}</b> meminta akses <b>${a.peranDiminta === "admin" ? "Admin" : "Sales"}</b><div class="mr-sub">${e(a.email)}${a.telepon ? ` · ${e(a.telepon)}` : ""}</div></div>
     <div class="ak-tunggu__f">${opsiPeran(p)}<span class="ak-lblkecil">Kode <span class="ak-kode" data-ak="prev">${e(kodeUnit(peranDasar(p), kodeTerpakai()))}</span></span></div>
     <div class="ak-tunggu__a"><button class="mr-btn mr-btn--utama mr-btn--kecil" data-st="akun-setujui"${kunciModal()}>Setujui</button><button class="mr-btn mr-btn--kecil" data-st="akun-tolak">Tolak</button></div></div>`;
@@ -336,8 +336,8 @@ async function aksiAkun(a, tr) {
   const sel = tr.querySelector("[data-akun=peran]"), peranBaru = sel ? sel.value : peranPilih(ak);
   const pr = presetDari(peranBaru), dasar = peranDasar(peranBaru), punyaJabatan = !!(ak.akses && ak.akses.jabatan);
   /* preset: hak mengikuti preset; peran dasar tanpa preset: hak lama dipertahankan hanya bila peran dan jabatannya tidak berubah */
-  const baca = () => ({ peran: dasar, kodeSales: ak.kodeSales || kodeUnit(dasar, kodeTerpakai()), akses: pr ? aksesPreset(pr) : (dasar === ak.peran && !punyaJabatan ? ak.akses || {} : {}) }); // kode unit dibuat sistem; akun lama mempertahankan kodenya
-  if ((a === "akun-setujui" || a === "akun-aktif") && !(S.modal && S.modal.siap)) {
+  const baca = () => ({ peran: dasar, kodeSales: ak.kodeSales || kodeUnit(dasar, kodeTerpakai()), akses: pr ? aksesPreset(pr) : peranBaru === "belum" ? { mr: 0, qt: 0, cu: 0, dj: 0, lg: 0 } : (dasar === ak.peran && !punyaJabatan ? ak.akses || {} : {}) }); // kode unit dibuat sistem; akun lama mempertahankan kodenya
+  if ((a === "akun-setujui" || a === "akun-aktif") && peranBaru !== "belum" && !(S.modal && S.modal.siap)) { // Belum diatur tidak melihat modul apa pun: tanpa pemisahan modal
     // Tombol tidak dimatikan supaya terasa alasannya: kunci ini sengaja (modal harus dipisah dulu).
     const kartu = document.querySelector(".mr-banner--peringatan"); if (kartu) kartu.scrollIntoView({ behavior: "smooth", block: "center" });
     return toast(S.modal == null ? "Sedang memeriksa keamanan modal. Coba lagi sebentar." : S.master ? "<b>Setujui terkunci.</b> Buka <b>Sistem dan data</b>, tekan <b>Pisahkan modal sekarang</b> (cukup sekali), lalu Setujui akan aktif." : "<b>Setujui terkunci.</b> Modal quotation dan rate harus dipisah pemilik lebih dulu.", "bahaya");
