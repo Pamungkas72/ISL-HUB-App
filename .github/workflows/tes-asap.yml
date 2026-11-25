@@ -56,6 +56,7 @@ jobs:
           node tests/unit/daily-job-kategori.test.mjs
           node tests/unit/halaman-akses.test.mjs
           node tests/unit/uang-jalan-master.test.mjs
+          node tests/unit/uang-jalan-impor.test.mjs
 
       - name: Pasang Playwright dan Chromium
         run: |
@@ -97,6 +98,8 @@ jobs:
         run: |
           node tests/asap/uji-uj-master.js hp
           node tests/asap/uji-uj-master.js desktop
+          node tests/asap/uji-uj-impor.js hp
+          node tests/asap/uji-uj-impor.js desktop
       - name: Uji menu Uang Jalan
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
