@@ -55,7 +55,7 @@ export function hapusSemuaSalinan() {
 }
 
 /* Banner kecil di atas layar: status data (memperbarui / terbaru / gagal). */
-export function bannerSinkron(teks, jenis) {
+export function bannerSinkron(teks, jenis, detik = 0) {
   let el = document.getElementById("sinkron-banner");
   if (!el) { el = document.createElement("div"); el.id = "sinkron-banner"; el.setAttribute("role", "status");
     el.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:9000;padding:8px 14px;border-radius:999px;font:600 13px Inter,system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.18)";
@@ -64,5 +64,6 @@ export function bannerSinkron(teks, jenis) {
   el.style.background = jenis === "gagal" ? "#FCEAEA" : jenis === "ok" ? "#E4F5EE" : "#FFF4E0";
   el.style.color = jenis === "gagal" ? "#A12626" : jenis === "ok" ? "#1F6B4B" : "#7A4A00";
   el.hidden = false;
+  clearTimeout(el._tutup); if (detik > 0) el._tutup = setTimeout(() => { el.hidden = true; }, detik * 1000); // pemberitahuan nonkritis hilang sendiri
   return el;
 }
