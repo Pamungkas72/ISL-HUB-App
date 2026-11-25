@@ -105,6 +105,15 @@ describe("Sales: customer disetujui hanya boleh naik prospek ke aktif", () => {
   it("sales tidak mengubah nama customer disetujui", () => assertFails(updateDoc(doc(sales(), "cu_customers/c1"), { nama: "PT Lain" })));
 });
 
+describe("Divisi non-Daily Job: hanya master dan admin", () => {
+  it("admin membuat divisi", () => assertSucceeds(setDoc(doc(admin(), "divisi/d1"), { nama: "Finance", presetId: "finance", kepala: [], dibuat: "2026-11-25" })));
+  it("sales tidak membuat divisi", () => assertFails(setDoc(doc(sales(), "divisi/d2"), { nama: "X", kepala: [] })));
+  it("kunci tak dikenal ditolak", () => assertFails(setDoc(doc(admin(), "divisi/d3"), { nama: "X", izin: 1 })));
+  it("sales tidak membaca divisi", () => assertFails(getDoc(doc(sales(), "divisi/d1"))));
+  it("admin menandai anggota dengan divisiId", () => assertSucceeds(updateDoc(doc(admin(), "pengguna/uid-lihat"), { divisiId: "d1" })));
+  it("sales tidak mengubah divisiId sendiri", () => assertFails(updateDoc(doc(sales(), "pengguna/uid-sales"), { divisiId: "d1" })));
+});
+
 describe("Koreksi rate: sales tidak bisa mengubah isi rate", () => {
   it("sales tidak bisa mengubah harga rate miliknya", () => assertFails(updateDoc(doc(sales(), "cu_rates/r1"), { jual: 2000 })));
 });

@@ -74,6 +74,7 @@ function render() {
     ...(S.sales ? [{ id: "profil", label: "Profil sales", ket: "Nama, telepon, tanda tangan", ikon: "profil", isi: `<section class="st-kartu"><h3>Profil sales</h3>${window.ISLSales ? window.ISLSales.kontenProfil() : ""}</section>` }] : []),
     ...(S.sales || S.kelola ? [{ id: "ajuan", label: "Pengajuan hapus quotation", ket: S.master ? (jmlAj ? `${jmlAj} menunggu keputusan` : "Tidak ada yang menunggu") : S.sales ? (jmlAj ? `${jmlAj} menunggu master` : "Status pengajuan milikmu") : "Daftar pengajuan sales", badge: jmlAj, ikon: "ajuan", isi: `<section class="st-kartu"><h3>Pengajuan hapus quotation${jmlAj ? ` <span class="cu-jml">${jmlAj}</span>` : ""}</h3><p>${S.master ? "Keputusan ada di tangan pemilik. Quotation yang sudah disetujui customer tidak bisa dihapus dari sini." : S.sales ? "Status pengajuan hapus yang kamu kirim. Master yang memutuskan." : "Pengajuan hapus dari sales. Keputusan ada di tangan pemilik."}</p>${window.ISLSales ? window.ISLSales.kontenAjuan() : ""}</section>` }] : []),
     ...(!S.sales ? [{ id: "cadangan", label: "Cadangan data", ket: "Unduh dan pulihkan", ikon: "cad", isi: kCad }] : []),
+    ...(!S.kelola && (S.divisiSaya || []).length ? [{ id: "timdivisi", label: "Tim divisi saya", ket: (S.divisiSaya || []).map((d) => d.nama).join(", "), ikon: "akses", isi: htmlTimDivisi() }] : []),
     ...(S.kelola ? [{ id: "akses", label: "Akun dan akses", ket: "Divisi, sales, persetujuan", ikon: "akses", badge: S.akun.filter((a) => a.status === "menunggu").length, isi: kAkses }] : []),
     ...(S.kelola ? [{ id: "sistem", label: "Sistem dan data", ket: "Keamanan modal, pembersihan, cek Firebase", ikon: "cad", isi: kSistem }] : []),
   ];
@@ -109,7 +110,7 @@ function htmlCekFirebase() {
 
 /* ---------- kelola akun (master) ---------- */
 const warna = { menunggu: "st-badge", aktif: "st-badge st-badge--ok", nonaktif: "st-badge" };
-const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "dj-tambah": "Akun divisi dibuat", "dj-ubah": "Akun divisi diubah", "dj-sandi": "Kata sandi akun divisi direset", "dj-keluar": "Semua sesi akun divisi diakhiri", "dj-nonaktif": "Akun divisi dinonaktifkan", "dj-aktif": "Akun divisi diaktifkan lagi", "dj-hapus": "Akun divisi dihapus", "dj-kepala": "Ditetapkan kepala divisi", "dj-anggota": "Jabatan kepala dilepas", "dj-kelompok": "Pindah kelompok", "dj-akses": "Akses Daily Job diubah", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
+const LABEL_LOG = { setujui: "Disetujui", aktifkan: "Diaktifkan lagi", ubah: "Diubah", nonaktifkan: "Dinonaktifkan", tolak: "Ditolak", hapus: "Dihapus", tambah: "Dibuat manual", "pindah-divisi": "Pindah divisi", "divisi-nonaktif": "Dinonaktifkan kepala divisi", "divisi-aktif": "Diaktifkan kepala divisi", "dj-kelompok-anggota": "Masuk kelompok Daily Job", "dj-kelompok-kepala": "Kepala kelompok Daily Job", "dj-keluarkan": "Keluar kelompok Daily Job", "dj-tambah": "Akun divisi dibuat", "dj-ubah": "Akun divisi diubah", "dj-sandi": "Kata sandi akun divisi direset", "dj-keluar": "Semua sesi akun divisi diakhiri", "dj-nonaktif": "Akun divisi dinonaktifkan", "dj-aktif": "Akun divisi diaktifkan lagi", "dj-hapus": "Akun divisi dihapus", "dj-kepala": "Ditetapkan kepala divisi", "dj-anggota": "Jabatan kepala dilepas", "dj-kelompok": "Pindah kelompok", "dj-akses": "Akses Daily Job diubah", "atur-sandi": "Kata sandi diatur master", "kirim-reset-sandi": "Email reset kata sandi dikirim" };
 const waktuLog = (v) => { const t = v && typeof v.toDate === "function" ? v.toDate() : v; return t ? wkt(t) : "-"; };
 /* Hanya bagian yang berubah yang ditampilkan: peran, status, kode sales, dan target. */
 const ringkasLog = (dari, ke) => {
@@ -372,9 +373,12 @@ async function aksiAkun(a, tr) {
   } catch (er) { return toast(`<b>Gagal.</b> ${e(String(er.code || "").startsWith("functions/") ? er.message : (er.code || er.message))}`, "bahaya"); } // galat fungsi server: tampilkan penyebabnya
   await muatAkun();
 }
+/* Kepala divisi non-Daily Job: daftar anggota divisinya dan tombol nonaktifkan/aktifkan (Cloud Function divisiSaya, divisiAturAnggota). */
+const htmlTimDivisi = () => (S.divisiSaya || []).map((d) => `<section class="st-kartu"><h3>Tim ${e(d.nama)}</h3><p>Anda kepala divisi ini. Izin modul anggota diatur admin atau master.</p>${d.anggota.map((a) => `<div class="st-baris"><b>${e(a.nama || "-")}</b><span class="mr-sub">${e(a.email)}</span>${a.kepala ? `<span class="st-badge">Kepala</span>` : `${a.status === "aktif" ? "" : `<span class="st-badge">Nonaktif</span>`}<button type="button" class="mr-btn mr-btn--kecil" data-st="tim-toggle" data-uid="${e(a.uid)}" data-aktif="${a.status === "aktif" ? 1 : 0}">${a.status === "aktif" ? "Nonaktifkan" : "Aktifkan"}</button>`}</div>`).join("") || `<p class="mr-sub">Belum ada anggota.</p>`}</section>`).join("");
+async function muatDivisiSaya() { try { S.divisiSaya = (await httpsCallable(getFunctions(app, "asia-southeast2"), "divisiSaya")()).data.divisi || []; } catch (_) { S.divisiSaya = []; } render(); }
 /* Akun yang sudah ada sebelum fitur masuk lewat nomor telepon: didaftarkan sekali per sesi saat master/admin membuka Pengaturan (aman diulang). */
 function sinkronTeleponSemua() { try { if (sessionStorage.getItem("islhub-sinkron-tel")) return; sessionStorage.setItem("islhub-sinkron-tel", "1"); } catch (_) {} sinkronLoginTelepon(); }
-async function muatLokal() { S.lokal = await C.daftarLokal(); if (S.kelola) sinkronTeleponSemua(); render(); if (S.kelola && !S.akunMuat) { S.akunMuat = true; muatAkun(); } }
+async function muatLokal() { S.lokal = await C.daftarLokal(); if (S.kelola) sinkronTeleponSemua(); else muatDivisiSaya(); render(); if (S.kelola && !S.akunMuat) { S.akunMuat = true; muatAkun(); } }
 const progres = (t) => { S.progres = t; const el = $("#st-progres"); if (el) el.textContent = t; };
 
 document.addEventListener("click", async (ev) => {
@@ -384,6 +388,7 @@ document.addEventListener("click", async (ev) => {
   if (t.dataset.st === "bag") { S.bag = t.dataset.v; render(); return window.scrollTo({ top: 0 }); }
   if (t.dataset.st === "bag-kembali") { S.bag = ""; render(); return window.scrollTo({ top: 0 }); }
   const a = t.dataset.st;
+  if (a === "tim-toggle") { t.disabled = true; try { await httpsCallable(getFunctions(app, "asia-southeast2"), "divisiAturAnggota")({ uid: t.dataset.uid, aksi: t.dataset.aktif === "1" ? "nonaktif" : "aktif" }); toast("Status anggota diperbarui."); await muatDivisiSaya(); } catch (er) { t.disabled = false; toast(`<b>Gagal.</b> ${e(er.message || er.code)}`, "bahaya"); } return; }
   if (a === "sandi-saya") { t.disabled = true; try { await kirimResetSandi(S.email); toast(`Email atur kata sandi terkirim ke <b>${e(S.email)}</b>. Periksa juga folder spam.`); } catch (er) { toast(`Email belum terkirim (${e(er.code || er.message)}).`, "bahaya"); } t.disabled = false; return; }
   if (a === "bersih-koreksi") {
     if (!S.master) return;

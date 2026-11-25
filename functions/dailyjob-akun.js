@@ -42,15 +42,50 @@ async function pesanAlias(kunci, email, milik = []) {
 }
 const lepasAlias = (kunci) => Promise.all(kunci.map((k) => db().doc(`dj_login/${k}`).delete().catch(() => {})));
 
+/** Lepas jabatan kepala di divisi non-Daily Job (dipakai saat akun pindah ke Daily Job). */
+async function lepasDivisi(uid, divisiId) {
+  if (!divisiId) return;
+  const d = await db().doc(`divisi/${divisiId}`).get();
+  if (d.exists && (d.get("kepala") || []).includes(uid)) await d.ref.update({ kepala: (d.get("kepala") || []).filter((x) => x !== uid) });
+}
+/** Divisi non-Daily Job yang dikepalai pemanggil, beserta anggotanya (hanya nama, email, status). Kepala tidak bisa membaca koleksi pengguna langsung. */
+exports.divisiSaya = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req);
+  const s = await db().collection("divisi").where("kepala", "array-contains", c.uid).get(), hasil = [];
+  for (const d of s.docs) {
+    if (d.get("arsip")) continue;
+    const m = await db().collection("pengguna").where("divisiId", "==", d.id).get();
+    hasil.push({ id: d.id, nama: d.get("nama") || "", anggota: m.docs.map((x) => ({ uid: x.id, nama: x.get("nama") || "", email: x.get("email") || "", status: x.get("status") || "aktif", kepala: x.id === c.uid })).sort((a, b) => a.nama.localeCompare(b.nama, "id")) });
+  }
+  return { divisi: hasil };
+});
+/** Kepala divisi menonaktifkan atau mengaktifkan anggota divisinya (izin modul tetap diatur admin/master). Master/admin juga boleh. */
+exports.divisiAturAnggota = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req), d = req.data || {}, uid = String(d.uid || ""), aksi = String(d.aksi || "");
+  if (!["nonaktif", "aktif"].includes(aksi)) throw new HttpsError("invalid-argument", "Aksi tidak dikenal.");
+  const ref = db().doc(`pengguna/${uid}`), s = await ref.get(); if (!s.exists || !s.get("divisiId")) throw new HttpsError("not-found", "Anggota divisi tidak ada.");
+  if (!c.kelola) {
+    const dv = await db().doc(`divisi/${s.get("divisiId")}`).get();
+    if (!dv.exists || !(dv.get("kepala") || []).includes(c.uid)) throw new HttpsError("permission-denied", "Hanya kepala divisi ini yang boleh mengurus anggotanya.");
+    if (uid === c.uid) throw new HttpsError("failed-precondition", "Kepala tidak menonaktifkan dirinya sendiri.");
+  }
+  if (["master", "admin"].includes(s.get("peran"))) throw new HttpsError("permission-denied", "Akun admin tidak diatur dari sini.");
+  const mati = aksi === "nonaktif"; await admin.auth().updateUser(uid, { disabled: mati }); if (mati) await admin.auth().revokeRefreshTokens(uid);
+  await ref.update({ status: mati ? "nonaktif" : "aktif" }); await catat(c, uid, s.get("email"), "divisi-" + aksi);
+  return { ok: true };
+});
+
 /** Kelompokkan akun yang sudah disetujui tetapi belum punya kelompok (peran Lihat saja tanpa peran siap pakai) menjadi anggota atau kepala divisi, dengan akses Daily Job kelola. Hanya master atau admin. */
 exports.djKelompokkan = onCall(OPSI, async (req) => {
   const c = await pemanggil(req); if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin.");
   const d = req.data || {}, uid = String(d.uid || ""), kelompokId = String(d.kelompokId || ""), kepala = d.jabatan === "kepala";
-  const ref = db().doc(`pengguna/${uid}`), s = await ref.get(), akses = s.exists ? s.get("akses") : null;
-  if (!s.exists || s.get("status") !== "aktif" || s.get("peran") !== "lihat" || s.get("kelompokDJ") || (akses && akses.jabatan)) throw new HttpsError("failed-precondition", "Akun ini bukan akun baru yang belum dikelompokkan.");
+  const ref = db().doc(`pengguna/${uid}`), s = await ref.get();
+  if (!s.exists || s.get("status") !== "aktif" || !["lihat", "sales"].includes(s.get("peran")) || s.get("kelompokDJ")) throw new HttpsError("failed-precondition", "Akun ini tidak bisa dikelompokkan ke Daily Job (sudah anggota kelompok, admin, atau tidak aktif).");
+  await lepasDivisi(uid, s.get("divisiId")); // satu akun satu divisi
+  if (s.get("peran") === "sales") await db().doc(`sales_publik/${uid}`).delete().catch(() => {});
   const kel = kelompokId ? await db().doc(`dj_kelompok/${kelompokId}`).get() : null;
   if (!kel || !kel.exists || kel.get("arsip")) throw new HttpsError("not-found", "Pilih kelompok yang masih aktif.");
-  await ref.update({ peran: "dj", kelompokDJ: kelompokId, kodeUnit: await kodeUnitKelompok(kelompokId), akses: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 } });
+  await ref.update({ peran: "dj", kelompokDJ: kelompokId, kodeUnit: await kodeUnitKelompok(kelompokId), akses: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 }, divisiId: admin.firestore.FieldValue.delete() });
   if (kepala) await kel.ref.update({ kepala: [uid] }); // satu kepala per kelompok
   await admin.auth().revokeRefreshTokens(uid); // menu dan hak baru berlaku di sesi berikutnya
   await catat(c, uid, s.get("email"), kepala ? "dj-kelompok-kepala" : "dj-kelompok-anggota");

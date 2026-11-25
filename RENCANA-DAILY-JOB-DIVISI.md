@@ -128,3 +128,10 @@ Uang jalan kini diurus di Master Rate. Dihapus: sub-tab Armada > Uang jalan (tar
 - **Mode ubah:** Distribusi memakai Detail titik (rute tidak diketik ulang); Trailer memakai kolom Rute.
 - Diperbaiki: blok Dokumen dan Kontainer (khusus Trailer) ikut tampil di formulir Distribusi (kelas `dj-sembunyi` kalah spesifisitas).
 - Dihapus: editor tujuan tambahan terpisah (diganti panah di kolom Rute); No. kontainer, ukuran, dan dokumen hanya untuk Trailer.
+
+## Divisi umum di Akun dan akses (25 Nov 2026, keputusan pemilik)
+- **Satu daftar "Divisi dan kelompok"** di Pengaturan > Akun dan akses: kelompok Daily Job (`dj_kelompok`) dan divisi tanpa Daily Job (`divisi`: Finance, Legal, Operasional/CS, dll.). Tab Tim di Daily Job tetap, hanya untuk kelompok Daily Job.
+- **Satu akun satu divisi.** Anggota divisi umum ditandai `pengguna.divisiId`; kepala di `divisi.kepala` (satu per divisi). Anggota Daily Job tetap `peran: dj` + `kelompokDJ`. Pindah antara keduanya lewat panel **Pindah** (Tanpa divisi, Divisi, atau Kelompok Daily Job); tiap perpindahan masuk log akun (`pindah-divisi`).
+- **Izin ikut peran siap pakai divisi** (`divisi.presetId`, dari Pengaturan > Peran), bisa diubah per akun. Mengganti peran divisi menawarkan penerapan ke semua anggota. Halaman atau modul baru muncul otomatis di editor Peran; divisi baru tinggal memilih peran siap pakainya, kelompok Daily Job baru otomatis tampil di daftar yang sama.
+- **Akun baru disetujui** = peran Lihat saja dengan semua modul tertutup (hanya Beranda) sampai dikelompokkan di sini.
+- **Kepala divisi umum**: melihat anggota dan menonaktifkan/mengaktifkan (Pengaturan > Tim divisi saya, Cloud Function `divisiSaya` dan `divisiAturAnggota`); izin modul tetap hanya master/admin. Divisi bawaan (Finance, Legal, Operasional/CS) diisi sekali (`sistem/divisi_awal`). Tampilan **Bagan** meringkas divisi, kepala, dan staf.
