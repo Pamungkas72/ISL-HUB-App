@@ -10,4 +10,5 @@ eq("anggota lain diterima dan dibakukan", tentukanPic("rina putri", "Dede", tim,
 eq("bukan anggota ditolak", tentukanPic("Budi", "Dede", tim, "Dede"), { ok: false, pic: "Budi" });
 eq("PIC lama (impor) yang tidak diubah tetap sah", tentukanPic("Ega", "Ega", tim, "Dede"), { ok: true, pic: "Ega" });
 eq("daftar belum termuat: tidak memblokir", tentukanPic("Budi", "", null, "Dede"), { ok: true, pic: "Budi" });
+eq("master (Ega Mulya) sah sebagai PIC di kelompok mana pun", [tentukanPic("Ega Mulya", "", tim, "Dede"), tentukanPic("ega mulya", "", [...tim, "Ega Mulya"], "Dede"), namaAkun({ nama: "Ega Mulya", peran: "master" }, {})], [{ ok: false, pic: "Ega Mulya" }, { ok: true, pic: "Ega Mulya" }, "Ega Mulya"]);
 process.exit(gagal ? 1 : 0);

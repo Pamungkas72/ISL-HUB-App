@@ -9,7 +9,9 @@
 export const EMAIL_MASTER = "codcodan1@gmail.com";
 
 // Nama dan peran yang ditampilkan di pojok kanan atas. Hanya tampilan; hak akses tetap dari EMAIL_MASTER.
-const NAMA_TAMPIL = { "codcodan1@gmail.com": "Ega Mulya · Owner" };
+/* Nama pemilik: dipakai sebagai nama profil master dan sah sebagai PIC Daily Job di semua kelompok (server: djNamaTim). */
+export const NAMA_MASTER = "Ega Mulya";
+const NAMA_TAMPIL = { "codcodan1@gmail.com": NAMA_MASTER + " · Owner" };
 // nama: nama yang diisi saat mendaftar (displayName). Pemilik selalu tampil dengan labelnya.
 export function labelAkun(email, nama) {
   const k = String(email || "").trim().toLowerCase();

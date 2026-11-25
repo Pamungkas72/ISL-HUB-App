@@ -6,6 +6,7 @@ const admin = require("firebase-admin");
 const U = require("./dailyjob-akun-util");
 
 const EMAIL_MASTER = "codcodan1@gmail.com"; // sama dengan isMaster() di firestore.rules
+const NAMA_MASTER = "Ega Mulya"; // sama dengan NAMA_MASTER di public/js/config-akses.js: sah sebagai PIC di semua kelompok
 const BATAS_SESI_DETIK = 87000;
 const OPSI = { region: "asia-southeast2" };
 const db = () => admin.firestore();
@@ -180,7 +181,8 @@ exports.djNamaTim = onCall(OPSI, async (req) => {
   const c = await pemanggil(req), kelompokId = String((req.data && req.data.kelompokId) || "");
   if (!kelompokId || !(c.kelola || c.kelompok === kelompokId)) throw new HttpsError("permission-denied", "Hanya anggota kelompok ini yang boleh melihat daftar PIC.");
   const s = await db().collection("pengguna").where("kelompokDJ", "==", kelompokId).get();
-  return { nama: s.docs.filter((x) => x.get("status") === "aktif").map((x) => String(x.get("nama") || "").trim()).filter(Boolean).sort((a, b) => a.localeCompare(b, "id")) };
+  const nama = new Set(s.docs.filter((x) => x.get("status") === "aktif").map((x) => String(x.get("nama") || "").trim()).filter(Boolean)); nama.add(NAMA_MASTER); // pemilik (master) bisa jadi PIC di semua kelompok
+  return { nama: [...nama].sort((a, b) => a.localeCompare(b, "id")) };
 });
 
 exports.djDaftarTim = onCall(OPSI, async (req) => {
