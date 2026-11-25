@@ -39,7 +39,7 @@ export function batalkanTahap(j) {
   return { ...r, tahap: t, ...(k === "pod" ? { pod: "belum", tglPod: null } : {}) };
 }
 export const podKembali = P.podKembali;
-const tglOperasional = (j) => { const r = rinci(j), t = tahapJenis(r.jenis), a = r.tahap && r.tahap[t[t.length - 2][0]]; return a ? String(a).slice(0, 10) : ""; };
+export const tglOperasional = (j) => { const r = rinci(j), t = tahapJenis(r.jenis), a = r.tahap && r.tahap[t[t.length - 2][0]]; return a ? String(a).slice(0, 10) : ""; };
 /** Operasional selesai = semua tahap sebelum POD selesai. */
 export const operasionalSelesai = (j) => kemajuan(j) >= tahapJenis(rinci(j).jenis).length - 1;
 /** Fase untuk antrean: belum, jalan, pod (menunggu POD sampai), bayar (vendor Cash perlu ditransfer), selesai, batal. */
