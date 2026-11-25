@@ -2788,3 +2788,33 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 .kd-bagan{margin:0}
 .kd-staf{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 @media (max-width:760px){.ad-aksi{justify-content:flex-start}.kd-bagan-grid{grid-template-columns:1fr}}
+
+/* Pemilih pilihan ringkas (js/pemilih.js): kolom, panel HP (dari bawah) dan popover desktop */
+.pm-asli { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; }
+.pm-medan { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.pm-medan:disabled { opacity: .55; cursor: default; } .pm-medan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pm-medan svg { flex: none; color: var(--muted); } .pm-nilai { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-scrim { position: fixed; inset: 0; z-index: 9700; background: rgba(5, 12, 22, .55); }
+.pm-panel { position: fixed; z-index: 9710; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border: 1px solid var(--border); box-shadow: 0 18px 40px rgba(0, 0, 0, .35); font-family: Inter, system-ui, sans-serif; }
+.pm-hp { left: 0; right: 0; bottom: 0; max-height: 52vh; max-height: 52dvh; border-radius: 20px 20px 0 0; padding: 8px 14px calc(12px + env(safe-area-inset-bottom)); }
+.pm-pop { border-radius: 14px; padding: 8px 10px; max-height: min(420px, 60vh); }
+.pm-pegang { width: 40px; height: 4px; border-radius: 4px; background: var(--border); margin: 2px auto 10px; flex: none; }
+.pm-cari { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--muted); margin-bottom: 4px; flex: none; }
+.pm-cari input { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: var(--text); font: inherit; }
+.pm-daftar { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.pm-grup { margin: 10px 4px 2px; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.pm-opsi { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 6px; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.pm-opsi:last-child { border-bottom: 0; } .pm-opsi:hover, .pm-opsi:focus-visible { background: var(--bg); outline: none; }
+.pm-opsi b { display: block; font-weight: 700; } .pm-opsi small { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; font-size: 12px; line-height: 1.35; color: var(--muted); }
+.pm-rad { flex: none; width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 50%; }
+.pm-opsi[aria-selected="true"] .pm-rad { border-color: var(--accent); background: radial-gradient(var(--accent) 45%, transparent 50%); }
+.pm-kosong { margin: 14px 6px; color: var(--muted); font-size: 13px; }
+
+/* Akun dan akses: kartu persetujuan, tab, tombol tambah, segmen (HP dan desktop) */
+.ak-tunggu__f { flex-wrap: wrap; } .ak-tunggu__f .pm-medan { flex: 1 1 220px; min-width: 0; }
+.ak-tab button { display: inline-flex; align-items: center; gap: 6px; } .ak-tab button svg { flex: none; }
+.ad-seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.ak-tambah, .ad-tambah { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+@media (max-width: 760px) { .ak-tambah__t { display: none; } .ak-tambah { width: 40px; height: 40px; padding: 0; justify-content: center; border-radius: 50%; } }
+.ad-aksi { flex-wrap: wrap; }
+.ak-h { display: flex; align-items: center; gap: 6px; }

@@ -12,6 +12,7 @@ import { hitungModalFase2 } from "./app-store.js";
 import { konfirmasi, e } from "./ui.js";
 import { adalahMaster } from "./config-akses.js";
 import { catatLogAkun, kodeUnit, aksesPreset } from "./akses.js";
+import "./pemilih.js";
 import { sinkronLoginTelepon } from "./auth.js";
 import { semuaPreset, muatPeran } from "./peran-akses.js";
 import { linkWa, pesanAkunAktif } from "./kontak-admin.js";
@@ -66,7 +67,7 @@ export function bukaPendaftarAksi({ onSelesai } = {}) {
           <div class="ip-item" data-uid="${e(x.uid)}" data-tel="${e(x.telepon)}" data-sales="${x.peranDiminta === "sales" ? "1" : "0"}">
             <div class="ip-orang"><span class="ip-avatar" aria-hidden="true">${e(inisial(x.nama || x.email))}</span><div style="min-width:0"><div class="ip-nama">${e(x.nama || "(tanpa nama)")}</div><div class="ip-mail">${e(x.email)}${x.telepon ? ` · ${e(x.telepon)}` : ""}</div></div></div>
             <div class="ip-grid">
-              <label class="ip-field">Peran<select class="ip-select" data-f="peran"><option value="lihat" selected>Belum diatur (hanya Beranda)</option><option value="sales">Sales</option><optgroup label="Peran siap pakai">${semuaPreset().map((p) => `<option value="p:${e(p.id)}">${e(p.nama)}</option>`).join("")}</optgroup>${pemilik() ? `<option value="admin">Admin</option>` : ""}</select></label>
+              <label class="ip-field">Peran<select class="ip-select" data-f="peran" data-pemilih aria-label="Peran"><optgroup label="Umum"><option value="lihat" data-ket="Hanya Beranda, diatur nanti" selected>Belum diatur</option><option value="sales" data-ket="Quotation dan customer">Sales</option>${pemilik() ? `<option value="admin" data-ket="Mengelola data dan akun">Admin</option>` : ""}</optgroup><optgroup label="Peran siap pakai">${semuaPreset().map((p) => `<option value="p:${e(p.id)}" data-ket="${e(p.ket || "")}">${e(p.nama)}</option>`).join("")}</optgroup></select></label>
               <label class="ip-field">Kode unit (otomatis)<input class="ip-input" data-f="kode" value="${e(kodeAuto)}" readonly></label>
             </div>
             <div class="ip-aksi ip-aksi--baris"><button type="button" class="ip-btn ip-btn--utama" data-a="setujui">Setujui</button><button type="button" class="ip-btn ip-btn--bahaya" data-a="tolak">Tolak</button></div>
