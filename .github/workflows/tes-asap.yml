@@ -42,6 +42,7 @@ jobs:
           node tests/unit/daily-job.test.mjs
           node tests/unit/daily-job-pdf.test.mjs
           node tests/unit/daily-job-giat.test.mjs
+          node tests/unit/daily-job-email-customer.test.js
           node tests/unit/daily-job-trailer.test.mjs
           node tests/unit/daily-job-pdf-trailer.test.mjs
           node tests/unit/daily-job-pdf-distribusi.test.mjs
