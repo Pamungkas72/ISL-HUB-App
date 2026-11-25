@@ -29,6 +29,8 @@ async function muat() {
     const berdivisi = (await getDocs(query(collection(db, "pengguna"), where("divisiId", ">=", "")))).docs.map((d) => ({ id: d.id, ...d.data() })), ada = new Set(A.akun.map((a) => a.id));
     /* calon = sudah disetujui tetapi belum punya divisi atau kelompok: peran Lihat saja, atau peran siap pakai (jabatan) tanpa divisi; Sales biasa tidak ikut */
     const calon = lain.filter((a) => !a.kelompokDJ && !a.divisiId && (a.peran === "lihat" || a.peran === "sales" || (a.akses && a.akses.jabatan))).map((a) => ({ ...a, calon: true }));
+    const berkelompok = (await getDocs(query(collection(db, "pengguna"), where("kelompokDJ", ">=", "")))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.kelompokDJ && !["master", "admin"].includes(a.peran)); // Sales yang juga anggota kelompok
+    A.akun = [...A.akun, ...berkelompok.filter((a) => !ada.has(a.id))]; berkelompok.forEach((a) => ada.add(a.id));
     A.akun = [...A.akun, ...berdivisi.filter((a) => a.divisiId && !ada.has(a.id) && !a.kelompokDJ)];
     A.akun = [...A.akun, ...urutNama(calon)];
     await muatPeran().catch(() => {}); A.div = await muatDivisi();
@@ -53,7 +55,7 @@ const namaKepala = (k) => { const a = A.akun.find((x) => x.id === (k.kepala || [
 const profilNama = (k) => (k.profil === "tracking" ? "Tracking" : "Marketing");
 function detailKel(k, hp) {
   const l = anggotaKel(k.id), kosong = !l.length && !(A.jobN[k.id] > 0);
-  const baris2 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${a.kodeUnit ? `<span class="ak-kode">${e(a.kodeUnit)}</span> · ` : ""}${e(a.username ? "@" + a.username : a.email || "")}${a.status === "nonaktif" ? " · Nonaktif" : ""}</small></span>${jabatanKepala(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
+  const baris2 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${a.kodeUnit ? `<span class="ak-kode">${e(a.kodeUnit)}</span> · ` : ""}${e(a.username ? "@" + a.username : a.email || "")}${a.status === "nonaktif" ? " · Nonaktif" : ""}</small></span>${lencanaSales(a)}${jabatanKepala(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
     <span class="kd-aksi"><button type="button" class="mr-btn mr-btn--kecil" data-ad="pindah" data-id="${e(a.id)}">Pindah ▾</button>${hp ? "" : `<button type="button" class="mr-btn mr-btn--kecil" data-ad="kepala-cepat" data-id="${e(a.id)}">${jabatanKepala(a) ? "Lepas kepala" : "Jadikan kepala"}</button>`}<button type="button" class="mr-ikonbtn" data-ad="kelola" data-id="${e(a.id)}" aria-label="Atur ${e(a.nama || "akun")}">⋯</button></span></div>`;
   return `<div class="kd-detail" data-k="${e(k.id)}"><div class="kd-judul"><div class="kd-judul__t"><h3>${e(k.nama)}</h3><div class="kd-mini"><span>Profil <b>${profilNama(k)}</b></span><span>Awalan <span class="ak-kode">${e(awalanKel(k))}</span></span>${k.dibuat ? `<span>Dibuat <b>${e(k.dibuat)}</b></span>` : ""}</div></div>
     <div class="kd-judul__a"><button type="button" class="mr-btn mr-btn--kecil" data-ad="kel-ubah" data-k="${e(k.id)}">Ubah</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="kel-arsip" data-k="${e(k.id)}">Arsipkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya${kosong ? "" : " kd-redup"}" data-ad="kel-hapus" data-k="${e(k.id)}" title="${kosong ? "" : "Pindahkan anggota dan job dulu, atau arsipkan"}">Hapus</button></div></div>
@@ -68,9 +70,10 @@ const anggotaDiv = (id) => [...A.akun.filter((a) => a.divisiId === id)].sort((x,
 const namaKepalaDiv = (d) => { const a = A.akun.find((x) => x.id === (d.kepala || [])[0]); return a ? a.nama : "—"; };
 const namaPreset = (d) => { const p = d.presetId ? presetById(d.presetId) : null; return p ? p.nama : "hak akun tidak diubah"; };
 const identAkun = (a) => e(a.username ? "@" + a.username : a.email || "");
+const lencanaSales = (a) => (a.peran === "sales" && (a.kelompokDJ || a.divisiId) ? `<span class="ad-bd">Sales</span>` : "");
 function detailDivisi(d) {
   const l = anggotaDiv(d.id), kosong = !l.length;
-  const baris3 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${identAkun(a)}${a.status === "nonaktif" ? " · Nonaktif" : ""}</small></span>${jabatanKepalaDiv(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
+  const baris3 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${identAkun(a)}${a.status === "nonaktif" ? " · Nonaktif" : ""}</small></span>${lencanaSales(a)}${jabatanKepalaDiv(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
     <span class="kd-aksi"><button type="button" class="mr-btn mr-btn--kecil" data-ad="pindah-u" data-id="${e(a.id)}">Pindah ▾</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="kepala-div" data-id="${e(a.id)}">${jabatanKepalaDiv(a) ? "Lepas kepala" : "Jadikan kepala"}</button></span></div>`;
   return `<div class="kd-detail" data-k="d:${e(d.id)}"><div class="kd-judul"><div class="kd-judul__t"><h3>${e(d.nama)}</h3><div class="kd-mini"><span>Peran siap pakai <b>${e(namaPreset(d))}</b></span><span>Tanpa Daily Job</span></div></div>
     <div class="kd-judul__a"><button type="button" class="mr-btn mr-btn--kecil" data-ad="div-ubah" data-k="${e(d.id)}">Ubah</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="div-arsip" data-k="${e(d.id)}">Arsipkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya${kosong ? "" : " kd-redup"}" data-ad="div-hapus" data-k="${e(d.id)}" title="${kosong ? "" : "Pindahkan anggota dulu, atau arsipkan"}">Hapus</button></div></div>
@@ -110,11 +113,12 @@ const fld = (lab, isi) => `<label class="mr-f"><span>${lab}</span>${isi}</label>
 
 const WAKTU = (w) => { const t = w && w.toDate ? w.toDate() : w ? new Date(w) : null; return t && !isNaN(t) ? t.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "–"; };
 const segAkses = (v) => `<div class="ad-seg" data-ad-jab="${v}"><button type="button" data-ad="jab" data-v="kelola" class="${v === "kelola" ? "is-on" : ""}">Kelola</button><button type="button" data-ad="jab" data-v="lihat" class="${v === "lihat" ? "is-on" : ""}">Lihat saja</button></div>`;
+const segSales = (v, kunci) => `<div class="ad-seg" data-ad-jab="${v}"><button type="button" data-ad="jab" data-v="tidak" class="${v === "tidak" ? "is-on" : ""}"${kunci ? " disabled" : ""}>Tidak</button><button type="button" data-ad="jab" data-v="ya" class="${v === "ya" ? "is-on" : ""}"${kunci ? " disabled" : ""}>Ya</button></div>`;
 const segStatus = (st) => `<div class="ad-seg" data-ad-jab="${st}"><button type="button" data-ad="jab" data-v="aktif" class="${st === "aktif" ? "is-on" : ""}">Aktif</button><button type="button" data-ad="jab" data-v="nonaktif" class="${st === "nonaktif" ? "is-on" : ""}">Nonaktif</button></div>`;
 function panelKelola(id, tab = "profil") {
   const a = A.akun.find((x) => x.id === id); if (!a) return;
   const kep = jabatanKepala(a), st = a.status === "nonaktif" ? "nonaktif" : "aktif";
-  A.edit = { id, awal: { nama: a.nama || "", username: a.username || "", telepon: a.telepon || "", mail: a.emailKontak || "", kel: a.kelompokDJ || "", jab: kep ? "kepala" : "anggota", st, akses: a.akses && a.akses.dj === 1 ? "lihat" : "kelola" } }; A.userOk = true;
+  A.edit = { id, awal: { nama: a.nama || "", username: a.username || "", telepon: a.telepon || "", mail: a.emailKontak || "", kel: a.kelompokDJ || "", jab: kep ? "kepala" : "anggota", st, akses: a.akses && a.akses.dj === 1 ? "lihat" : "kelola", sales: a.peran === "sales" ? "ya" : "tidak" } }; A.userOk = true;
   const tabs = [["profil", "Profil"], ["peran", "Peran"], ["aman", "Keamanan"], ["riwayat", "Riwayat"]];
   bukaLayer(`${kepalaPanel("Edit akun")}<div class="mr-panel__isi" id="ad-kelola" data-id="${e(id)}">
     <div class="ad-id">${avatar(a.nama, 1)}<span class="ad-t"><b>${e(a.nama)}</b><small>${e(a.username ? "@" + a.username : a.email || "")} · ${e((kelById(a.kelompokDJ) || {}).nama || "tanpa kelompok")}</small></span><span class="ad-bd">${st === "aktif" ? "Aktif" : "Nonaktif"}</span></div>
@@ -125,7 +129,7 @@ function panelKelola(id, tab = "profil") {
       ${fld("Telepon <small>bisa dipakai masuk</small>", `<input id="ad-e-tel" type="tel" value="${e(a.telepon || "")}">`)}${fld("Email kontak <small>bisa dipakai masuk</small>", `<input id="ad-e-mail" type="email" value="${e(a.emailKontak || "")}">`)}
       <p class="mr-sub">Nama PIC di job lama tidak ikut berubah.</p></section>
     <section data-tab="peran"${tab === "peran" ? "" : " hidden"} class="ad-bag">${fld("Kelompok", `<select id="ad-pindah">${a.kelompokDJ ? "" : `<option value="">— pilih kelompok —</option>`}${opsiKel(a.kelompokDJ)}</select>`)}<p class="mr-sub" style="margin-top:-4px">Job lama tetap di kelompok lamanya.</p>
-      ${fld("Jabatan <small>satu kepala per kelompok</small>", segJabatan(kep ? "kepala" : "anggota"))}${fld("Status", segStatus(st))}${fld("Akses Daily Job <small>lihat saja = tidak bisa mencatat atau mengubah job</small>", segAkses(a.akses && a.akses.dj === 1 ? "lihat" : "kelola"))}
+      ${fld("Jabatan <small>satu kepala per kelompok</small>", segJabatan(kep ? "kepala" : "anggota"))}${fld("Status", segStatus(st))}${fld("Akses Daily Job <small>lihat saja = tidak bisa mencatat atau mengubah job</small>", segAkses(a.akses && a.akses.dj === 1 ? "lihat" : "kelola"))}${fld("Juga Sales <small>bisa membuat quotation dengan akun ini</small>", segSales(a.peran === "sales" ? "ya" : "tidak", a.peran === "sales" && !a.jugaSales))}
       <p class="mr-sub">Akun yang belum dikelompokkan hanya melihat Beranda sampai kelompok dipilih di sini.</p></section>
     <section data-tab="aman"${tab === "aman" ? "" : " hidden"} class="ad-bag"><h4>Kata sandi</h4><p class="mr-sub">Kata sandi diatur pemilik akun lewat email (Lupa kata sandi di halaman masuk, atau Pengaturan &rsaquo; Akun saya).</p>
       ${a.calon ? "" : `<h4>Kelompok</h4><button class="mr-btn" data-ad="keluarkan">Keluarkan dari kelompok</button><p class="mr-sub">Akun kembali ke Tanpa kelompok dan hanya melihat Beranda.</p>`}<h4>Sesi login</h4><button class="mr-btn" data-ad="keluar">Akhiri semua sesi</button><p class="mr-sub">Orangnya harus masuk lagi.</p><h4>Hapus akun</h4><button class="mr-btn mr-btn--bahaya" data-ad="hapus">Hapus akun</button></section>
@@ -133,8 +137,8 @@ function panelKelola(id, tab = "profil") {
     <footer class="mr-panel__kaki dj-kaki" id="ad-kaki"${tab === "profil" || tab === "peran" ? "" : " hidden"}><span class="mr-sub" id="ad-hit">Belum ada perubahan</span><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-ad="simpan-ok" id="ad-simpan" disabled>Simpan</button></footer>`);
   muatInfo(a); if (tab === "riwayat") muatRiwayat(id);
 }
-const bacaEdit = () => { const sg = document.querySelectorAll("#ad-kelola section[data-tab=peran] .ad-seg"); return { nama: nilai("ad-e-nama"), username: nilai("ad-e-user").toLowerCase(), telepon: nilai("ad-e-tel"), mail: nilai("ad-e-mail"), kel: ($("#ad-pindah") || {}).value, jab: sg[0] && sg[0].dataset.adJab, st: sg[1] && sg[1].dataset.adJab, akses: sg[2] && sg[2].dataset.adJab }; };
-const LAB = { nama: "Nama tampil", username: "Username", telepon: "Telepon", mail: "Email kontak", kel: "Kelompok", jab: "Jabatan", st: "Status", akses: "Akses Daily Job" };
+const bacaEdit = () => { const sg = document.querySelectorAll("#ad-kelola section[data-tab=peran] .ad-seg"); return { nama: nilai("ad-e-nama"), username: nilai("ad-e-user").toLowerCase(), telepon: nilai("ad-e-tel"), mail: nilai("ad-e-mail"), kel: ($("#ad-pindah") || {}).value, jab: sg[0] && sg[0].dataset.adJab, st: sg[1] && sg[1].dataset.adJab, akses: sg[2] && sg[2].dataset.adJab, sales: sg[3] && sg[3].dataset.adJab }; };
+const LAB = { nama: "Nama tampil", username: "Username", telepon: "Telepon", mail: "Email kontak", kel: "Kelompok", jab: "Jabatan", st: "Status", akses: "Akses Daily Job", sales: "Juga Sales" };
 const beda = () => { if (!A.edit) return []; const b = bacaEdit(); return Object.keys(LAB).filter((k) => String(b[k] ?? "") !== String(A.edit.awal[k] ?? "")); };
 function hitung() {
   const n = beda().length, i = $("#ad-hit"), s = $("#ad-simpan"); if (!i || !s) return;
@@ -178,6 +182,7 @@ async function simpanEdit(t) {
     if (b.jab !== kepAwal) await panggil("djAturAnggota", { uid: id, aksi: b.jab === "kepala" ? "kepala" : "anggota" });
     if (d.includes("akses") && (!akun.calon || b.kel)) await panggil("djAturAnggota", { uid: id, aksi: "akses", dj: b.akses === "lihat" ? 1 : 2 });
     if (d.includes("st") && (!akun.calon || b.kel)) await panggil("djAturAnggota", { uid: id, aksi: b.st === "nonaktif" ? "nonaktif" : "aktif" });
+    if (d.includes("sales") && !(akun.peran === "sales" && !akun.jugaSales)) await panggil("akunJugaSales", { uid: id, aktif: b.sales === "ya" });
     await muat(); gambar(); tutupLayer(); toast("Perubahan disimpan.");
   } catch (err) { await muat(); gambar(); t.disabled = false; toast(e(err.message || err), "bahaya"); }
 }
@@ -250,24 +255,35 @@ function panelPindah(id) {
   bukaLayer(`${kepalaPanel("Pindahkan akun", `${e(a.nama || a.email)} · satu akun satu divisi`)}<div class="mr-panel__isi"><div class="mr-form" style="grid-template-columns:1fr" id="ad-pindah-form" data-id="${e(id)}" data-cur="${e(cur)}" data-kep="${kep ? 1 : 0}">
     ${fld("Divisi atau kelompok", `<select id="ad-tujuan"><option value="">Tanpa divisi (hanya Beranda)</option><optgroup label="Divisi">${divAktif().map((d) => `<option value="d:${e(d.id)}"${cur === "d:" + d.id ? " selected" : ""}>${e(d.nama)} · ${e(namaPreset(d))}</option>`).join("")}</optgroup><optgroup label="Kelompok Daily Job">${kelAktif().map((k) => `<option value="k:${e(k.id)}"${cur === "k:" + k.id ? " selected" : ""}>${e(k.nama)}</option>`).join("")}</optgroup></select>`)}
     ${fld("Jabatan <small>satu kepala per divisi</small>", segJabatan(kep ? "kepala" : "anggota"))}
+    <label class="mr-f" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="ad-sales"${a.peran === "sales" ? " checked" : ""}${a.peran === "sales" && !a.jugaSales ? " disabled" : ""}><span>Juga bisa membuat quotation sebagai Sales <small>${a.peran === "sales" && !a.jugaSales ? "(akun Sales sejak awal)" : "satu akun, tanpa akun kedua"}</small></span></label>
     <p class="mr-sub">Izin modul mengikuti peran siap pakai divisi, atau tetap bila divisi tanpa peran siap pakai (kelompok Daily Job: akses Daily Job kelola, bisa diubah di panel akun). Perpindahan tercatat di riwayat akun dan sesi login akun berakhir.</p></div></div>
     <footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-ad="pindah-ok">Pindahkan</button></footer>`);
 }
 async function simpanPindah(t) {
-  const f = $("#ad-pindah-form"), id = f.dataset.id, a = A.akun.find((x) => x.id === id), tujuan = $("#ad-tujuan").value, jab = f.querySelector(".ad-seg").dataset.adJab || "anggota";
-  if (!a || (tujuan === f.dataset.cur && (jab === "kepala") === (f.dataset.kep === "1"))) return toast("Tidak ada perubahan.");
+  const f = $("#ad-pindah-form"), id = f.dataset.id, tujuan = $("#ad-tujuan").value, jab = f.querySelector(".ad-seg").dataset.adJab || "anggota", kotakSales = $("#ad-sales");
+  let a = A.akun.find((x) => x.id === id); if (!a) return;
+  const mauSales = !!kotakSales && kotakSales.checked, adaSales = a.peran === "sales", pindah = tujuan !== f.dataset.cur || (jab === "kepala") !== (f.dataset.kep === "1");
+  if (!pindah && mauSales === adaSales) return toast("Tidak ada perubahan.");
   t.disabled = true;
+  const segar = async () => { await muat(); a = A.akun.find((x) => x.id === id) || a; };
   try {
-    if (tujuan.startsWith("k:")) {
-      const kid = tujuan.slice(2);
-      if (a.peran === "dj") { if (a.kelompokDJ !== kid) await panggil("djAturAnggota", { uid: id, aksi: "kelompok", kelompokId: kid }); await panggil("djAturAnggota", { uid: id, aksi: jab === "kepala" ? "kepala" : "anggota" }); }
-      else await panggil("djKelompokkan", { uid: id, kelompokId: kid, jabatan: jab });
-    } else {
-      if (a.peran === "dj") await panggil("djAturAnggota", { uid: id, aksi: "keluarkan" });
-      if (tujuan) await masukkanKeDivisi(a, divById(tujuan.slice(2)), jab, A.div, await kodeTerpakai());
-      else if (a.divisiId) await keluarkanDariDivisi(a, A.div);
+    if (pindah) {
+      if (a.jugaSales) { await panggil("akunJugaSales", { uid: id, aktif: false }); await segar(); } // kembali ke peran dasar dulu; akses Sales dipasang lagi di akhir
+      if (tujuan.startsWith("k:")) {
+        const kid = tujuan.slice(2);
+        if (a.kelompokDJ) { if (a.kelompokDJ !== kid) await panggil("djAturAnggota", { uid: id, aksi: "kelompok", kelompokId: kid }); await panggil("djAturAnggota", { uid: id, aksi: jab === "kepala" ? "kepala" : "anggota" }); }
+        else await panggil("djKelompokkan", { uid: id, kelompokId: kid, jabatan: jab });
+      } else {
+        if (a.kelompokDJ) await panggil("djAturAnggota", { uid: id, aksi: "keluarkan" });
+        if (tujuan) await masukkanKeDivisi(a, divById(tujuan.slice(2)), jab, A.div, await kodeTerpakai());
+        else if (a.divisiId) await keluarkanDariDivisi(a, A.div);
+      }
+      await segar();
     }
-    await muat(); gambar(); tutupLayer(); toast("Akun dipindahkan.");
+    const sudahSales = a.peran === "sales";
+    if (mauSales && !sudahSales) await panggil("akunJugaSales", { uid: id, aktif: true });
+    else if (!mauSales && sudahSales && a.jugaSales) await panggil("akunJugaSales", { uid: id, aktif: false });
+    await muat(); gambar(); tutupLayer(); toast("Akun disimpan.");
   } catch (err) { await muat(); gambar(); t.disabled = false; toast(e(err.message || err), "bahaya"); }
 }
 /** Aksi divisi non-Daily Job; true bila ditangani. */

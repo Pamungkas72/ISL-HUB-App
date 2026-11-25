@@ -31,10 +31,16 @@ async function selaraskanSales(akun, peran, kodeTerpakai) {
   if (peran === "sales") { const kode = akun.kodeSales || kodeUnit("sales", kodeTerpakai); await setDoc(doc(db, "sales_publik", akun.id), { uid: akun.id, nama: akun.nama || akun.email, kode, targetBulanan: null }); return { kodeSales: kode }; }
   await deleteDoc(doc(db, "sales_publik", akun.id)).catch(() => {}); return {};
 }
+/* Data pengguna untuk satu peran siap pakai. Akun Sales tetap Sales (peran sales, qt dan cu Kelola) supaya bisa membuat quotation tanpa akun kedua. */
+const dataPreset = async (akun, pr, kodeTerpakai) => {
+  const dasar = aksesPreset(pr);
+  if (akun.peran === "sales" && pr.peran !== "sales") return { akses: { ...dasar, qt: 2, cu: 2 } };
+  return { peran: pr.peran, akses: dasar, jugaSales: deleteField(), peranSebelumSales: deleteField(), aksesSebelumSales: deleteField(), ...(await selaraskanSales(akun, pr.peran, kodeTerpakai)) };
+};
 /** Masukkan akun ke divisi: izin mengikuti peran siap pakai divisi. jabatan: "kepala" atau "anggota". */
 export async function masukkanKeDivisi(akun, divisi, jabatan, semuaDivisi, kodeTerpakai) {
   const pr = divisi.presetId ? presetById(divisi.presetId) : null; if (divisi.presetId && !pr) throw new Error("Peran siap pakai divisi ini tidak ditemukan. Ubah divisinya dulu.");
-  const data = pr ? { divisiId: divisi.id, peran: pr.peran, akses: aksesPreset(pr), ...(await selaraskanSales(akun, pr.peran, kodeTerpakai)) } : { divisiId: divisi.id }; // tanpa peran siap pakai: hak akun tetap
+  const data = { divisiId: divisi.id, ...(pr ? await dataPreset(akun, pr, kodeTerpakai) : {}) }; // tanpa peran siap pakai: hak akun tetap
   await updateDoc(doc(db, "pengguna", akun.id), data);
   await lepasKepala(semuaDivisi, akun.id, jabatan === "kepala" ? divisi.id : "");
   if (jabatan === "kepala") await updateDoc(doc(db, "divisi", divisi.id), { kepala: [akun.id] }), divisi.kepala = [akun.id];
@@ -44,7 +50,8 @@ export async function masukkanKeDivisi(akun, divisi, jabatan, semuaDivisi, kodeT
 /** Keluarkan dari divisi: kembali ke Belum diatur (hanya Beranda). */
 export async function keluarkanDariDivisi(akun, semuaDivisi) {
   const dari = semuaDivisi.find((d) => d.id === akun.divisiId);
-  if (dari && !dari.presetId) await updateDoc(doc(db, "pengguna", akun.id), { divisiId: deleteField() }); // divisi tanpa peran siap pakai (mis. Sales): hak akun tetap
+  if (akun.peran === "sales") await updateDoc(doc(db, "pengguna", akun.id), { divisiId: deleteField(), ...(dari && dari.presetId ? { akses: deleteField() } : {}) }); // Sales tetap Sales; hanya keluar dari divisi
+  else if (dari && !dari.presetId) await updateDoc(doc(db, "pengguna", akun.id), { divisiId: deleteField() }); // divisi tanpa peran siap pakai (mis. Sales): hak akun tetap
   else { await updateDoc(doc(db, "pengguna", akun.id), { divisiId: deleteField(), peran: "lihat", akses: AKSES_KOSONG }); await deleteDoc(doc(db, "sales_publik", akun.id)).catch(() => {}); }
   await lepasKepala(semuaDivisi, akun.id, "");
   const lama = semuaDivisi.find((d) => d.id === akun.divisiId);
@@ -53,6 +60,6 @@ export async function keluarkanDariDivisi(akun, semuaDivisi) {
 /** Peran siap pakai divisi berubah: terapkan ke semua anggotanya (izin per akun yang diubah manual ikut ditimpa; dikonfirmasi di layar). */
 export async function terapkanPresetKeAnggota(divisi, anggota, kodeTerpakai) {
   const pr = presetById(divisi.presetId); if (!pr) return 0; // tanpa peran siap pakai: hak akun tidak diubah
-  for (const a of anggota) await updateDoc(doc(db, "pengguna", a.id), { peran: pr.peran, akses: aksesPreset(pr), ...(await selaraskanSales(a, pr.peran, kodeTerpakai)) });
+  for (const a of anggota) await updateDoc(doc(db, "pengguna", a.id), await dataPreset(a, pr, kodeTerpakai));
   return anggota.length;
 }

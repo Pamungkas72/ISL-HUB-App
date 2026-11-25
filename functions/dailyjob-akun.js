@@ -42,6 +42,33 @@ async function pesanAlias(kunci, email, milik = []) {
 }
 const lepasAlias = (kunci) => Promise.all(kunci.map((k) => db().doc(`dj_login/${k}`).delete().catch(() => {})));
 
+/** Kode sales berikutnya (SLS-01, SLS-02, ...; tidak memakai ulang nomor). */
+async function kodeSalesBerikut() {
+  const s = await db().collection("pengguna").get(), maks = s.docs.reduce((m, x) => { const k = String(x.get("kodeSales") || "").match(/^SLS-(\d+)$/); return k ? Math.max(m, +k[1]) : m; }, 0);
+  return `SLS-${String(maks + 1).padStart(2, "0")}`;
+}
+/** Satu akun bisa jadi anggota divisi (kepala atau staf) sekaligus Sales: bisa membuat quotation tanpa akun kedua. aktif=true: peran menjadi Sales dan hak dasar disimpan untuk dikembalikan; aktif=false: dikembalikan. Hanya master atau admin. */
+exports.akunJugaSales = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req); if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin.");
+  const d = req.data || {}, uid = String(d.uid || ""), aktif = !!d.aktif, F = admin.firestore.FieldValue;
+  const ref = db().doc(`pengguna/${uid}`), s = await ref.get(), peran = s.exists ? s.get("peran") : null;
+  if (!s.exists || s.get("status") !== "aktif" || !["lihat", "dj", "sales"].includes(peran)) throw new HttpsError("failed-precondition", "Akun tidak aktif atau perannya tidak bisa diberi akses Sales.");
+  const email = s.get("email");
+  if (aktif) {
+    if (peran === "sales") return { ok: true }; // sudah Sales
+    const kode = s.get("kodeSales") || await kodeSalesBerikut();
+    await ref.update({ peran: "sales", jugaSales: true, peranSebelumSales: peran, aksesSebelumSales: s.get("akses") ?? null, akses: { ...(s.get("akses") || {}), qt: 2, cu: 2 }, kodeSales: kode });
+    await db().doc(`sales_publik/${uid}`).set({ uid, nama: s.get("nama") || email, kode, targetBulanan: null });
+    await catat(c, uid, email, "juga-sales-aktif");
+  } else {
+    if (peran !== "sales" || !s.get("jugaSales")) throw new HttpsError("failed-precondition", "Akun ini Sales sejak awal atau belum diberi akses Sales.");
+    await ref.update({ peran: s.get("peranSebelumSales") || "lihat", akses: s.get("aksesSebelumSales") ?? F.delete(), jugaSales: F.delete(), peranSebelumSales: F.delete(), aksesSebelumSales: F.delete() });
+    await db().doc(`sales_publik/${uid}`).delete().catch(() => {});
+    await catat(c, uid, email, "juga-sales-nonaktif");
+  }
+  await admin.auth().revokeRefreshTokens(uid); // menu dan hak baru berlaku di sesi berikutnya
+  return { ok: true };
+});
 /** Lepas jabatan kepala di divisi non-Daily Job (dipakai saat akun pindah ke Daily Job). */
 async function lepasDivisi(uid, divisiId) {
   if (!divisiId) return;
@@ -82,10 +109,10 @@ exports.djKelompokkan = onCall(OPSI, async (req) => {
   const ref = db().doc(`pengguna/${uid}`), s = await ref.get();
   if (!s.exists || s.get("status") !== "aktif" || !["lihat", "sales"].includes(s.get("peran")) || s.get("kelompokDJ")) throw new HttpsError("failed-precondition", "Akun ini tidak bisa dikelompokkan ke Daily Job (sudah anggota kelompok, admin, atau tidak aktif).");
   await lepasDivisi(uid, s.get("divisiId")); // satu akun satu divisi
-  if (s.get("peran") === "sales") await db().doc(`sales_publik/${uid}`).delete().catch(() => {});
   const kel = kelompokId ? await db().doc(`dj_kelompok/${kelompokId}`).get() : null;
   if (!kel || !kel.exists || kel.get("arsip")) throw new HttpsError("not-found", "Pilih kelompok yang masih aktif.");
-  await ref.update({ peran: "dj", kelompokDJ: kelompokId, kodeUnit: await kodeUnitKelompok(kelompokId), akses: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 }, divisiId: admin.firestore.FieldValue.delete() });
+  const F = admin.firestore.FieldValue, sales = s.get("peran") === "sales"; // akun Sales tetap Sales (bisa membuat quotation) dan hanya bertambah kelompok
+  await ref.update({ ...(sales ? { akses: { ...(s.get("akses") || {}), dj: 2 }, jugaSales: F.delete(), peranSebelumSales: F.delete(), aksesSebelumSales: F.delete() } : { peran: "dj", akses: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 } }), kelompokDJ: kelompokId, kodeUnit: await kodeUnitKelompok(kelompokId), divisiId: F.delete() });
   if (kepala) await kel.ref.update({ kepala: [uid] }); // satu kepala per kelompok
   await admin.auth().revokeRefreshTokens(uid); // menu dan hak baru berlaku di sesi berikutnya
   await catat(c, uid, s.get("email"), kepala ? "dj-kelompok-kepala" : "dj-kelompok-anggota");
@@ -134,19 +161,20 @@ exports.djNamaTim = onCall(OPSI, async (req) => {
 
 exports.djDaftarTim = onCall(OPSI, async (req) => {
   const c = await pemanggil(req), kelompokId = String((req.data && req.data.kelompokId) || ""); await pastikanKepala(c, kelompokId);
-  const s = await db().collection("pengguna").where("kelompokDJ", "==", kelompokId).where("peran", "==", "dj").get();
+  const s = await db().collection("pengguna").where("kelompokDJ", "==", kelompokId).get();
   return { anggota: s.docs.map((x) => ({ uid: x.id, nama: x.get("nama") || "", email: x.get("email") || "", username: x.get("username") || "", telepon: x.get("telepon") || "", emailKontak: x.get("emailKontak") || "", status: x.get("status") || "aktif" })).sort((a, b) => a.nama.localeCompare(b.nama, "id")) };
 });
 
 exports.djAturAnggota = onCall(OPSI, async (req) => {
   const c = await pemanggil(req), d = req.data || {}, uid = String(d.uid || ""), aksi = String(d.aksi || "");
   const ref = db().doc(`pengguna/${uid}`), s = await ref.get();
-  if (!s.exists || s.get("peran") !== "dj") throw new HttpsError("not-found", "Anggota tidak ada.");
+  if (!s.exists || !s.get("kelompokDJ") || ["master", "admin"].includes(s.get("peran"))) throw new HttpsError("not-found", "Anggota kelompok tidak ada.");
   await pastikanKepala(c, s.get("kelompokDJ")); const email = s.get("email");
   if (aksi === "nonaktif" || aksi === "aktif") {
     const mati = aksi === "nonaktif"; await admin.auth().updateUser(uid, { disabled: mati }); if (mati) await admin.auth().revokeRefreshTokens(uid);
     await ref.update({ status: mati ? "nonaktif" : "aktif" }); await catat(c, uid, email, "dj-" + aksi);
   } else if (aksi === "hapus") {
+    if (s.get("peran") !== "dj") throw new HttpsError("failed-precondition", "Hanya akun anggota divisi (bukan Sales) yang bisa dihapus dari sini. Nonaktifkan akun Sales.");
     await admin.auth().deleteUser(uid).catch((err) => { if (err.code !== "auth/user-not-found") throw err; });
     await lepasAlias(s.get("alias") || []); await ref.delete();
     const tk = await db().collection("dj_token").where("uid", "==", uid).get(); await Promise.all(tk.docs.map((x) => x.ref.delete())); await catat(c, uid, email, "dj-hapus");
@@ -177,12 +205,13 @@ exports.djAturAnggota = onCall(OPSI, async (req) => {
   } else if (aksi === "akses") {
     if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin yang mengatur akses.");
     const dj = Number(d.dj); if (![1, 2].includes(dj)) throw new HttpsError("invalid-argument", "Akses Daily Job: 1 (lihat saja) atau 2 (kelola).");
-    await ref.update({ akses: { dj } }); await catat(c, uid, email, "dj-akses", { dj: s.get("akses") ? s.get("akses").dj ?? 2 : 2 }, { dj });
+    await ref.update({ akses: { ...(s.get("akses") || {}), dj } }); await catat(c, uid, email, "dj-akses", { dj: s.get("akses") ? s.get("akses").dj ?? 2 : 2 }, { dj });
   } else if (aksi === "keluarkan") {
     if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin.");
     const lamaId = s.get("kelompokDJ"), kl = lamaId ? await db().doc(`dj_kelompok/${lamaId}`).get() : null;
     if (kl && kl.exists && (kl.get("kepala") || []).includes(uid)) await kl.ref.update({ kepala: (kl.get("kepala") || []).filter((x) => x !== uid) });
-    await ref.update({ peran: "lihat", kelompokDJ: admin.firestore.FieldValue.delete(), kodeUnit: admin.firestore.FieldValue.delete(), akses: { mr: 0, qt: 0, cu: 0, dj: 0, lg: 0 } });
+    const F = admin.firestore.FieldValue, sales = s.get("peran") === "sales"; // akun Sales tetap Sales; hanya keluar dari kelompok
+    await ref.update({ kelompokDJ: F.delete(), kodeUnit: F.delete(), ...(sales ? { akses: { ...(s.get("akses") || {}), dj: 0 }, jugaSales: F.delete(), peranSebelumSales: F.delete(), aksesSebelumSales: F.delete() } : { peran: "lihat", akses: { mr: 0, qt: 0, cu: 0, dj: 0, lg: 0 } }) });
     await admin.auth().revokeRefreshTokens(uid); await catat(c, uid, email, "dj-keluarkan");
   } else if (aksi === "keluar") {
     await admin.auth().revokeRefreshTokens(uid); await catat(c, uid, email, "dj-keluar");
