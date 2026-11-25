@@ -2185,7 +2185,7 @@ async function muatData() {
 let mulai = false;
 /* Dipanggil router (app.html#master-rate) setiap kali halaman ini dibuka. Data dimuat sekali; kunjungan berikutnya hanya menggambar ulang. */
 export function mulaiMR(user, profil) {
-  if (profil && profil.peran === "sales") { location.hash = "#quotation"; return; }
+  if (profil && profil.peran === "sales" && !(profil.akses && profil.akses.mr >= 1)) { location.hash = "#quotation"; return; }
   try { const tujuan = localStorage.getItem("islhub-sk-buka"); if (tujuan) { window.__skBuka = tujuan; localStorage.removeItem("islhub-sk-buka"); } } catch (e) { /* abaikan */ }
   S.user = user;
   if (window.__islMR && window.__islMR.satuan) S.satuan = window.__islMR.satuan; // satuan dikelola di Quotation: pakai daftar yang sama

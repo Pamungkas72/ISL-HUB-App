@@ -35,18 +35,25 @@ service cloud.firestore {
     }
     // Akun yang boleh MEMBACA: master, atau akun yang sudah disetujui master.
     function aktif() {
-      return isMaster() || (profilAda() && profil().status == 'aktif' && profil().get('peran', null) != 'dj');
+      return isMaster() || (profilAda() && profil().status == 'aktif' && (profil().get('peran', null) != 'dj' || djLain()));
     }
+    // Izin per modul yang diatur master/admin (pengguna.akses) berlaku penuh, tidak terkunci peran dasar (25 Nov 2026).
+    // jelas(m): nilai yang DITETAPKAN untuk modul m (-1 = tidak ditetapkan). bisaBuat: Quotation atau Customer ditetapkan Kelola = boleh membuat dan mengubah miliknya sendiri (seperti Sales).
+    function jelas(m) { return profil().get('akses', {}).get(m, -1); }
+    function bisaBuat() { return jelas('qt') == 2 || jelas('cu') == 2; }
+    // Anggota tim Daily Job (peran 'dj') yang juga diberi akses modul lain secara eksplisit.
+    function djLain() { return jelas('mr') >= 1 || jelas('qt') >= 1 || jelas('cu') >= 1 || jelas('lg') >= 1; }
     // Anggota tim Daily Job (peran 'dj', dibuat kepala divisi): hanya boleh Daily Job. Tidak termasuk aktif(), jadi tidak bisa membaca data lain.
     function aktifDJ() {
       return isMaster() || (profilAda() && profil().status == 'aktif');
     }
     function isSales() {
-      return !isMaster() && profilAda() && profil().status == 'aktif' && profil().peran == 'sales';
+      return !isMaster() && profilAda() && profil().status == 'aktif' && (profil().peran == 'sales' || bisaBuat());
     }
     // Admin ikut membaca seperti lihat saja (menu dan data yang sama), lalu menambah izin kelolanya di bawah.
     function isLihat() {
-      return !isMaster() && profilAda() && profil().status == 'aktif' && (profil().peran == 'lihat' || profil().peran == 'admin');
+      return !isMaster() && profilAda() && profil().status == 'aktif' && (profil().peran == 'lihat' || profil().peran == 'admin'
+        || (profil().peran == 'dj' && (jelas('qt') == 1 || jelas('cu') == 1)));
     }
     // Admin: setingkat master untuk pemeliharaan (Master Rate dan modal, pengelolaan sales, pembersihan quotation).
     // Tidak bisa: vendor_rahasia, diagnostik, menghapus akun, atau mengubah peran master/admin. Menyetujui customer boleh (cu_customers mengikuti isStaf).
@@ -195,22 +202,22 @@ service cloud.firestore {
       allow write: if kelola('lg') && (isStaf());
     }
     match /lg_mom/{id} {
-      allow read: if baca('lg') && (isStaf() || (isSales() && milikSaya(resource.data)));
-      allow create: if kelola('lg') && ((isStaf() || isSales()) && request.resource.data.pemilikUid == request.auth.uid && request.resource.data.status == 'draf');
+      allow read: if baca('lg') && (isStaf() || ((isSales() || jelas('lg') >= 1) && milikSaya(resource.data)));
+      allow create: if kelola('lg') && ((isStaf() || (isSales() || jelas('lg') >= 1)) && request.resource.data.pemilikUid == request.auth.uid && request.resource.data.status == 'draf');
       // draf boleh diubah pemiliknya; MOM final terkunci (hanya staf yang boleh mengubah atau menghapus)
-      allow update: if kelola('lg') && (isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf' && request.resource.data.pemilikUid == request.auth.uid));
-      allow delete: if kelola('lg') && (isStaf() || (isSales() && milikSaya(resource.data) && resource.data.status == 'draf'));
+      allow update: if kelola('lg') && (isStaf() || ((isSales() || jelas('lg') >= 1) && milikSaya(resource.data) && resource.data.status == 'draf' && request.resource.data.pemilikUid == request.auth.uid));
+      allow delete: if kelola('lg') && (isStaf() || ((isSales() || jelas('lg') >= 1) && milikSaya(resource.data) && resource.data.status == 'draf'));
     }
     match /lg_counters/{id} {
-      allow read: if baca('lg') && (isStaf() || isSales());
-      allow create: if kelola('lg') && (isStaf() || isSales());
-      allow update: if kelola('lg') && (((isStaf() || isSales()) && request.resource.data.nilai >= resource.data.nilai) || isKelola());
+      allow read: if baca('lg') && (isStaf() || (isSales() || jelas('lg') >= 1));
+      allow create: if kelola('lg') && (isStaf() || (isSales() || jelas('lg') >= 1));
+      allow update: if kelola('lg') && (((isStaf() || (isSales() || jelas('lg') >= 1)) && request.resource.data.nilai >= resource.data.nilai) || isKelola());
       allow delete: if false;
     }
     // Saran nama peserta MOM: milik tiap akun
     match /lg_peserta/{uid} {
-      allow read: if baca('lg') && (sesiBerlaku() && request.auth.uid == uid && (isStaf() || isSales()));
-      allow write: if kelola('lg') && (sesiBerlaku() && request.auth.uid == uid && (isStaf() || isSales()));
+      allow read: if baca('lg') && (sesiBerlaku() && request.auth.uid == uid && (isStaf() || (isSales() || jelas('lg') >= 1)));
+      allow write: if kelola('lg') && (sesiBerlaku() && request.auth.uid == uid && (isStaf() || (isSales() || jelas('lg') >= 1)));
     }
 
     // ---------------- Quotation ----------------

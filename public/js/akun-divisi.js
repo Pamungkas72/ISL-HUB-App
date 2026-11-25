@@ -7,6 +7,7 @@ import { collection, getDocs, getDoc, doc, query, where, setDoc, updateDoc, dele
 import * as H from "./daily-job-hitung.js";
 import { muatPeran, semuaPreset } from "./peran-akses.js";
 import { pilihDariMenu } from "./pemilih.js";
+import { ringkasAkses } from "./akses.js";
 import { muatDivisi, isiDivisiAwal, simpanDivisi, arsipkanDivisi, hapusDivisi, masukkanKeDivisi, keluarkanDariDivisi, terapkanPresetKeAnggota, presetById } from "./divisi-umum.js";
 
 const A = { kel: [], div: [], tampil: "daftar", akun: [], jobN: {}, pilihKel: "", unsub: null, siap: false, galat: "", root: null, filter: "", edit: null, userOk: true };
@@ -56,7 +57,7 @@ const namaKepala = (k) => { const a = A.akun.find((x) => x.id === (k.kepala || [
 const profilNama = (k) => (k.profil === "tracking" ? "Tracking" : "Marketing");
 function detailKel(k, hp) {
   const l = anggotaKel(k.id), kosong = !l.length && !(A.jobN[k.id] > 0);
-  const baris2 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${a.kodeUnit ? `<span class="ak-kode">${e(a.kodeUnit)}</span> · ` : ""}${e(a.username ? "@" + a.username : a.email || "")}${a.status === "nonaktif" ? " · Nonaktif" : ""}</small></span>${lencanaSales(a)}${jabatanKepala(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
+  const baris2 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${a.kodeUnit ? `<span class="ak-kode">${e(a.kodeUnit)}</span> · ` : ""}${e(a.username ? "@" + a.username : a.email || "")}${a.status === "nonaktif" ? " · Nonaktif" : ""}<br>${e(ringkasAkses(a))}</small></span>${lencanaSales(a)}${jabatanKepala(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
     <span class="kd-aksi"><button type="button" class="mr-btn mr-btn--kecil" data-ad="pindah" data-id="${e(a.id)}">Pindah ${ikon("turun", 14)}</button>${hp ? "" : `<button type="button" class="mr-btn mr-btn--kecil" data-ad="kepala-cepat" data-id="${e(a.id)}">${jabatanKepala(a) ? "Lepas kepala" : "Jadikan kepala"}</button>`}<button type="button" class="mr-ikonbtn" data-ad="kelola" data-id="${e(a.id)}" aria-label="Atur ${e(a.nama || "akun")}">⋯</button></span></div>`;
   return `<div class="kd-detail" data-k="${e(k.id)}"><div class="kd-judul"><div class="kd-judul__t"><h3>${e(k.nama)}</h3><div class="kd-mini"><span>Profil <b>${profilNama(k)}</b></span><span>Awalan <span class="ak-kode">${e(awalanKel(k))}</span></span>${k.dibuat ? `<span>Dibuat <b>${e(k.dibuat)}</b></span>` : ""}</div></div>
     <div class="kd-judul__a"><button type="button" class="mr-btn mr-btn--kecil" data-ad="kel-ubah" data-k="${e(k.id)}">Ubah</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="kel-arsip" data-k="${e(k.id)}">Arsipkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya${kosong ? "" : " kd-redup"}" data-ad="kel-hapus" data-k="${e(k.id)}" title="${kosong ? "" : "Pindahkan anggota dan job dulu, atau arsipkan"}">Hapus</button></div></div>
@@ -74,7 +75,7 @@ const identAkun = (a) => e(a.username ? "@" + a.username : a.email || "");
 const lencanaSales = (a) => (a.peran === "sales" && (a.kelompokDJ || a.divisiId) ? `<span class="ad-bd">Sales</span>` : "");
 function detailDivisi(d) {
   const l = anggotaDiv(d.id), kosong = !l.length;
-  const baris3 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${identAkun(a)}${a.status === "nonaktif" ? " · Nonaktif" : ""}</small></span>${lencanaSales(a)}${jabatanKepalaDiv(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
+  const baris3 = (a, i) => `<div class="kd-ang" data-id="${e(a.id)}">${avatar(a.nama, i + 1)}<span class="ad-t"><b>${e(a.nama || "-")}</b><small>${identAkun(a)}${a.status === "nonaktif" ? " · Nonaktif" : ""}<br>${e(ringkasAkses(a))}</small></span>${lencanaSales(a)}${jabatanKepalaDiv(a) ? `<span class="ad-bd ad-bd--k">Kepala</span>` : ""}
     <span class="kd-aksi"><button type="button" class="mr-btn mr-btn--kecil" data-ad="pindah-u" data-id="${e(a.id)}">Pindah ${ikon("turun", 14)}</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="kepala-div" data-id="${e(a.id)}">${jabatanKepalaDiv(a) ? "Lepas kepala" : "Jadikan kepala"}</button></span></div>`;
   return `<div class="kd-detail" data-k="d:${e(d.id)}"><div class="kd-judul"><div class="kd-judul__t"><h3>${e(d.nama)}</h3><div class="kd-mini"><span>Peran siap pakai <b>${e(namaPreset(d))}</b></span><span>Tanpa Daily Job</span></div></div>
     <div class="kd-judul__a"><button type="button" class="mr-btn mr-btn--kecil" data-ad="div-ubah" data-k="${e(d.id)}">Ubah</button><button type="button" class="mr-btn mr-btn--kecil" data-ad="div-arsip" data-k="${e(d.id)}">Arsipkan</button><button type="button" class="mr-btn mr-btn--kecil mr-btn--bahaya${kosong ? "" : " kd-redup"}" data-ad="div-hapus" data-k="${e(d.id)}" title="${kosong ? "" : "Pindahkan anggota dulu, atau arsipkan"}">Hapus</button></div></div>

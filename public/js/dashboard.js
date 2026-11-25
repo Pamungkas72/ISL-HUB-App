@@ -1,6 +1,7 @@
 import { renderNav } from "./nav.js";
 import { navItems as semuaNav, SEMBUNYI_PERAN } from "./nav-config.js";
 import { labelAkun } from "./config-akses.js";
+import { itemTersembunyi } from "./akses.js";
 import { semuaItem, muatUlang, bukaTujuan } from "./notifikasi.js";
 import { db } from "./firebase-config.js";
 import * as H from "./daily-job-hitung.js";
@@ -78,7 +79,7 @@ async function muatDJ(profil, kelola) {
 export async function mulaiBeranda(u, profil) {
   user = u; root = document.getElementById("bd-root");
   const nm = document.getElementById("user-email"); if (nm) nm.textContent = labelAkun(u.email, u.displayName);
-  St.navItems = semuaNav.filter((i) => !((profil && SEMBUNYI_PERAN[profil.peran]) || []).includes(i.id));
+  St.navItems = semuaNav.filter((i) => !itemTersembunyi(profil, i));
   St.nama = (profil && profil.nama) || u.displayName || "";
   if (!root.dataset.pasang) {
     root.dataset.pasang = "1";

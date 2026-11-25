@@ -7,7 +7,7 @@
 import { auth, db } from "./firebase-config.js";
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, writeBatch, serverTimestamp, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { adalahMaster } from "./config-akses.js";
-import { navItems } from "./nav-config.js";
+import { navItems, SEMBUNYI_PERAN } from "./nav-config.js";
 import { WA_ADMIN_TAMPILAN, linkWaAdmin, pesanDaftarSales } from "./kontak-admin.js";
 
 export const PERAN = { master: "Master", admin: "Admin", sales: "Sales", lihat: "Lihat saja", dj: "Anggota Daily Job" };
@@ -59,8 +59,12 @@ export async function muatLogAkun() {
   return s.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-export const adalahSales = (p) => !!p && p.peran === "sales" && p.status === "aktif";
-export const bolehEdit = (p) => !!p && p.status === "aktif" && (p.peran === "master" || p.peran === "admin" || p.peran === "sales");
+/* Quotation atau Customer ditetapkan Kelola (pengguna.akses) = boleh membuat dan mengubah miliknya sendiri seperti Sales, apa pun peran dasarnya (firestore.rules: bisaBuat). */
+export const bisaBuat = (p) => !!p && !!p.akses && p.peran !== "admin" && p.peran !== "master" && (p.akses.qt === 2 || p.akses.cu === 2);
+/* Anggota tim Daily Job (peran dj) yang juga diberi akses modul lain: memakai aplikasi penuh, bukan tampilan Daily Job saja. */
+export const adaAksesLain = (p) => !!p && !!p.akses && ["mr", "qt", "cu", "lg"].some((k) => p.akses[k] >= 1);
+export const adalahSales = (p) => !!p && p.status === "aktif" && (p.peran === "sales" || bisaBuat(p));
+export const bolehEdit = (p) => !!p && p.status === "aktif" && (p.peran === "master" || p.peran === "admin" || p.peran === "sales" || bisaBuat(p));
 /* Admin (pemeliharaan): setingkat master untuk Master Rate dan modal, tetapi tidak untuk rahasia vendor atau akun pemilik. */
 export const adalahKelola = (p) => !!p && p.status === "aktif" && (p.peran === "master" || p.peran === "admin");
 
@@ -126,17 +130,30 @@ export const MODUL = HALAMAN.map((i) => [i.modul, i.label]);
 export const MODUL_NAV = Object.fromEntries(HALAMAN.map((i) => [i.id, i.modul]));
 export const KET_MODUL = Object.fromEntries(HALAMAN.map((i) => [i.modul, i.ket || ""]));
 export const NAMA_LEVEL = ["Tidak", "Lihat", "Kelola"];
-/* Batas tertinggi tiap peran (sama dengan perilaku lama). 0 = modul tidak tersedia untuk peran itu. */
-export const BATAS_PERAN = {
+/* Hak awal tiap peran bila pengguna.akses tidak menetapkan modul itu (sama dengan perilaku lama). */
+export const AWAL_PERAN = {
   admin: { mr: 2, qt: 2, cu: 2, dj: 2, lg: 2 },
   sales: { mr: 0, qt: 2, cu: 2, dj: 2, lg: 2 },
   lihat: { mr: 1, qt: 1, cu: 1, dj: 2, lg: 0 },
   dj: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 },
 };
-/* Batas tertinggi (batasModul) dan hak awal tanpa pengaturan (awalModul). Halaman baru di navigasi: peran dasar boleh diberi sampai Kelola,
-   tetapi awalnya hanya admin yang punya (peran lain 0 sampai diaktifkan di Pengaturan). */
-export const batasModul = (peran, m) => { const b = BATAS_PERAN[peran]; return b && m in b ? b[m] : peran === "dj" ? 0 : 2; };
-export const awalModul = (peran, m) => { const b = BATAS_PERAN[peran]; return b && m in b ? b[m] : peran === "admin" ? 2 : 0; };
+/* Izin per modul berlaku penuh, tidak lagi terkunci peran dasar (25 Nov 2026). Satu-satunya batas: Master Rate Kelola khusus Admin, karena data tarif
+   hanya bisa ditulis admin/master di server. Halaman baru di navigasi awalnya hanya untuk admin (peran lain 0 sampai diaktifkan di Pengaturan). */
+export const batasModul = (peran, m) => (peran === "admin" || peran === "master" ? 2 : m === "mr" ? 1 : 2);
+export const awalModul = (peran, m) => { const b = AWAL_PERAN[peran]; return b && m in b ? b[m] : peran === "admin" ? 2 : 0; };
+/** Ringkasan singkat izin satu akun, mis. "Quotation: Kelola · Daily Job: Kelola" (hanya modul yang aktif). Master dan admin: "Semua modul". */
+export function ringkasAkses(p) {
+  if (!p) return "";
+  if (p.peran === "master" || p.peran === "admin") return "Semua modul";
+  const l = MODUL.map(([m, n]) => [n, levelAkses(p, m)]).filter(([, v]) => v > 0);
+  return l.length ? l.map(([n, v]) => `${n}: ${NAMA_LEVEL[v]}`).join(" · ") : "Hanya Beranda";
+}
+/* Menu yang disembunyikan menurut peran dasar, kecuali modul itu diberi akses eksplisit (Lihat atau Kelola) di pengguna.akses. */
+export function itemTersembunyi(p, item) {
+  if (!p) return false;
+  const peran = p.peran === "dj" && adaAksesLain(p) ? "lihat" : p.peran, tegas = item.modul && p.akses && p.akses[item.modul] >= 1;
+  return (SEMBUNYI_PERAN[peran] || []).includes(item.id) && !tegas;
+}
 /** Level efektif satu modul: nilai di pengguna.akses (bila ada) dibatasi oleh batas peran. */
 export function levelAkses(p, m) {
   if (!p || p.peran === "master") return 2;

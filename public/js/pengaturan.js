@@ -15,7 +15,7 @@ import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverT
 import { kirimResetSandi, sinkronLoginTelepon } from "./auth.js";
 import "./pemilih.js";
 import { ikon } from "./ikon.js";
-import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
+import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit, adalahSales, ringkasAkses } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
@@ -172,7 +172,7 @@ function htmlAkun() {
   const kosong = `<div class="st-stat">${S.akunMuat ? "Tidak ada akun yang cocok." : "Memuat akun…"}</div>`;
   let isi;
   if (!hp) {
-    const tabel = lain.length ? `<table class="ak-tb"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Login terakhir</th></tr></thead><tbody>${lain.map((a) => `<tr data-uid="${e(a.id)}" data-st="ak-pilih" class="${pilih && pilih.id === a.id ? "is-pilih" : ""}"><td><div class="ak-orang">${avAk(a)}<div><b>${e(a.nama || "-")}</b><div class="mr-sub">${e(a.email)}</div></div></div></td><td>${e(namaPeran(a))}${a.status !== "aktif" ? ` <span class="st-badge">${e(STATUS_AKUN[a.status] || a.status)}</span>` : ""}</td><td>${kodeTampil(a)}</td><td class="mr-sub">${e(loginTxt(a.id))}</td></tr>`).join("")}</tbody></table>` : kosong;
+    const tabel = lain.length ? `<table class="ak-tb"><thead><tr><th>Akun</th><th>Peran</th><th>Kode</th><th>Login terakhir</th></tr></thead><tbody>${lain.map((a) => `<tr data-uid="${e(a.id)}" data-st="ak-pilih" class="${pilih && pilih.id === a.id ? "is-pilih" : ""}"><td><div class="ak-orang">${avAk(a)}<div><b>${e(a.nama || "-")}</b><div class="mr-sub">${e(a.email)}</div></div></div></td><td>${e(namaPeran(a))}<div class="mr-sub ak-ringkas">${e(ringkasAkses(a))}</div>${a.status !== "aktif" ? ` <span class="st-badge">${e(STATUS_AKUN[a.status] || a.status)}</span>` : ""}</td><td>${kodeTampil(a)}</td><td class="mr-sub">${e(loginTxt(a.id))}</td></tr>`).join("")}</tbody></table>` : kosong;
     isi = `${kepala}${statHtml}${peringatan}${menunggu.length ? `<div class="ak-antre"><h4 class="ak-h">${ikon("setuju", 17)}Menunggu persetujuan (${menunggu.length})</h4>${menunggu.map(kartuMenunggu).join("")}</div>` : ""}<div class="ak-alat">${cari}${chip}</div>
       <div class="ak-dua"><div class="ak-daftar">${tabel}</div><aside class="ak-samping">${pilih ? panelAkun(pilih, false) : `<div class="st-stat">Pilih akun untuk melihat dan mengubah detailnya.</div>`}</aside></div>
       <details class="st-laci" open><summary><span>Peran dan akses halaman</span><span class="st-laci-jml">atur halaman tiap peran</span></summary><div class="st-laci-isi">${htmlPeran(false)}</div></details>
@@ -180,7 +180,7 @@ function htmlAkun() {
   } else if (pilih && S.tab === "anggota") isi = panelAkun(pilih, true);
   else {
     const tab = [["anggota", "Anggota", "grup"], ["menunggu", `Persetujuan${menunggu.length ? ` ${menunggu.length}` : ""}`, "setuju"], ["peran", "Peran", "tameng"]];
-    const kartu = lain.map((a) => `<button type="button" class="ak-kartu" data-uid="${e(a.id)}" data-st="ak-pilih">${avAk(a, 40)}<span class="ak-kartu__t"><b>${e(a.nama || "-")}</b><small>${e(a.email)}</small><small>${a.status === "aktif" ? `Login ${e(loginTxt(a.id))}` : e(STATUS_AKUN[a.status] || a.status)}</small></span>${kodeTampil(a)}</button>`).join("");
+    const kartu = lain.map((a) => `<button type="button" class="ak-kartu" data-uid="${e(a.id)}" data-st="ak-pilih">${avAk(a, 40)}<span class="ak-kartu__t"><b>${e(a.nama || "-")}</b><small>${e(a.email)}</small><small>${a.status === "aktif" ? `Login ${e(loginTxt(a.id))}` : e(STATUS_AKUN[a.status] || a.status)}</small><small class="ak-ringkas">${e(ringkasAkses(a))}</small></span>${kodeTampil(a)}</button>`).join("");
     const badan = S.tab === "menunggu" ? (menunggu.length ? menunggu.map(kartuMenunggu).join("") : `<div class="st-stat">Tidak ada pendaftar yang menunggu.</div>`)
       : S.tab === "peran" ? `<div class="ak-peran-hp">${htmlPeran(true)}</div><h4 style="margin:14px 0 6px">Riwayat perubahan akun</h4>${htmlLog()}`
         : `${statHtml}${peringatan}${cari}${chip}<div class="ak-daftar-hp">${kartu || kosong}</div>`;
@@ -333,7 +333,7 @@ function dialogUbah(ak, uid) {
 }
 async function aksiAkun(a, tr) {
   const uid = tr && tr.dataset.uid, ak = S.akun.find((x) => x.id === uid); if (!ak) return;
-  if (a === "akun-akses") return ak.peran && ak.peran !== "master" ? bukaPanelAkses(ak, { sesudah: render }) : undefined;
+  if (a === "akun-akses") return ak.peran && ak.peran !== "master" ? bukaPanelAkses(ak, { sesudah: render, akun: S.akun }) : undefined;
   if (a === "akun-hapus" && !S.master) return; // hanya pemilik
   const sel = tr.querySelector("[data-akun=peran]"), peranBaru = sel ? sel.value : peranPilih(ak);
   const pr = presetDari(peranBaru), dasar = peranDasar(peranBaru), punyaJabatan = !!(ak.akses && ak.akses.jabatan);
@@ -485,7 +485,7 @@ document.addEventListener("click", (ev) => { if (window.__rute === "pengaturan" 
 let sudahMuat = false;
 /* Dipanggil router (app.html#pengaturan) setiap kali halaman ini dibuka. */
 export async function mulaiPengaturan(user, profil) {
-  S.email = user.email; S.master = adalahMaster(user.email); S.sales = !!profil && profil.peran === "sales" && profil.status === "aktif";
+  S.email = user.email; S.master = adalahMaster(user.email); S.sales = adalahSales(profil);
   S.admin = !!profil && profil.peran === "admin" && profil.status === "aktif";
   S.kelola = S.master || S.admin;
   window.__ISL_KELOLA = S.kelola;

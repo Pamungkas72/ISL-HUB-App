@@ -73,7 +73,7 @@ export function htmlPeran(hp) {
 function dialogNama({ judul, nama = "", peran = null, aksiNama, selesai }) {
   const l = document.createElement("div"); l.className = "mr-konfirm"; l.id = "pr-dialog";
   l.innerHTML = `<div class="mr-konfirm__kotak"><h3>${e(judul)}</h3><div class="mr-konfirm__isi"><label class="ak-lbl">Nama peran</label><input id="pr-nama" maxlength="30" value="${e(nama)}" autocomplete="off" style="width:100%;box-sizing:border-box">
-    ${peran ? `<label class="ak-lbl">Peran dasar (batas tertinggi)</label><select id="pr-dasar" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option><option value="lihat">Lihat saja</option></select>` : ""}</div>
+    ${peran ? `<label class="ak-lbl">Peran dasar (cakupan data awal)</label><select id="pr-dasar" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option><option value="lihat">Lihat saja</option></select>` : ""}</div>
     <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="batal">Batal</button><button class="mr-btn mr-btn--utama" data-x="ok">${e(aksiNama)}</button></div></div>`;
   document.body.appendChild(l);
   l.querySelector('[data-x="batal"]').onclick = () => l.remove();

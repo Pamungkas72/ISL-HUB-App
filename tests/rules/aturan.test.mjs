@@ -17,6 +17,10 @@ const master = () => ctx("uid-master", MASTER);
 const admin = () => ctx("uid-admin", "admin@isl.test");
 const sales = () => ctx("uid-sales", "sales@isl.test");
 const lihat = () => ctx("uid-lihat", "lihat@isl.test");
+const djq = () => ctx("uid-djq", "djq@isl.test");       // peran dj + akses eksplisit qt/cu Kelola
+const djpolos = () => ctx("uid-djpolos", "djpolos@isl.test");
+const djv = () => ctx("uid-djv", "djv@isl.test");       // peran dj + qt Lihat
+const lihatq = () => ctx("uid-lihatq", "lihatq@isl.test"); // peran lihat + qt Kelola
 const dj1 = () => ctx("uid-dj1", "dj1@isl.test");
 const sales2 = () => ctx("uid-sales2", "sales2@isl.test");
 
@@ -44,6 +48,12 @@ before(async () => {
     await isi("dj_bagikan/tokenAktif00000000000001", { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: true, berlakuSampai: Date.now() + 864e5, unduh: true, snapshot: { judul: "x" } });
     await isi("dj_bagikan/tokenKedaluwarsa000000001", { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: true, berlakuSampai: Date.now() - 1000, unduh: true, snapshot: { judul: "x" } });
     await isi("dj_bagikan/tokenDicabut00000000000001", { jobId: "j-k1", kelompokId: "k1", dibuatOleh: "uid-dj1", aktif: false, berlakuSampai: Date.now() + 864e5, unduh: true, snapshot: { judul: "x" } });
+    await isi("pengguna/uid-djq", { email: "djq@isl.test", nama: "DJ Quotation", peran: "dj", status: "aktif", kelompokDJ: "k1", akses: { mr: 0, qt: 2, cu: 2, dj: 2, lg: 0 } });
+    await isi("pengguna/uid-djpolos", { email: "djpolos@isl.test", nama: "DJ Polos", peran: "dj", status: "aktif", kelompokDJ: "k1", akses: { mr: 0, qt: 0, cu: 0, dj: 2, lg: 0 } });
+    await isi("pengguna/uid-djv", { email: "djv@isl.test", nama: "DJ Lihat", peran: "dj", status: "aktif", kelompokDJ: "k1", akses: { mr: 0, qt: 1, cu: 0, dj: 2, lg: 0 } });
+    await isi("pengguna/uid-lihatq", { email: "lihatq@isl.test", nama: "Lihat Kelola", peran: "lihat", status: "aktif", akses: { qt: 2, cu: 2 } });
+    await isi("master_tarif/t-uji", { nama: "Tarif uji", hargaMin: 1000 });
+    await isi("qt_quotations/q-djq", { pemilikUid: "uid-djq", status: "draf", customerId: "c1", baris: [] });
     await isi("pengguna/uid-pending", { email: "pending@isl.test", nama: "Pendaftar", peranDiminta: "sales", peran: null, status: "menunggu" });
     await isi("qt_quotations/q-sales", { pemilikUid: "uid-sales", status: "disetujui", nomor: "001/QL", customerId: "c1", baris: [] });
     await isi("qt_quotations/q-draf-sales", { pemilikUid: "uid-sales", status: "draf", customerId: "c1", baris: [] });
@@ -112,6 +122,20 @@ describe("Divisi non-Daily Job: hanya master dan admin", () => {
   it("sales tidak membaca divisi", () => assertFails(getDoc(doc(sales(), "divisi/d1"))));
   it("admin menandai anggota dengan divisiId", () => assertSucceeds(updateDoc(doc(admin(), "pengguna/uid-lihat"), { divisiId: "d1" })));
   it("sales tidak mengubah divisiId sendiri", () => assertFails(updateDoc(doc(sales(), "pengguna/uid-sales"), { divisiId: "d1" })));
+});
+
+describe("Izin per modul penuh (tidak terkunci peran dasar)", () => {
+  it("dj dengan Quotation Kelola membuat quotation miliknya", () => assertSucceeds(setDoc(doc(djq(), "qt_quotations/n-djq"), { pemilikUid: "uid-djq", status: "draf", customerId: "c1", baris: [] })));
+  it("dj dengan Quotation Kelola tidak membuat atas nama orang lain", () => assertFails(setDoc(doc(djq(), "qt_quotations/n-lain"), { pemilikUid: "uid-sales", status: "draf", baris: [] })));
+  it("dj polos tidak membuat quotation", () => assertFails(setDoc(doc(djpolos(), "qt_quotations/n-polos"), { pemilikUid: "uid-djpolos", status: "draf", baris: [] })));
+  it("dj Kelola hanya membaca quotation miliknya", () => assertSucceeds(getDoc(doc(djq(), "qt_quotations/q-djq"))));
+  it("dj Kelola tidak membaca quotation orang lain", () => assertFails(getDoc(doc(djq(), "qt_quotations/q-sales"))));
+  it("dj dengan Quotation Lihat membaca semua quotation", () => assertSucceeds(getDoc(doc(djv(), "qt_quotations/q-sales"))));
+  it("dj dengan Quotation Lihat tidak membuat quotation", () => assertFails(setDoc(doc(djv(), "qt_quotations/n-djv"), { pemilikUid: "uid-djv", status: "draf", baris: [] })));
+  it("dj dengan akses quotation membaca tarif", () => assertSucceeds(getDoc(doc(djq(), "master_tarif/t-uji"))));
+  it("dj polos tidak membaca tarif", () => assertFails(getDoc(doc(djpolos(), "master_tarif/t-uji"))));
+  it("lihat dengan Quotation Kelola membuat quotation miliknya", () => assertSucceeds(setDoc(doc(lihatq(), "qt_quotations/n-lihatq"), { pemilikUid: "uid-lihatq", status: "draf", customerId: "c1", baris: [] })));
+  it("lihat tanpa Kelola tetap tidak membuat quotation", () => assertFails(setDoc(doc(lihat(), "qt_quotations/n-lihat"), { pemilikUid: "uid-lihat", status: "draf", baris: [] })));
 });
 
 describe("Koreksi rate: sales tidak bisa mengubah isi rate", () => {
