@@ -12,7 +12,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { kirimResetSandi } from "./auth.js";
+import { kirimResetSandi, sinkronLoginTelepon } from "./auth.js";
 import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
@@ -261,6 +261,7 @@ async function tambahAkunManual() {
   try { await signOut(await authTambahAkun()); } catch (_) {}
   const l = $("#ak-tambah"); if (l) l.remove();
   await muatAkun(); S.pilih = uid;
+  if (telepon) sinkronLoginTelepon(uid);
   await dialogAkunBaru({ nama, email, sandi, kode, telepon });
 }
 async function muatAkun() {
@@ -324,7 +325,7 @@ function dialogUbah(ak, uid) {
       if (!nama || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi nama dan email yang valid.", "bahaya");
       if (S.akun.some((x) => x.id !== uid && String(x.email || "").toLowerCase() === email)) return toast("Email ini sudah dipakai akun lain.", "bahaya");
       ev.target.disabled = true; ev.target.textContent = "Menyimpan…";
-      try { await httpsCallable(getFunctions(app, "asia-southeast2"), "ubahAkun")({ uid, nama, email, telepon }); tutup(true); }
+      try { await httpsCallable(getFunctions(app, "asia-southeast2"), "ubahAkun")({ uid, nama, email, telepon }); sinkronLoginTelepon(uid); tutup(true); }
       catch (er) { ev.target.disabled = false; ev.target.textContent = "Simpan"; toast(`<b>Gagal.</b> ${e(er.code === "functions/internal" ? "Email sudah dipakai di Firebase atau server belum ter-deploy." : er.message || er.code)}`, "bahaya"); }
     };
   });
@@ -374,7 +375,9 @@ async function aksiAkun(a, tr) {
   } catch (er) { return toast(`<b>Gagal.</b> ${e(String(er.code || "").startsWith("functions/") ? er.message : (er.code || er.message))}`, "bahaya"); } // galat fungsi server: tampilkan penyebabnya
   await muatAkun();
 }
-async function muatLokal() { S.lokal = await C.daftarLokal(); render(); if (S.kelola && !S.akunMuat) { S.akunMuat = true; muatAkun(); } }
+/* Akun yang sudah ada sebelum fitur masuk lewat nomor telepon: didaftarkan sekali per sesi saat master/admin membuka Pengaturan (aman diulang). */
+function sinkronTeleponSemua() { try { if (sessionStorage.getItem("islhub-sinkron-tel")) return; sessionStorage.setItem("islhub-sinkron-tel", "1"); } catch (_) {} sinkronLoginTelepon(); }
+async function muatLokal() { S.lokal = await C.daftarLokal(); if (S.kelola) sinkronTeleponSemua(); render(); if (S.kelola && !S.akunMuat) { S.akunMuat = true; muatAkun(); } }
 const progres = (t) => { S.progres = t; const el = $("#st-progres"); if (el) el.textContent = t; };
 
 document.addEventListener("click", async (ev) => {

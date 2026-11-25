@@ -80,6 +80,29 @@ exports.djSetujuiPendaftar = onCall(OPSI, async (req) => {
   return { ok: true };
 });
 
+/** Daftarkan nomor telepon akun sebagai kunci masuk (dj_login/p_<nomor> -> email). Pemilik akun, admin, atau master; tanpa uid = semua akun aktif (admin/master). Nomor yang sudah dipakai akun lain dilewati. */
+async function sinkronTelepon(uid) {
+  const ref = db().doc(`pengguna/${uid}`), s = await ref.get(); if (!s.exists || s.get("status") !== "aktif") return "lewat";
+  const email = String(s.get("email") || "").toLowerCase(), tel = U.normalTelepon(s.get("telepon")), lama = s.get("aliasTelepon") || "";
+  if (!email || email.endsWith("@" + U.DOMAIN)) return "lewat"; // akun tim dengan username punya aliasnya sendiri
+  const kunci = tel ? `p_${tel}` : "";
+  if (lama && lama !== kunci) { const d = await db().doc(`dj_login/${lama}`).get(); if (d.exists && d.get("email") === email) await d.ref.delete(); } // nomor lama dilepas
+  if (!kunci) { if (lama) await ref.update({ aliasTelepon: admin.firestore.FieldValue.delete() }); return "lewat"; }
+  const d = await db().doc(`dj_login/${kunci}`).get();
+  if (d.exists && d.get("email") !== email && lama !== kunci) return "bentrok"; // milik akun lain (bukan alias lama kita)
+  if (!d.exists || d.get("email") !== email) await d.ref.set({ email }); // email akun berubah: alias ikut diperbarui
+  if (lama !== kunci) await ref.update({ aliasTelepon: kunci });
+  return d.exists && d.get("email") === email ? "sama" : "baru";
+}
+exports.loginTeleponSinkron = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req), uid = String((req.data && req.data.uid) || "");
+  if (uid) { if (uid !== c.uid && !c.kelola) throw new HttpsError("permission-denied", "Hanya pemilik akun, admin, atau master."); return { hasil: await sinkronTelepon(uid) }; }
+  if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin.");
+  const s = await db().collection("pengguna").where("status", "==", "aktif").get(), n = { baru: 0, sama: 0, bentrok: 0, lewat: 0 };
+  for (const x of s.docs) { try { n[await sinkronTelepon(x.id)]++; } catch (_) { n.lewat++; } }
+  return { jumlah: n };
+});
+
 /** Nama anggota aktif satu kelompok untuk memilih dan memvalidasi PIC. Boleh dipanggil anggota kelompok itu, admin, atau master; hanya nama yang dikembalikan (tanpa telepon, email, atau akses). */
 exports.djNamaTim = onCall(OPSI, async (req) => {
   const c = await pemanggil(req), kelompokId = String((req.data && req.data.kelompokId) || "");

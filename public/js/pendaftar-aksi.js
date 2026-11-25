@@ -12,6 +12,7 @@ import { hitungModalFase2 } from "./app-store.js";
 import { konfirmasi, e } from "./ui.js";
 import { adalahMaster } from "./config-akses.js";
 import { catatLogAkun, kodeUnit, aksesPreset } from "./akses.js";
+import { sinkronLoginTelepon } from "./auth.js";
 import { semuaPreset, muatPeran } from "./peran-akses.js";
 import { linkWa, pesanAkunAktif } from "./kontak-admin.js";
 
@@ -118,6 +119,7 @@ export function bukaPendaftarAksi({ onSelesai } = {}) {
         if (dj) { /* sales_publik tidak dipakai divisi */ } else if (peranFinal === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama: nama || email, kode, targetBulanan: null });
         else await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
       } catch (err) { kunciKartu(kartu, false); return statusKartu(kartu, "gagal", `<b>Gagal menyetujui.</b> ${e(err.code || err.message)}`); }
+      sinkronLoginTelepon(uid); // nomor teleponnya ikut menjadi kunci masuk
       baru.push({ nama, email, telepon, kode: dj ? "" : kode });
       if (!dj) await catatLogAkun({ uid, email }, "setujui", { peran: null, status: "menunggu" }, { peran: peranFinal, status: "aktif", kode: peranFinal === "sales" ? kode : null, target: null });
       if (onSelesai) onSelesai();
