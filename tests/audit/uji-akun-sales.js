@@ -40,6 +40,8 @@ const dipisah = a => { Object.values(a.master_tarif).forEach(t => { delete t.mod
   // 3. Master: kartu pendaftar dengan kode otomatis, setujui, kabari WA
   p = await buka(MASTER, 'app.html'); await p.waitForTimeout(2000);
   await p.evaluate(async () => { const m = await import('/js/pendaftar-aksi.js'); m.bukaPendaftarAksi(); }); await p.waitForTimeout(800);
+  cek('peran bawaan: Belum diatur (hanya Beranda)', await p.inputValue('.ip-item [data-f=peran]') === 'lihat');
+  await p.selectOption('.ip-item [data-f=peran]', 'sales'); await p.waitForTimeout(200); // admin memilih Sales secara eksplisit
   const kode = await p.inputValue('.ip-item [data-f=kode]').catch(() => null);
   cek('kode unit otomatis terisi (SLS-01)', kode === 'SLS-01', String(kode));
   cek('peran terpilih Sales', await p.inputValue('.ip-item [data-f=peran]') === 'sales');

@@ -47,7 +47,8 @@ lupaSandi.addEventListener("click", async (e) => {
   const email = document.getElementById("email").value.trim();
   errorBox.classList.add("hidden"); lupaInfo.classList.add("hidden");
   if (!email) { errorBox.textContent = "Isi email dulu, lalu klik Lupa kata sandi."; errorBox.classList.remove("hidden"); return; }
-  if (!email.includes("@") || email.toLowerCase().endsWith("@dj.isl-hub.app")) { lupaInfo.textContent = "Akun anggota tim: minta kepala divisi Anda untuk mereset kata sandi di menu Daily Job > Kelompok."; lupaInfo.classList.remove("hidden"); return; }
+  if (!email.includes("@")) { errorBox.textContent = "Reset kata sandi hanya lewat email. Ketik alamat email akunmu (bukan nomor telepon), lalu klik Lupa kata sandi."; errorBox.classList.remove("hidden"); return; }
+  if (email.toLowerCase().endsWith("@dj.isl-hub.app")) { lupaInfo.textContent = "Akun anggota tim: minta kepala divisi Anda untuk mereset kata sandi di menu Daily Job > Kelompok."; lupaInfo.classList.remove("hidden"); return; }
   lupaSandi.textContent = "Mengirim...";
   try {
     await kirimResetSandi(email);

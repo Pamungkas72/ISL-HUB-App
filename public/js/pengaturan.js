@@ -12,12 +12,13 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/fireba
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, setPersistence, inMemoryPersistence } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { kirimResetSandi, sinkronLoginTelepon } from "./auth.js";
 import { aksesPreset, PERAN, STATUS_AKUN, catatLogAkun, muatLogAkun, kodeUnit } from "./akses.js";
 import { linkWa, normalisasiWa, pesanAkunBaru } from "./kontak-admin.js";
 import * as MRDB from "./db.js";
 import { hitungModalFase2, pisahkanModalFase2 } from "./app-store.js";
 import { pasangPembersihan } from "./pembersihan-qt.js";
-import { isiAkunDivisi, bukaBuatDivisi } from "./akun-divisi.js";
+import { isiAkunDivisi } from "./akun-divisi.js";
 import { semuaPreset, htmlPeran, muatPeran, pasangPeran } from "./peran-akses.js";
 import { bukaPanelAkses } from "./akses-panel.js";
 
@@ -39,6 +40,7 @@ function render() {
 
     <section class="st-kartu"><h3>Akun saya</h3><p>Masuk sebagai <b>${e(S.email)}</b>.</p>
       <div class="st-stat">Peran: <span class="st-badge ${S.kelola ? "st-badge--ok" : ""}">${S.master ? "Pemilik (bisa mengubah semua data)" : S.admin ? "Admin (mengelola Master Rate, modal, dan akun sales)" : "Lihat saja"}</span></div>
+      <div class="st-baris"><button class="mr-btn" data-st="sandi-saya">Ubah kata sandi lewat email</button><span class="mr-sub">Tautan atur kata sandi dikirim ke ${e(S.email)}.</span></div>
     </section>`;
   const kAkses = S.kelola ? htmlAkun() : "";
   const kSistem = `${htmlModal()}
@@ -191,9 +193,7 @@ const sandiAcak = (n = 24) => { const b = new Uint8Array(n); crypto.getRandomVal
 document.addEventListener("change", (ev) => {
   const t = ev.target; if (!t) return;
   if (t.id === "ta-peran") {
-    const k = $("#ta-kode"), dv = t.value === "divisi"; if (k && !dv) k.textContent = kodeUnit(peranDasar(t.value), kodeTerpakai());
-    $("#ta-info-divisi").hidden = !dv; $("#ta-info-staf").hidden = dv; $("#ta-ok").textContent = dv ? "Lanjut" : "Buat akun";
-    ["#ta-nama", "#ta-email", "#ta-wa"].forEach((i) => { $(i).disabled = dv; });
+    const k = $("#ta-kode"); if (k) k.textContent = kodeUnit(peranDasar(t.value), kodeTerpakai());
   }
   if (t.dataset && t.dataset.akun === "peran") { const p = t.closest(".ak-tunggu"), k = p && p.querySelector('[data-ak="prev"]'); if (k) k.textContent = kodeUnit(peranDasar(t.value), kodeTerpakai()); }
 });
@@ -207,7 +207,7 @@ function dialogTambah() {
     <label class="ak-lbl">Nama lengkap</label><input id="ta-nama" autocomplete="off" style="width:100%;box-sizing:border-box">
     <label class="ak-lbl">Email</label><input id="ta-email" type="email" autocomplete="off" style="width:100%;box-sizing:border-box">
     <label class="ak-lbl">WhatsApp (opsional)</label><input id="ta-wa" type="tel" inputmode="tel" autocomplete="off" style="width:100%;box-sizing:border-box">
-    <label class="ak-lbl">Peran</label><select id="ta-peran" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option>${`<optgroup label="Peran siap pakai">${semuaPreset().map((x) => `<option value="p:${e(x.id)}">${e(x.nama)}</option>`).join("")}</optgroup>`}<option value="divisi">Kepala / anggota divisi (Daily Job)</option></select>
+    <label class="ak-lbl">Peran</label><select id="ta-peran" style="width:100%;box-sizing:border-box"><option value="sales">Sales</option>${S.master ? '<option value="admin">Admin</option>' : ""}<option value="lihat">Lihat saja</option>${`<optgroup label="Peran siap pakai">${semuaPreset().map((x) => `<option value="p:${e(x.id)}">${e(x.nama)}</option>`).join("")}</optgroup>`}</select>
     <p class="mr-sub" id="ta-info-divisi" hidden style="margin:10px 0 0">Nama, username, kelompok, dan jabatan (kepala divisi atau anggota) diisi di langkah berikutnya.</p>
     <p class="mr-sub" id="ta-info-staf" style="margin:10px 0 0">Kode unit <span class="ak-kode" id="ta-kode">${e(kodeUnit("sales", kodeTerpakai()))}</span> dibuat otomatis. Akun langsung aktif dengan kata sandi sementara yang tampil sekali untuk disalin atau dikirim lewat WhatsApp.</p></div>
     <div class="mr-konfirm__aksi"><button class="mr-btn" data-x="batal">Batal</button><button class="mr-btn mr-btn--utama" data-st="akun-tambah" id="ta-ok">Buat akun</button></div></div>`;
@@ -230,7 +230,6 @@ function dialogAkunBaru(d) {
 }
 async function tambahAkunManual() {
   if (!S.master && !S.admin) return;
-  if ($("#ta-peran").value === "divisi") { $("#ak-tambah").remove(); return bukaBuatDivisi(); } // kepala dan anggota divisi dibuat lewat fungsi server akun divisi
   const email = $("#ta-email").value.trim().toLowerCase(), nama = $("#ta-nama").value.trim(), pilih = $("#ta-peran").value, pr = presetDari(pilih), peran = pr ? pr.peran : pilih, kode = kodeUnit(peran, kodeTerpakai()), telepon = normalisasiWa($("#ta-wa").value);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi email yang valid.", "bahaya");
   if (!nama) return toast("Isi nama lengkap.", "bahaya");
@@ -259,6 +258,7 @@ async function tambahAkunManual() {
   try { await signOut(await authTambahAkun()); } catch (_) {}
   const l = $("#ak-tambah"); if (l) l.remove();
   await muatAkun(); S.pilih = uid;
+  if (telepon) sinkronLoginTelepon(uid);
   await dialogAkunBaru({ nama, email, sandi, kode, telepon });
 }
 async function muatAkun() {
@@ -322,7 +322,7 @@ function dialogUbah(ak, uid) {
       if (!nama || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast("Isi nama dan email yang valid.", "bahaya");
       if (S.akun.some((x) => x.id !== uid && String(x.email || "").toLowerCase() === email)) return toast("Email ini sudah dipakai akun lain.", "bahaya");
       ev.target.disabled = true; ev.target.textContent = "Menyimpan…";
-      try { await httpsCallable(getFunctions(app, "asia-southeast2"), "ubahAkun")({ uid, nama, email, telepon }); tutup(true); }
+      try { await httpsCallable(getFunctions(app, "asia-southeast2"), "ubahAkun")({ uid, nama, email, telepon }); sinkronLoginTelepon(uid); tutup(true); }
       catch (er) { ev.target.disabled = false; ev.target.textContent = "Simpan"; toast(`<b>Gagal.</b> ${e(er.code === "functions/internal" ? "Email sudah dipakai di Firebase atau server belum ter-deploy." : er.message || er.code)}`, "bahaya"); }
     };
   });
@@ -372,7 +372,9 @@ async function aksiAkun(a, tr) {
   } catch (er) { return toast(`<b>Gagal.</b> ${e(String(er.code || "").startsWith("functions/") ? er.message : (er.code || er.message))}`, "bahaya"); } // galat fungsi server: tampilkan penyebabnya
   await muatAkun();
 }
-async function muatLokal() { S.lokal = await C.daftarLokal(); render(); if (S.kelola && !S.akunMuat) { S.akunMuat = true; muatAkun(); } }
+/* Akun yang sudah ada sebelum fitur masuk lewat nomor telepon: didaftarkan sekali per sesi saat master/admin membuka Pengaturan (aman diulang). */
+function sinkronTeleponSemua() { try { if (sessionStorage.getItem("islhub-sinkron-tel")) return; sessionStorage.setItem("islhub-sinkron-tel", "1"); } catch (_) {} sinkronLoginTelepon(); }
+async function muatLokal() { S.lokal = await C.daftarLokal(); if (S.kelola) sinkronTeleponSemua(); render(); if (S.kelola && !S.akunMuat) { S.akunMuat = true; muatAkun(); } }
 const progres = (t) => { S.progres = t; const el = $("#st-progres"); if (el) el.textContent = t; };
 
 document.addEventListener("click", async (ev) => {
@@ -382,6 +384,7 @@ document.addEventListener("click", async (ev) => {
   if (t.dataset.st === "bag") { S.bag = t.dataset.v; render(); return window.scrollTo({ top: 0 }); }
   if (t.dataset.st === "bag-kembali") { S.bag = ""; render(); return window.scrollTo({ top: 0 }); }
   const a = t.dataset.st;
+  if (a === "sandi-saya") { t.disabled = true; try { await kirimResetSandi(S.email); toast(`Email atur kata sandi terkirim ke <b>${e(S.email)}</b>. Periksa juga folder spam.`); } catch (er) { toast(`Email belum terkirim (${e(er.code || er.message)}).`, "bahaya"); } t.disabled = false; return; }
   if (a === "bersih-koreksi") {
     if (!S.master) return;
     if (!(await konfirmasi("Bersihkan nilai modal dari riwayat koreksi?", "Baris Modal di teks koreksi lama dihapus. Nilai rate, dokumen, dan tanggal tidak berubah.", "Bersihkan"))) return;

@@ -6,7 +6,7 @@
 // ===========================================================
 import { renderNav } from "./nav.js";
 import { labelAkun } from "./config-akses.js";
-import { e, $, toast, konfirmasi, konfirmasiKetik, bukaLayer, tutupLayer } from "./ui.js";
+import { e, $, toast, konfirmasi, bukaLayer, tutupLayer } from "./ui.js";
 import { ikon } from "./ikon.js";
 import { app, db } from "./firebase-config.js";
 import { unggahBlob } from "./app-store.js";
@@ -527,7 +527,7 @@ function render() {
   if (layarHp() && S.tab === "job" && !S.muat && !S.detail && !pilihAktif()) intipGeser();
 }
 
-/* ---------- tim kelompok: kepala divisi membuat dan mengurus akun anggota lewat UI (Cloud Functions djBuatAnggota, djDaftarTim, djAturAnggota) ---------- */
+/* ---------- tim kelompok: daftar anggota; kepala bisa menonaktifkan. Anggota ditambahkan master/admin dari akun yang sudah disetujui (Pengaturan > Akun dan akses) ---------- */
 const kepalaDi = () => S.kelompok.filter((k) => S.kelola || (k.kepala || []).includes(S.u.uid));
 async function panggil(nama, data) {
   const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js");
@@ -541,53 +541,13 @@ async function muatTim(kid) {
 }
 function htmlTim(k) {
   const t = S.tim[k.id] || { muat: true, anggota: [], galat: "" };
-  const baris = (a) => `<div class="dj-agt${a.status === "aktif" ? "" : " is-mati"}">${avatar(a.nama)}<div class="dj-agt__i"><b>${e(a.nama)}</b>${a.status === "aktif" ? "" : ' <span class="dj-chip dj-chip--mu">Nonaktif</span>'}<small>@${e(a.username)}${a.telepon ? " · " + e(a.telepon) : ""}${a.emailKontak ? " · " + e(a.emailKontak) : ""}</small></div>
-    <span class="dj-agt__a"><button type="button" class="mr-ikonbtn" data-dj="tim-ubah" data-id="${e(a.uid)}" data-k="${e(k.id)}" title="Ubah data" aria-label="Ubah data">${ikon("edit", 15)}</button><button type="button" class="mr-btn mr-btn--kecil" data-dj="tim-sandi" data-id="${e(a.uid)}" data-k="${e(k.id)}">Reset sandi</button>
-    <button type="button" class="mr-btn mr-btn--kecil" data-dj="tim-toggle" data-id="${e(a.uid)}" data-k="${e(k.id)}">${a.status === "aktif" ? "Nonaktifkan" : "Aktifkan"}</button><button type="button" class="mr-ikonbtn dj-bhy" data-dj="tim-hapus" data-id="${e(a.uid)}" data-k="${e(k.id)}" title="Hapus akun" aria-label="Hapus akun">${ikon("tong", 15)}</button></span></div>`;
-  return `<section class="mr-kartu dj-kartu"><div class="dj-cap"><h3 style="margin:0">Tim ${e(k.nama)}</h3><button type="button" class="mr-btn mr-btn--utama mr-btn--kecil" data-dj="tim-baru" data-k="${e(k.id)}">${ikon("plus", 13)} Tambah anggota</button></div>
-    <p class="mr-sub">Anggota masuk dengan username, email, atau nomor telepon, dan hanya bisa membuka Daily Job kelompok ini.</p>
-    ${t.muat ? '<p class="mr-sub">Memuat tim…</p>' : t.galat ? `<p class="mr-sub">${e(t.galat)}</p>` : t.anggota.length ? t.anggota.map(baris).join("") : '<p class="mr-sub">Belum ada anggota. Ketuk Tambah anggota untuk membuat akun pertama.</p>'}</section>`;
-}
-function panelAnggota(kid, a) {
-  const baru = !a;
-  bukaLayer(`<header class="mr-panel__kepala"><div><h2>${baru ? "Tambah anggota tim" : "Ubah data anggota"}</h2><p class="mr-sub">${baru ? "Akun login dibuat langsung. Anggota hanya bisa membuka Daily Job." : "@" + e(a.username)}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
-  <div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr" id="dj-agt" data-k="${e(kid)}" data-uid="${e(a ? a.uid : "")}">
-    <label class="mr-f"><span>Nama lengkap *</span><input id="dja-nama" maxlength="80" value="${e(a ? a.nama : "")}" autocomplete="off"></label>
-    ${baru ? `<label class="mr-f"><span>Username * <small>huruf kecil, angka, titik, garis bawah, strip (3 sampai 30)</small></span><input id="dja-user" maxlength="30" autocapitalize="none" spellcheck="false" autocomplete="off"></label>` : ""}
-    <label class="mr-f"><span>Nomor telepon <small>(bisa dipakai untuk masuk)</small></span><input id="dja-tel" inputmode="tel" maxlength="20" value="${e(a ? a.telepon : "")}" placeholder="0812…" autocomplete="off"></label>
-    <label class="mr-f"><span>Email <small>(opsional, bisa dipakai untuk masuk)</small></span><input id="dja-email" type="email" maxlength="80" value="${e(a ? a.emailKontak : "")}" autocomplete="off"></label>
-    ${baru ? `<label class="mr-f"><span>Kata sandi awal *</span><div class="dj-bg__u"><input id="dja-sandi" value="${e(sandiAcak())}" autocomplete="off" spellcheck="false"><button type="button" class="mr-btn" data-dj="tim-acak">Acak</button></div></label>` : ""}</div></div>
-  <footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="${baru ? "tim-simpan" : "tim-ubah-simpan"}">${baru ? "Buat akun" : "Simpan"}</button></footer>`);
-}
-const sandiAcak = H.sandiAcak;
-function panelSandi(kid, a) {
-  bukaLayer(`<header class="mr-panel__kepala"><div><h2>Reset kata sandi</h2><p class="mr-sub">${e(a.nama)} · @${e(a.username)}. Sesi lama anggota berakhir.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
-  <div class="mr-panel__isi"><div class="mr-form dj-form" style="grid-template-columns:1fr" id="dj-agt" data-k="${e(kid)}" data-uid="${e(a.uid)}"><label class="mr-f"><span>Kata sandi baru</span><div class="dj-bg__u"><input id="dja-sandi" value="${e(sandiAcak())}" autocomplete="off" spellcheck="false"><button type="button" class="mr-btn" data-dj="tim-acak">Acak</button></div></label></div></div>
-  <footer class="mr-panel__kaki dj-kaki"><span class="mr-ruang"></span><button class="mr-btn" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="tim-sandi-simpan">Reset sandi</button></footer>`);
-}
-/** Sandi hanya tampil sekali di sini; kepala menyalin atau mengirimnya lewat WhatsApp. */
-function panelKredensial(a, sandi, judul) {
-  const url = location.origin + "/index.html", teks = `Akun ISL HUB (Daily Job)\nNama: ${a.nama}\nMasuk di: ${url}\nUsername: ${a.username}${a.telepon ? ` (atau nomor telepon ${a.telepon})` : ""}\nKata sandi: ${sandi}`;
-  bukaLayer(`<header class="mr-panel__kepala"><div><h2>${e(judul)}</h2><p class="mr-sub">Catat atau kirim sekarang. Kata sandi tidak ditampilkan lagi.</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
-  <div class="mr-panel__isi"><div class="dj-kred"><div><span>Nama</span><b>${e(a.nama)}</b></div><div><span>Masuk di</span><b>${e(url)}</b></div><div><span>Username</span><b>${e(a.username)}</b></div>${a.telepon ? `<div><span>Atau nomor telepon</span><b>${e(a.telepon)}</b></div>` : ""}<div><span>Kata sandi</span><b class="dj-kred__s">${e(sandi)}</b></div></div></div>
-  <footer class="mr-panel__kaki dj-kaki"><button class="mr-btn" data-dj="tim-salin" data-teks="${e(teks)}">Salin</button><span class="mr-ruang"></span><a class="mr-btn mr-btn--utama" target="_blank" rel="noopener" href="https://wa.me/${e(a.telepon || "")}?text=${encodeURIComponent(teks)}">Kirim WhatsApp</a></footer>`);
+  const baris = (a) => `<div class="dj-agt${a.status === "aktif" ? "" : " is-mati"}">${avatar(a.nama)}<div class="dj-agt__i"><b>${e(a.nama)}</b>${a.status === "aktif" ? "" : ' <span class="dj-chip dj-chip--mu">Nonaktif</span>'}<small>${e(a.email || "")}${a.telepon ? " · " + e(a.telepon) : ""}</small></div>
+    <span class="dj-agt__a"><button type="button" class="mr-btn mr-btn--kecil" data-dj="tim-toggle" data-id="${e(a.uid)}" data-k="${e(k.id)}">${a.status === "aktif" ? "Nonaktifkan" : "Aktifkan"}</button></span></div>`;
+  return `<section class="mr-kartu dj-kartu"><div class="dj-cap"><h3 style="margin:0">Tim ${e(k.nama)}</h3></div>
+    <p class="mr-sub">Anggota masuk dengan email atau nomor telepon. Master atau admin yang menambah anggota: Pengaturan &rsaquo; Akun dan akses, bagian Tanpa kelompok.</p>
+    ${t.muat ? '<p class="mr-sub">Memuat tim…</p>' : t.galat ? `<p class="mr-sub">${e(t.galat)}</p>` : t.anggota.length ? t.anggota.map(baris).join("") : '<p class="mr-sub">Belum ada anggota. Master atau admin menambahkannya dari akun yang sudah disetujui.</p>'}</section>`;
 }
 const anggotaDi = (kid, uid) => ((S.tim[kid] || {}).anggota || []).find((x) => x.uid === uid);
-async function jalankanTim(a, t) {
-  const f = $("#dj-agt"), kid = f ? f.dataset.k : t.dataset.k, v = (id) => (($("#" + id) || {}).value || "").trim();
-  try {
-    if (a === "tim-simpan") {
-      const x = { kelompokId: kid, nama: v("dja-nama"), username: v("dja-user").toLowerCase(), telepon: v("dja-tel"), emailKontak: v("dja-email"), sandi: v("dja-sandi") };
-      if (!x.nama || !H.usernameValid(x.username)) return toast("Isi nama dan username (3 sampai 30 huruf kecil, angka, titik, garis bawah, strip).", "bahaya");
-      if (x.telepon && !H.normalTelepon(x.telepon)) return toast("Nomor telepon tidak valid.", "bahaya"); if (x.emailKontak && !H.emailValid(x.emailKontak)) return toast("Format email tidak valid.", "bahaya"); if (x.sandi.length < 8) return toast("Kata sandi minimal 8 karakter.", "bahaya");
-      t.disabled = true; t.textContent = "Membuat…"; await panggil("djBuatAnggota", x); muatTim(kid); panelKredensial({ nama: x.nama, username: x.username, telepon: H.normalTelepon(x.telepon) }, x.sandi, "Akun dibuat");
-    } else if (a === "tim-ubah-simpan") {
-      const uid = f.dataset.uid; t.disabled = true; await panggil("djAturAnggota", { uid, aksi: "ubah", nama: v("dja-nama"), telepon: v("dja-tel"), emailKontak: v("dja-email") }); tutupLayer(); toast("Data anggota diperbarui."); muatTim(kid);
-    } else if (a === "tim-sandi-simpan") {
-      const uid = f.dataset.uid, sandi = v("dja-sandi"); if (sandi.length < 8) return toast("Kata sandi minimal 8 karakter.", "bahaya"); t.disabled = true; await panggil("djAturAnggota", { uid, aksi: "sandi", sandi }); panelKredensial(anggotaDi(kid, uid) || {}, sandi, "Kata sandi diganti");
-    }
-  } catch (err) { console.error(err); t.disabled = false; toast(e(err.message || err), "bahaya"); }
-}
 
 /* ---------- filter: sheet dari bawah (HP dan desktop), seragam dengan Quotation ---------- */
 const selF = (aksi, lab, isi) => `<label class="mr-f"><span>${lab}</span><select data-dj="${aksi}">${isi}</select></label>`;
@@ -1127,18 +1087,9 @@ document.addEventListener("click", async (ev) => {
   if (a === "baru-lepas") { berkasBaru.splice(+t.dataset.i, 1); return tampilBaru(); }
   if (a === "tautan-tambah") { const u = $("#djf-tl").value.trim(); if (!/^https?:\/\//i.test(u)) return toast("Tautan harus diawali http:// atau https://", "bahaya"); d.tautan.push({ url: u, nama: u.replace(/^https?:\/\//, "").slice(0, 60) }); $("#djf-tl").value = ""; return $("#djf-tautan").insertAdjacentHTML("beforeend", `<div class="dj-fl"><a href="${aman(u)}" target="_blank" rel="noopener">${ikon("file", 13)} ${e(u.slice(0, 60))}</a><span class="mr-sub">disimpan saat Simpan</span></div>`); }
   if (a === "hapus") { if (!(await konfirmasi("Hapus job ini?", "Job dan catatannya dihapus permanen. File di Storage tidak ikut dihapus.", "Hapus"))) return; try { await deleteDoc(doc(db, "dj_job", id)); S.jobs = S.jobs.filter((x) => x.id !== id); tutupLayer(); render(); toast("Job dihapus."); } catch (err) { toast("Belum bisa dihapus: " + e(err.message || err), "bahaya"); } return; }
-  if (a === "tim-baru") return panelAnggota(t.dataset.k, null);
-  if (a === "tim-ubah") return panelAnggota(t.dataset.k, anggotaDi(t.dataset.k, id));
-  if (a === "tim-sandi") return panelSandi(t.dataset.k, anggotaDi(t.dataset.k, id));
-  if (a === "tim-acak") { $("#dja-sandi").value = sandiAcak(); return; }
-  if (a === "tim-simpan" || a === "tim-ubah-simpan" || a === "tim-sandi-simpan") return jalankanTim(a, t);
-  if (a === "tim-salin") { try { await navigator.clipboard.writeText(t.dataset.teks); toast("Data akun disalin."); } catch (_) { toast("Salin manual dari layar.", "info"); } return; }
   if (a === "tim-toggle") { const x = anggotaDi(t.dataset.k, id); if (!x) return; const mati = x.status === "aktif";
     if (!(await konfirmasi(mati ? "Nonaktifkan akun?" : "Aktifkan akun?", `${e(x.nama)} ${mati ? "tidak bisa masuk sampai diaktifkan lagi." : "bisa masuk lagi."}`, mati ? "Nonaktifkan" : "Aktifkan"))) return;
     try { await panggil("djAturAnggota", { uid: id, aksi: mati ? "nonaktif" : "aktif" }); toast(mati ? "Akun dinonaktifkan." : "Akun diaktifkan."); muatTim(t.dataset.k); } catch (err) { toast(e(err.message), "bahaya"); } return; }
-  if (a === "tim-hapus") { const x = anggotaDi(t.dataset.k, id); if (!x) return;
-    if (!(await konfirmasiKetik("Hapus akun anggota?", `Akun <b>${e(x.nama)}</b> (@${e(x.username)}) dihapus permanen dan tidak bisa masuk lagi. Job yang pernah dibuatnya tetap ada.`, "HAPUS"))) return;
-    try { await panggil("djAturAnggota", { uid: id, aksi: "hapus" }); toast("Akun dihapus."); muatTim(t.dataset.k); } catch (err) { toast(e(err.message), "bahaya"); } return; }
   if (a === "subkel") { S.subKel = v; render(); return; }
   if (a === "kel-pilih") { S.pilihKel = id; render(); return; }
   if (a === "kel-baru" || a === "kel-ubah") return bukaFormKelompok(a === "kel-ubah" ? S.kelompok.find((x) => x.id === id) : null, { sesudah: muat }); // form sama dengan Pengaturan > Akun dan akses

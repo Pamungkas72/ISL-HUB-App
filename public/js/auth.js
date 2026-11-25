@@ -3,7 +3,7 @@
 // Kalau nanti mau ganti aturan login (tambah role, dsb),
 // cukup ubah di sini, HTML/CSS tidak perlu disentuh.
 // ===========================================================
-import { auth, db, siapAuth } from "./firebase-config.js";
+import { app, auth, db, siapAuth } from "./firebase-config.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { kunciLogin } from "./daily-job-hitung.js";
 import { adalahMaster } from "./config-akses.js";
@@ -18,6 +18,11 @@ export function loginUser(email, password) {
 
 /* Masuk dengan email, username, atau nomor telepon. Akun anggota tim Daily Job (dibuat kepala divisi) dicari lewat dj_login;
    selain itu masukan dianggap email biasa. */
+/* Daftarkan nomor telepon akun sebagai kunci masuk (Cloud Function). uid kosong = semua akun (admin/master). Gagal tidak mengganggu pekerjaan lain. */
+export async function sinkronLoginTelepon(uid) {
+  try { const { getFunctions, httpsCallable } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js"); return (await httpsCallable(getFunctions(app, "asia-southeast2"), "loginTeleponSinkron")(uid ? { uid } : {})).data; }
+  catch (err) { console.warn("Login nomor telepon belum tersinkron:", err && err.code); return null; }
+}
 export async function loginIdentitas(masukan, password) {
   await siapAuth;
   const t = String(masukan || "").trim(), kunci = kunciLogin(t); let email = t.includes("@") ? t : "";
@@ -64,7 +69,7 @@ export function watchAuthState(onLoggedIn, onLoggedOut, opsi = {}) {
     try { p = await muatProfil(user); }
     catch (e) { console.error("Profil akun gagal dimuat:", e); p = { uid: user.uid, email: user.email, peran: null, status: "menunggu", galat: e && e.code }; }
     window.__ISL_PROFIL = p;
-    window.__islSimpanProfil = data => simpanProfilSaya(user.uid, data);
+    window.__islSimpanProfil = async data => { const r = await simpanProfilSaya(user.uid, data); if (data && "telepon" in data) sinkronLoginTelepon(user.uid); return r; };
     window.__islKegiatan = { muat: muatKegiatan, tambah: tambahKegiatan, ubah: ubahKegiatan, hapus: hapusKegiatan, semua: muatSemuaKegiatan };
     window.__islVolume = { muat: muatVolume, tambahBanyak: tambahVolumeBanyak, hapus: hapusVolume, semua: muatSemuaVolume };
     // Pemilik atau admin: menentukan siapa yang melihat pendaftar sales dan boleh mengurus Master Rate (semua halaman).

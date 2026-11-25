@@ -11,10 +11,16 @@ import { hitungModalBelumDipisah } from "./db-firebase.js";
 import { hitungModalFase2 } from "./app-store.js";
 import { konfirmasi, e } from "./ui.js";
 import { adalahMaster } from "./config-akses.js";
-import { catatLogAkun, kodeUnit } from "./akses.js";
+import { catatLogAkun, kodeUnit, aksesPreset } from "./akses.js";
+import { sinkronLoginTelepon } from "./auth.js";
+import { semuaPreset, muatPeran } from "./peran-akses.js";
 import { linkWa, pesanAkunAktif } from "./kontak-admin.js";
 
 const IKON_ORANG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M17 8v6M14 11h6"/></svg>';
+/* Peran siap pakai (Finance, Legal, dll. dari Pengaturan > Peran): peran dasar + izin modul awal. "Belum diatur" = peran Lihat saja dengan semua modul tertutup (hanya Beranda) sampai admin mengelompokkan atau memberi akses. */
+const AKSES_KOSONG = { mr: 0, qt: 0, cu: 0, dj: 0, lg: 0 };
+const presetDari = (v) => String(v).startsWith("p:") ? semuaPreset().find((p) => p.id === v.slice(2)) : null;
+const dasarPeran = (v) => { const p = presetDari(v); return p ? p.peran : v; };
 /* Admin hanya bisa diangkat pemilik (aturan Firestore juga menolak yang lain). */
 const pemilik = () => { const u = auth.currentUser; return !!u && adalahMaster(u.email); };
 const inisial = (t) => String(t || "?").trim().split(/\s+/).slice(0, 2).map((w) => w[0] || "").join("").toUpperCase();
@@ -50,16 +56,17 @@ export function bukaPendaftarAksi({ onSelesai } = {}) {
   let baru = []; // akun yang baru disetujui di lembar ini: tombol kabari via WhatsApp
   const gambar = async () => {
     try {
+      await muatPeran().catch(() => {});
       const daftar = await muatPendaftar();
       const pakai = await kodeTerpakai(); kodePakai = pakai.slice();
       const blokBaru = baru.map((b) => `<div class="ip-item"><div class="ip-orang"><span class="ip-avatar" aria-hidden="true">${e(inisial(b.nama))}</span><div style="min-width:0"><div class="ip-nama">${e(b.nama)} aktif${b.kode ? ` · kode <b>${e(b.kode)}</b>` : ""}</div><div class="ip-mail">${e(b.email)}</div></div></div>${b.telepon ? `<div class="ip-aksi"><a class="ip-btn ip-btn--wa" href="${e(linkWa(b.telepon, pesanAkunAktif(b)))}" target="_blank" rel="noopener">Kabari via WhatsApp</a></div>` : ""}</div>`).join("");
       if (!daftar.length) { jml.textContent = "Semua sudah ditindaklanjuti"; isi.innerHTML = blokBaru + `<div class="ip-kosong">Tidak ada pendaftar yang menunggu.</div>`; return; }
       jml.textContent = `${daftar.length} akun menunggu keputusan Anda`;
-      isi.innerHTML = blokBaru + daftar.map((x) => { const kodeAuto = kodeUnit(x.peranDiminta === "admin" ? (pemilik() ? "admin" : "lihat") : "sales", pakai); pakai.push(kodeAuto); return `
+      isi.innerHTML = blokBaru + daftar.map((x) => { const kodeAuto = kodeUnit("lihat", pakai); pakai.push(kodeAuto); return `
           <div class="ip-item" data-uid="${e(x.uid)}" data-tel="${e(x.telepon)}" data-sales="${x.peranDiminta === "sales" ? "1" : "0"}">
             <div class="ip-orang"><span class="ip-avatar" aria-hidden="true">${e(inisial(x.nama || x.email))}</span><div style="min-width:0"><div class="ip-nama">${e(x.nama || "(tanpa nama)")}</div><div class="ip-mail">${e(x.email)}${x.telepon ? ` · ${e(x.telepon)}` : ""}</div></div></div>
             <div class="ip-grid">
-              <label class="ip-field">Peran<select class="ip-select" data-f="peran"><option value="sales" ${x.peranDiminta !== "admin" ? "selected" : ""}>Sales</option><option value="lihat" ${x.peranDiminta === "admin" ? "selected" : ""}>Lihat saja</option>${pemilik() ? `<option value="admin">Admin</option>` : ""}</select></label>
+              <label class="ip-field">Peran<select class="ip-select" data-f="peran"><option value="lihat" selected>Belum diatur (hanya Beranda)</option><option value="sales">Sales</option><optgroup label="Peran siap pakai">${semuaPreset().map((p) => `<option value="p:${e(p.id)}">${e(p.nama)}</option>`).join("")}</optgroup>${pemilik() ? `<option value="admin">Admin</option>` : ""}</select></label>
               <label class="ip-field">Kode unit (otomatis)<input class="ip-input" data-f="kode" value="${e(kodeAuto)}" readonly></label>
             </div>
             <div class="ip-aksi ip-aksi--baris"><button type="button" class="ip-btn ip-btn--utama" data-a="setujui">Setujui</button><button type="button" class="ip-btn ip-btn--bahaya" data-a="tolak">Tolak</button></div>
@@ -81,7 +88,7 @@ export function bukaPendaftarAksi({ onSelesai } = {}) {
   isi.addEventListener("change", (ev) => { // ganti peran: kode unit ikut kelompok barunya, tidak bentrok dengan kartu lain
     const sel = ev.target.closest('[data-f="peran"]'); if (!sel) return;
     const kartu = sel.closest(".ip-item"), lain = [...isi.querySelectorAll('.ip-item [data-f="kode"]')].filter((k) => !kartu.contains(k)).map((k) => k.value);
-    kartu.querySelector('[data-f="kode"]').value = kodeUnit(sel.value, [...kodePakai, ...lain]);
+    kartu.querySelector('[data-f="kode"]').value = kodeUnit(dasarPeran(sel.value), [...kodePakai, ...lain]);
   });
   isi.addEventListener("click", async (ev) => {
     const b = ev.target.closest("button[data-a]"); if (!b) return;
@@ -90,18 +97,19 @@ export function bukaPendaftarAksi({ onSelesai } = {}) {
     const peran = kartu.querySelector('[data-f="peran"]').value;
     const kode = kartu.querySelector('[data-f="kode"]').value.trim();
     if (b.dataset.a === "setujui") {
-      const peranFinal = peran === "sales" || (peran === "admin" && pemilik()) ? peran : "lihat";
+      const pr = presetDari(peran), dasar = dasarPeran(peran), peranFinal = dasar === "sales" || (dasar === "admin" && pemilik()) ? dasar : "lihat";
       kunciKartu(kartu, true);
       statusKartu(kartu, "info", "Memeriksa modal…");
-      let siap = false;
-      try { siap = await modalSudahDipisah(); }
+      let siap = peran === "lihat"; // Belum diatur: semua modul tertutup, tidak perlu pemisahan modal
+      try { if (!siap) siap = await modalSudahDipisah(); }
       catch (err) { kunciKartu(kartu, false); return statusKartu(kartu, "gagal", `Tidak bisa memeriksa modal (${e(err.code || err.message)}). Coba lagi.`); }
       if (!siap) { kunciKartu(kartu, false); return statusKartu(kartu, "info", `<b>Belum bisa disetujui.</b> Pisahkan modal dulu (sekali saja): <a href="pengaturan.html">Buka Pengaturan &gt; Sistem dan data</a>, lalu tekan <b>Pisahkan modal sekarang</b>.`); }
       try {
-        await updateDoc(doc(db, "pengguna", uid), { peran: peranFinal, kodeSales: kode, status: "aktif", disetujuiPada: serverTimestamp() });
+        await updateDoc(doc(db, "pengguna", uid), { peran: peranFinal, kodeSales: kode, status: "aktif", disetujuiPada: serverTimestamp(), ...(pr ? { akses: aksesPreset(pr) } : peran === "lihat" ? { akses: AKSES_KOSONG } : {}) });
         if (peranFinal === "sales") await setDoc(doc(db, "sales_publik", uid), { uid, nama: nama || email, kode, targetBulanan: null });
         else await deleteDoc(doc(db, "sales_publik", uid)).catch(() => {});
       } catch (err) { kunciKartu(kartu, false); return statusKartu(kartu, "gagal", `<b>Gagal menyetujui.</b> ${e(err.code || err.message)}`); }
+      sinkronLoginTelepon(uid); // nomor teleponnya ikut menjadi kunci masuk
       baru.push({ nama, email, telepon, kode });
       await catatLogAkun({ uid, email }, "setujui", { peran: null, status: "menunggu" }, { peran: peranFinal, status: "aktif", kode: peranFinal === "sales" ? kode : null, target: null });
       if (onSelesai) onSelesai();
