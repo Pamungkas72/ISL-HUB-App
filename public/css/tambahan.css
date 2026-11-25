@@ -2818,3 +2818,4 @@ body.di-dasar .ke-atas.is-tampil { opacity: 0; pointer-events: none; } /* di das
 @media (max-width: 760px) { .ak-tambah__t { display: none; } .ak-tambah { width: 40px; height: 40px; padding: 0; justify-content: center; border-radius: 50%; } }
 .ad-aksi { flex-wrap: wrap; }
 .ak-h { display: flex; align-items: center; gap: 6px; }
+.ak-ringkas { font-size: 12px; color: var(--muted); } .pa-arti { color: var(--text); } .pa-menu { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; margin-top: 10px; }

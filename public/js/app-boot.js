@@ -20,6 +20,7 @@ window.__islUJ = {
 };
 import { renderNav } from "./nav.js";
 import { adalahMaster, emailMasterBelumDiisi, labelAkun } from "./config-akses.js";
+import { adalahSales, adaAksesLain } from "./akses.js";
 import * as MRDB from "./db.js";
 import { buatKunci, slug } from "./kunci.js";
 import { URUTAN_LINI } from "./standar.js";
@@ -95,10 +96,10 @@ watchAuthState(
     if (mulai) return; mulai = true;
     document.getElementById("user-email").textContent = labelAkun(user.email, user.displayName);
     try {
-      if (profil && profil.peran === "dj" && profil.status === "aktif") return mulaiAnggotaDJ(user, profil); // anggota tim: hanya Daily Job, tanpa memuat data lain
+      if (profil && profil.peran === "dj" && profil.status === "aktif" && !adaAksesLain(profil)) return mulaiAnggotaDJ(user, profil); // anggota tim: hanya Daily Job, tanpa memuat data lain
       const master = adalahMaster(user.email);
       if (emailMasterBelumDiisi()) console.warn("EMAIL_MASTER belum diisi di config-akses.js: semua akun hanya bisa melihat.");
-      const sales = !!profil && profil.peran === "sales" && profil.status === "aktif";
+      const sales = adalahSales(profil);
       const admin = !!profil && profil.peran === "admin" && profil.status === "aktif";
       const kelola = master || admin; // pemilik atau admin: boleh mengurus Master Rate dan modal tarif
       window.__ISL_KELOLA = kelola;

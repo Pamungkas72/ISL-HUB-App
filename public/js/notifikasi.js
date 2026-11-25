@@ -8,6 +8,7 @@ import { quotationGantung, tarifPerluVerifikasi, riwayatPerluTindak, labelUmur, 
 import { muatSemua as muatMaster, muatReferensi } from "./db.js";
 import { muatSemua as muatApp } from "./app-store.js";
 import { adalahMaster } from "./config-akses.js";
+import { adalahSales } from "./akses.js";
 import { statusKontrak, BATAS_HARI } from "./legal-hitung.js";
 import { auth, db } from "./firebase-config.js";
 import { bukaPendaftarAksi } from "./pendaftar-aksi.js";
@@ -184,7 +185,7 @@ export async function kumpulkan({ paksa = false } = {}) {
   let semua = c && !paksa && Date.now() - c.t < UMUR_CACHE_MS ? c.items : null;
   if (!semua) {
     semua = [];
-    try { const pr = window.__ISL_PROFIL || {}; const a = await muatApp({ master: false, hanyaBaca: true, sales: pr.peran === "sales", uid: pr.uid }); semua.push(...dariQuotation(a.quotations), ...dariRiwayat(a.riwayat, a.quotations), ...dariQuotationLengkap(a.quotations), ...dariHargaMin(a.quotations)); } catch (e) { console.warn("Pemberitahuan quotation tidak termuat:", e); }
+    try { const pr = window.__ISL_PROFIL || {}; const a = await muatApp({ master: false, hanyaBaca: true, sales: adalahSales(pr), uid: pr.uid }); semua.push(...dariQuotation(a.quotations), ...dariRiwayat(a.riwayat, a.quotations), ...dariQuotationLengkap(a.quotations), ...dariHargaMin(a.quotations)); } catch (e) { console.warn("Pemberitahuan quotation tidak termuat:", e); }
     try { const m = await muatMaster(); semua.push(...dariTarif(m.tarif, m.vendor, m.lini)); semua.push(...(await dariMaster(m, await muatReferensi().catch(() => ({ profil: [] }))))); } catch (e) { console.warn("Pemberitahuan tarif tidak termuat:", e); }
     tulis(K_CACHE, { t: Date.now(), items: semua });
   }

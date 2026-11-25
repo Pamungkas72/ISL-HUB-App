@@ -69,6 +69,30 @@ exports.akunJugaSales = onCall(OPSI, async (req) => {
   await admin.auth().revokeRefreshTokens(uid); // menu dan hak baru berlaku di sesi berikutnya
   return { ok: true };
 });
+/** Atur izin per modul satu akun (pengguna.akses): Tidak 0, Lihat 1, Kelola 2, bebas dari peran dasar. Master Rate Kelola khusus Admin. Quotation atau Customer Kelola = boleh membuat miliknya sendiri (kode sales dan sales_publik dibuat). Hanya master atau admin. */
+exports.akunAturAkses = onCall(OPSI, async (req) => {
+  const c = await pemanggil(req); if (!c.kelola) throw new HttpsError("permission-denied", "Hanya master atau admin.");
+  const d = req.data || {}, uid = String(d.uid || ""), masuk = d.akses && typeof d.akses === "object" ? d.akses : null, F = admin.firestore.FieldValue;
+  if (!masuk) throw new HttpsError("invalid-argument", "Data akses tidak valid.");
+  const ref = db().doc(`pengguna/${uid}`), s = await ref.get(), peran = s.exists ? s.get("peran") : null;
+  const adalahMasterPemanggil = String(req.auth.token.email || "").toLowerCase() === EMAIL_MASTER;
+  if (!s.exists || peran === "master" || (peran === "admin" && !adalahMasterPemanggil)) throw new HttpsError("failed-precondition", "Akun tidak ada, atau akun admin (hanya master yang mengatur).");
+  const bersih = {};
+  for (const [k, v] of Object.entries(masuk)) {
+    if (k === "jabatan") { if (typeof v === "string" && v.length <= 40) bersih.jabatan = v; }
+    else if (k === "khusus") { if (Array.isArray(v)) bersih.khusus = v.filter((x) => /^[a-z]{1,8}$/.test(String(x))).slice(0, 20); }
+    else if (/^[a-z]{1,8}$/.test(k) && Number.isInteger(v) && v >= 0 && v <= 2) bersih[k] = k === "mr" && peran !== "admin" ? Math.min(v, 1) : v;
+  }
+  const dari = s.get("akses") || {};
+  await ref.update({ akses: bersih });
+  const buat = bersih.qt === 2 || bersih.cu === 2, email = s.get("email");
+  if (buat && peran !== "sales") { const kode = s.get("kodeSales") || await kodeSalesBerikut(); if (!s.get("kodeSales")) await ref.update({ kodeSales: kode }); await db().doc(`sales_publik/${uid}`).set({ uid, nama: s.get("nama") || email, kode, targetBulanan: null }); }
+  else if (!buat && peran !== "sales") await db().doc(`sales_publik/${uid}`).delete().catch(() => {});
+  await admin.auth().revokeRefreshTokens(uid); // menu dan hak baru berlaku di sesi berikutnya
+  await catat(c, uid, email, "ubah-akses", dari, bersih);
+  return { ok: true };
+});
+
 /** Lepas jabatan kepala di divisi non-Daily Job (dipakai saat akun pindah ke Daily Job). */
 async function lepasDivisi(uid, divisiId) {
   if (!divisiId) return;
