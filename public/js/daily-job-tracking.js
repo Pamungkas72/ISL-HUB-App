@@ -35,7 +35,7 @@ export function htmlFormTracking(d, c) {
   <div class="dj-lng" data-lng="2"><h4 class="dj-lng__h">2. Driver dan plat</h4>
     ${f("Nama driver", inp("djt-driver", r.driver))}${f("Telepon driver", inp("djt-telp", r.telp, "", 'inputmode="tel"'))}${f("Plat nomor", inp("djt-plat", r.plat, "mis. B 1234 XYZ", 'data-huruf="besar"'))}</div>
   <div class="dj-lng" data-lng="3"><h4 class="dj-lng__h">3. Biaya dan status</h4>
-    ${f("Cost (Rp) <small id=\"djt-costinfo\">uang jalan bila armada internal</small>", inp("djt-cost", rp(r.cost), "mis. 2.500.000", 'inputmode="numeric"'))}
+    ${f("Cost (Rp) <small id=\"djt-costinfo\">uang jalan bila armada internal</small>", inp("djt-cost", rp(r.cost), "mis. 2.500.000", 'inputmode="numeric" data-ribuan-live'))}
     <div class="mr-f dj-lebar"><span>POD</span>${chipPil("pod", st.pod, [["belum", "Belum kembali"], ["kembali", "Sudah kembali"]])}</div>
     ${f("Tanggal POD kembali", `<input type="date" id="djt-tglpod" value="${e(r.tglPod || "")}">`, "dj-tglpod" + (st.pod === "kembali" ? "" : " dj-sembunyi"))}
     ${f("Tanggal transfer vendor <small>Cash; kosongkan bila belum. Resi POD dan bukti bayar dicatat di detail</small>", `<input type="date" id="djt-tglbayar" value="${e(r.tglBayar || "")}">`)}
