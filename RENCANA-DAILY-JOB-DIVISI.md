@@ -119,3 +119,12 @@ Aturan murni di `daily-job-pod.js` (diuji `tests/unit/daily-job-pod.test.mjs`).
 
 ## Uang jalan dihapus dari Daily Job (24 Nov 2026)
 Uang jalan kini diurus di Master Rate. Dihapus: sub-tab Armada > Uang jalan (tarif tetap, persetujuan), blok uang jalan di formulir pengiriman (tarif tetap, kalkulator, slip, ajukan), dan `daily-job-uangjalan.js`. Cost pengiriman internal diisi manual di kolom Cost. Koleksi `dj_tarif` ikut dihapus dari `firestore.rules` dan tesnya; dokumen lama di koleksi itu tidak terbaca lagi (hapus lewat konsol Firebase bila perlu).
+
+## Formulir pengiriman: rancangan A, rute ketik bebas (25 Nov 2026, Trailer dan Distribusi)
+- **Urutan:** Customer, Unit (Internal atau Vendor, wajib dipilih; Vendor menampilkan nama vendor dan Cash/TOP), Jenis armada sejajar Tipe bak (Distribusi) atau Jenis shipment (Trailer), Rute, Jumlah, tanggal, PIC.
+- **Rute:** satu kolom, ketik bebas ("Jakarta → Surabaya", juga "A -> B", "A ke B", "A - B"; lebih dari dua lokasi = banyak drop atau banyak tujuan Domestik, maks. 4 tujuan Trailer). Saran dari riwayat pengiriman kelompok (`saranRute`): customer, jenis armada, dan unit yang sama tampil dulu ("Rute langganan"), lalu customer sama, lalu rute lain. Memilih saran mengisi titik (Distribusi), tipe bak, dan cost dari pengiriman terakhir. Rute yang tidak ada di riwayat = rute baru; Detail titik dibuka untuk melengkapi lokasi.
+- **Pengiriman berulang** = customer, jenis armada, jenis unit, dan rute sama (`berulang`); tanda ↻ di daftar dan detail (`rinci.berulang`).
+- **Jumlah pengiriman** (1 sampai 20) membuat beberapa pengiriman sekaligus dengan rute sama. No. DO, dokumen, dan kontainer boleh menyusul (wajib sebelum POD ditandai kembali).
+- **Mode ubah:** Distribusi memakai Detail titik (rute tidak diketik ulang); Trailer memakai kolom Rute.
+- Diperbaiki: blok Dokumen dan Kontainer (khusus Trailer) ikut tampil di formulir Distribusi (kelas `dj-sembunyi` kalah spesifisitas).
+- Dihapus: editor tujuan tambahan terpisah (diganti panah di kolom Rute); No. kontainer, ukuran, dan dokumen hanya untuk Trailer.

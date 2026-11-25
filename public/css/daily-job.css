@@ -334,3 +334,15 @@ body.jp { margin: 0; background: var(--bg); color: var(--text); font-family: var
 .dj-dok select:focus, .dj-dok input:focus, .dj-ttk input:focus, .dj-tl input:focus { outline: none; border-color: var(--mr-navy); box-shadow: 0 0 0 3px var(--mr-navy-soft); }
 
 .dj-tl { display: grid; grid-template-columns: 74px 1fr auto; gap: 6px; align-items: center; margin-bottom: 6px; } .dj-tl input { min-width: 0; }
+
+/* Formulir Tracking rancangan A: kelas sembunyi berlaku untuk semua blok (memperbaiki dokumen/kontainer Trailer yang tampil di Distribusi), unit, rute, saran, jumlah */
+.dj-form .dj-sembunyi { display: none !important; }
+.dj-g2t { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; } .dj-g2t[hidden] { display: none; }
+.dj-rute { position: relative; } .dj-rute input { width: 100%; }
+.dj-sug { position: absolute; left: 0; right: 0; top: 100%; z-index: 30; margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden; } .dj-sug[hidden] { display: none; }
+.dj-sug__i { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--border); background: none; color: var(--text); padding: 10px 12px; cursor: pointer; font: 13.5px var(--font-body); min-height: 44px; } .dj-sug__i:first-child { border-top: 0; } .dj-sug__i:hover, .dj-sug__i:focus-visible { background: var(--sky-soft); } .dj-sug__i b { display: block; font-weight: 600; } .dj-sug__i small { display: block; color: var(--muted); font-size: 12px; } .dj-sug__i--baru b { color: var(--dj-tx-aksen); }
+.dj-step { display: flex; align-items: stretch; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); overflow: hidden; height: 42px; } .dj-step input { flex: 1; min-width: 0; width: 100%; border: 0; background: transparent; color: var(--text); text-align: center; font: 700 16px var(--font-body); } .dj-step button { width: 46px; border: 0; border-radius: 0; background: var(--sky-soft); color: var(--head); font-size: 20px; cursor: pointer; }
+.dj-titikd { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; } .dj-titikd > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: var(--head); min-height: 32px; display: flex; align-items: center; gap: 6px; } .dj-titikd[open] > summary { margin-bottom: 8px; }
+.dj-bu { color: var(--success); font-weight: 700; }
+.dj-form [hidden] { display: none !important; } .dj-kecil.dj-lebar { display: block; grid-column: 1 / -1; }
+.dj-form .dj-seg .mr-chip { padding: 0 14px; min-height: 38px; }
