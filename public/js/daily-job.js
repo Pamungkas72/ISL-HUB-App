@@ -13,7 +13,7 @@ import { unggahBlob } from "./app-store.js";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import * as H from "./daily-job-hitung.js";
 import * as TR from "./daily-job-tracking-hitung.js";
-import { htmlFormTracking, htmlTujuanLain, chipPil, dataFormTracking, htmlTrailerDetail, htmlDistribusiDetail, htmlTitik, titikAwal, htmlDokRows, htmlSaranDok, ringkasDok } from "./daily-job-tracking.js";
+import { htmlFormTracking, chipPil, dataFormTracking, htmlTrailerDetail, htmlDistribusiDetail, htmlTitik, titikAwal, htmlDokRows, htmlSaranDok, ringkasDok } from "./daily-job-tracking.js";
 import * as TL from "./daily-job-trailer-hitung.js";
 import * as DZ from "./daily-job-distribusi-hitung.js";
 import { htmlArmada, htmlFormKendaraan, htmlFormTugas, judulTugas } from "./daily-job-armada.js";
@@ -189,7 +189,8 @@ const langkahTr = (j) => { const trl = TL.jenisTrailer(j); if (!trl && TR.rinci(
 const armadaTr = (j) => { const r = TR.rinci(j); return e((r.vendor && !/^internal$/i.test(r.vendor) ? r.vendor : "Internal") + (r.plat ? " · " + r.plat : "")); };
 const rpTr = (j) => (Number(TR.rinci(j).cost) ? "Rp " + Number(TR.rinci(j).cost).toLocaleString("id-ID") : "–");
 const tandaTr = (j, now) => { const a = profilAktif() === "tracking" && alasanTr(j, now); return a ? ` dj-u dj-u--${a.k}` : ""; };
-const rute = (j) => { const t = DZ.titikDari(j); if (t.length) { const p = t.find((x) => x.t === "P"), d = [...t].reverse().find((x) => x.t === "D"), lain = t.length - 2; return [p && (p.kota || p.nama), d && (d.kota || d.nama)].filter(Boolean).map(e).join(" → ") + (lain > 0 ? ` <small>+${lain} titik</small>` : ""); } const r = TR.rinci(j), lain = (r.tujuanLain || []).length; return [r.asal, r.tujuan].filter(Boolean).map(e).join(" → ") + (lain ? ` <small>+${lain} tujuan</small>` : "") || "–"; };
+const rute = (j) => (TR.rinci(j).berulang ? '<span class="dj-bu" title="Pengiriman berulang: customer, armada, unit, dan rute sama">↻</span> ' : "") + ruteDasar(j);
+const ruteDasar = (j) => { const t = DZ.titikDari(j); if (t.length) { const p = t.find((x) => x.t === "P"), d = [...t].reverse().find((x) => x.t === "D"), lain = t.length - 2; return [p && (p.kota || p.nama), d && (d.kota || d.nama)].filter(Boolean).map(e).join(" → ") + (lain > 0 ? ` <small>+${lain} titik</small>` : ""); } const r = TR.rinci(j), lain = (r.tujuanLain || []).length; return [r.asal, r.tujuan].filter(Boolean).map(e).join(" → ") + (lain ? ` <small>+${lain} tujuan</small>` : "") || "–"; };
 /** Isi tengah kartu HP menurut profil kelompok. */
 function isiKartu(j, now) {
   if (profilAktif() === "tracking") { const a = alasanTr(j, now), r = TR.rinci(j); return `<div class="dj-job__isi"><span class="dj-job__a">${chipJenis(j)}<b>${e(j.customer || j.judul)}</b></span><small>${rute(j)}${r.noDo ? " · " + e(r.noDo) : ""}</small><span class="dj-job__st">${langkahTr(j)}</span><span class="dj-job__pic">${a ? chip(a.k, e(a.t)) : ""}<small>${armadaTr(j)}</small>${infoJob(j)}</span></div>`; }
@@ -650,6 +651,7 @@ const htmlLainnyaForm = (d, f) => `
       ${f("Prioritas", `<select id="djf-prio">${opsi(Object.entries(H.PRIORITAS), d.prioritas)}</select>`)}${f("Bobot kerja", `<select id="djf-bobot">${opsi(Object.entries(H.BOBOT).map(([k, t]) => [k, `${t} (${k})`]), d.bobot)}</select>`)}</div></details>`;
 const bagStatus = (d, f) => f("Status", `<select id="djf-status">${opsi([["proses", "Dikerjakan"], ["tunggu", "Tertunda"], ["selesai", "Selesai"], ["batal", "Batal"]], d.status === "baru" ? "proses" : d.status)}</select>`);
 const bagTunda = (d, f) => f("Tertunda karena apa? *", `<input id="djf-tunda" maxlength="200" value="${e(d.alasanTunda || "")}">`, "dj-lebar dj-tunda").replace('class="mr-f', d.status === "tunggu" ? 'class="mr-f' : 'hidden class="mr-f');
+const daftarCustomer = () => [...new Set(S.jobs.map((j) => j.customer).filter(Boolean))].sort((a, b) => a.localeCompare(b, "id"));
 const daftarVendor = () => [...new Set(S.jobs.map((j) => TR.rinci(j).vendor).filter(Boolean))].sort();
 
 function formJob(j) {
@@ -659,11 +661,11 @@ function formJob(j) {
   const tr = profilKel(d.kelompokId) === "tracking", st = dataFormTracking(d);
   const f = (lab, isi, kelas = "") => `<label class="mr-f ${kelas}"><span>${lab}</span>${isi}</label>`;
   bukaLayer(`<header class="mr-panel__kepala"><div><h2>${tr ? (baru ? "Catat pengiriman" : "Ubah pengiriman") : baru ? "Catat job baru" : "Ubah job"}</h2><p class="mr-sub">${baru ? "Job yang masuk hari ini, baru dikerjakan, atau masih pending." : e(namaKel(d.kelompokId))}</p></div><button class="mr-ikonbtn" data-aksi="tutup-layer" aria-label="Tutup">${ikon("tutup")}</button></header>
-  <div class="mr-panel__isi"><div class="mr-form dj-form${tr ? " dj-form--tr dj-huruf" : ""}" id="dj-form" data-id="${e(d.id || "")}" data-profil="${tr ? "tracking" : "marketing"}" data-sub="${st.sub}" data-bayar="${st.bayar}" data-pod="${st.pod}" data-tagihan="${st.tagihan}">
-    ${tr ? htmlFormTracking(d, { picList: picForm(d.kelompokId), vendorList: daftarVendor(), targetLabel: `Target tiba *${d.id && !bolehUbahTarget(d) ? ` <small>(ditetapkan ${LABEL_TINGKAT[d.targetTingkat]})</small>` : ""} <small id="djf-tgt-info"></small>`, targetKunci: !!d.id && !bolehUbahTarget(d), status: bagStatus(d, f), tunda: bagTunda(d, f), berkas: htmlBerkasForm(d), lain: htmlLainnyaForm(d, f) }) : isiMarketing(d, f, baru) + htmlBerkasForm(d) + htmlLainnyaForm(d, f)}
+  <div class="mr-panel__isi"><div class="mr-form dj-form${tr ? " dj-form--tr dj-huruf" : ""}" id="dj-form" data-id="${e(d.id || "")}" data-profil="${tr ? "tracking" : "marketing"}" data-sub="${st.sub}" data-unit="${st.unit}" data-bayar="${st.bayar}" data-pod="${st.pod}" data-tagihan="${st.tagihan}">
+    ${tr ? htmlFormTracking(d, { picList: picForm(d.kelompokId), vendorList: daftarVendor(), custList: daftarCustomer(), targetLabel: `Target tiba *${d.id && !bolehUbahTarget(d) ? ` <small>(ditetapkan ${LABEL_TINGKAT[d.targetTingkat]})</small>` : ""} <small id="djf-tgt-info"></small>`, targetKunci: !!d.id && !bolehUbahTarget(d), status: bagStatus(d, f), tunda: bagTunda(d, f), berkas: htmlBerkasForm(d), lain: htmlLainnyaForm(d, f) }) : isiMarketing(d, f, baru) + htmlBerkasForm(d) + htmlLainnyaForm(d, f)}
   </div></div>
   <footer class="mr-panel__kaki dj-kaki">${baru ? "" : `<button class="mr-btn dj-ib dj-bhy" data-dj="hapus" data-id="${e(d.id)}" title="Hapus job" aria-label="Hapus job">${ikon("tong", 16)}</button>`}<span class="mr-ruang"></span>${tr ? `<button type="button" class="mr-btn dj-t-prev" data-dj="t-prev" hidden>‹ Kembali</button><button type="button" class="mr-btn mr-btn--utama dj-t-next" data-dj="t-next">Lanjut ›</button>` : ""}<button class="mr-btn dj-t-batal" data-aksi="tutup-layer">Batal</button><button class="mr-btn mr-btn--utama" data-dj="simpan" id="dj-simpan">Simpan</button></footer>`);
-  $("#dj-form")._d = d; if (tr) { langkahTracking(1); polaTitik(); $("#dj-form").addEventListener("change", (ev) => { if (ev.target.id === "djf-kat") { const m = $("#djt-multi"); if (m) m.hidden = ev.target.value !== "Trailer Domestik"; const w = $("#djt-dok-saran"); if (w) w.innerHTML = htmlSaranDok(ev.target.value); } }); }
+  $("#dj-form")._d = d; if (tr) { langkahTracking(1); polaTitik(); pasangRute(); $("#dj-form").addEventListener("change", (ev) => { if (ev.target.id === "djf-kat") { const w = $("#djt-dok-saran"); if (w) w.innerHTML = htmlSaranDok(ev.target.value); } }); }
   let manual = false; // target otomatis dari kategori hanya untuk job baru dan selama target belum diketik sendiri
   const isiTarget = () => { if (!baru || manual) return; const kid = S.kelola ? $("#djf-kel").value : S.kelompokSaya, kat = $("#djf-kat").value, hr = +((petaTarget(kid) || {})[kat]) || 0, t = H.targetKategori(petaTarget(kid), kat, ($("#djt-kirim") && $("#djt-kirim").value) || $("#djf-masuk").value || H.hariIni()), i = $("#djf-tgt-info");
     if (t) $("#djf-target").value = t; i.textContent = t ? `otomatis ${hr} hari dari kategori, bisa diubah` : ""; };
@@ -683,6 +685,7 @@ async function ubahTahap(a, id, i) {
   else if (a === "t-tahap") { if (!TL.tahapBerikut(j)) return; r = TL.tandaiTahap(j, sekarang); }
   else if (a === "t-undo") { if (!(await konfirmasi("Batalkan tahap terakhir?", "Tahap terakhir yang selesai dikembalikan ke belum.", "Batalkan tahap"))) return; r = dz ? DZ.batalkanBerikut(j) : TL.batalkanTahap(j); }
   else r = { ...r, dok: { ...(r.dok || {}), [i]: !(r.dok && r.dok[i]) } };
+  if (r.pod === "kembali" && TR.rinci(j).pod !== "kembali" && !String(r.noDo || "").trim()) return toast("Isi No. DO / surat jalan dulu (ikon pensil) sebelum POD ditandai kembali.", "bahaya");
   return simpanRinciTr(j, r);
 }
 /** Simpan rinci baru; status ikut Selesai bila POD kembali dan pembayaran beres (aturan di daily-job-pod.js), atau kembali Proses bila tidak lagi. */
@@ -758,18 +761,58 @@ function ubahDok(a, t) {
   let l = bacaDok(); if (a === "t-dok-tambah") l.push({ jenis: t.dataset.v || "Surat jalan", no: "" }); else l.splice(+t.dataset.i, 1); if (!l.length) l = [{ jenis: "Surat jalan", no: "" }];
   $("#djt-dok").innerHTML = htmlDokRows(l); const k = $("#djt-dok").querySelectorAll(".djt-dn"); if (a === "t-dok-tambah") k[k.length - 1].focus();
 }
-/** Tujuan tambahan Trailer Domestik (multi drop): baca, tambah (maks. 4 tujuan), hapus; gambar ulang tanpa kehilangan isian. */
-const bacaTujuanLain = () => [...document.querySelectorAll("#djt-tujlain .djt-tl")].map((x) => awalKalimat(x.value.trim()));
-function ubahTujuanLain(a, t) {
-  const l = bacaTujuanLain(); if (a === "t-tuj-tambah") { if (l.length >= TL.MAKS_TUJUAN - 1) return; l.push(""); } else l.splice(+t.dataset.i, 1);
-  $("#djt-tujlain").innerHTML = htmlTujuanLain(l); $("#djt-tujtb").hidden = l.length >= TL.MAKS_TUJUAN - 1; if (a === "t-tuj-tambah") $("#djt-tujlain").querySelector(".dj-tl:last-child .djt-tl").focus();
+/* ---------- Rute: ketik bebas, saran dari riwayat (customer, armada, unit), jumlah pengiriman ---------- */
+/** Titik editor dari lokasi berurutan: lokasi pertama pick up, sisanya drop. */
+function isiTitik(lok) { $("#djt-titik").innerHTML = htmlTitik(lok.map((x, i) => ({ t: i ? "D" : "P", nama: x.nama || "", kota: x.kota || "", selesai: null }))); polaTitik(); }
+/** Titik editor dari pengiriman contoh (riwayat): nama lokasi dan kota disalin, status selesai dikosongkan. */
+function titikDariContoh(c) { const t = (TR.rinci(c).titik || []).filter((x) => x && (x.t === "P" || x.t === "D")); if (!t.length) return false; $("#djt-titik").innerHTML = htmlTitik(t.map((x) => ({ t: x.t, nama: x.nama || "", kota: x.kota || "", selesai: null }))); polaTitik(); return true; }
+const riwayatForm = () => { const form = $("#dj-form"); return S.jobs.filter((j) => j.kelompokId === form._d.kelompokId && j.id !== form.dataset.id); };
+const konteksRute = () => { const form = $("#dj-form"); return { cust: ($("#djt-cust") || {}).value, kat: ($("#djf-kat") || {}).value, unit: form.dataset.unit === "vendor" ? "vendor" : "internal", sub: form.dataset.sub }; };
+/** Teks rute yang diketik menjadi titik: rute yang sama persis dengan riwayat memakai lokasi riwayat, selain itu kota dari teks. Hanya bila editor titik belum diubah manual dan ada minimal dua lokasi. */
+function sinkronRute() {
+  const form = $("#dj-form"), box = $("#djt-rute"); if (!form || !box || form._titikManual || form.dataset.id || form.dataset.sub === "besar") return;
+  const seg = TR.bagiRute(box.value).map(awalKalimat); if (seg.length < 2) return;
+  const kunci = seg.join(">").toLowerCase(), cocok = TR.saranRute(riwayatForm(), { ...konteksRute(), cari: "" }, 200).find((o) => TR.bagiRute(o.teks).join(">").toLowerCase() === kunci);
+  if (!(cocok && titikDariContoh(cocok.contoh))) isiTitik(seg.map((k) => ({ kota: k })));
 }
+function pasangRute() {
+  const form = $("#dj-form"), box = $("#djt-rute"), sug = $("#djt-sug"); if (!form || !box) return;
+  const ket = (o) => (o.nCocok ? `Rute langganan · ${o.nCocok}× untuk customer ini` : o.nCust ? `Customer ini ${o.nCust}×, armada atau unit berbeda` : `${o.n}× di kelompok ini`);
+  const tampil = () => {
+    const l = TR.saranRute(riwayatForm(), { ...konteksRute(), cari: box.value }), q = box.value.trim(), ada = l.some((o) => o.teks.toLowerCase() === q.toLowerCase()); form._saran = l;
+    sug.innerHTML = l.map((o, i) => `<button type="button" role="option" class="dj-sug__i" data-dj="rute-pilih" data-i="${i}"><span><b>${e(o.teks)}</b><small>${e(ket(o))}</small></span>${o.nCocok ? '<span class="dj-chip dj-chip--ok">Berulang</span>' : ""}</button>`).join("") + (q && !ada ? `<button type="button" role="option" class="dj-sug__i dj-sug__i--baru" data-dj="rute-baru"><span><b>Rute baru: "${e(q)}"</b><small>Lengkapi lokasi di Detail titik</small></span></button>` : "");
+    sug.hidden = !sug.innerHTML;
+  };
+  form._segarSaran = () => { if (!sug.hidden) tampil(); };
+  const tutup = () => { sug.hidden = true; };
+  box.addEventListener("focus", tampil); box.addEventListener("input", () => { form._ruteDipilih = null; tampil(); });
+  box.addEventListener("blur", () => setTimeout(() => { tutup(); sinkronRute(); }, 180));
+  sug.addEventListener("pointerdown", (ev) => ev.preventDefault()); // klik saran tidak menutup lewat blur
+  form.addEventListener("input", (ev) => { if (ev.target.closest && ev.target.closest("#djt-titik")) form._titikManual = true; if (ev.target.id === "djt-jumlah") jmlUi(); });
+  form.addEventListener("change", (ev) => { if (ev.target.id === "djt-cust" || ev.target.id === "djf-kat") form._segarSaran(); });
+}
+function pilihRute(i) {
+  const form = $("#dj-form"), o = form && form._saran && form._saran[i], box = $("#djt-rute"); if (!o) return;
+  box.value = o.teks; $("#djt-sug").hidden = true; form._ruteDipilih = o; const c = o.contoh, r = TR.rinci(c), info = $("#djt-ruteinfo");
+  if (form.dataset.sub !== "besar") { if (!form._titikManual) titikDariContoh(c); const d = $("#djt-titikd"); if (d) d.open = false; }
+  const bak = $("#djt-bak"); if (bak && o.nCocok && !bak.value && r.bak) bak.value = r.bak;
+  const cost = $("#djt-cost"); if (cost && o.nCocok && !cost.value && Number(r.cost)) { cost.value = Number(r.cost).toLocaleString("id-ID"); }
+  if (info) info.textContent = o.nCocok ? `Rute langganan: lokasi${Number(r.cost) ? ", cost" : ""} diisi dari pengiriman terakhir. Ubah bila beda.` : "Lokasi diisi dari pengiriman terakhir rute ini. Ubah bila beda.";
+}
+function ruteBaru() {
+  const form = $("#dj-form"); if (!form) return; $("#djt-sug").hidden = true; sinkronRute(); const d = $("#djt-titikd"); if (d && form.dataset.sub !== "besar") { d.open = true; d.scrollIntoView({ block: "nearest" }); }
+}
+function jmlUi() {
+  const form = $("#dj-form"), n = +($("#djt-jumlah") || {}).value || 1, banyak = n > 1;
+  const i = $("#djt-jmlinfo"); if (i) i.hidden = !banyak; ["djt-do", "djt-kont"].forEach((id) => { const x = $("#" + id); if (x) { x.disabled = banyak; if (banyak) x.value = ""; } }); document.querySelectorAll("#djt-dok .djt-dn").forEach((x) => { x.disabled = banyak; if (banyak) x.value = ""; });
+}
+function ubahJumlah(d) { const i = $("#djt-jumlah"); if (!i) return; i.value = Math.min(20, Math.max(1, (+i.value || 1) + d)); jmlUi(); }
 /** Editor titik pick up/drop (Distribusi): baca isian ke form._titik, tambah atau hapus, lalu gambar ulang tanpa kehilangan isian. */
 function bacaTitik() { return [...document.querySelectorAll("#djt-titik .dj-ttk")].map((x) => ({ t: x.dataset.t, nama: awalKalimat(x.querySelector(".djt-tn").value.trim()), kota: awalKalimat(x.querySelector(".djt-tk").value.trim()), selesai: x.dataset.selesai || null })); }
 function ubahTitik(a, t) {
   let l = bacaTitik();
   if (a === "t-tambah") l.push({ t: t.dataset.v, nama: "", kota: "", selesai: null }); else l.splice(+t.dataset.i, 1);
-  l.sort((x, y) => (x.t === y.t ? 0 : x.t === "P" ? -1 : 1)); $("#djt-titik").innerHTML = htmlTitik(l); polaTitik();
+  l.sort((x, y) => (x.t === y.t ? 0 : x.t === "P" ? -1 : 1)); $("#djt-titik").innerHTML = htmlTitik(l); polaTitik(); $("#dj-form")._titikManual = true;
 }
 const polaTitik = () => { const l = bacaTitik(), p = l.filter((x) => x.t === "P").length, d = l.length - p, el = $("#djt-pola"); if (el) el.textContent = `· ${p} pick up → ${d} drop`; };
 /** HP: formulir Tracking tiga langkah; desktop: semua bagian terlihat. */
@@ -784,24 +827,29 @@ function langkahTracking(n) {
 function aturChipTracking(t) {
   const form = $("#dj-form"), k = t.dataset.k, v = t.dataset.v; if (!form) return; form.dataset[k] = v;
   t.closest(".mr-seg").querySelectorAll(".mr-chip").forEach((c) => c.classList.toggle("is-aktif", c === t));
-  if (k === "sub") { document.querySelectorAll(".dj-besar").forEach((x) => x.classList.toggle("dj-sembunyi", v !== "besar")); document.querySelectorAll(".dj-kecil").forEach((x) => x.classList.toggle("dj-sembunyi", v === "besar")); const lab = $("#djt-katlab"); if (lab) lab.textContent = v === "besar" ? "Jenis shipment *" : "Jenis armada *"; const kat = $("#djf-kat"); kat.innerHTML = TR.SUBDIVISI[v].kategori.map((x) => `<option>${e(x)}</option>`).join(""); kat.dispatchEvent(new Event("change")); }
+  if (k === "sub") { document.querySelectorAll(".dj-besar").forEach((x) => x.classList.toggle("dj-sembunyi", v !== "besar")); document.querySelectorAll(".dj-kecil").forEach((x) => x.classList.toggle("dj-sembunyi", v === "besar")); const lab = $("#djt-katlab"); if (lab) lab.textContent = v === "besar" ? "Jenis shipment *" : "Jenis armada *"; const kat = $("#djf-kat"); kat.innerHTML = TR.SUBDIVISI[v].kategori.map((x) => `<option>${e(x)}</option>`).join(""); kat.dispatchEvent(new Event("change")); const rb = $("#djt-rutebox"); if (rb) rb.classList.toggle("dj-sembunyi", !!form.dataset.id && v !== "besar"); const kb = $("#djt-rute"); if (kb) kb.placeholder = "mis. Jakarta → Surabaya"; form._segarSaran && form._segarSaran(); }
+  if (k === "unit") { const vb = $("#djt-vbox"); if (vb) vb.hidden = v !== "vendor"; const ui = $("#djt-unitinfo"); if (ui) ui.textContent = v === "internal" ? "Uang jalan dibayar sebelum berangkat, POD kembali otomatis." : ""; form._segarSaran && form._segarSaran(); }
   if (k === "pod") { const w = $(".dj-tglpod"); if (w) w.classList.toggle("dj-sembunyi", v !== "kembali"); if (v === "kembali" && !$("#djt-tglpod").value) $("#djt-tglpod").value = H.hariIni(); }
 }
 /** Rinci khusus Distribusi: titik, jenis armada, tipe bak; asal dan tujuan diturunkan dari titik pertama dan terakhir agar daftar dan laporan lama tetap jalan. */
 const titikRinci = (v) => { const t = bacaTitik(), p = t.find((x) => x.t === "P"), d = [...t].reverse().find((x) => x.t === "D"), arm = v("djf-kat"); return { jenis: "distribusi", titik: t, jenisArmada: arm === "Grand Max Blind Van" ? "Blind Van" : arm, bak: v("djt-bak"), asalTitik: p && (p.nama || p.kota), tujuanTitik: d && (d.nama || d.kota) }; };
-const rinciDariForm = (form, v) => ({ ...(form._d && form._d.rinci), ...(form.dataset.sub === "besar" ? { jenis: TR.jenisDariKategori(v("djf-kat")) || undefined, kontainer: v("djt-kont").trim().toUpperCase(), ukuran: v("djt-ukuran"), tujuanLain: v("djf-kat") === "Trailer Domestik" ? bacaTujuanLain().filter(Boolean).slice(0, TL.MAKS_TUJUAN - 1) : [] } : titikRinci(v)), tglBayar: v("djt-tglbayar") || null, sub: form.dataset.sub || "", asal: v("djt-asal").trim(), tujuan: v("djt-tujuan").trim(), noDo: v("djt-do").trim(), tglKirim: v("djt-kirim") || null, vendor: v("djt-vendor").trim(), driver: v("djt-driver").trim(), telp: v("djt-telp").trim(), plat: v("djt-plat").trim().toUpperCase(), bayar: form.dataset.bayar || "cash", cost: Number(v("djt-cost").replace(/\D/g, "")) || 0, pod: form.dataset.pod || "belum", tglPod: form.dataset.pod === "kembali" ? v("djt-tglpod") || H.hariIni() : null, tagihan: form.dataset.tagihan || "belum" });
+/** Trailer: asal, tujuan, dan tujuan lain (hanya Domestik, maks. 4 tujuan) dari teks rute "Asal → Tujuan → ...". */
+const ruteTrailer = (v) => { const l = TR.bagiRute(v("djt-rute")).map(awalKalimat); return { asal: l[0] || "", tujuan: l[1] || "", tujuanLain: v("djf-kat") === "Trailer Domestik" ? l.slice(2, TL.MAKS_TUJUAN) : [] }; };
+const rinciDariForm = (form, v) => ({ ...(form._d && form._d.rinci), ...(form.dataset.sub === "besar" ? { jenis: TR.jenisDariKategori(v("djf-kat")) || undefined, kontainer: v("djt-kont").trim().toUpperCase(), ukuran: v("djt-ukuran"), ...ruteTrailer(v) } : titikRinci(v)), tglBayar: v("djt-tglbayar") || null, sub: form.dataset.sub || "", noDo: v("djt-do").trim(), tglKirim: v("djt-kirim") || null, vendor: form.dataset.unit === "vendor" ? v("djt-vendor").trim() : "", driver: v("djt-driver").trim(), telp: v("djt-telp").trim(), plat: v("djt-plat").trim().toUpperCase(), bayar: form.dataset.bayar || "cash", cost: Number(v("djt-cost").replace(/\D/g, "")) || 0, pod: form.dataset.pod || "belum", tglPod: form.dataset.pod === "kembali" ? v("djt-tglpod") || H.hariIni() : null, tagihan: form.dataset.tagihan || "belum" });
 const tampilBaru = () => { const w = $("#djf-file"); w.querySelectorAll(".dj-fl--baru").forEach((x) => x.remove()); berkasBaru.forEach((b, i) => w.insertAdjacentHTML("beforeend", `<div class="dj-fl dj-fl--baru"><span>${ikon("upload", 13)} ${e(b.name)} <small>(baru)</small></span><button type="button" class="mr-ikonbtn" data-dj="baru-lepas" data-i="${i}" aria-label="Batalkan">${ikon("tutup", 14)}</button></div>`)); };
 
 async function simpanJob() {
   const form = $("#dj-form"), d = form._d, v0 = (id) => ($("#" + id) || {}).value || "";
   /* penulisan seragam: awal kalimat kapital pada teks, kode (kontainer, plat, no. DO) semua kapital */
   const v = (id) => { const x = v0(id); return /^(djt-cust|djt-vendor|djt-driver|djt-asal|djt-tujuan|djf-desk|djf-judul)$/.test(id) ? awalKalimat(x) : /^(djt-kont|djt-plat|djt-do)$/.test(id) ? kapital(x) : x; };
-  const tr = form.dataset.profil === "tracking", rinci = tr ? rinciDariForm(form, v) : null;
+  if (form.dataset.profil === "tracking" && form.dataset.sub !== "besar") sinkronRute(); // teks rute yang diketik menjadi titik bila editor titik belum diubah manual
+  const tr = form.dataset.profil === "tracking", rinci = tr ? rinciDariForm(form, v) : null, jumlah = tr && !d.id ? Math.min(20, Math.max(1, +v("djt-jumlah") || 1)) : 1;
   if (tr && form.dataset.sub === "besar") { const dn = bacaDok().filter((x) => x.no); rinci.dokNomor = dn; rinci.noDo = ringkasDok(dn); }
   if (tr && rinci.jenis === "distribusi") { rinci.asal = rinci.asalTitik || ""; rinci.tujuan = rinci.tujuanTitik || ""; delete rinci.asalTitik; delete rinci.tujuanTitik; }
-  const judul = tr ? TR.judulTracking(rinci.noDo, v("djt-cust")) : v("djf-judul").trim(), target = v("djf-target"), kel = S.kelola ? v("djf-kel") || d.kelompokId : S.kelompokSaya;
+  const judul = tr ? TR.judulTracking(rinci.noDo || [rinci.asal, rinci.tujuan].filter(Boolean).join(" → "), v("djt-cust")) : v("djf-judul").trim(), target = v("djf-target"), kel = S.kelola ? v("djf-kel") || d.kelompokId : S.kelompokSaya;
   if (tr && rinci.jenis) { const t = rinci.tahap || {}; if ((rinci.vendor || rinci.plat || rinci.driver) && !t.siap) rinci.tahap = { ...t, siap: new Date(Date.now() + 7 * 36e5).toISOString().slice(0, 16) }; } // armada terisi = Siap
-  if (tr) { const kurang = [[1, !v("djt-cust").trim(), "customer"], [1, !rinci.asal, "asal"], [1, !rinci.tujuan, "tujuan"], [1, !rinci.noDo, form.dataset.sub === "besar" ? "minimal satu nomor dokumen (SPPB, BL, surat jalan, dll.)" : "no. DO / surat jalan"]].find((x) => x[1]); if (kurang) { langkahTracking(kurang[0]); return toast("Isi " + kurang[2] + ".", "bahaya"); } }
+  if (tr && jumlah > 1) { rinci.noDo = ""; rinci.dokNomor = []; rinci.kontainer = ""; } // beberapa pengiriman sekaligus: DO, dokumen, kontainer diisi menyusul di tiap pengiriman
+  if (tr) { const kurang = [[1, !v("djt-cust").trim(), "customer"], [1, !form.dataset.unit, "unit: pilih Internal atau Vendor"], [1, form.dataset.unit === "vendor" && !rinci.vendor, "nama vendor"], [1, !rinci.asal || !rinci.tujuan, "rute (Asal → Tujuan)"]].find((x) => x[1]); if (kurang) { langkahTracking(1); return toast("Isi " + kurang[2] + ".", "bahaya"); } }
   const baruKat = !tr && v("djf-kat") === "__baru", kat = baruKat ? H.rapikanKategori(v("djf-kat-baru"), katDari(kel)) : v("djf-kat");
   if (!judul) return toast("Isi judul job.", "bahaya");
   if (!kat) return toast("Isi nama kategori baru.", "bahaya");
@@ -821,17 +869,19 @@ async function simpanJob() {
     for (const b of berkasBaru) { const path = `dailyjob/${kel}/${id}/${Date.now()}-${b.name.replace(/[^\w.\-]+/g, "_")}`; file.push({ nama: b.name, path, url: await unggahBlob(path, b, b.type || "application/octet-stream"), ukuran: b.size, tipe: b.type || "", oleh: S.u.nama || S.u.email, tgl: H.hariIni() }); }
     const berubahTarget = !!d.id && !!d.tglTarget && d.tglTarget !== target, alasan = v("djf-alasan").trim();
     if (berubahTarget && !alasan && !adalahKepala(d)) { tombol.disabled = false; tombol.textContent = "Simpan"; return toast("Isi alasan perubahan target.", "bahaya"); }
+    if (tr && rinci.jenis) rinci.berulang = TR.berulang(S.jobs, { id, customer: v("djt-cust").trim(), kategori: kat, rinci }); // customer, armada, unit, dan rute sama dengan pengiriman lain
     const status = tr && (rinci.jenis ? TL.selesaiOtomatis({ rinci }) : TR.selesaiOtomatis(rinci)) && v("djf-status") !== "batal" ? "selesai" : v("djf-status"), data = {
       judul, kategori: kat, kategoriAjuan: ajuanId, customer: tr ? v("djt-cust").trim() : v("djf-cust").trim(), ...(tr ? { rinci } : {}), pic: rp.pic, kelompokId: kel, deskripsi: v("djf-desk").trim(), tglMasuk: v("djf-masuk") || H.hariIni(), tglMulai: v("djf-mulai") || null, tglTarget: target,
       status, alasanTunda: status === "tunggu" ? v("djf-tunda").trim() : null, ...(!d.id || target !== d.tglTarget ? { targetTingkat: tingkatSaya(kel) } : {}), tglSelesai: status === "selesai" ? v("djf-selesai") || (tr && rinci.tglPod) || H.hariIni() : null, prioritas: v("djf-prio"), bobot: +v("djf-bobot") || 2, file, tautan: d.tautan, catatan: d.catatan || [],
       dibuatOleh: d.dibuatOleh || S.u.uid, dibuatNama: d.dibuatNama || S.u.nama || S.u.email, dibuatPada: d.dibuatPada || H.hariIni(), diubah: serverTimestamp(),
     };
     if (form.dataset.id) await updateDoc(doc(db, "dj_job", id), data); else await setDoc(doc(db, "dj_job", id), data); // ubah tidak boleh membuat dokumen baru
+    for (let n = 1; n < jumlah; n++) { const nid = uid(), x = { ...data, rinci: { ...rinci } }; await setDoc(doc(db, "dj_job", nid), x); S.jobs.push({ id: nid, ...x, diubah: null }); } // pengiriman tambahan dengan rute sama
     if (berubahTarget) { const x = { uid: S.u.uid, oleh: S.u.nama || S.u.email, peran: adalahKepala(d) ? "kepala" : "anggota", jenis: "target", dari: d.tglTarget, ke: target, alasan, waktu: Date.now() }; await setDoc(doc(db, "dj_job", id, "aktivitas", uid()), x).catch((err) => console.warn(err)); if (S.detail && S.detail.id === id) S.detail.aktivitas.push(x); }
     const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...(ada >= 0 ? S.jobs[ada] : {}), id, ...data, diubah: null };
     if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru); segarkanTautan(baru);
     if (!d.id) { S.hal = 0; S.status = "aktif"; S.antre = "aktif"; } // job baru langsung terlihat di paling atas
-    tutupLayer(); render(); toast("Job tersimpan.");
+    tutupLayer(); render(); toast(jumlah > 1 ? `${jumlah} pengiriman tersimpan.` : "Job tersimpan.");
   } catch (err) { console.error(err); toast("Job belum tersimpan: " + pesanUnggah(err), "bahaya"); tombol.disabled = false; tombol.textContent = "Simpan"; }
 }
 
@@ -1004,7 +1054,9 @@ document.addEventListener("click", async (ev) => {
   if (a === "t-resi" || a === "t-bayar") return panelPod(a === "t-resi" ? "resi" : "bayar", id);
   if (a === "pod-simpan") return simpanPod(v, id);
   if (a === "t-tambah" || a === "t-hapus") return ubahTitik(a, t);
-  if (a === "t-tuj-tambah" || a === "t-tuj-hapus") return ubahTujuanLain(a, t);
+  if (a === "t-jml") return ubahJumlah(+v);
+  if (a === "rute-pilih") return pilihRute(+t.dataset.i);
+  if (a === "rute-baru") return ruteBaru();
   if (a === "t-next") { const f = $("#dj-form"); return langkahTracking(Math.min(3, (f._lg || 1) + 1)); }
   if (a === "t-prev") { const f = $("#dj-form"); return langkahTracking(Math.max(1, (f._lg || 1) - 1)); }
   if (a === "f-sub") { S.sub = v; S.fKat = ""; S.hal = 0; render(); return panelFilter(); }
