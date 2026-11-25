@@ -179,12 +179,12 @@ const kelasSt = (j, now) => (j.status === "selesai" ? "ok" : j.status === "batal
 const ikonSt = (j, now, kecil) => { const k = kelasSt(j, now); return `<span class="dj-ik dj-ik--${k}${kecil ? " dj-ik--k" : ""}" aria-hidden="true">${IK_ST[k]}</span>`; };
 const chip = (k, t) => `<span class="dj-chip dj-chip--${k}">${t}</span>`;
 /* Antrean Tracking (desain A, 24 Nov 2026): menggantikan status Aktif/Tertunda/Selesai. Fase turun dari tahap pengiriman. */
-const ANTRE = [["aktif", "Semua aktif"], ["tindakan", "Perlu tindakan"], ["belum", "Belum jalan"], ["jalan", "Di lapangan"], ["pod", "Tunggu POD"], ["bayar", "Perlu dibayar"], ["selesai", "Selesai"]];
+const ANTRE = [["aktif", "Semua aktif"], ["tindakan", "Perlu tindakan"], ["pod", "Tunggu POD"], ["selesai", "Selesai"]]; // ringkas (25 Nov 2026): tanpa Belum jalan, Di lapangan, Perlu dibayar
 /** Fase satu pengiriman (belum, jalan, pod, bayar, selesai, batal); aturannya di daily-job-pod.js. Job lama tanpa tahap dianggap jalan. */
 const faseTr = (j) => (j.status === "batal" || j.status === "selesai" ? j.status : TL.jenisTrailer(j) ? TL.fase(j) : TR.rinci(j).jenis === "distribusi" ? DZ.fase(j) : "jalan");
 /** Alasan perlu tindakan (pertama yang cocok): { id, t, k } atau null. */
 const alasanTr = (j, now) => { const x = TL.TINDAKAN.find(([id]) => cocokTind(j, id, now)); return x ? { id: x[0], t: x[1], k: x[2] } : null; };
-const cocokAntre = (j, k, now) => { const f = faseTr(j), akt = H.aktif(j) && f !== "selesai"; return k === "aktif" ? akt : k === "tindakan" ? akt && !!alasanTr(j, now) : k === "selesai" ? !akt : akt && f === k; };
+const cocokAntre = (j, k, now) => { const f = faseTr(j), akt = H.aktif(j) && f !== "selesai"; return k === "aktif" ? akt : k === "tindakan" ? akt && !!alasanTr(j, now) : k === "selesai" ? !akt : akt && (k === "pod" ? f === "pod" || f === "bayar" : f === k); }; // Tunggu POD juga memuat yang menunggu bayar (POD belum kembali)
 const chipJenis = (j) => { const k = TL.jenisTrailer(j) || (TR.rinci(j).jenis === "distribusi" ? "distribusi" : ""); return `<span class="dj-jn dj-jn--${k || "lain"}">${e(k === "distribusi" ? "Distribusi" : k ? TL.JENIS[k].nama : j.kategori || "–")}</span>`; };
 const armadaTr = (j) => { const r = TR.rinci(j); return e((r.vendor && !/^internal$/i.test(r.vendor) ? r.vendor : "Internal") + (r.plat ? " · " + r.plat : "")); };
 const rpTr = (j) => (Number(TR.rinci(j).cost) ? "Rp " + Number(TR.rinci(j).cost).toLocaleString("id-ID") : "–");
