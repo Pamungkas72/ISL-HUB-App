@@ -8,6 +8,7 @@ const L = require("./notif-laporan");
 const X = require("./notif-xlsx");
 const { kirimUji } = require("./dailyjob-email-kirim-isi");
 const { penerimaDaftar } = require("./dailyjob-email-customer");
+const Q = require("./notif-kuota-jalan");
 
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const EMAIL_MASTER = "codcodan1@gmail.com", REGION = "asia-southeast2", MIME = { xlsx: "xlsx", csv: "csv" };
@@ -61,9 +62,10 @@ exports.laporanUji = onCall({ region: REGION, secrets: [RESEND_API_KEY] }, async
   let r; try { r = await isiLaporan({ kelompokId: String(d.kelompokId), customerId: String(d.customerId), lap, dari: per.dari, sampai: per.sampai }); } catch (er) { throw new HttpsError("failed-precondition", er.message); }
   const hasil = { header: r.header, rows: r.rows.slice(0, 10), total: r.total, dari: per.dari, sampai: per.sampai };
   if (d.kirim) {
+    if (!(await Q.reservasi(1))) throw new HttpsError("resource-exhausted", "Kuota email hari ini atau bulan ini sudah habis. Kirim uji laporan ditunda agar tidak mengambil jatah customer.");
     const e = L.emailLaporan(lap, r.c, per, r.total), format = MIME[lap.format] ? lap.format : "xlsx";
     const res = await kirimUji(email, "[UJI] " + e.subjek, e.isi, RESEND_API_KEY.value(), fetch, berkas(format, r.header, r.rows, L.namaBerkas(lap, per, MIME[format])));
-    if (!res.ok) throw new HttpsError("failed-precondition", `Resend menolak (${res.kode}): ${res.galat}`); hasil.ke = email;
+    if (!res.ok) { await Q.kembalikan(1); throw new HttpsError("failed-precondition", `Resend menolak (${res.kode}): ${res.galat}`); } hasil.ke = email;
   }
   return hasil;
 });

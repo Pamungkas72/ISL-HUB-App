@@ -495,6 +495,11 @@ service cloud.firestore {
         && ((resource.data.status == 'antre' && request.resource.data.status == 'batal') || (resource.data.status == 'gagal' && request.resource.data.status == 'antre'));
       allow create, delete: if false;
     }
+    // Pencacah kuota email (hari dan bulan, UTC): ditulis hanya Cloud Function; master dan admin membaca untuk ditampilkan.
+    match /notif_kuota/{id} {
+      allow read: if isKelola();
+      allow write: if false;
+    }
     // Pengaturan notifikasi email per kelompok (template, waktu kirim): master dan admin.
     match /notif_pengaturan/{id} {
       allow read, write: if isKelola();

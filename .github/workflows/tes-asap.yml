@@ -46,6 +46,7 @@ jobs:
           node tests/unit/daily-job-email-kirim.test.js
           node tests/unit/notif-pengaturan.test.mjs
           node tests/unit/notif-laporan.test.js
+          node tests/unit/notif-kuota.test.js
           node tests/unit/daily-job-trailer.test.mjs
           node tests/unit/daily-job-pdf-trailer.test.mjs
           node tests/unit/daily-job-pdf-distribusi.test.mjs

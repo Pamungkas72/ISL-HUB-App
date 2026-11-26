@@ -7,9 +7,11 @@ const { awal } = require('../audit/data-contoh.js');
 const PUBLIK = path.join(__dirname, '..', '..', 'public') + path.sep;
 let gagal = 0; const cek = (n, ok, cat = '') => { if (!ok) gagal++; console.log(ok ? 'LULUS' : 'GAGAL', n, ok ? '' : '- ' + cat); };
 const dipisah = (a) => { Object.values(a.master_tarif).forEach((t) => { delete t.modal; t.hargaMin = t.hargaMin ?? 1; }); return a; };
+const HARI = new Date().toISOString().slice(0, 10), BULAN = HARI.slice(0, 7);
 const DATA = (pengguna) => dipisah(JSON.parse(JSON.stringify({ ...awal, pengguna, sistem: { modal: { siap: true } },
   dj_kelompok: { k1: { nama: 'Tracking', profil: 'tracking', kepala: [] }, k2: { nama: 'Marketing BD', profil: 'marketing', kepala: [] } },
-  dj_email: { e1: { kelompokId: 'k1', customer: 'PT Maju', subjek: 'Pengiriman selesai · DO-1', ke: 'a@maju.id', status: 'gagal', dibuat: 3, kirimPada: 3 }, e2: { kelompokId: 'k1', customer: 'PT Sinar', subjek: 'Order diterima · DO-2', ke: 'b@sinar.id', status: 'terkirim', dibuat: 2, kirimPada: 2 }, e3: { kelompokId: 'k1', customer: 'PT Lima', subjek: 'Order diterima · DO-3', ke: '', status: 'tanpa-email', dibuat: 1, kirimPada: 1 } } })));
+  notif_kuota: { ['h_' + HARI]: { n: 84 }, ['b_' + BULAN]: { n: 240 } },
+  dj_email: { e4: { kelompokId: 'k2', customer: 'PT Antre', subjek: 'Menunggu', ke: 'z@antre.id', status: 'antre', menunggu: 'kuota', dibuat: 4, kirimPada: 4 }, e1: { kelompokId: 'k1', customer: 'PT Maju', subjek: 'Pengiriman selesai · DO-1', ke: 'a@maju.id', status: 'gagal', dibuat: 3, kirimPada: 3 }, e2: { kelompokId: 'k1', customer: 'PT Sinar', subjek: 'Order diterima · DO-2', ke: 'b@sinar.id', status: 'terkirim', dibuat: 2, kirimPada: 2 }, e3: { kelompokId: 'k1', customer: 'PT Lima', subjek: 'Order diterima · DO-3', ke: '', status: 'tanpa-email', dibuat: 1, kirimPada: 1 } } })));
 const buka = async (b, vp, email, doc, mobile) => {
   const c = await b.newContext({ viewport: vp, isMobile: mobile, hasTouch: mobile }), p = await c.newPage(), galat = []; p.on('pageerror', (e) => galat.push(e.message.slice(0, 120)));
   await pasang(p, PUBLIK, { email, awal: DATA(doc) }); await p.addInitScript(() => { globalThis.__FN = { kirimUjiNotif: { ke: 'master@isl.test' }, laporanUji: { header: ['No. DO', 'Rute'], rows: [['DO-1', 'A → B'], ['DO-2', 'C → D']], total: 2, dari: '2026-11-16', sampai: '2026-11-22', ke: 'master@isl.test' } }; });
@@ -22,6 +24,13 @@ const buka = async (b, vp, email, doc, mobile) => {
     const { p, galat } = await buka(b, vp, ML, {}, mobile);
     cek(`${nama}: bagian Notifikasi ada di menu Pengaturan`, await p.locator('[data-st="bag"][data-v="notifikasi"]').count() === 1);
     await p.click('[data-st="bag"][data-v="notifikasi"]'); await p.waitForSelector('#nt-root .ak-kepala'); await p.waitForTimeout(600);
+    // Kuota email
+    cek(`${nama}: kuota menampilkan pemakaian hari dan bulan`, (await p.locator('.nt-kuota__i').allInnerTexts()).join(' ').replace(/\s+/g, ' ').includes('84 / 100') && (await p.locator('.nt-kuota__i').allInnerTexts()).join(' ').replace(/\s+/g, ' ').includes('240 / 3000'));
+    cek(`${nama}: 84% ditandai hampir penuh dan ada email menunggu kuota`, await p.locator('.nt-bar.is-hampir').count() === 1 && /1 email menunggu kuota/.test(await p.evaluate(() => document.body.innerText)));
+    await p.click('[data-nt="k-atur"]'); await p.fill('#nk-hari', '500'); await p.fill('#nk-bulan', '400'); await p.click('[data-nt="k-simpan"]'); await p.waitForTimeout(250);
+    cek(`${nama}: batas harian melebihi bulanan ditolak`, /tidak boleh melebihi/.test(await p.evaluate(() => document.body.innerText)));
+    await p.fill('#nk-hari', '120'); await p.fill('#nk-bulan', '2500'); await p.click('[data-nt="k-simpan"]'); await p.waitForTimeout(400);
+    cek(`${nama}: batas baru tersimpan dan batang menyesuaikan (84 dari 120 = 70%)`, (await p.locator('.nt-kuota__i').first().innerText()).replace(/\s+/g, ' ').includes('84 / 120') && await p.locator('.nt-bar.is-hampir').count() === 0);
     cek(`${nama}: kelompok Tracking terpilih, dua chip kelompok`, await p.locator('.nt-kel .mr-chip').count() === 2 && await p.locator('.nt-kel .mr-chip.is-aktif').innerText() === 'Tracking');
     if (mobile) {
       cek('HP: lima kartu (2 kejadian + Penerima + Laporan + Riwayat), belum ada yang terbuka', await p.locator('.nt-kartu').count() === 5 && await p.locator('.nt-editor').count() === 0);

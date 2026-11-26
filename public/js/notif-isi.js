@@ -42,3 +42,10 @@ export const LAPORAN_BARU = (profil) => ({ nama: "", aktif: true, periode: "ming
 export const EMAIL_SAH = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Teks ringkas jadwal laporan. */
 export const ringkasLaporan = (l) => `${l.periode === "harian" ? "Harian" : l.periode === "bulanan" ? `Bulanan, tanggal ${l.tanggal}` : `Mingguan, ${NAMA_HARI[(+l.hari || 1) - 1]}`} ${l.jam} · ${(l.format || "xlsx").toUpperCase()}`;
+
+/* Kuota email (sama dengan functions/notif-kuota.js; dijaga tests/unit/notif-pengaturan.test.mjs). Resend gratis: 100/hari, 3.000/bulan, reset 00.00 UTC. */
+export const BATAS_BAWAAN = { hari: 100, bulan: 3000 };
+export const hariKey = (ms) => new Date(ms).toISOString().slice(0, 10);
+export const bulanKey = (ms) => hariKey(ms).slice(0, 7);
+const bulat = (x, bawaan) => (Number.isFinite(+x) && +x >= 1 ? Math.min(Math.round(+x), 100000) : bawaan);
+export const batasKuota = (dok) => ({ hari: bulat(dok && dok.batasHari, BATAS_BAWAAN.hari), bulan: bulat(dok && dok.batasBulan, BATAS_BAWAAN.bulan) });

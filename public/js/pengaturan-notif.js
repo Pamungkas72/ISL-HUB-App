@@ -2,10 +2,10 @@
 // HP: kartu per kejadian (buka-tutup). Desktop: daftar kejadian di kiri, editor dengan pratinjau di kanan.
 import { e, $, toast, konfirmasi } from "./ui.js";
 import { app, db } from "./firebase-config.js";
-import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, limit, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
-import { KEJADIAN, VARIABEL, CONTOH, BAWAAN, render, rapikanSubjek, efektif, ringkasKirim, KOLOM_UI, IZIN_PROFIL, NAMA_HARI, LAPORAN_BARU, EMAIL_SAH, ringkasLaporan } from "./notif-isi.js";
+import { collection, getDocs, getDoc, doc, setDoc, updateDoc, query, orderBy, limit, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { KEJADIAN, VARIABEL, CONTOH, BAWAAN, render, rapikanSubjek, efektif, ringkasKirim, KOLOM_UI, IZIN_PROFIL, NAMA_HARI, hariKey, bulanKey, batasKuota, LAPORAN_BARU, EMAIL_SAH, ringkasLaporan } from "./notif-isi.js";
 
-const N = { root: null, siap: false, kel: [], dok: {}, riw: [], kelId: "", buka: "", bhs: "id", draf: null, fokus: "nt-isi", galat: "", cust: [], kat: {}, lapId: "", lap: null, pv: null, pvNama: "" };
+const N = { root: null, siap: false, kel: [], dok: {}, riw: [], kelId: "", buka: "", bhs: "id", draf: null, fokus: "nt-isi", galat: "", cust: [], kat: {}, lapId: "", lap: null, pv: null, pvNama: "", kuota: { hari: 0, bulan: 0 }, kuotaBuka: false };
 const hp = () => matchMedia("(max-width: 760px)").matches;
 const klon = (x) => JSON.parse(JSON.stringify(x));
 const kelAktif = () => N.kel.find((k) => k.id === N.kelId) || null;
@@ -18,6 +18,8 @@ async function muat() {
     const [k, p, r] = await Promise.all([getDocs(collection(db, "dj_kelompok")), getDocs(collection(db, "notif_pengaturan")), getDocs(query(collection(db, "dj_email"), orderBy("dibuat", "desc"), limit(60))).catch(() => ({ docs: [] }))]);
     N.kel = k.docs.map((d) => ({ id: d.id, ...d.data() })).filter((x) => !x.arsip).sort((a, b) => String(a.nama).localeCompare(String(b.nama), "id"));
     N.dok = Object.fromEntries(p.docs.map((d) => [d.id, d.data()])); N.riw = r.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const nk = async (id) => { try { const x = await getDoc(doc(db, "notif_kuota", id)); return (x.exists() ? x.data() : {}).n || 0; } catch (_) { return 0; } };
+    N.kuota = { hari: await nk("h_" + hariKey(Date.now())), bulan: await nk("b_" + bulanKey(Date.now())) };
     N.cust = (await getDocs(collection(db, "cu_customers")).catch(() => ({ docs: [] }))).docs.map((d) => ({ id: d.id, nama: (d.data() || {}).nama || "" })).filter((x) => x.nama).sort((a, b) => a.nama.localeCompare(b.nama, "id"));
     if (!kelAktif()) N.kelId = (N.kel.find((x) => x.profil === "tracking") || N.kel[0] || {}).id || "";
     N.galat = "";
@@ -62,7 +64,7 @@ function htmlPratinjau() {
 function htmlRiwayat() {
   const k = kelAktif(), now = Date.now(), baris = N.riw.filter((x) => x.kelompokId === (k && k.id)).slice(0, 40);
   if (!baris.length) return `<p class="mr-sub">Belum ada email untuk kelompok ini. Muncul setelah ada job Tracking baru atau selesai.</p>`;
-  return `<div class="nt-riw">${baris.map((x) => { const [lab, kls] = STATUS[x.status] || [x.status, ""], jadwal = x.status === "antre" && x.kirimPada > now ? ` · kirim ${WAKTU(x.kirimPada)}` : "";
+  return `<div class="nt-riw">${baris.map((x) => { const [lab, kls] = x.status === "antre" && x.menunggu === "kuota" ? ["Menunggu kuota", "warn"] : STATUS[x.status] || [x.status, ""], jadwal = x.status === "antre" && x.kirimPada > now ? ` · kirim ${WAKTU(x.kirimPada)}` : "";
     return `<div class="nt-rw"><div class="nt-rw__t"><b>${e(x.customer || "–")}</b><small class="mr-sub">${e(x.subjek || "")}</small><small class="mr-sub">${e(x.ke || "tanpa alamat")} · ${WAKTU(x.dibuat)}${jadwal}</small></div><span class="st-badge${kls ? " st-badge--" + kls : ""}">${lab}</span>${x.status === "antre" ? `<button type="button" class="mr-btn mr-btn--kecil" data-nt="batal" data-v="${e(x.id)}">Batalkan</button>` : x.status === "gagal" ? `<button type="button" class="mr-btn mr-btn--kecil" data-nt="ulang" data-v="${e(x.id)}">Kirim ulang</button>` : ""}</div>`; }).join("")}</div>`;
 }
 
@@ -105,6 +107,15 @@ function htmlLaporan() {
 const htmlPv = () => { const v = N.pv; if (!v) return `<small class="mr-sub">Pilih customer lalu Pratinjau untuk melihat data yang akan dikirim.</small>`; if (v.galat) return `<small class="mr-sub" role="alert">${e(v.galat)}</small>`;
   return `<small class="mr-sub">Periode ${e(v.dari)} s.d. ${e(v.sampai)} · ${v.total} pengiriman${v.total > v.rows.length ? ` (10 pertama ditampilkan)` : ""}</small><div class="nt-scroll"><table class="nt-tbl"><thead><tr>${v.header.map((h) => `<th>${e(h)}</th>`).join("")}</tr></thead><tbody>${v.rows.map((r) => `<tr>${r.map((c) => `<td>${e(c)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${v.header.length || 1}" class="mr-sub">Tidak ada pengiriman pada periode ini.</td></tr>`}</tbody></table></div>`; };
 
+/* ---------- kuota email ---------- */
+const batang = (pakai, maks) => { const p = Math.min(100, Math.round((pakai / maks) * 100)); return `<span class="nt-bar ${p >= 100 ? "is-penuh" : p >= 80 ? "is-hampir" : ""}" role="progressbar" aria-valuemin="0" aria-valuemax="${maks}" aria-valuenow="${pakai}"><i style="width:${p}%"></i></span>`; };
+function htmlKuota() {
+  const b = batasKuota(N.dok._kuota), tunggu = N.riw.filter((x) => x.status === "antre" && x.menunggu === "kuota").length;
+  return `<div class="nt-kuota"><div class="nt-kuota__b"><div class="nt-kuota__i"><small>Hari ini</small><b>${N.kuota.hari}</b><small>/ ${b.hari}</small>${batang(N.kuota.hari, b.hari)}</div><div class="nt-kuota__i"><small>Bulan ini</small><b>${N.kuota.bulan}</b><small>/ ${b.bulan}</small>${batang(N.kuota.bulan, b.bulan)}</div><button type="button" class="mr-btn mr-btn--kecil" data-nt="k-atur">${N.kuotaBuka ? "Tutup" : "Atur batas"}</button></div>
+    ${tunggu ? `<small class="mr-sub">${tunggu} email menunggu kuota dan dikirim otomatis berurutan setelah kuota tersedia (reset harian 07.00 WIB).</small>` : ""}
+    ${N.kuotaBuka ? `<div class="nt-kuota__f"><label class="mr-f nt-kecil"><span>Batas per hari</span><input id="nk-hari" type="number" min="1" value="${b.hari}" inputmode="numeric"></label><label class="mr-f nt-kecil"><span>Batas per bulan</span><input id="nk-bulan" type="number" min="1" value="${b.bulan}" inputmode="numeric"></label><button type="button" class="mr-btn mr-btn--utama" data-nt="k-simpan">Simpan batas</button></div><small class="mr-sub">Samakan dengan paket Resend Anda (gratis: 100 per hari, 3.000 per bulan). Dihitung per alamat penerima. Email yang melewati batas tidak hilang: menunggu antrean sampai kuota tersedia.</small>` : ""}</div>`;
+}
+
 /* ---------- tata letak ---------- */
 const panel = (id, kj) => (id === "riwayat" ? `<div class="nt-eh"><div><h3>Riwayat terkirim</h3></div></div>${htmlRiwayat()}` : id === "penerima" ? htmlPenerima() : id === "laporan" ? htmlLaporan() : N.draf ? htmlEditor(kj.find((x) => x.id === id) || kj[0]) : "");
 function gambar() {
@@ -113,7 +124,7 @@ function gambar() {
   if (N.galat) { r.innerHTML = `<div class="mr-banner mr-banner--peringatan" role="alert"><div>Tidak bisa memuat pengaturan notifikasi: ${e(N.galat)}</div></div>`; return; }
   const k = kelAktif(), kj = daftarKejadian(), mobile = hp();
   const chips = `<div class="nt-kel">${N.kel.map((x) => chip("kel", e(x.id), e(x.nama), x.id === N.kelId)).join("")}</div>`;
-  const kepala = `<div class="ak-kepala"><div><h3>Notifikasi</h3><p>Email otomatis ke customer: isi, penerima, laporan, waktu kirim, dan riwayat. Pengaturan berlaku per kelompok.</p></div></div>${chips}`;
+  const kepala = `<div class="ak-kepala"><div><h3>Notifikasi</h3><p>Email otomatis ke customer: isi, penerima, laporan, waktu kirim, dan riwayat. Pengaturan berlaku per kelompok.</p></div></div>${htmlKuota()}${chips}`;
   if (!k) { r.innerHTML = kepala + `<p class="mr-sub">Belum ada kelompok Daily Job.</p>`; return; }
   if (!kj.length) { r.innerHTML = kepala + `<div class="nt-kosong"><b>Belum ada notifikasi email untuk kelompok ${e(k.nama)}.</b><p class="mr-sub">Saat ini notifikasi email tersedia untuk kelompok Tracking. Kejadian untuk kelompok lain akan muncul di sini setelah ditambahkan.</p></div>`; return; }
   if (!mobile && !N.buka) bukaKejadian(kj[0].id);
@@ -153,6 +164,11 @@ async function aksi(a, v, el) {
     if (a === "kel") { N.kelId = v; N.buka = ""; N.draf = null; return gambar(); }
     if (a === "buka") { if (N.buka === v && hp()) { N.buka = ""; N.draf = null; } else bukaKejadian(v); return gambar(); }
     if (a === "aktif") { const f = efektif(N.dok[k.id], v), baru = !f.aktif; await simpanDok(k.id, { [v]: { aktif: baru } }); rekam(k.id, v, { aktif: baru }); if (N.draf && N.buka === v) N.draf.aktif = baru; toast(baru ? "Notifikasi diaktifkan." : "Notifikasi dimatikan."); return gambar(); }
+    if (a === "k-atur") { N.kuotaBuka = !N.kuotaBuka; return gambar(); }
+    if (a === "k-simpan") {
+      const h = Math.round(+$("#nk-hari").value), m = Math.round(+$("#nk-bulan").value); if (!(h >= 1) || !(m >= 1)) return toast("Isi batas harian dan bulanan (minimal 1).", "bahaya"); if (h > m) return toast("Batas harian tidak boleh melebihi batas bulanan.", "bahaya");
+      el.disabled = true; await setDoc(doc(db, "notif_pengaturan", "_kuota"), { batasHari: h, batasBulan: m, diubah: serverTimestamp() }, { merge: true }); N.dok._kuota = { ...(N.dok._kuota || {}), batasHari: h, batasBulan: m }; N.kuotaBuka = false; toast("Batas kuota disimpan."); return gambar();
+    }
     if (a.startsWith("p-")) {
       const pm = klon(peta(k)), dicentang = !!(el && el.checked);
       if (a === "p-cust-tambah") { const c = custDari($("#nt-cari").value); if (!c) return toast("Pilih customer dari daftar.", "bahaya"); if (pm[c.id]) return toast("Customer sudah ada di daftar.", "bahaya"); pm[c.id] = { emails: [], laporan: [] }; }
