@@ -641,6 +641,7 @@ function formCustomer(c) {
       <label class="mr-f"><span>Jabatan</span><input id="cf-ttdj" value="${esc((c.ttd || {}).jabatan)}" autocomplete="off"></label>
       <label class="mr-f"><span>Termin bayar default (hari)</span><input id="cf-termin" inputmode="numeric" value="${c.termin ?? ''}"></label>
       <label class="mr-f"><span>Catatan penagihan</span><input id="cf-ctagih" value="${esc(c.catatanTagih)}" autocomplete="off"></label>
+      <label class="mr-f mr-f--lebar" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="cf-emailnotif" ${c.emailNotif === false ? '' : 'checked'}><span>Kirim email notifikasi pengiriman ke customer ini (order diterima, pengiriman selesai)</span></label>
       <label class="mr-f mr-f--lebar"><span>Catatan</span><textarea id="cf-catatan" rows="2">${esc(c.catatan)}</textarea></label>
     </div></section>
     <p class="mr-galat" id="pn-galat" hidden></p>
@@ -756,7 +757,7 @@ async function simpanCustomer(btn) {
   const nomorLegal = j => (legal.find(l => l.jenis === j) || {}).nomor || '';
   const d = { nama: v('#cf-nama'), alias: v('#cf-alias'), namaLengkap: v('#cf-lengkap'), jenisBadan: $('#cf-badan').value, kategori: $('#cf-kat').value, status: $('#cf-status').value, bahasa: $('#cf-bahasa').value, npwp: nomorLegal('NPWP'), nib: nomorLegal('NIB'), legalitas: legal,
     alamat: v('#cf-alamat'), alamatTagih: v('#cf-tagih'), kontak: kontakDraf.filter(k => k.nama || k.telp || k.email),
-    ttd: { nama: v('#cf-ttd'), jabatan: v('#cf-ttdj') }, termin: angka(v('#cf-termin')), catatanTagih: v('#cf-ctagih'), catatan: v('#cf-catatan') };
+    ttd: { nama: v('#cf-ttd'), jabatan: v('#cf-ttdj') }, termin: angka(v('#cf-termin')), catatanTagih: v('#cf-ctagih'), catatan: v('#cf-catatan'), emailNotif: $('#cf-emailnotif').checked };
   const err = [];
   if (!d.nama) err.push('Nama perusahaan wajib diisi.');
   if (d.nama && S.customers.some(c => c.id !== id && norm(c.nama) === norm(d.nama))) err.push('Customer dengan nama ini sudah ada.');
