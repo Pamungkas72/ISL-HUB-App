@@ -375,7 +375,7 @@ function viewDetail() {
   const c = cust(S.id); if (!c) { S.view = 'list'; return viewDaftar(); }
   const nRate = rateCust(c.id).length;
   /* Order dan laba hanya untuk pemilik (sales, lihat saja, dan admin tidak melihat laba). */
-  const tabs = [['profil', 'Profil', ''], ['rate', 'Rate Disetujui', jumlahAktif(c.id)], ['dokumen', 'Dokumen', itemDok(c).length || ''], ['order', 'Order dan Laba', window.__qt ? window.__qt.jumlahOrder(c.id) : '']].filter(([k]) => k !== 'order' || masterSaja());
+  const tabs = [['profil', 'Profil', ''], ['rate', 'Rate Disetujui', jumlahAktif(c.id)], ['dokumen', 'Dokumen', itemDok(c).length || ''], ['rute', 'Daftar Rute', window.__islRute ? window.__islRute.jumlah(c) : ''], ['order', 'Order dan Laba', window.__qt ? window.__qt.jumlahOrder(c.id) : '']].filter(([k]) => (k !== 'order' || masterSaja()) && (k !== 'rute' || masterAtauAdmin()));
   return `
   <div class="cu-kepala">
     <button class="mr-btn mr-btn--kecil" data-cu="kembali">${ik('kembali', 14)} Semua customer</button>
@@ -386,7 +386,7 @@ function viewDetail() {
   <div class="cu-judul"><h2>${esc(c.nama)}</h2><div class="cu-judul__tag">${tagKat(c.kategori)} ${tampilStatusC(c.status)}${vendorSama(c) ? ` <button type="button" class="cu-vend" data-cu="ke-vendor" data-vid="${esc(vendorSama(c).id)}" title="Buka profil vendor di Master Rate">Juga vendor ${ik('panah', 12)}</button>` : ''}${c.persetujuan === 'menunggu' ? `<span class="mr-status cu-st--info" title="Diajukan ${esc(c.diajukanOleh || '')}; menunggu tinjauan master atau admin">Baru dari sales</span>` : ''}<span class="mr-sub">${esc(c.alias)}</span></div></div>
   ${bisaEdit() ? '' : `<div class="mr-banner">${ik('info')}<div><strong>Mode lihat saja.</strong> Data terlihat tanpa modal dan margin. Hanya master atau sales yang bisa mengubah.</div></div>`}
   <div class="mr-tabs">${tabs.map(([k, n, j]) => `<button class="mr-tab ${S.tab === k ? 'is-aktif' : ''}" data-cu="tab" data-tab="${k}">${n}${j !== '' ? ` <span class="cu-jml">${j}</span>` : ''}</button>`).join('')}</div>
-  <div id="cu-tab">${S.tab === 'profil' ? tabProfil(c) : S.tab === 'rate' ? tabRate(c) : S.tab === 'dokumen' ? tabDokumen(c) : S.tab === 'order' && window.__qt ? window.__qt.tabOrder(c) : tabDokumen(c)}</div>`;
+  <div id="cu-tab">${S.tab === 'profil' ? tabProfil(c) : S.tab === 'rate' ? tabRate(c) : S.tab === 'dokumen' ? tabDokumen(c) : S.tab === 'rute' && window.__islRute && masterAtauAdmin() ? window.__islRute.tab(c) : S.tab === 'order' && window.__qt ? window.__qt.tabOrder(c) : tabDokumen(c)}</div>`;
 }
 const dl = (pairs) => `<dl class="cu-dl">${pairs.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v || '<span class="cu-kosong">—</span>'}</dd></div>`).join('')}</dl>`;
 function kartuLegal(c) {

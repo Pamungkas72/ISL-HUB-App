@@ -152,6 +152,17 @@ service cloud.firestore {
       // Sales boleh menghapus draf customer yang diajukannya sendiri dan belum disetujui; selebihnya master.
       allow delete: if (kelola('cu') || kelola('qt')) && (isMaster() || (isSales() && resource.data.persetujuan == 'menunggu' && resource.data.diajukanUid == request.auth.uid));
     }
+    // Daftar rute customer (26 Nov 2026): rute tanpa harga dibaca tim Tracking; tim Tracking boleh menambah rute baru (sumber tracking). Harga tagihan di cu_rute_tagihan hanya master/admin.
+    match /cu_rute/{id} {
+      allow read: if baca('dj') || baca('cu');
+      allow create: if ((kelola('cu') || kelola('qt')) && isStaf())
+        || (kelola('dj') && request.resource.data.sumber == 'tracking' && request.resource.data.keys().hasOnly(['kunciCust', 'customerId', 'rute', 'jenisArmada', 'sumber', 'dibuat', 'diubah'])
+            && request.resource.data.rute is string && request.resource.data.rute.size() <= 300);
+      allow update, delete: if (kelola('cu') || kelola('qt')) && isStaf();
+    }
+    match /cu_rute_tagihan/{id} {
+      allow read, write: if (kelola('cu') || kelola('qt')) && isStaf();
+    }
     // Rate dan paket: sales hanya membaca miliknya (query WAJIB memakai where pemilikUid == uid; harga negosiasi sales lain tertutup).
     match /cu_rates/{id} {
       allow read: if baca('qt') && (isMaster() || isAdmin() || isLihat() || (isSales() && milikSaya(resource.data)));

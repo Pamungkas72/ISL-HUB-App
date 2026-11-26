@@ -19,6 +19,7 @@ import * as DZ from "./daily-job-distribusi-hitung.js";
 import * as LK from "./daily-job-langkah.js";
 import * as JL from "./daily-job-jalan.js";
 import * as GT from "./daily-job-giat.js";
+import * as RC from "./rute-customer.js";
 import { htmlArmada, htmlFormKendaraan, htmlFormTugas, judulTugas } from "./daily-job-armada.js";
 import { namaAkun, tentukanPic } from "./daily-job-pic.js";
 import { aturHuruf, awalKalimat, kapital } from "./daily-job-huruf.js";
@@ -29,7 +30,7 @@ import { tampilkanPratinjau, tipeBerkas, labelTipe, ukuranTeks, temaGelap } from
 import { statusPush, aktifkanPush, matikanPush, jagaPush } from "./daily-job-push.js";
 import { bukaFormKelompok, hapusKelompok } from "./akun-divisi.js";
 
-const S = { lihatSaja: false, ajuanKat: [], u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", antre: "aktif", masalah: "", armada: [], giat: [], gAwal: "", gPilih: "", gF: "", subArm: "tindakan", subPdz: "pengiriman", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAktif: "", sub: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
+const S = { lihatSaja: false, ajuanKat: [], u: null, kelola: false, kelompokSaya: null, kelompok: [], jobs: [], akun: [], tab: "job", periode: "bulan", dari: "", sampai: "", fKel: "", fPic: "", fKat: "", status: "aktif", antre: "aktif", masalah: "", armada: [], giat: [], ruteCust: [], gAwal: "", gPilih: "", gF: "", subArm: "tindakan", subPdz: "pengiriman", pDaftar: "semua", pDari: "", pSampai: "", urut: "baru", hal: 0, menu: "", kelAktif: "", sub: "", terbuka: "", sisi: "aksi", kelAtur: "", pilih: new Set(), modePilih: false, detail: null, tim: {}, cari: "", muat: false, galat: "", subKel: "kelompok", pilihKel: "" };
 const uid = () => "dj" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const fmtTgl = (s) => (s ? new Date(s + "T00:00:00Z").toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }) : "–");
 const namaKel = (id) => ((S.kelompokSemua || S.kelompok).find((k) => k.id === id) || {}).nama || "–";
@@ -46,6 +47,7 @@ async function muat() {
     S.jobs = q ? (await getDocs(q)).docs.map((d) => H.dariDok(d.id, d.data())) : [];
     try { const qr = S.kelola ? collection(db, "dj_armada") : S.kelompokSaya ? query(collection(db, "dj_armada"), where("kelompokId", "==", S.kelompokSaya)) : null; S.armada = qr ? (await getDocs(qr)).docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(a.plat).localeCompare(String(b.plat))) : []; } catch (_) { S.armada = []; } // aturan dj_armada mungkin belum dipasang
     try { const qg = S.kelola ? collection(db, "dj_kegiatan") : S.kelompokSaya ? query(collection(db, "dj_kegiatan"), where("kelompokId", "==", S.kelompokSaya)) : null; S.giat = qg ? (await getDocs(qg)).docs.map((d) => ({ id: d.id, ...d.data() })) : []; } catch (_) { S.giat = []; } // aturan dj_kegiatan mungkin belum dipasang
+    try { S.ruteCust = (await getDocs(collection(db, "cu_rute"))).docs.map((d) => ({ id: d.id, ...d.data() })); } catch (_) { S.ruteCust = []; } // daftar rute customer (tanpa harga); aturan mungkin belum dipasang
     if (!S.kelompok.some((k) => k.id === S.kelAktif)) { let simpan = ""; try { simpan = localStorage.getItem("dj-kel") || ""; } catch (_) {} S.kelAktif = S.kelola ? (S.kelompok.some((k) => k.id === simpan) ? simpan : (S.kelompok[0] || {}).id || "") : S.kelompokSaya || ""; }
     try { const qa = S.kelola ? collection(db, "dj_kategori_ajuan") : S.kelompokSaya ? query(collection(db, "dj_kategori_ajuan"), where("kelompokId", "==", S.kelompokSaya)) : null; S.ajuanKat = qa ? (await getDocs(qa)).docs.map((d) => ({ id: d.id, ...d.data() })) : []; } catch (_) { S.ajuanKat = []; } // aturan baru belum dipasang: ajuan kosong
     if (S.kelola) S.akun = (await getDocs(collection(db, "pengguna"))).docs.map((d) => ({ id: d.id, ...d.data() })).filter((a) => a.status === "aktif").sort((a, b) => String(a.nama || a.email).localeCompare(String(b.nama || b.email), "id"));
@@ -782,11 +784,22 @@ function sinkronRute() {
   const kunci = seg.join(">").toLowerCase(), cocok = TR.saranRute(riwayatForm(), { ...konteksRute(), cari: "" }, 200).find((o) => TR.bagiRute(o.teks).join(">").toLowerCase() === kunci);
   if (!(cocok && titikDariContoh(cocok.contoh))) isiTitik(seg.map((k) => ({ kota: k })));
 }
+/** Rute yang belum ada di daftar customer dicatat sebagai sumber "tracking" tanpa harga; gagal tidak mengganggu simpan job. */
+async function catatRuteBaru(cust, jenis, rute) {
+  if (!RC.baruDiDaftar(S.ruteCust, cust, rute, jenis)) return;
+  const id = RC.idRute(cust, rute, jenis), d = { kunciCust: RC.norm(cust), customerId: null, rute: RC.teksRute(rute), jenisArmada: jenis || "", sumber: "tracking", dibuat: Date.now() };
+  try { await setDoc(doc(db, "cu_rute", id), { ...d, diubah: serverTimestamp() }); S.ruteCust.push({ id, ...d }); } catch (err) { console.error(err); }
+}
+/** Saran: daftar rute customer (dari halaman customer) dulu, lalu riwayat pengiriman yang belum ada di daftar. */
+function saranGabung(cari) {
+  const k = konteksRute(), dft = RC.saran(S.ruteCust, { cust: k.cust, jenis: k.kat, cari }, 8), ada = new Set(dft.map((o) => RC.kunciRute(o.teks)));
+  return [...dft, ...TR.saranRute(riwayatForm(), { ...k, cari }).filter((o) => !ada.has(RC.kunciRute(o.teks)))].slice(0, 8);
+}
 function pasangRute() {
   const form = $("#dj-form"), box = $("#djt-rute"), sug = $("#djt-sug"); if (!form || !box) return;
-  const ket = (o) => (o.nCocok ? `Rute langganan · ${o.nCocok}× untuk customer ini` : o.nCust ? `Customer ini ${o.nCust}×, armada atau unit berbeda` : `${o.n}× di kelompok ini`);
+  const ket = (o) => (o.daftar ? (o.nCocok ? "Daftar rute customer" : `Daftar rute customer · armada ${o.jenisArmada}`) : o.nCocok ? `Rute langganan · ${o.nCocok}× untuk customer ini` : o.nCust ? `Customer ini ${o.nCust}×, armada atau unit berbeda` : `${o.n}× di kelompok ini`);
   const tampil = () => {
-    const l = TR.saranRute(riwayatForm(), { ...konteksRute(), cari: box.value }), q = box.value.trim(), ada = l.some((o) => o.teks.toLowerCase() === q.toLowerCase()); form._saran = l;
+    const l = saranGabung(box.value), q = box.value.trim(), ada = l.some((o) => o.teks.toLowerCase() === q.toLowerCase()); form._saran = l;
     sug.innerHTML = l.map((o, i) => `<button type="button" role="option" class="dj-sug__i" data-dj="rute-pilih" data-i="${i}"><span><b>${e(o.teks)}</b><small>${e(ket(o))}</small></span>${o.nCocok ? '<span class="dj-chip dj-chip--ok">Berulang</span>' : ""}</button>`).join("") + (q && !ada ? `<button type="button" role="option" class="dj-sug__i dj-sug__i--baru" data-dj="rute-baru"><span><b>Rute baru: "${e(q)}"</b><small>Lengkapi lokasi di Detail titik</small></span></button>` : "");
     sug.hidden = !sug.innerHTML;
   };
@@ -800,6 +813,7 @@ function pasangRute() {
 }
 function pilihRute(i) {
   const form = $("#dj-form"), o = form && form._saran && form._saran[i], box = $("#djt-rute"); if (!o) return;
+  if (o.daftar) { box.value = o.teks; $("#djt-sug").hidden = true; form._ruteDipilih = o; if (form.dataset.sub !== "besar" && !form._titikManual) { isiTitik(TR.bagiRute(o.teks).map((x) => ({ kota: awalKalimat(x) }))); const d = $("#djt-titikd"); if (d) d.open = false; } const inf = $("#djt-ruteinfo"); if (inf) inf.textContent = "Rute dari daftar customer. Ubah lokasi bila beda."; return; }
   box.value = o.teks; $("#djt-sug").hidden = true; form._ruteDipilih = o; const c = o.contoh, r = TR.rinci(c), info = $("#djt-ruteinfo");
   if (form.dataset.sub !== "besar") { if (!form._titikManual) titikDariContoh(c); const d = $("#djt-titikd"); if (d) d.open = false; }
   const bak = $("#djt-bak"); if (bak && o.nCocok && !bak.value && r.bak) bak.value = r.bak;
@@ -892,6 +906,7 @@ async function simpanJob() {
     if (berubahTarget) { const x = { uid: S.u.uid, oleh: S.u.nama || S.u.email, peran: adalahKepala(d) ? "kepala" : "anggota", jenis: "target", dari: d.tglTarget, ke: target, alasan, waktu: Date.now() }; await setDoc(doc(db, "dj_job", id, "aktivitas", uid()), x).catch((err) => console.warn(err)); if (S.detail && S.detail.id === id) S.detail.aktivitas.push(x); }
     const ada = S.jobs.findIndex((x) => x.id === id), baru = { ...(ada >= 0 ? S.jobs[ada] : {}), id, ...data, diubah: null };
     if (ada >= 0) S.jobs[ada] = baru; else S.jobs.push(baru); segarkanTautan(baru);
+    if (tr && rinci.jenis) catatRuteBaru(baru.customer, kat, TR.ruteTeks(baru)); // rute baru otomatis masuk daftar customer (tagihan diisi master/admin)
     if (!d.id) { S.hal = 0; S.status = "aktif"; S.antre = "aktif"; } // job baru langsung terlihat di paling atas
     tutupLayer(); render(); toast(jumlah > 1 ? `${jumlah} pengiriman tersimpan.` : "Job tersimpan.");
   } catch (err) { console.error(err); toast("Job belum tersimpan: " + pesanUnggah(err), "bahaya"); tombol.disabled = false; tombol.textContent = "Simpan"; }
