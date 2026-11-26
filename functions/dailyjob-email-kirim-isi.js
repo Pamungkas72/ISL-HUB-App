@@ -11,4 +11,9 @@ async function kirim(d, kunciApi, ambil = fetch) {
   });
   return res.ok ? { status: "terkirim", dikirim: Date.now() } : { status: "gagal", kode: res.status, galat: String(await res.text()).slice(0, 300) };
 }
-module.exports = { kirim };
+/** Kirim uji ke satu alamat (pemanggil sendiri); tanpa kunci idempotensi. */
+async function kirimUji(ke, subjek, isi, kunciApi, ambil = fetch) {
+  const res = await ambil("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${kunciApi}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: DARI, to: [ke], reply_to: BALAS, subject: subjek, text: isi }) });
+  return res.ok ? { ok: true } : { ok: false, kode: res.status, galat: String(await res.text()).slice(0, 300) };
+}
+module.exports = { kirim, kirimUji };

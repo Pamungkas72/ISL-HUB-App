@@ -490,7 +490,14 @@ service cloud.firestore {
     // Antrean email ke customer (25 Nov 2026): ditulis hanya oleh Cloud Function; anggota kelompok boleh melihat statusnya.
     match /dj_email/{id} {
       allow read: if baca('dj') && (isKelola() || djAnggota(resource.data.get('kelompokId', null)));
-      allow write: if false;
+      // Master dan admin: batalkan email yang masih antre, atau kirim ulang yang gagal (selebihnya hanya Cloud Function).
+      allow update: if isKelola() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'kirimPada'])
+        && ((resource.data.status == 'antre' && request.resource.data.status == 'batal') || (resource.data.status == 'gagal' && request.resource.data.status == 'antre'));
+      allow create, delete: if false;
+    }
+    // Pengaturan notifikasi email per kelompok (template, waktu kirim): master dan admin.
+    match /notif_pengaturan/{id} {
+      allow read, write: if isKelola();
     }
     // Aktivitas Tracking non-pengiriman (25 Nov 2026): kunjungan, survei, perbaikan, dokumen, dll. Akses seperti dj_armada.
     match /dj_kegiatan/{id} {
