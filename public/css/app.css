@@ -1649,3 +1649,8 @@ button.qt-chip { border: 0; cursor: pointer; font: inherit; font-size: 12.5px; f
   #t-kembali, #t-lanjut { display: inline-flex; }
   .mr-panel[data-langkah="1"] #t-kembali, .mr-panel[data-langkah="3"] #t-lanjut, .mr-panel:not([data-langkah="1"]) #t-batal, .mr-panel:not([data-langkah="3"]) #t-simpan { display: none; }
 }
+/* Daftar Rute customer */
+.rt-tb .mr-select { width: 100%; max-width: none; } .rt-tb .rt-kosong { border-color: var(--mr-warn, #e0a030); } .rt-baru { background: var(--mr-surface2, transparent); }
+@media (max-width: 760px) { .rt-tb thead { display: none; } .rt-tb, .rt-tb tbody, .rt-tb tr, .rt-tb td { display: block; width: 100%; } .rt-tb tr { padding: 10px 14px; border-bottom: 1px solid var(--mr-border); } .rt-tb td { padding: 4px 0; border: 0; text-align: left; } .rt-tb td.cu-r input { text-align: right; } .rt-tb td.cu-aksi { text-align: right; } }
+@media (max-width: 760px) { .rt-tb td.cu-aksi { position: static; float: none; width: 100%; } .rt-baru .cu-aksi .mr-btn { width: 100%; margin-top: 4px; } .rt-tb td:empty { display: none; } }
+@media (max-width: 760px) { #cu-tab .rt-tb td.cu-aksi { position: static; width: 100%; top: auto; right: auto; } #cu-tab .rt-tb tr:not(.rt-baru) td.cu-aksi { position: absolute; top: 8px; right: 8px; width: auto; } #cu-tab .rt-tb tr { position: relative; } }

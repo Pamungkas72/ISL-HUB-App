@@ -18,6 +18,7 @@ window.__islUJ = {
   simpan: (kol, id, data) => setDoc(doc(db, kol, id), { ...data, diubah: serverTimestamp() }),
   hapus: (kol, id) => deleteDoc(doc(db, kol, id)),
 };
+import "./rute-customer-ui.js";
 import { renderNav } from "./nav.js";
 import { adalahMaster, emailMasterBelumDiisi, labelAkun } from "./config-akses.js";
 import { adalahSales, adaAksesLain } from "./akses.js";

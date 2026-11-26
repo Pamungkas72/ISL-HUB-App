@@ -43,8 +43,8 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 - Satu tombol global (`js/ke-atas.js`, gaya `.ke-atas` di `tambahan.css`): **tengah bawah, melayang, transparan, muncul hanya setelah halaman digulir**. Berlaku di semua halaman; halaman atau fitur baru yang punya daftar/gulir otomatis memakainya. Jangan membuat tombol ke atas sendiri atau memindahkan posisinya per halaman.
 - Di dasar halaman (`body.di-dasar`, ditandai `ke-atas.js`) tombol Ke atas dan tombol + (FAB) memudar, dan ruang bawah halaman tipis (menu bawah + 16 px, lewat `app-main`): **scroll harus berakhir tepat di baris terakhir tanpa ruang kosong** (aturan pemilik, 19 Nov 2026). Halaman baru tidak boleh menambah `padding-bottom` besar untuk menghindari tombol melayang.
 
-## Peringatan galat hilang otomatis (aturan pemilik, 25 Nov 2026)
-- **Semua peringatan galat dan notifikasi kegagalan hilang sendiri setelah 10 detik**, tanpa menekan X. Berlaku di semua halaman dan fitur, termasuk fitur yang akan datang.
+## Peringatan, banner, dan notifikasi hilang otomatis (aturan pemilik, 25 dan 26 Nov 2026)
+- **Semua peringatan galat, notifikasi kegagalan, dan banner (kecuali lonceng) hilang sendiri setelah 10 detik, atau 15 detik bila informasinya penting**, tanpa menekan X. Penting = banner peringatan/bahaya (`.mr-banner--peringatan`, `.mr-banner--bahaya`, `.dj-alert--bahaya`) atau atribut `data-penting`. Berlaku di semua halaman dan fitur, termasuk fitur yang akan datang.
 - Diatur terpusat oleh `js/galat-otomatis.js` (mengamati DOM; cocok dengan toast, `.mr-galat`, `.login-error`, `.ip-status.is-gagal`, `role="alert"`, `.galat-otomatis`, `data-galat`). **Fitur baru cukup memakai toast atau salah satu penanda itu untuk pesan galatnya**; jangan membuat pesan galat permanen sendiri. Pesan yang berisi tombol atau tautan aksi (mis. "Coba lagi") tidak dihilangkan karena bagian dari halaman.
 - **Setiap halaman HTML baru wajib memuat** `<script src="js/galat-otomatis.js"></script>` setelah `tema.js`. Dijaga `tests/asap/uji-galat-otomatis.js` (gagal bila ada halaman tanpa skrip itu).
 

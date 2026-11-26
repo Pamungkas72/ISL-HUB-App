@@ -33,6 +33,13 @@ fs.readdirSync(PUBLIK).filter((f) => f.endsWith('.html')).forEach((f) => {
   await tunggu(300); cek('hitungan ulang saat isi berganti', await tampil('#g1'));
   await tunggu(400); cek('hilang setelah hitungan ulang', !(await tampil('#g1')));
 
+  // banner biasa 10 detik (400 ms di tes), banner penting 15 detik (600 ms), banner dengan tautan aksi tetap, banner dengan tombol X sendiri tetap hilang
+  await tambah('<div class="mr-banner" id="b1">Info biasa</div><div class="mr-banner mr-banner--peringatan" id="b2">Peringatan penting</div><div class="mr-banner" id="b3">Ada <a href="#x">tautan</a></div><div class="mr-banner" id="b4">Dengan X <button class="qt-banner-x" aria-label="Tutup">x</button></div><div class="mr-banner" id="b5" data-tetap>Tetap</div>');
+  await tunggu(500); cek('banner biasa hilang sendiri', !(await tampil('#b1'))); cek('banner penting masih tampil sebelum 15 detik', await tampil('#b2'));
+  cek('banner dengan X sendiri ikut hilang', !(await tampil('#b4')));
+  await tunggu(300); cek('banner penting hilang setelahnya', !(await tampil('#b2')));
+  cek('banner dengan tautan aksi tetap tampil', await tampil('#b3')); cek('data-tetap tidak dihilangkan', await tampil('#b5'));
+
   // toast kegagalan dihapus
   await tambah('<div class="mr-toast mr-toast--bahaya" id="t1"><div class="mr-toast__isi">Ditolak server</div><button class="mr-toast__x">x</button></div>');
   await tunggu(600); cek('toast kegagalan hilang sendiri', (await p.$('#t1')) === null);
