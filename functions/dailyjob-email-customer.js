@@ -12,6 +12,12 @@ function penerima(c) {
   const k = (c.kontak || []).filter((x) => x && EMAIL.test(String(x.email || "").trim())), p = k.find((x) => x.utama) || k[0];
   return p ? p.email.trim() : EMAIL.test(String(c.emailUmum || "").trim()) ? c.emailUmum.trim() : "";
 }
+/** Penerima notifikasi: daftar di pengaturan notifikasi (per customer id) menggantikan kontak customer; tanpa daftar, kontak utama. */
+function penerimaDaftar(c, dok) {
+  const p = c && c.id && dok && dok.penerima && dok.penerima[c.id], l = p && Array.isArray(p.emails) ? p.emails.map((x) => String(x || "").trim()).filter((x) => EMAIL.test(x)) : [];
+  if (l.length) return [...new Set(l.map((x) => x.toLowerCase()))];
+  const u = penerima(c); return u ? [u] : [];
+}
 const terkirim = (r) => !!r && !!r.jenis && selesaiOperasional(r) !== "";
 /** Tahap email yang baru terjadi pada perubahan sebelum → sesudah (dokumen job; sebelum null bila baru dibuat). Kosong bila dimatikan atau job batal. */
 function tahapBaru(sebelum, sesudah) {
@@ -32,7 +38,7 @@ function susunEmail(tahap, job, c, p) {
 /** Dokumen antrean email. Kunci tetap (job + tahap) agar tidak terkirim dua kali. status "antre" = menunggu pengirim, "tanpa-email" = customer belum punya email, "dimatikan" = email customer dimatikan. null bila kejadian dimatikan di pengaturan. */
 function antrean(tahap, id, job, c, dok, sekarang = Date.now()) {
   const p = N.efektif(dok, tahap); if (!p.aktif) return null;
-  const off = !!c && c.emailNotif === false, ke = off ? "" : penerima(c), { subjek, isi } = susunEmail(tahap, job, c, p);
-  return { kunci: `${id}_${tahap}`, doc: { jobId: id, kelompokId: job.kelompokId || null, tahap, customer: job.customer || "", ke, subjek, isi, status: ke ? "antre" : off ? "dimatikan" : "tanpa-email", kirimPada: N.hitungKirimPada(p.kirim, sekarang), dibuat: sekarang } };
+  const off = !!c && c.emailNotif === false, kepada = off ? [] : penerimaDaftar(c, dok), ke = kepada.join(", "), { subjek, isi } = susunEmail(tahap, job, c, p);
+  return { kunci: `${id}_${tahap}`, doc: { jobId: id, kelompokId: job.kelompokId || null, tahap, customer: job.customer || "", ke, kepada, subjek, isi, status: ke ? "antre" : off ? "dimatikan" : "tanpa-email", kirimPada: N.hitungKirimPada(p.kirim, sekarang), dibuat: sekarang } };
 }
-module.exports = { norm, cariCustomer, penerima, tahapBaru, variabel, susunEmail, antrean };
+module.exports = { norm, cariCustomer, penerima, penerimaDaftar, tahapBaru, variabel, susunEmail, antrean, ruteJob };

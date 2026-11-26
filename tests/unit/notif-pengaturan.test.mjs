@@ -26,4 +26,8 @@ eq("antrean: kejadian dimatikan = tidak ada", EC.antrean("terkirim", "j", job, c
 const a = EC.antrean("diterima", "j", job, c, { kejadian: { diterima: { kirim: { mode: "tunda", menit: 10 } } } }, sen);
 eq("antrean: tunda memakai kirimPada", [a.doc.status, a.doc.kirimPada], ["antre", sen + 600000]);
 eq("antrean: customer mematikan email", EC.antrean("diterima", "j", job, { ...c, emailNotif: false }).doc.status, "dimatikan");
+const LP = require("../../functions/notif-laporan.js");
+eq("kolom klien = registry server (id, label, izin)", K.KOLOM_UI.tracking, LP.KOLOM.tracking.map((k) => [k.id, k.label, k.izin]));
+eq("izin dan kolom bawaan klien = server", [K.IZIN_PROFIL, K.KOLOM_BAWAAN], [LP.IZIN_PROFIL, LP.KOLOM_BAWAAN]);
+eq("ringkas jadwal laporan", [K.ringkasLaporan({ periode: "mingguan", hari: 1, jam: "08:00", format: "xlsx" }), K.ringkasLaporan({ periode: "bulanan", tanggal: 5, jam: "09:30", format: "csv" })], ["Mingguan, Senin 08:00 · XLSX", "Bulanan, tanggal 5 09:30 · CSV"]);
 process.exit(gagal ? 1 : 0);

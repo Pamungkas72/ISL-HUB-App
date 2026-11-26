@@ -30,3 +30,15 @@ export function ringkasKirim(k) {
   if (k.mode === "jam") return `Jam ${(k.jam || []).join(", ") || "-"}${k.hariKerja === false ? "" : " (hari kerja)"}`;
   return "Langsung";
 }
+
+/* Laporan berkala: daftar kolom per profil dan tingkat izinnya (sama dengan functions/notif-laporan.js; dijaga tests/unit/notif-pengaturan.test.mjs). Penegakan izin ada di server. */
+export const KOLOM_UI = {
+  tracking: [["tglKirim", "Tanggal kirim", "umum"], ["noDo", "No. DO", "umum"], ["rute", "Rute", "umum"], ["kategori", "Jenis armada", "umum"], ["plat", "Plat nomor", "umum"], ["driver", "Driver", "umum"], ["kontainer", "No. kontainer", "umum"], ["status", "Status", "umum"], ["tglSelesai", "Tanggal selesai", "umum"], ["pod", "POD", "umum"], ["tglPod", "Tanggal POD", "umum"], ["vendor", "Vendor", "keuangan"], ["cost", "Biaya", "keuangan"], ["tagihan", "Status tagihan vendor", "keuangan"]],
+};
+export const IZIN_PROFIL = { tracking: ["umum"] };
+export const KOLOM_BAWAAN = { tracking: ["tglKirim", "noDo", "rute", "kategori", "plat", "status", "pod"] };
+export const NAMA_HARI = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+export const LAPORAN_BARU = (profil) => ({ nama: "", aktif: true, periode: "mingguan", hari: 1, tanggal: 1, jam: "08:00", format: "xlsx", kolom: [...(KOLOM_BAWAAN[profil] || [])], filter: { status: "semua", kategori: [] }, kirimBilaKosong: false });
+export const EMAIL_SAH = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Teks ringkas jadwal laporan. */
+export const ringkasLaporan = (l) => `${l.periode === "harian" ? "Harian" : l.periode === "bulanan" ? `Bulanan, tanggal ${l.tanggal}` : `Mingguan, ${NAMA_HARI[(+l.hari || 1) - 1]}`} ${l.jam} · ${(l.format || "xlsx").toUpperCase()}`;

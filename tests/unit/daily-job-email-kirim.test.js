@@ -11,5 +11,10 @@ let gagal = 0; const eq = (n, a, b) => { const ok = JSON.stringify(a) === JSON.s
   eq("gagal dicatat", (await kirim(d, "K", bad)).status, "gagal");
   eq("tanpa-email dilewati", await kirim({ ...d, status: "tanpa-email", ke: "" }, "K", ok), null);
   eq("sudah terkirim dilewati", await kirim({ ...d, status: "terkirim" }, "K", ok), null);
+  const banyak = await kirim({ ...d, kepada: ["a@x.id", "b@x.id"] }, "K", ok); eq("banyak penerima dikirim dalam satu email", [banyak.status, JSON.parse(req.o.body).to], ["terkirim", ["a@x.id", "b@x.id"]]);
+  const lamp = { ...d, tahap: "laporan", lampiran: { x: 1 } }; await kirim(lamp, "K", ok, async () => ({ nama: "r.xlsx", base64: "QQ==" }));
+  eq("lampiran ikut sebagai attachment", JSON.parse(req.o.body).attachments, [{ filename: "r.xlsx", content: "QQ==" }]);
+  eq("lampiran kosong: dilewati, tidak dikirim", [(await kirim(lamp, "K", async () => { throw new Error("jangan kirim"); }, async () => null)).status], ["dilewati"]);
+  eq("lampiran tanpa pembuat: gagal", (await kirim(lamp, "K", ok)).status, "gagal");
   process.exit(gagal ? 1 : 0);
 })();

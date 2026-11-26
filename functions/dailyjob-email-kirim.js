@@ -7,6 +7,7 @@ const { defineSecret } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const { kirim, kirimUji } = require("./dailyjob-email-kirim-isi");
 const N = require("./notif-pengaturan");
+const { buatLampiran } = require("./notif-laporan-jalan");
 
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const EMAIL_MASTER = "codcodan1@gmail.com", REGION = "asia-southeast2", MACET_MS = 10 * 60e3;
@@ -18,7 +19,7 @@ async function proses(ref) {
     if (!x || x.status !== "antre" || (x.kirimPada || 0) > Date.now()) return null;
     t.update(ref, { status: "mengirim", diklaim: Date.now() }); return x;
   });
-  if (d) await ref.update((await kirim(d, RESEND_API_KEY.value())) || { status: "antre" });
+  if (d) await ref.update((await kirim(d, RESEND_API_KEY.value(), fetch, buatLampiran)) || { status: "antre" });
 }
 
 exports.kirimEmailCustomer = onDocumentCreated({ document: "dj_email/{id}", region: REGION, secrets: [RESEND_API_KEY] }, (ev) => proses(ev.data.ref));
