@@ -7,5 +7,6 @@ exports.emailCustomerDailyJob = onDocumentWritten({ document: "dj_job/{id}", reg
   const sebelum = ev.data.before.exists ? ev.data.before.data() : null, sesudah = ev.data.after.exists ? ev.data.after.data() : null, tahap = E.tahapBaru(sebelum, sesudah);
   if (!tahap.length) return;
   const db = admin.firestore(), daftar = (await db.collection("cu_customers").get()).docs.map((d) => d.data()), c = E.cariCustomer(sesudah.customer, daftar);
-  for (const t of tahap) { const { kunci, doc } = E.antrean(t, ev.params.id, sesudah, c); await db.collection("dj_email").doc(kunci).create(doc).catch((err) => { if (err.code !== 6) throw err; }); } // 6 = sudah ada
+  const dok = (await db.doc(`notif_pengaturan/${sesudah.kelompokId || "-"}`).get()).data() || null;
+  for (const t of tahap) { const a = E.antrean(t, ev.params.id, sesudah, c, dok); if (!a) continue; const { kunci, doc } = a; await db.collection("dj_email").doc(kunci).create(doc).catch((err) => { if (err.code !== 6) throw err; }); } // 6 = sudah ada
 });

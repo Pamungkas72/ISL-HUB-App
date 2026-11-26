@@ -44,6 +44,7 @@ jobs:
           node tests/unit/daily-job-giat.test.mjs
           node tests/unit/daily-job-email-customer.test.js
           node tests/unit/daily-job-email-kirim.test.js
+          node tests/unit/notif-pengaturan.test.mjs
           node tests/unit/daily-job-trailer.test.mjs
           node tests/unit/daily-job-pdf-trailer.test.mjs
           node tests/unit/daily-job-pdf-distribusi.test.mjs
@@ -77,6 +78,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules
         run: node tests/asap/uji-peran-tampilan.js
+      - name: Uji Pengaturan Notifikasi (HP dan desktop)
+        env:
+          NODE_PATH: ${{ runner.temp }}/tes/node_modules
+        run: node tests/asap/uji-notifikasi-pengaturan.js
       - name: Uji galat hilang otomatis 10 detik (semua halaman)
         env:
           NODE_PATH: ${{ runner.temp }}/tes/node_modules

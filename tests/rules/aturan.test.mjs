@@ -425,3 +425,18 @@ describe("Master Uang Jalan (uj_master, uj_riwayat): master dan admin tulis, han
   it("sales dan lihat saja tidak membaca atau menulis", async () => { await assertFails(getDoc(doc(sales(), "uj_master/u1"))); await assertFails(setDoc(doc(sales(), "uj_master/u3"), baris)); await assertFails(setDoc(doc(lihat(), "uj_master/u4"), baris)); });
   it("riwayat: admin menambah, tidak bisa mengubah atau menghapus", async () => { await assertSucceeds(setDoc(doc(admin(), "uj_riwayat/r1"), { kunci: "u1", lama: 1 })); await assertFails(updateDoc(doc(admin(), "uj_riwayat/r1"), { lama: 2 })); await assertFails(deleteDoc(doc(admin(), "uj_riwayat/r1"))); });
 });
+
+describe("Notifikasi email: pengaturan dan antrean", () => {
+  const sedia = (st) => env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "dj_email/n1"), { kelompokId: "k1", status: st, kirimPada: 1 }));
+  it("pengaturan: master dan admin tulis dan baca; sales, lihat, dj ditolak", async () => {
+    await assertSucceeds(setDoc(doc(master(), "notif_pengaturan/k1"), { kejadian: {} })); await assertSucceeds(setDoc(doc(admin(), "notif_pengaturan/k1"), { kejadian: {} })); await assertSucceeds(getDoc(doc(admin(), "notif_pengaturan/k1")));
+    for (const k of [sales(), lihat(), dj1()]) { await assertFails(getDoc(doc(k, "notif_pengaturan/k1"))); await assertFails(setDoc(doc(k, "notif_pengaturan/k1"), { kejadian: {} })); }
+  });
+  it("antre boleh dibatalkan master dan admin", async () => { await sedia("antre"); await assertSucceeds(updateDoc(doc(admin(), "dj_email/n1"), { status: "batal" })); });
+  it("gagal boleh dikirim ulang (antre + kirimPada)", async () => { await sedia("gagal"); await assertSucceeds(updateDoc(doc(master(), "dj_email/n1"), { status: "antre", kirimPada: 5 })); });
+  it("status lain atau kolom lain ditolak", async () => {
+    await sedia("antre"); await assertFails(updateDoc(doc(admin(), "dj_email/n1"), { status: "terkirim" })); await assertFails(updateDoc(doc(admin(), "dj_email/n1"), { status: "batal", ke: "x@y.id" }));
+    await sedia("terkirim"); await assertFails(updateDoc(doc(admin(), "dj_email/n1"), { status: "antre" }));
+  });
+  it("anggota dan sales tidak mengubah antrean", async () => { await sedia("antre"); await assertFails(updateDoc(doc(dj1(), "dj_email/n1"), { status: "batal" })); await assertFails(updateDoc(doc(sales(), "dj_email/n1"), { status: "batal" })); });
+});
