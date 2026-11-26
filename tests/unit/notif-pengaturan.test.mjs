@@ -26,4 +26,13 @@ eq("antrean: kejadian dimatikan = tidak ada", EC.antrean("terkirim", "j", job, c
 const a = EC.antrean("diterima", "j", job, c, { kejadian: { diterima: { kirim: { mode: "tunda", menit: 10 } } } }, sen);
 eq("antrean: tunda memakai kirimPada", [a.doc.status, a.doc.kirimPada], ["antre", sen + 600000]);
 eq("antrean: customer mematikan email", EC.antrean("diterima", "j", job, { ...c, emailNotif: false }).doc.status, "dimatikan");
+const LP = require("../../functions/notif-laporan.js");
+eq("kolom klien = registry server (id, label, izin)", K.KOLOM_UI.tracking, LP.KOLOM.tracking.map((k) => [k.id, k.label, k.izin]));
+eq("izin dan kolom bawaan klien = server", [K.IZIN_PROFIL, K.KOLOM_BAWAAN], [LP.IZIN_PROFIL, LP.KOLOM_BAWAAN]);
+eq("ringkas jadwal laporan", [K.ringkasLaporan({ periode: "mingguan", hari: 1, jam: "08:00", format: "xlsx" }), K.ringkasLaporan({ periode: "bulanan", tanggal: 5, jam: "09:30", format: "csv" })], ["Mingguan, Senin 08:00 · XLSX", "Bulanan, tanggal 5 09:30 · CSV"]);
+const KU = require("../../functions/notif-kuota.js"), t0 = Date.parse("2026-11-26T20:30:00Z");
+eq("kuota: kunci hari dan bulan UTC sama di klien dan server", [K.hariKey(t0), K.bulanKey(t0), KU.hariKey(t0), KU.bulanKey(t0)], ["2026-11-26", "2026-11", "2026-11-26", "2026-11"]);
+eq("kuota: batas klien = server (bawaan, kustom, salah)", [K.batasKuota(null), K.batasKuota({ batasHari: 80, batasBulan: 2500 }), K.batasKuota({ batasHari: "x", batasBulan: 0 })], [KU.batas(null), KU.batas({ batasHari: 80, batasBulan: 2500 }), KU.batas({ batasHari: "x", batasBulan: 0 })]);
+eq("kuota: bawaan 100 per hari dan 3000 per bulan", KU.batas(undefined), { hari: 100, bulan: 3000 });
+eq("kuota: izinkan sampai tepat batas, bukan melebihi", [KU.izinkan(98, 10, 2, KU.batas()), KU.izinkan(99, 10, 2, KU.batas()), KU.izinkan(1, 2999, 1, KU.batas()), KU.izinkan(1, 3000, 1, KU.batas())], [true, false, true, false]);
 process.exit(gagal ? 1 : 0);

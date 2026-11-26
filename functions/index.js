@@ -71,3 +71,4 @@ exports.notifDailyJob = require("./dailyjob").notifDailyJob;
 Object.assign(exports, require("./dailyjob-akun"));
 exports.emailCustomerDailyJob = require("./dailyjob-email").emailCustomerDailyJob;
 Object.assign(exports, require("./dailyjob-email-kirim"));
+Object.assign(exports, { kirimLaporanBerkala: require("./notif-laporan-jalan").kirimLaporanBerkala, laporanUji: require("./notif-laporan-jalan").laporanUji });

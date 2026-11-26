@@ -438,5 +438,11 @@ describe("Notifikasi email: pengaturan dan antrean", () => {
     await sedia("antre"); await assertFails(updateDoc(doc(admin(), "dj_email/n1"), { status: "terkirim" })); await assertFails(updateDoc(doc(admin(), "dj_email/n1"), { status: "batal", ke: "x@y.id" }));
     await sedia("terkirim"); await assertFails(updateDoc(doc(admin(), "dj_email/n1"), { status: "antre" }));
   });
+  it("kuota: master dan admin membaca; tidak ada yang menulis; sales dan anggota tidak membaca", async () => {
+    await env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "notif_kuota/h_2026-11-26"), { n: 3 }));
+    await assertSucceeds(getDoc(doc(master(), "notif_kuota/h_2026-11-26"))); await assertSucceeds(getDoc(doc(admin(), "notif_kuota/h_2026-11-26")));
+    await assertFails(setDoc(doc(master(), "notif_kuota/h_2026-11-26"), { n: 0 })); await assertFails(getDoc(doc(sales(), "notif_kuota/h_2026-11-26"))); await assertFails(getDoc(doc(dj1(), "notif_kuota/h_2026-11-26")));
+  });
+  it("batas kuota disimpan di notif_pengaturan/_kuota: master dan admin saja", async () => { await assertSucceeds(setDoc(doc(admin(), "notif_pengaturan/_kuota"), { batasHari: 80, batasBulan: 2500 })); await assertFails(setDoc(doc(sales(), "notif_pengaturan/_kuota"), { batasHari: 9999 })); });
   it("anggota dan sales tidak mengubah antrean", async () => { await sedia("antre"); await assertFails(updateDoc(doc(dj1(), "dj_email/n1"), { status: "batal" })); await assertFails(updateDoc(doc(sales(), "dj_email/n1"), { status: "batal" })); });
 });
