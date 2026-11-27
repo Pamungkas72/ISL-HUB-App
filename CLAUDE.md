@@ -48,3 +48,17 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 - Diatur terpusat oleh `js/galat-otomatis.js` (mengamati DOM; cocok dengan toast, `.mr-galat`, `.login-error`, `.ip-status.is-gagal`, `role="alert"`, `.galat-otomatis`, `data-galat`). **Fitur baru cukup memakai toast atau salah satu penanda itu untuk pesan galatnya**; jangan membuat pesan galat permanen sendiri. Pesan yang berisi tombol atau tautan aksi (mis. "Coba lagi") tidak dihilangkan karena bagian dari halaman.
 - **Setiap halaman HTML baru wajib memuat** `<script src="js/galat-otomatis.js"></script>` setelah `tema.js`. Dijaga `tests/asap/uji-galat-otomatis.js` (gagal bila ada halaman tanpa skrip itu).
 
+
+## Orkestrator Opus dan sub-agent (aturan pemilik, 27 Nov 2026)
+- **Opus = orkestrator** (model bawaan sesi, `.claude/settings.json`). Opus memecah tugas dan memilih agent yang paling cocok dengan kemampuan dan karakternya, demi efisiensi token.
+- Pembagian bawaan:
+
+| Subtugas | Agent / model |
+|---|---|
+| Cari, baca, ringkas berkas | Explore / Haiku |
+| Tulis dan uji kode | general-purpose / Sonnet |
+| Rancang, keputusan desain, tinjau akhir, merge | Opus sendiri (Plan untuk rancangan besar) |
+
+- Opus yang menentukan perlu tidaknya sub-agent per tugas. Sub-agent mulai tanpa konteks, jadi beri prompt lengkap dan ringkas; edit kecil dan pertanyaan singkat dikerjakan langsung.
+- Bagian independen dijalankan paralel. Laporan sub-agent diperiksa Opus sebelum dipakai.
+- Aturan lain di berkas ini tetap berlaku untuk semua sub-agent (data tiruan, gaya kode, tampilan, bahasa).
