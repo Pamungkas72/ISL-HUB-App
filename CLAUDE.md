@@ -55,9 +55,11 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 
 | Subtugas | Agent / model |
 |---|---|
-| Cari, baca, ringkas berkas | Explore / Haiku |
-| Tulis dan uji kode | general-purpose / Sonnet |
-| Rancang, keputusan desain, tinjau akhir, merge | Opus sendiri (Plan untuk rancangan besar) |
+| Cari, baca, ringkas berkas | Explore / Haiku 5.5 |
+| Tulis dan uji kode | general-purpose / Sonnet 5.5 |
+| Rancang, keputusan desain, tinjau akhir, merge | Opus 5.5 sendiri (Plan untuk rancangan besar) |
+
+- **Versi dikunci di 5.5** (`.claude/settings.json`: `model` dan `ANTHROPIC_DEFAULT_*_MODEL`), jadi alias opus/sonnet/haiku tidak ikut naik sendiri. Bila Claude merilis versi baru, jangan ganti otomatis: periksa harga per token, kecepatan, dan kemampuannya (skill `claude-api`), lalu usulkan ke pemilik lewat pop-up. Pilih yang paling hemat token dengan kemampuan cukup untuk subtugasnya.
 
 - Opus yang menentukan perlu tidaknya sub-agent per tugas. Sub-agent mulai tanpa konteks, jadi beri prompt lengkap dan ringkas; edit kecil dan pertanyaan singkat dikerjakan langsung.
 - Bagian independen dijalankan paralel. Laporan sub-agent diperiksa Opus sebelum dipakai.
