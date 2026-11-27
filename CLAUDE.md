@@ -48,3 +48,19 @@ Catatan dari pemilik proyek (4 Nov 2026). Berlaku untuk semua sesi berikutnya.
 - Diatur terpusat oleh `js/galat-otomatis.js` (mengamati DOM; cocok dengan toast, `.mr-galat`, `.login-error`, `.ip-status.is-gagal`, `role="alert"`, `.galat-otomatis`, `data-galat`). **Fitur baru cukup memakai toast atau salah satu penanda itu untuk pesan galatnya**; jangan membuat pesan galat permanen sendiri. Pesan yang berisi tombol atau tautan aksi (mis. "Coba lagi") tidak dihilangkan karena bagian dari halaman.
 - **Setiap halaman HTML baru wajib memuat** `<script src="js/galat-otomatis.js"></script>` setelah `tema.js`. Dijaga `tests/asap/uji-galat-otomatis.js` (gagal bila ada halaman tanpa skrip itu).
 
+
+## Orkestrator Opus dan sub-agent (aturan pemilik, 27 Nov 2026)
+- **Opus = orkestrator** (model bawaan sesi, `.claude/settings.json`). Opus memecah tugas dan memilih agent yang paling cocok dengan kemampuan dan karakternya, demi efisiensi token.
+- Pembagian bawaan:
+
+| Subtugas | Agent / model |
+|---|---|
+| Cari, baca, ringkas berkas | Explore / Haiku 5.5 |
+| Tulis dan uji kode | general-purpose / Sonnet 5.5 |
+| Rancang, keputusan desain, tinjau akhir, merge | Opus 5.5 sendiri (Plan untuk rancangan besar) |
+
+- **Versi dikunci di 5.5** (`.claude/settings.json`: `model` dan `ANTHROPIC_DEFAULT_*_MODEL`), jadi alias opus/sonnet/haiku tidak ikut naik sendiri. Bila Claude merilis versi baru, jangan ganti otomatis: periksa harga per token, kecepatan, dan kemampuannya (skill `claude-api`), lalu usulkan ke pemilik lewat pop-up. Pilih yang paling hemat token dengan kemampuan cukup untuk subtugasnya.
+
+- Opus yang menentukan perlu tidaknya sub-agent per tugas. Sub-agent mulai tanpa konteks, jadi beri prompt lengkap dan ringkas; edit kecil dan pertanyaan singkat dikerjakan langsung.
+- Bagian independen dijalankan paralel. Laporan sub-agent diperiksa Opus sebelum dipakai.
+- Aturan lain di berkas ini tetap berlaku untuk semua sub-agent (data tiruan, gaya kode, tampilan, bahasa).
